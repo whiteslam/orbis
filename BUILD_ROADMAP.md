@@ -129,7 +129,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Initialize the project Git repository and create a clean `main` history
 - [x] Check that local secrets are ignored and no configured secrets appear in committed files
 - [x] Exclude dotenv files from Vercel deployment uploads
-- [ ] Push to `https://github.com/whiteslam/orbis.git` (current GitHub login `ractrotech-dev` was denied write access)
+- [x] Push the project to `https://github.com/whiteslam/orbis.git` on `main`
 - [ ] Sign in to Vercel and link this project
 - [ ] Add production Supabase and Google OAuth URLs, and required server environment values
 - [ ] Add an OpenRouter API key to enable workbook advice in production
@@ -145,7 +145,7 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** Git CLI is signed in as `ractrotech-dev` and was denied push access. Browser-based CLI sign-in for the repository owner `whiteslam` is now waiting for authorization. The GitHub connector reports repo admin permissions but its contents-write operation returns 403. Vercel CLI is also waiting for interactive authorization; the available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
+**Current external blockers:** GitHub `main` is pushed and tracks the requested repository. Vercel CLI is waiting for interactive authorization; the available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
 
 ## Project notes
 
