@@ -28,6 +28,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function contextRelevance(note: string, preview: WorkbookPreview): number {
+  const noteWords = new Set(note.toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+  const workbookWords = new Set<string>();
+  for (const sheet of preview.sheets) {
+    for (const value of [sheet.name, ...sheet.columns]) {
+      for (const word of value.toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []) workbookWords.add(word);
+    }
+  }
+  let score = 0;
+  for (const word of workbookWords) if (noteWords.has(word)) score += 1;
+  return score;
+}
+
 function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
   if (!isRecord(value)) return null;
   const token = value.verificationToken;
@@ -182,10 +195,14 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
         .select('note')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
-        .limit(5);
+        .limit(20);
       if (error) return { success: false, message: 'Saved context is not available. Apply the Orbis Memory migration or turn off context sharing.' };
+      const rankedNotes = (data ?? [])
+        .map(({ note }, index) => ({ note: note.trim(), index, score: contextRelevance(note, preview) }))
+        .sort((left, right) => right.score - left.score || left.index - right.index)
+        .slice(0, 5);
       let remainingCharacters = 3_000;
-      for (const item of data ?? []) {
+      for (const item of rankedNotes) {
         if (remainingCharacters <= 0) break;
         const note = item.note.trim().slice(0, remainingCharacters);
         if (note) savedContextNotes.push(note);
@@ -210,6 +227,10 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
     return { success: false, message: 'AI advice usage limits are not available right now. Try again later.' };
   }
 
+  const startedAt = Date.now();
+  let outcome: 'succeeded' | 'failed' = 'failed';
+  let providerStatus: number | null = null;
+  let responseBytes = 0;
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -235,6 +256,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
       cache: 'no-store',
       signal: AbortSignal.timeout(30_000),
     });
+    providerStatus = response.status;
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 402) return { success: false, message: 'The AI provider could not authorize this request. Check the OpenRouter key and account balance.' };
@@ -245,10 +267,27 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
     const data = await readProviderJson(response) as OpenRouterResponse;
     const content = data.choices?.[0]?.message?.content;
     const text = typeof content === 'string' ? content : Array.isArray(content) ? content.filter((part) => part.type === 'text').map((part) => part.text ?? '').join('') : '';
+    responseBytes = Buffer.byteLength(text, 'utf8');
     const advice = text ? parseAdvice(text, preview) : null;
     if (!advice) return { success: false, message: 'The AI returned an incomplete result. Try asking again.' };
+    outcome = 'succeeded';
     return { success: true, data: advice };
   } catch {
     return { success: false, message: 'The AI provider could not be reached. Check your connection and try again.' };
+  } finally {
+    // Keep only operational metadata. Never persist workbook content, notes, or advice.
+    try {
+      await admin.from('ai_generation_events').insert({
+        user_id: userId,
+        feature: 'workbook_advice',
+        model: adviceModel().slice(0, 120),
+        outcome,
+        provider_status: providerStatus,
+        duration_ms: Math.min(Date.now() - startedAt, 120_000),
+        response_bytes: responseBytes,
+      });
+    } catch {
+      // Logging must not change the advice shown to the user.
+    }
   }
 }

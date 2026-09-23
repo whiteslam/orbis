@@ -4,7 +4,7 @@ Use this file to see where the project stands and what to do next, even between 
 
 **Last updated:** 2026-09-24
 **Current app:** `http://localhost:3000` (`pnpm dev`)
-**Current focus:** Apply the Supabase migrations, connect Google/OpenRouter, then deploy to Vercel
+**Current focus:** Finish the local build; then complete the single external setup checklist below
 
 ## Status key
 
@@ -83,22 +83,24 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 **Next:** Connect the OpenRouter server key and review advice against a representative workbook. Workbook data is never persisted.
 
-### 5. Orbis memory and retrieval — In progress
+### 5. Orbis memory and retrieval — Code complete; database setup pending
 
 - [x] Let users add, review, and delete their own context notes
 - [x] Store notes in a private RLS-protected table
 - [x] Add an explicit opt-in to include up to five recent saved notes in workbook advice
-- [ ] Store and retrieve relevant personal context with pgvector/RAG
+- [x] Retrieve up to five relevant notes from a bounded set of the user's own notes when the user opts in
+- [ ] Consider semantic pgvector search after real usage demonstrates a need; current retrieval is private, bounded, and keyword-ranked
 
-### 6. AI gateway and usage limits — In progress
+### 6. AI gateway and usage limits — Code complete; database/provider setup pending
 
 - [x] Call OpenRouter only from a server action; bound request and response sizes
 - [x] Add an atomic five-advice-attempts-per-user-per-UTC-day budget
 - [x] Rebuild signed previews from allowlisted fields and cap streamed provider responses
 - [x] Keep API keys out of browser code
-- [ ] Add durable aggregate generation records (workbook data and advice remain unpersisted by design)
-- [ ] Add request budgets and useful failure handling
-- [ ] Ground responses in the relevant user data and explain uncertainty
+- [x] Add durable aggregate generation records containing outcome, model, provider status, response size, and duration only
+- [x] Enforce five attempts per user per UTC day and provide provider/key/limit/timeout error messages
+- [x] Ground responses in the relevant user data, require cited workbook evidence, and include caveats
+- [ ] Apply `supabase/migrations/202609240007_ai_generation_events.sql` to enable aggregate event logging
 
 ### 6a. Goals and habits — In progress
 
@@ -117,14 +119,14 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Add owner-scoped RLS for investment holdings
 - [ ] Apply `supabase/migrations/202609240006_investment_holdings.sql` in Supabase and verify with the signed-in account
 
-### 7. Daily Orbis Brief — In progress
+### 7. Daily Orbis Brief — Core experience complete
 
 - [x] Show a concise Home snapshot from confirmed expenses, pending alerts, goals, and today's habit check-ins
 - [x] Handle missing data without inventing insights
-- [ ] Add health workbook observations only when the user has chosen to save or share them
-- [ ] Add an optional AI-generated brief after consent and usage limits are in place
+- [x] Keep workbook observations out of the Home brief unless a future explicit save/share feature is designed
+- [ ] Optional AI-written daily brief is a future enhancement; the current brief is deterministic and data-grounded
 
-### 8. GitHub and Vercel deployment — In progress
+### 8. GitHub and Vercel deployment — App pushed; provider setup pending
 
 - [x] Initialize the project Git repository and create a clean `main` history
 - [x] Check that local secrets are ignored and no configured secrets appear in committed files
@@ -136,6 +138,16 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [ ] Apply all Supabase migrations and deploy the production build
 - [ ] Verify sign-in, finance review, goals/habits, context notes, and workbook advice on the deployed URL
 
+## One-time external setup checklist
+
+1. In Supabase **Authentication → URL Configuration**, allow `http://localhost:3000/auth/callback` and `http://localhost:3000/auth/gmail/callback`; later add the matching production URLs.
+2. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240007` in filename order.
+3. In Google Cloud, enable Gmail API, add the Gmail callback URI to the OAuth web client, and add the Google account as a consent-screen test user.
+4. In OpenRouter, create an API key and add it as `OPENROUTER_API_KEY` to the local environment and Vercel. Keep it server-only.
+5. Sign in to Vercel, import/link `whiteslam/orbis`, add the required environment variables for Production (and Preview if desired), then deploy.
+6. In the production Supabase and Google settings, allow `https://<your-vercel-domain>/auth/callback` and `https://<your-vercel-domain>/auth/gmail/callback`; set the production site URL and Google redirect URI to that domain.
+7. Verify password sign-in/recovery, Gmail connection and transaction review, goals/habits, notes, manual holdings, and advice with a sample workbook.
+
 ## Resume checklist
 
 When returning to the project:
@@ -145,10 +157,10 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** GitHub `main` is pushed and tracks the requested repository. Vercel CLI is waiting for interactive authorization; the available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
+**Current external blockers:** GitHub `main` is pushed and tracks the requested repository. Vercel CLI is not signed in. Supabase migrations/redirect settings, Google OAuth setup, and the OpenRouter server key still require dashboard access. A production deployment cannot be completed or verified until these are configured.
 
 ## Project notes
 
-- Goals, habits, user-managed context notes, and investment entries use owner-private tables after migrations 004–006 are applied. Investment values are manual; memory retrieval via pgvector is still planned.
+- Goals, habits, user-managed context notes, and investment entries use owner-private tables after migrations 004–006 are applied. Investment values are manual. Workbook generation events contain operational metadata only; workbook content/advice are not stored.
 - Never put API keys in client-side code or commit secret values.
 - The original build-order notes are in `CLAUDE.md`.
