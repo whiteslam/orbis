@@ -41,7 +41,7 @@ After signing in to the Supabase Dashboard, open **SQL Editor** and run migratio
 
 ## Workbook advice
 
-The Health tab accepts `.xlsx` and `.csv` files up to 1.5 MB. XLSX archives are expanded through a capped streaming check before workbook parsing; workbook limits also cap sheets, rows, columns, cells, and preview size. Orbis parses them in memory, shows the detected rows and calculated numeric observations, and does not save workbook content or advice. Only after you request advice and confirm the disclosure does Orbis send a bounded summary (not the original workbook) to OpenRouter. Each account has five advice attempts per UTC day; provider errors also count as attempts. Set `OPENROUTER_API_KEY` as a server-only variable. The default model is `openai/gpt-4o-mini`; set `OPENROUTER_MODEL` to override it. Advice is informational and should not be treated as medical diagnosis or guaranteed financial guidance.
+The Health tab accepts `.xlsx` and `.csv` files up to 1.5 MB. XLSX archives are expanded through a capped streaming check before workbook parsing; workbook limits also cap sheets, rows, columns, cells, and preview size. Orbis parses them in memory, shows the detected rows and calculated numeric observations, and does not save workbook content or advice. Only after you request advice and confirm the disclosure does Orbis send a bounded summary (not the original workbook) to OpenRouter. Saved context notes are excluded unless you separately opt in; when enabled, up to five most recently updated notes are included with a 3,000-character cap. Each account has five advice attempts per UTC day; provider errors also count as attempts. Set `OPENROUTER_API_KEY` as a server-only variable. The default model is `openai/gpt-4o-mini`; set `OPENROUTER_MODEL` to override it. Advice is informational and should not be treated as medical diagnosis or guaranteed financial guidance.
 
 The project directory currently uses `.env.local` for local credentials and is ignored by Git. For Vercel, add the Supabase URL, publishable key, secret key, site URL, OpenRouter key, and Gmail OAuth/encryption values in the Vercel project's server environment before enabling those features. Set `NEXT_PUBLIC_SITE_URL` and `GOOGLE_REDIRECT_URI` to the deployed HTTPS origin and add the corresponding callback URLs to Supabase and Google. Do not pull production secrets into a file that may be committed.
 
@@ -50,7 +50,7 @@ The project directory currently uses `.env.local` for local credentials and is i
 2. Finance schema + Gmail OAuth sync
 3. Deterministic transaction parser
 4. Health onboarding + Excel ingestion and advice
-5. Orbis memory + pgvector RAG
+5. User-managed context notes; opt-in context in workbook advice; future pgvector retrieval
 6. OpenRouter AI gateway and request budget
 7. Daily Orbis Brief
 

@@ -82,17 +82,18 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 **Next:** Connect the OpenRouter server key and review advice against a representative workbook. Workbook data is never persisted.
 
-### 5. Orbis memory and retrieval — Planned
+### 5. Orbis memory and retrieval — In progress
 
 - [x] Let users add, review, and delete their own context notes
 - [x] Store notes in a private RLS-protected table
-- [ ] Decide when saved notes should be included in an AI request, with explicit user control
+- [x] Add an explicit opt-in to include up to five recent saved notes in workbook advice
 - [ ] Store and retrieve relevant personal context with pgvector/RAG
 
 ### 6. AI gateway and usage limits — In progress
 
 - [x] Call OpenRouter only from a server action; bound request and response sizes
 - [x] Add an atomic five-advice-attempts-per-user-per-UTC-day budget
+- [x] Rebuild signed previews from allowlisted fields and cap streamed provider responses
 - [x] Keep API keys out of browser code
 - [ ] Add durable aggregate generation records (workbook data and advice remain unpersisted by design)
 - [ ] Add request budgets and useful failure handling
@@ -134,7 +135,7 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** The GitHub credential can read the requested repository but cannot push to it. Vercel CLI is awaiting interactive account authentication. Production OAuth callbacks and server keys still need to be added to their provider dashboards.
+**Current external blockers:** Git CLI account `ractrotech-dev` was denied push access. The GitHub connector identifies as `whiteslam` and reports repo admin permissions, but its contents-write operation returns 403. Vercel CLI remains logged out; its available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
 
 ## Project notes
 

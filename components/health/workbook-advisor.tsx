@@ -5,12 +5,13 @@ import { FileSpreadsheet, LoaderCircle, Sparkles, Upload, X } from 'lucide-react
 import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
 import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
-export function WorkbookAdvisor() {
+export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?: number }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
   const [advice, setAdvice] = useState<WorkbookAdvice | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  const [includeSavedContext, setIncludeSavedContext] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function parseFile(formData: FormData) {
@@ -18,6 +19,7 @@ export function WorkbookAdvisor() {
     setPreview(null);
     setAdvice(null);
     setConsent(false);
+    setIncludeSavedContext(false);
     startTransition(async () => {
       const result = await parseWorkbookAction(formData);
       if (!result.success) {
@@ -33,7 +35,7 @@ export function WorkbookAdvisor() {
     setMessage(null);
     setAdvice(null);
     startTransition(async () => {
-      const result = await generateWorkbookAdviceAction(preview);
+      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext });
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -47,6 +49,7 @@ export function WorkbookAdvisor() {
     setAdvice(null);
     setMessage(null);
     setConsent(false);
+    setIncludeSavedContext(false);
   }
 
   const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
@@ -105,7 +108,8 @@ export function WorkbookAdvisor() {
 
           {!advice && (
             <div className="workbook-consent">
-              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand a bounded summary of this workbook will be sent to OpenRouter to generate advice. The original file is not sent to the AI provider.</label>
+              {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => setIncludeSavedContext(event.currentTarget.checked)} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} recent saved notes from Personal (up to 3,000 characters).</label>}
+              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {includeSavedContext ? 'the workbook summary and up to 5 recent saved notes (up to 3,000 characters)' : 'a bounded summary of this workbook'} will be sent to OpenRouter for advice. The original file is not sent.</label>
               <button className="finance-button primary" type="button" onClick={requestAdvice} disabled={!consent || isPending}>
                 {isPending ? <><LoaderCircle className="workbook-spinner" size={15} /> Analyzing…</> : <><Sparkles size={15} /> Get advice</>}
               </button>
