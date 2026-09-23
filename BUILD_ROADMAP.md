@@ -128,6 +128,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 - [x] Initialize the project Git repository and create a clean `main` history
 - [x] Check that local secrets are ignored and no configured secrets appear in committed files
+- [x] Exclude dotenv files from Vercel deployment uploads
 - [ ] Push to `https://github.com/whiteslam/orbis.git` (current GitHub login `ractrotech-dev` was denied write access)
 - [ ] Sign in to Vercel and link this project
 - [ ] Add production Supabase and Google OAuth URLs, and required server environment values
