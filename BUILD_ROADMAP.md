@@ -83,9 +83,10 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 ### 5. Orbis memory and retrieval — Planned
 
-- [ ] Decide what information Orbis should remember
+- [x] Let users add, review, and delete their own context notes
+- [x] Store notes in a private RLS-protected table
+- [ ] Decide when saved notes should be included in an AI request, with explicit user control
 - [ ] Store and retrieve relevant personal context with pgvector/RAG
-- [ ] Let users inspect and manage saved memory
 
 ### 6. AI gateway and usage limits — In progress
 
@@ -103,6 +104,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Add habit creation and daily check-ins with streak display
 - [x] Add RLS and owner-scoped check-in records
 - [ ] Apply `supabase/migrations/202609240004_goals_habits.sql` in Supabase and verify with the signed-in account
+- [ ] Apply `supabase/migrations/202609240005_orbis_memory.sql` in Supabase and verify note management
 
 ### 7. Daily Orbis Brief — Planned
 
@@ -121,6 +123,6 @@ When returning to the project:
 
 ## Project notes
 
-- Goals and habits are connected to user-owned tables after migration 004 is applied. Investment and Personal memory are still planned.
+- Goals, habits, and user-managed context notes are connected to owner-private tables after migrations 004 and 005 are applied. Investment tracking and memory retrieval are still planned.
 - Never put API keys in client-side code or commit secret values.
 - The original build-order notes are in `CLAUDE.md`.

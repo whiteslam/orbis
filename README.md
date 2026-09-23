@@ -37,7 +37,7 @@ Google consent screen configuration must include your account as a test user whi
 
 ## Apply the Finance and Gmail schema
 
-After signing in to the Supabase Dashboard, open **SQL Editor** and run migrations in order: `202609240001_finance_gmail.sql`, `202609240002_workbook_ai_usage.sql`, `202609240003_transaction_review.sql`, then `202609240004_goals_habits.sql`. Until these migrations are applied, the corresponding Finance/Gmail, workbook advice, transaction review, and Goals/Habits features are unavailable.
+After signing in to the Supabase Dashboard, open **SQL Editor** and run migrations in order: `202609240001_finance_gmail.sql`, `202609240002_workbook_ai_usage.sql`, `202609240003_transaction_review.sql`, `202609240004_goals_habits.sql`, then `202609240005_orbis_memory.sql`. Until these migrations are applied, the corresponding Finance/Gmail, workbook advice, transaction review, Goals/Habits, and saved-context features are unavailable.
 
 ## Workbook advice
 

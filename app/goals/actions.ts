@@ -14,6 +14,12 @@ function validId(id: string) {
   return /^[0-9a-f-]{36}$/i.test(id);
 }
 
+function todayInAppTimezone() {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 export async function createGoalAction(input: { title: string; target: string; current: string; unit: string; dueDate: string }) {
   const auth = await userClient();
   if (!auth) return { success: false, message: 'Sign in again to save this goal.' };
@@ -61,7 +67,7 @@ export async function createHabitAction(titleInput: string) {
 export async function checkInHabitAction(id: string, date: string) {
   const auth = await userClient();
   if (!auth) return { success: false, message: 'Sign in again to check in.' };
-  if (typeof id !== 'string' || !validId(id) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'This habit check-in is invalid.' };
+  if (typeof id !== 'string' || !validId(id) || typeof date !== 'string' || date !== todayInAppTimezone()) return { success: false, message: 'Habit check-ins are available for today only. Refresh and try again.' };
   const { data: habit, error: habitError } = await auth.supabase.from('habits').select('id').eq('id', id).eq('user_id', auth.userId).is('archived_at', null).maybeSingle();
   if (habitError || !habit) return { success: false, message: 'Habit not found.' };
   const { error } = await auth.supabase.from('habit_checkins').upsert({ user_id: auth.userId, habit_id: id, checked_on: date }, { onConflict: 'habit_id,checked_on', ignoreDuplicates: true });

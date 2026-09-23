@@ -53,7 +53,7 @@ function parseMerchant(segment: string) {
 function splitTransactionSegments(body: string) {
   // Split on line breaks and sentence endings, while preserving decimal points.
   return body
-    .split(/\n+|(?<=[.!?])\s+(?=[^\d\s])/)
+    .split(/\n+|;|(?<!\d),\s*|(?<=[.!?])\s+(?=[^\d\s])/)
     .map((segment) => segment.trim())
     .filter(Boolean);
 }

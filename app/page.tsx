@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import OrbisApp from '@/components/orbis-app';
 import { getFinanceSummary } from '@/lib/finance/repository';
 import { getGoalsSummary } from '@/lib/goals/repository';
+import { getContextNotes } from '@/lib/goals/memory';
 import { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -17,5 +18,6 @@ export default async function Page() {
 
   const financeSummary = await getFinanceSummary(userId);
   const goalsSummary = await getGoalsSummary(userId);
-  return <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} />;
+  const contextNotes = await getContextNotes(userId);
+  return <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} />;
 }
