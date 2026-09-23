@@ -7,6 +7,7 @@ import { parseWorkbook } from '@/lib/workbook/parse';
 import type { ParsedWorkbookPreview, WorkbookActionResult, WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
 const MAX_PREVIEW_BYTES = 24 * 1024;
+const MAX_PROVIDER_RESPONSE_BYTES = 128 * 1024;
 const MAX_MODEL_OUTPUT_TOKENS = 1_200;
 const MAX_ADVICE = 5;
 const DAILY_ADVICE_LIMIT = 5;
@@ -22,14 +23,51 @@ function withSignature(userId: string, preview: ParsedWorkbookPreview): Workbook
   return { ...preview, verificationToken: signedPreview(userId, preview) };
 }
 
-function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
-  if (!value || typeof value !== 'object') return null;
-  const payload = value as Partial<WorkbookPreview>;
-  if (typeof payload.verificationToken !== 'string' || typeof payload.fileName !== 'string' || !Array.isArray(payload.sheets) || !Array.isArray(payload.observations)) return null;
-  if (payload.sheets.length < 1 || payload.sheets.length > 8 || payload.observations.length > 24) return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  const previewData = { fileName: payload.fileName, sheets: payload.sheets, observations: payload.observations };
-  const json = JSON.stringify(previewData);
+function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
+  if (!isRecord(value)) return null;
+  const token = value.verificationToken;
+  const fileName = value.fileName;
+  const rawSheets = value.sheets;
+  const rawObservations = value.observations;
+  if (typeof token !== 'string' || token.length !== 43 || typeof fileName !== 'string' || !/^[\w.-]{1,100}$/.test(fileName)) return null;
+  if (!Array.isArray(rawSheets) || rawSheets.length < 1 || rawSheets.length > 8 || !Array.isArray(rawObservations) || rawObservations.length > 24) return null;
+
+  // Server action arguments are client-controlled. Rebuild only the bounded
+  // fields we issued before serializing or verifying the signature.
+  const sheets: ParsedWorkbookPreview['sheets'] = [];
+  for (const rawSheet of rawSheets) {
+    if (!isRecord(rawSheet)) return null;
+    const { name, rowCount, columnCount, columns, previewRows } = rawSheet;
+    if (typeof name !== 'string' || name.length > 48 || !Number.isInteger(rowCount) || (rowCount as number) < 0 || (rowCount as number) > 2_000 || !Number.isInteger(columnCount) || (columnCount as number) < 1 || (columnCount as number) > 40 || !Array.isArray(columns) || columns.length > 10 || !columns.every((column) => typeof column === 'string' && column.length <= 48) || !Array.isArray(previewRows) || previewRows.length > 2) return null;
+    const safeRows: ParsedWorkbookPreview['sheets'][number]['previewRows'] = [];
+    for (const rawRow of previewRows) {
+      if (!isRecord(rawRow) || !Number.isInteger(rawRow.rowNumber) || (rawRow.rowNumber as number) < 1 || (rawRow.rowNumber as number) > 2_008 || !Array.isArray(rawRow.values) || rawRow.values.length > 10 || !rawRow.values.every((cell) => typeof cell === 'string' && cell.length <= 80)) return null;
+      safeRows.push({ rowNumber: rawRow.rowNumber as number, values: rawRow.values as string[] });
+    }
+    sheets.push({ name, rowCount: rowCount as number, columnCount: columnCount as number, columns: columns as string[], previewRows: safeRows });
+  }
+
+  const observations: ParsedWorkbookPreview['observations'] = [];
+  const observationIds = new Set<string>();
+  for (const rawObservation of rawObservations) {
+    if (!isRecord(rawObservation)) return null;
+    const { id, sheet, column, label, value: observationValue } = rawObservation;
+    if (typeof id !== 'string' || !/^obs_\d{1,2}$/.test(id) || observationIds.has(id) || typeof sheet !== 'string' || sheet.length > 48 || typeof column !== 'string' || column.length > 48 || typeof label !== 'string' || label.length > 120 || typeof observationValue !== 'string' || observationValue.length > 240) return null;
+    observationIds.add(id);
+    observations.push({ id, sheet, column, label, value: observationValue });
+  }
+
+  const previewData: ParsedWorkbookPreview = { fileName, sheets, observations };
+  let json: string;
+  try {
+    json = JSON.stringify(previewData);
+  } catch {
+    return null;
+  }
   if (Buffer.byteLength(json, 'utf8') > MAX_PREVIEW_BYTES) return null;
   let expected: string;
   try {
@@ -37,18 +75,33 @@ function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
   } catch {
     return null;
   }
-  const providedBuffer = Buffer.from(payload.verificationToken);
+  const providedBuffer = Buffer.from(token);
   const expectedBuffer = Buffer.from(expected);
   if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) return null;
 
-  if (!/^[\w.-]{1,100}$/.test(payload.fileName)) return null;
-  for (const sheet of payload.sheets) {
-    if (!sheet || typeof sheet !== 'object' || typeof sheet.name !== 'string' || sheet.name.length > 48 || !Number.isInteger(sheet.rowCount) || sheet.rowCount < 0 || sheet.rowCount > 2_000 || !Array.isArray(sheet.columns) || sheet.columns.length > 10 || !Array.isArray(sheet.previewRows) || sheet.previewRows.length > 2) return null;
+  return { ...previewData, verificationToken: token };
+}
+
+async function readProviderJson(response: Response): Promise<unknown> {
+  if (!response.body) throw new Error('The AI provider returned an empty response.');
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error('The AI provider response is too large.');
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
   }
-  for (const observation of payload.observations) {
-    if (!observation || typeof observation !== 'object' || typeof observation.id !== 'string' || !/^obs_\d+$/.test(observation.id) || typeof observation.sheet !== 'string' || typeof observation.column !== 'string' || typeof observation.label !== 'string' || typeof observation.value !== 'string' || observation.value.length > 240) return null;
-  }
-  return payload as WorkbookPreview;
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
 }
 
 export async function parseWorkbookAction(formData: FormData): Promise<WorkbookActionResult<WorkbookPreview>> {
@@ -158,7 +211,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
       return { success: false, message: 'The AI provider could not analyze this workbook right now. Try again shortly.' };
     }
 
-    const data = await response.json() as OpenRouterResponse;
+    const data = await readProviderJson(response) as OpenRouterResponse;
     const content = data.choices?.[0]?.message?.content;
     const text = typeof content === 'string' ? content : Array.isArray(content) ? content.filter((part) => part.type === 'text').map((part) => part.text ?? '').join('') : '';
     const advice = text ? parseAdvice(text, preview) : null;
