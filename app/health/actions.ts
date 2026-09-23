@@ -138,17 +138,22 @@ function parseAdvice(text: string, preview: WorkbookPreview): WorkbookAdvice | n
   const allowedEvidence = new Set(preview.observations.map((observation) => observation.id));
   const advice = result.advice.slice(0, MAX_ADVICE).flatMap((item) => {
     if (!item || typeof item !== 'object' || typeof item.title !== 'string' || typeof item.action !== 'string' || !Array.isArray(item.evidenceIds)) return [];
-    const evidenceIds = item.evidenceIds.filter((id): id is string => typeof id === 'string' && allowedEvidence.has(id)).slice(0, 4);
-    if (!evidenceIds.length) return [];
+    const evidenceIds = Array.from(new Set(item.evidenceIds.filter((id): id is string => typeof id === 'string' && allowedEvidence.has(id)))).slice(0, 4);
+    const title = item.title.trim().slice(0, 100);
+    const action = item.action.trim().slice(0, 400);
+    if (!evidenceIds.length || !title || !action) return [];
     return [{
-      title: item.title.trim().slice(0, 100),
-      action: item.action.trim().slice(0, 400),
+      title,
+      action,
       evidenceIds,
     }];
   });
 
+  const summary = result.summary.trim().slice(0, 500);
+  if (!summary || advice.length === 0) return null;
+
   return {
-    summary: result.summary.trim().slice(0, 500),
+    summary,
     advice,
     caveats: result.caveats.filter((item): item is string => typeof item === 'string').slice(0, 5).map((item) => item.trim().slice(0, 240)),
   };
@@ -161,6 +166,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
   if (!isRecord(value) || typeof value.includeSavedContext !== 'boolean') return { success: false, message: 'This workbook request is invalid. Upload the file again to continue.' };
   const preview = verifyPreview(userId, value.preview);
   if (!preview) return { success: false, message: 'This workbook preview expired or changed. Upload the file again to continue.' };
+  if (preview.observations.length === 0) return { success: false, message: 'Orbis needs at least three numeric values in a column to ground workbook advice. Check the preview or try a workbook with measurable data.' };
 
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) return { success: false, message: 'Workbook preview is ready, but AI advice is not configured yet. Add OPENROUTER_API_KEY to the server environment.' };

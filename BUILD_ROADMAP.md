@@ -78,6 +78,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Generate advice only after user consent, and filter evidence to signed observations
 - [x] Check XLSX archive expansion before parsing to limit ZIP-bomb resource usage
 - [x] Rebuild signed preview payloads from bounded allowlisted fields and cap streamed AI responses
+- [x] Require numeric evidence and discard advice that does not cite a valid workbook observation
 - [ ] Configure the OpenRouter key in local/Vercel server environments and try a real workbook
 
 **Next:** Connect the OpenRouter server key and review advice against a representative workbook. Workbook data is never persisted.

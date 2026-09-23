@@ -17,9 +17,11 @@ export default async function Page() {
   const userId = data.claims.sub;
   if (typeof userId !== 'string') redirect('/login');
 
-  const financeSummary = await getFinanceSummary(userId);
-  const goalsSummary = await getGoalsSummary(userId);
-  const contextNotes = await getContextNotes(userId);
-  const investmentSummary = await getInvestmentSummary(userId);
+  const [financeSummary, goalsSummary, contextNotes, investmentSummary] = await Promise.all([
+    getFinanceSummary(userId),
+    getGoalsSummary(userId),
+    getContextNotes(userId),
+    getInvestmentSummary(userId),
+  ]);
   return <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} investmentSummary={investmentSummary} />;
 }

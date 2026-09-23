@@ -106,7 +106,11 @@ export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?:
             </div>
           )}
 
-          {!advice && (
+          {!advice && preview.observations.length === 0 && (
+            <p className="workbook-no-observations" role="status">Orbis needs at least three numeric values in a column to ground its advice. You can still review this preview or choose another workbook.</p>
+          )}
+
+          {!advice && preview.observations.length > 0 && (
             <div className="workbook-consent">
               {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => setIncludeSavedContext(event.currentTarget.checked)} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} recent saved notes from Personal (up to 3,000 characters).</label>}
               <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {includeSavedContext ? 'the workbook summary and up to 5 recent saved notes (up to 3,000 characters)' : 'a bounded summary of this workbook'} will be sent to OpenRouter for advice. The original file is not sent.</label>
