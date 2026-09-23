@@ -143,7 +143,7 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** Git CLI account `ractrotech-dev` was denied push access. The GitHub connector identifies as `whiteslam` and reports repo admin permissions, but its contents-write operation returns 403. Vercel CLI remains logged out; its available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
+**Current external blockers:** Git CLI is signed in as `ractrotech-dev` and was denied push access. Browser-based CLI sign-in for the repository owner `whiteslam` is now waiting for authorization. The GitHub connector reports repo admin permissions but its contents-write operation returns 403. Vercel CLI is also waiting for interactive authorization; the available deployment connector currently returns “tool not found.” Production OAuth callbacks and server keys still need to be configured in provider dashboards.
 
 ## Project notes
 
