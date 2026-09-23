@@ -263,12 +263,12 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   );
 }
 
-function HealthScreen() {
+function HealthScreen({ savedContextCount }: { savedContextCount: number }) {
   return (
     <div className="screen-body">
       <header className="page-head"><div><small>ORBIS HEALTH</small><h2>Health</h2></div><button className="icon-btn"><Search size={19} /></button></header>
       <div className="health-intro"><HeartPulse size={18} /><p>Start with a spreadsheet you already have. Orbis will show what it read before sending a summary for advice.</p></div>
-      <WorkbookAdvisor />
+      <WorkbookAdvisor savedContextCount={savedContextCount} />
       <p className="health-disclaimer">Suggestions are informational and aren’t a medical diagnosis.</p>
     </div>
   );
@@ -315,7 +315,7 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes }:
   const screen = useMemo(() => {
     if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} openHealth={() => setTab('health')} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen />;
+    if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} />;
     return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} />;
   }, [contextNotes, financeSummary, gmailNotice, goalsSummary, tab]);
 
