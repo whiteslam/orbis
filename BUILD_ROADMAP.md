@@ -113,6 +113,17 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [ ] Add health workbook observations only when the user has chosen to save or share them
 - [ ] Add an optional AI-generated brief after consent and usage limits are in place
 
+### 8. GitHub and Vercel deployment — In progress
+
+- [x] Initialize the project Git repository and create a clean `main` history
+- [x] Check that local secrets are ignored and no configured secrets appear in committed files
+- [ ] Push to `https://github.com/whiteslam/orbis.git` (current GitHub login `ractrotech-dev` was denied write access)
+- [ ] Sign in to Vercel and link this project
+- [ ] Add production Supabase and Google OAuth URLs, and required server environment values
+- [ ] Add an OpenRouter API key to enable workbook advice in production
+- [ ] Apply all Supabase migrations and deploy the production build
+- [ ] Verify sign-in, finance review, goals/habits, context notes, and workbook advice on the deployed URL
+
 ## Resume checklist
 
 When returning to the project:
@@ -121,6 +132,8 @@ When returning to the project:
 2. Start the app with `pnpm dev` and open `http://localhost:3000`.
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
+
+**Current external blockers:** The GitHub credential can read the requested repository but cannot push to it. Vercel CLI is awaiting interactive account authentication. Production OAuth callbacks and server keys still need to be added to their provider dashboards.
 
 ## Project notes
 
