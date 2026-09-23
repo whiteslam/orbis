@@ -69,6 +69,14 @@ function SectionTitle({ title, action = 'See all' }: { title: string; action?: s
 function HomeScreen({ financeSummary, goalsSummary, openHealth }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; openHealth: () => void }) {
   const monthlyTotal = financeSummary.monthlyExpenses.length === 1 ? financeSummary.monthlyExpenses[0] : null;
   const monthlyDisplay = monthlyTotal ? money(monthlyTotal.amount, monthlyTotal.currency) : financeSummary.monthlyExpenses.length > 1 ? 'Multiple' : '—';
+  const activeGoal = goalsSummary.goals[0];
+  const checkedHabits = goalsSummary.habits.filter((habit) => habit.checkedToday).length;
+  const briefItems = [
+    monthlyTotal ? `${monthlyDisplay} in confirmed expenses this month` : null,
+    financeSummary.pendingCandidateCount ? `${financeSummary.pendingCandidateCount} transaction alert${financeSummary.pendingCandidateCount === 1 ? '' : 's'} waiting for review` : null,
+    activeGoal ? `${Math.round((activeGoal.current / activeGoal.target) * 100)}% toward “${activeGoal.title}”` : null,
+    goalsSummary.habits.length ? `${checkedHabits} of ${goalsSummary.habits.length} habits checked off today` : null,
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <div className="screen-body">
@@ -91,7 +99,7 @@ function HomeScreen({ financeSummary, goalsSummary, openHealth }: { financeSumma
         <div className="sparkle"><Sparkles size={18} /></div>
         <div>
           <small>ORBIS BRIEF</small>
-          <p>{monthlyTotal ? `${monthlyDisplay} in saved expenses this month. Add a workbook to get insights from your health or activity data.` : 'Connect your accounts or add a workbook. Orbis will show insights here when it has your data.'}</p>
+          <p>{briefItems.length ? `${briefItems.join(' · ')}.` : 'Your brief will appear here as you add confirmed transactions, goals, and habit check-ins.'}</p>
         </div>
       </div>
 

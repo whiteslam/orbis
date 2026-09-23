@@ -106,11 +106,12 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [ ] Apply `supabase/migrations/202609240004_goals_habits.sql` in Supabase and verify with the signed-in account
 - [ ] Apply `supabase/migrations/202609240005_orbis_memory.sql` in Supabase and verify note management
 
-### 7. Daily Orbis Brief — Planned
+### 7. Daily Orbis Brief — In progress
 
-- [ ] Combine available finance, health, goals, and memory signals
-- [ ] Generate a concise daily brief
-- [ ] Show the brief on Home and handle missing data clearly
+- [x] Show a concise Home snapshot from confirmed expenses, pending alerts, goals, and today's habit check-ins
+- [x] Handle missing data without inventing insights
+- [ ] Add health workbook observations only when the user has chosen to save or share them
+- [ ] Add an optional AI-generated brief after consent and usage limits are in place
 
 ## Resume checklist
 
