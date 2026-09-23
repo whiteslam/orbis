@@ -108,6 +108,14 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [ ] Apply `supabase/migrations/202609240004_goals_habits.sql` in Supabase and verify with the signed-in account
 - [ ] Apply `supabase/migrations/202609240005_orbis_memory.sql` in Supabase and verify note management
 
+### 6b. Investment holdings — In progress
+
+- [x] Replace the empty Investment screen with manual holding entry and edits
+- [x] Compute estimated values from user-entered units and unit values
+- [x] Label values as user-entered, dated, and not live market prices or investment advice
+- [x] Add owner-scoped RLS for investment holdings
+- [ ] Apply `supabase/migrations/202609240006_investment_holdings.sql` in Supabase and verify with the signed-in account
+
 ### 7. Daily Orbis Brief — In progress
 
 - [x] Show a concise Home snapshot from confirmed expenses, pending alerts, goals, and today's habit check-ins
@@ -139,6 +147,6 @@ When returning to the project:
 
 ## Project notes
 
-- Goals, habits, and user-managed context notes are connected to owner-private tables after migrations 004 and 005 are applied. Investment tracking and memory retrieval are still planned.
+- Goals, habits, user-managed context notes, and investment entries use owner-private tables after migrations 004–006 are applied. Investment values are manual; memory retrieval via pgvector is still planned.
 - Never put API keys in client-side code or commit secret values.
 - The original build-order notes are in `CLAUDE.md`.

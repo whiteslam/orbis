@@ -229,6 +229,15 @@ button { font: inherit; }
 .memory-note p { margin: 0 0 10px; white-space: pre-wrap; color: var(--ink); }
 .memory-note > div { display: flex; align-items: center; justify-content: space-between; }
 .memory-note small { color: var(--muted); font-size: 10px; }
+.personal-form select, .investment-holding select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; color: var(--ink); background: white; font: inherit; font-size: 11px; }
+.investment-note { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.investment-note strong, .investment-holding-head strong { font-size: 12px; }
+.investment-note p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 5px 0 0; }
+.investment-list { display: grid; gap: 10px; margin-top: 14px; }
+.investment-holding { padding: 14px; margin: 0; }
+.investment-holding > form { display: grid; gap: 10px; }
+.investment-holding-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.investment-holding > form > small { color: var(--muted); font-size: 10px; }
 .empty-state { margin-top: 14px; padding: 24px; text-align: center; }
 .empty-state svg { color: var(--accent); }
 .empty-state strong { display: block; margin-top: 8px; }

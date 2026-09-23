@@ -7,9 +7,9 @@ Orbis is a personal intelligence workspace with Supabase email/password authenti
 - Home / AI board
 - Finance tab with owner-scoped transaction data and Gmail transaction-alert connection states
 - Health tab with bounded Excel/CSV preview and data-grounded AI advice
-- Personal, Investment, Goals and Habits tabs
+- User-managed context notes, investment holdings, goals, and habits
 - Responsive full-screen mobile mode
-- Reusable components and mock data
+- Reusable components with owner-scoped storage
 
 ## Run
 ```bash
@@ -37,7 +37,7 @@ Google consent screen configuration must include your account as a test user whi
 
 ## Apply the Finance and Gmail schema
 
-After signing in to the Supabase Dashboard, open **SQL Editor** and run migrations in order: `202609240001_finance_gmail.sql`, `202609240002_workbook_ai_usage.sql`, `202609240003_transaction_review.sql`, `202609240004_goals_habits.sql`, then `202609240005_orbis_memory.sql`. Until these migrations are applied, the corresponding Finance/Gmail, workbook advice, transaction review, Goals/Habits, and saved-context features are unavailable.
+After signing in to the Supabase Dashboard, open **SQL Editor** and run migrations in order: `202609240001_finance_gmail.sql`, `202609240002_workbook_ai_usage.sql`, `202609240003_transaction_review.sql`, `202609240004_goals_habits.sql`, `202609240005_orbis_memory.sql`, then `202609240006_investment_holdings.sql`. Until these migrations are applied, the corresponding Finance/Gmail, workbook advice, transaction review, Goals/Habits, saved-context, and Investment features are unavailable.
 
 ## Workbook advice
 
@@ -50,9 +50,10 @@ The project directory currently uses `.env.local` for local credentials and is i
 2. Finance schema + Gmail OAuth sync
 3. Deterministic transaction parser
 4. Health onboarding + Excel ingestion and advice
-5. User-managed context notes; opt-in context in workbook advice; future pgvector retrieval
+5. User-managed context notes and explicit opt-in to AI advice
 6. OpenRouter AI gateway and request budget
-7. Daily Orbis Brief
+7. Daily Orbis Brief from confirmed user data
+8. Manual investment holdings tracker
 
 ## Environment variables
 ```env

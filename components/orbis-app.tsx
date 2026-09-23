@@ -31,6 +31,8 @@ import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
 import type { ContextNote } from '@/lib/goals/memory';
 import { ContextNotes } from '@/components/personal/context-notes';
+import { InvestmentHoldings } from '@/components/invest/investment-holdings';
+import type { InvestmentSummary } from '@/lib/invest/types';
 
 type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment' | 'goals' | 'habits';
 
@@ -274,7 +276,7 @@ function HealthScreen({ savedContextCount }: { savedContextCount: number }) {
   );
 }
 
-function GenericScreen({ tab, goalsSummary, contextNotes }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] } }) {
+function GenericScreen({ tab, goalsSummary, contextNotes, investmentSummary }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; investmentSummary: InvestmentSummary }) {
   const content = {
     personal: { title: 'Personal', icon: UserRound, text: 'Your profile, preferences, memory and important life context.' },
     investment: { title: 'Investment', icon: Landmark, text: 'Portfolio tracking and future investment intelligence will live here.' },
@@ -290,12 +292,12 @@ function GenericScreen({ tab, goalsSummary, contextNotes }: { tab: Exclude<Tab, 
       {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />}
       {tab === 'goals' && <GoalsHabits kind="goals" data={goalsSummary} />}
       {tab === 'personal' && <ContextNotes ready={contextNotes.ready} notes={contextNotes.notes} />}
-      {tab === 'investment' && <div className="empty-state"><Sparkles size={22}/><strong>Investment tracking is planned</strong><p>Connect a data source before Orbis shows investment information here.</p></div>}
+      {tab === 'investment' && <InvestmentHoldings summary={investmentSummary} />}
     </div>
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] } }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, investmentSummary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; investmentSummary: InvestmentSummary }) {
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
 
@@ -316,8 +318,8 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes }:
     if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} openHealth={() => setTab('health')} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
     if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} />;
-    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} />;
-  }, [contextNotes, financeSummary, gmailNotice, goalsSummary, tab]);
+    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} investmentSummary={investmentSummary} />;
+  }, [contextNotes, financeSummary, gmailNotice, goalsSummary, investmentSummary, tab]);
 
   return (
     <main className="stage">
