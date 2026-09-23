@@ -34,7 +34,7 @@ export async function saveInvestmentHoldingAction(input: HoldingInput) {
   const currency = input.currency.trim().toUpperCase();
   const valueAsOf = input.valueAsOf;
   if (!name || !['stock', 'fund', 'etf', 'crypto', 'cash', 'other'].includes(assetType)) return { success: false, message: 'Enter a name and choose an asset type.' };
-  if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000_000 || !Number.isFinite(valuePerUnit) || valuePerUnit < 0 || valuePerUnit > 1_000_000_000_000) return { success: false, message: 'Enter a positive quantity and a valid unit value.' };
+  if (!/^\d+(?:\.\d{1,6})?$/.test(input.quantity) || !/^\d+(?:\.\d{1,4})?$/.test(input.valuePerUnit) || !Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000_000 || !Number.isFinite(valuePerUnit) || valuePerUnit < 0 || valuePerUnit > 1_000_000_000_000) return { success: false, message: 'Enter a positive quantity (up to 6 decimals) and a valid unit value (up to 4 decimals).' };
   if (!/^[A-Z]{3}$/.test(currency)) return { success: false, message: 'Use a three-letter currency code, such as INR or USD.' };
   const date = new Date(`${valueAsOf}T00:00:00.000Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valueAsOf) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== valueAsOf) return { success: false, message: 'Choose a valid value date.' };
