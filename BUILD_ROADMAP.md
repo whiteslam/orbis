@@ -4,7 +4,7 @@ Use this file to see where the project stands and what to do next, even between 
 
 **Last updated:** 2026-09-24
 **Current app:** `http://localhost:3000` (`pnpm dev`)
-**Current focus:** Finish the local build; then complete the single external setup checklist below
+**Current focus:** Complete Supabase migrations and OAuth redirect setup, then verify production sign-in and connected features
 
 ## Status key
 
@@ -126,27 +126,26 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Keep workbook observations out of the Home brief unless a future explicit save/share feature is designed
 - [ ] Optional AI-written daily brief is a future enhancement; the current brief is deterministic and data-grounded
 
-### 8. GitHub and Vercel deployment — App pushed; provider setup pending
+### 8. GitHub and Vercel deployment — Production deployed; integration setup pending
 
 - [x] Initialize the project Git repository and create a clean `main` history
 - [x] Check that local secrets are ignored and no configured secrets appear in committed files
 - [x] Exclude dotenv files from Vercel deployment uploads
 - [x] Push the project to `https://github.com/whiteslam/orbis.git` on `main`
-- [ ] Sign in to Vercel and link this project
-- [ ] Add production Supabase and Google OAuth URLs, and required server environment values
-- [ ] Add an OpenRouter API key to enable workbook advice in production
-- [ ] Apply all Supabase migrations and deploy the production build
+- [x] Sign in to Vercel, link the GitHub repository, and connect automatic deployments
+- [x] Add the production Supabase, Google OAuth, Gmail encryption, site URL, and OpenRouter variables
+- [x] Deploy the production build at https://orbis-starter.vercel.app
+- [x] Verify the public login route loads and the home route sends signed-out visitors to login
+- [ ] Apply all Supabase migrations and configure production Supabase/Google OAuth redirects
 - [ ] Verify sign-in, finance review, goals/habits, context notes, and workbook advice on the deployed URL
 
 ## One-time external setup checklist
 
-1. In Supabase **Authentication → URL Configuration**, allow `http://localhost:3000/auth/callback` and `http://localhost:3000/auth/gmail/callback`; later add the matching production URLs.
-2. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240007` in filename order.
-3. In Google Cloud, enable Gmail API, add the Gmail callback URI to the OAuth web client, and add the Google account as a consent-screen test user.
-4. In OpenRouter, create an API key and add it as `OPENROUTER_API_KEY` to the local environment and Vercel. Keep it server-only.
-5. Sign in to Vercel, import/link `whiteslam/orbis`, add the required environment variables for Production (and Preview if desired), then deploy.
-6. In the production Supabase and Google settings, allow `https://<your-vercel-domain>/auth/callback` and `https://<your-vercel-domain>/auth/gmail/callback`; set the production site URL and Google redirect URI to that domain.
-7. Verify password sign-in/recovery, Gmail connection and transaction review, goals/habits, notes, manual holdings, and advice with a sample workbook.
+1. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240007` in filename order.
+2. In Supabase **Authentication → URL Configuration**, allow `http://localhost:3000/auth/callback`, `http://localhost:3000/auth/gmail/callback`, `https://orbis-starter.vercel.app/auth/callback`, and `https://orbis-starter.vercel.app/auth/gmail/callback`.
+3. In Google Cloud, enable Gmail API, add `https://orbis-starter.vercel.app/auth/gmail/callback` to the OAuth web client, and add the Google account as a consent-screen test user.
+4. In the production Supabase settings, set the site URL to `https://orbis-starter.vercel.app`.
+5. Verify password sign-in/recovery, Gmail connection and transaction review, goals/habits, notes, manual holdings, and workbook advice with a sample workbook.
 
 ## Resume checklist
 
@@ -157,7 +156,7 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** GitHub `main` is pushed and tracks the requested repository. Vercel CLI is not signed in. Supabase migrations/redirect settings, Google OAuth setup, and the OpenRouter server key still require dashboard access. A production deployment cannot be completed or verified until these are configured.
+**Current external blockers:** Production is live at https://orbis-starter.vercel.app and all required environment variables are set in Vercel Production. Supabase migrations and production redirect settings, plus the Google OAuth callback allowlist, still require dashboard access before connected features can be verified. The login page returns successfully; authentication against Supabase is not yet confirmed.
 
 ## Project notes
 
