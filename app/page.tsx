@@ -3,7 +3,7 @@ import OrbisApp from '@/components/orbis-app';
 import { getFinanceSummary } from '@/lib/finance/repository';
 import { getGoalsSummary } from '@/lib/goals/repository';
 import { getContextNotes } from '@/lib/goals/memory';
-import { getFitnessPersona } from '@/lib/personal/repository';
+import { getFitnessPersona, getPersonalProfile } from '@/lib/personal/repository';
 import { getInvestmentSummary } from '@/lib/invest/repository';
 import { createClient } from '@/lib/supabase/server';
 
@@ -18,12 +18,13 @@ export default async function Page() {
   const userId = data.claims.sub;
   if (typeof userId !== 'string') redirect('/login');
 
-  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, investmentSummary] = await Promise.all([
+  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary] = await Promise.all([
     getFinanceSummary(userId),
     getGoalsSummary(userId),
     getContextNotes(userId),
     getFitnessPersona(userId),
+    getPersonalProfile(userId),
     getInvestmentSummary(userId),
   ]);
-  return <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} investmentSummary={investmentSummary} />;
+  return <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} />;
 }

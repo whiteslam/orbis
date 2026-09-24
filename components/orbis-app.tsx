@@ -32,7 +32,8 @@ import { GoalsHabits } from '@/components/goals/goals-habits';
 import type { ContextNote } from '@/lib/goals/memory';
 import { ContextNotes } from '@/components/personal/context-notes';
 import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
-import type { FitnessPersonaSummary } from '@/lib/personal/repository';
+import { ProfileEditor } from '@/components/personal/profile-editor';
+import type { FitnessPersonaSummary, PersonalProfileSummary } from '@/lib/personal/repository';
 import { InvestmentHoldings } from '@/components/invest/investment-holdings';
 import type { InvestmentSummary } from '@/lib/invest/types';
 
@@ -70,11 +71,12 @@ function SectionTitle({ title, action = 'See all' }: { title: string; action?: s
   );
 }
 
-function HomeScreen({ financeSummary, goalsSummary, openHealth }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; openHealth: () => void }) {
+function HomeScreen({ financeSummary, goalsSummary, preferredName, openHealth }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; preferredName: string | null; openHealth: () => void }) {
   const monthlyTotal = financeSummary.monthlyExpenses.length === 1 ? financeSummary.monthlyExpenses[0] : null;
   const monthlyDisplay = monthlyTotal ? money(monthlyTotal.amount, monthlyTotal.currency) : financeSummary.monthlyExpenses.length > 1 ? 'Multiple' : '—';
   const activeGoal = goalsSummary.goals[0];
   const checkedHabits = goalsSummary.habits.filter((habit) => habit.checkedToday).length;
+  const firstName = preferredName?.trim().split(/\s+/)[0] || null;
   const briefItems = [
     monthlyTotal ? `${monthlyDisplay} in confirmed expenses this month` : null,
     financeSummary.pendingCandidateCount ? `${financeSummary.pendingCandidateCount} transaction alert${financeSummary.pendingCandidateCount === 1 ? '' : 's'} waiting for review` : null,
@@ -85,7 +87,7 @@ function HomeScreen({ financeSummary, goalsSummary, openHealth }: { financeSumma
   return (
     <div className="screen-body">
       <header className="topbar">
-        <div className="avatar">G</div>
+        <div className="avatar">{firstName?.charAt(0).toLocaleUpperCase() || 'G'}</div>
         <div className="brand">Orbis</div>
         <div className="topbar-actions">
           <button className="icon-btn" aria-label="Notifications"><Bell size={19} /></button>
@@ -95,7 +97,7 @@ function HomeScreen({ financeSummary, goalsSummary, openHealth }: { financeSumma
 
       <section className="hero-copy">
         <p className="eyebrow">YOUR PERSONAL INTELLIGENCE SYSTEM</p>
-        <h1>Welcome back.</h1>
+        <h1>{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h1>
         <p>Your life at a glance.</p>
       </section>
 
@@ -267,18 +269,18 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   );
 }
 
-function HealthScreen({ savedContextCount, hasSavedFitnessPersona }: { savedContextCount: number; hasSavedFitnessPersona: boolean }) {
+function HealthScreen({ savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile }: { savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean }) {
   return (
     <div className="screen-body">
       <header className="page-head"><div><small>ORBIS HEALTH</small><h2>Health</h2></div><button className="icon-btn"><Search size={19} /></button></header>
       <div className="health-intro"><HeartPulse size={18} /><p>Start with a spreadsheet you already have. Orbis will show what it read before sending a summary for advice.</p></div>
-      <WorkbookAdvisor savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} />
+      <WorkbookAdvisor savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} />
       <p className="health-disclaimer">Suggestions are informational and aren’t a medical diagnosis.</p>
     </div>
   );
 }
 
-function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, investmentSummary }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; investmentSummary: InvestmentSummary }) {
+function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary }) {
   const content = {
     personal: { title: 'Personal', icon: UserRound, text: 'Your profile, preferences, memory and important life context.' },
     investment: { title: 'Investment', icon: Landmark, text: 'Portfolio tracking and future investment intelligence will live here.' },
@@ -294,6 +296,7 @@ function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, invest
       {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />}
       {tab === 'goals' && <GoalsHabits kind="goals" data={goalsSummary} />}
       {tab === 'personal' && <>
+        <ProfileEditor key={personalProfile.profile?.preferredName ?? personalProfile.profile?.aboutMe ?? 'personal-profile-draft'} state={personalProfile.state} profile={personalProfile.profile} />
         <FitnessPersonaEditor key={fitnessPersona.persona ?? 'fitness-persona-draft'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
         <ContextNotes ready={contextNotes.ready} notes={contextNotes.notes} />
       </>}
@@ -302,7 +305,7 @@ function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, invest
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, investmentSummary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; investmentSummary: InvestmentSummary }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary }) {
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
 
@@ -320,11 +323,11 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
   }, []);
 
   const screen = useMemo(() => {
-    if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} openHealth={() => setTab('health')} />;
+    if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} preferredName={personalProfile.profile?.preferredName ?? null} openHealth={() => setTab('health')} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} />;
-    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} investmentSummary={investmentSummary} />;
-  }, [contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, investmentSummary, tab]);
+    if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} />;
+    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} />;
+  }, [contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, investmentSummary, personalProfile, tab]);
 
   return (
     <main className="stage">

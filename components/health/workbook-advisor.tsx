@@ -6,7 +6,7 @@ import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
-export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona = false }: { savedContextCount?: number; hasSavedFitnessPersona?: boolean }) {
+export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false }: { savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
   const [advice, setAdvice] = useState<WorkbookAdvice | null>(null);
@@ -14,6 +14,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
   const [consent, setConsent] = useState(false);
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
   const [includeFitnessPersona, setIncludeFitnessPersona] = useState(false);
+  const [includePersonalProfile, setIncludePersonalProfile] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function parseFile(formData: FormData) {
@@ -23,6 +24,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setConsent(false);
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
+    setIncludePersonalProfile(false);
     startTransition(async () => {
       const result = await parseWorkbookAction(formData);
       if (!result.success) {
@@ -38,7 +40,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setMessage(null);
     setAdvice(null);
     startTransition(async () => {
-      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona });
+      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, consented: consent });
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -54,6 +56,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setConsent(false);
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
+    setIncludePersonalProfile(false);
   }
 
   const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
@@ -61,6 +64,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
   const disclosureItems = [
     'a bounded workbook summary',
     includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
+    includePersonalProfile ? 'your personal profile (name, role, and More about me text)' : null,
     includeFitnessPersona ? 'your saved fitness persona' : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -123,6 +127,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
           {!advice && preview.observations.length > 0 && (
             <div className="workbook-consent">
               {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => { setIncludeSavedContext(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} relevant saved notes from Personal (up to 3,000 characters).</label>}
+              {hasSavedPersonalProfile && <label><input type="checkbox" checked={includePersonalProfile} onChange={(event) => { setIncludePersonalProfile(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my personal profile and “More about me” details for this request.</label>}
               {personaRelevant && <label><input type="checkbox" checked={includeFitnessPersona} onChange={(event) => { setIncludeFitnessPersona(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my saved fitness persona for this health or fitness workbook.</label>}
               <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {disclosureItems.join(' and ')} will be sent to OpenRouter for advice. The original file is not sent.</label>
               <button className="finance-button primary" type="button" onClick={requestAdvice} disabled={!consent || isPending}>
