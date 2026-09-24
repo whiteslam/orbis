@@ -3,15 +3,17 @@
 import { useId, useState, useTransition } from 'react';
 import { FileSpreadsheet, LoaderCircle, Sparkles, Upload, X } from 'lucide-react';
 import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
+import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
-export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?: number }) {
+export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona = false }: { savedContextCount?: number; hasSavedFitnessPersona?: boolean }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
   const [advice, setAdvice] = useState<WorkbookAdvice | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
+  const [includeFitnessPersona, setIncludeFitnessPersona] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function parseFile(formData: FormData) {
@@ -20,6 +22,7 @@ export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?:
     setAdvice(null);
     setConsent(false);
     setIncludeSavedContext(false);
+    setIncludeFitnessPersona(false);
     startTransition(async () => {
       const result = await parseWorkbookAction(formData);
       if (!result.success) {
@@ -35,7 +38,7 @@ export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?:
     setMessage(null);
     setAdvice(null);
     startTransition(async () => {
-      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext });
+      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona });
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -50,9 +53,16 @@ export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?:
     setMessage(null);
     setConsent(false);
     setIncludeSavedContext(false);
+    setIncludeFitnessPersona(false);
   }
 
   const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
+  const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets));
+  const disclosureItems = [
+    'a bounded workbook summary',
+    includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
+    includeFitnessPersona ? 'your saved fitness persona' : null,
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <section className="workbook-advisor" aria-labelledby="workbook-title">
@@ -112,8 +122,9 @@ export function WorkbookAdvisor({ savedContextCount = 0 }: { savedContextCount?:
 
           {!advice && preview.observations.length > 0 && (
             <div className="workbook-consent">
-              {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => setIncludeSavedContext(event.currentTarget.checked)} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} recent saved notes from Personal (up to 3,000 characters).</label>}
-              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {includeSavedContext ? 'the workbook summary and up to 5 recent saved notes (up to 3,000 characters)' : 'a bounded summary of this workbook'} will be sent to OpenRouter for advice. The original file is not sent.</label>
+              {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => { setIncludeSavedContext(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} relevant saved notes from Personal (up to 3,000 characters).</label>}
+              {personaRelevant && <label><input type="checkbox" checked={includeFitnessPersona} onChange={(event) => { setIncludeFitnessPersona(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my saved fitness persona for this health or fitness workbook.</label>}
+              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {disclosureItems.join(' and ')} will be sent to OpenRouter for advice. The original file is not sent.</label>
               <button className="finance-button primary" type="button" onClick={requestAdvice} disabled={!consent || isPending}>
                 {isPending ? <><LoaderCircle className="workbook-spinner" size={15} /> Analyzing…</> : <><Sparkles size={15} /> Get advice</>}
               </button>

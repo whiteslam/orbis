@@ -31,6 +31,8 @@ import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
 import type { ContextNote } from '@/lib/goals/memory';
 import { ContextNotes } from '@/components/personal/context-notes';
+import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
+import type { FitnessPersonaSummary } from '@/lib/personal/repository';
 import { InvestmentHoldings } from '@/components/invest/investment-holdings';
 import type { InvestmentSummary } from '@/lib/invest/types';
 
@@ -265,18 +267,18 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   );
 }
 
-function HealthScreen({ savedContextCount }: { savedContextCount: number }) {
+function HealthScreen({ savedContextCount, hasSavedFitnessPersona }: { savedContextCount: number; hasSavedFitnessPersona: boolean }) {
   return (
     <div className="screen-body">
       <header className="page-head"><div><small>ORBIS HEALTH</small><h2>Health</h2></div><button className="icon-btn"><Search size={19} /></button></header>
       <div className="health-intro"><HeartPulse size={18} /><p>Start with a spreadsheet you already have. Orbis will show what it read before sending a summary for advice.</p></div>
-      <WorkbookAdvisor savedContextCount={savedContextCount} />
+      <WorkbookAdvisor savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} />
       <p className="health-disclaimer">Suggestions are informational and aren’t a medical diagnosis.</p>
     </div>
   );
 }
 
-function GenericScreen({ tab, goalsSummary, contextNotes, investmentSummary }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; investmentSummary: InvestmentSummary }) {
+function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, investmentSummary }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; investmentSummary: InvestmentSummary }) {
   const content = {
     personal: { title: 'Personal', icon: UserRound, text: 'Your profile, preferences, memory and important life context.' },
     investment: { title: 'Investment', icon: Landmark, text: 'Portfolio tracking and future investment intelligence will live here.' },
@@ -291,13 +293,16 @@ function GenericScreen({ tab, goalsSummary, contextNotes, investmentSummary }: {
       <div className="feature-hero"><div className="feature-icon"><Icon size={28}/></div><h3>{content.title}</h3><p>{content.text}</p></div>
       {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />}
       {tab === 'goals' && <GoalsHabits kind="goals" data={goalsSummary} />}
-      {tab === 'personal' && <ContextNotes ready={contextNotes.ready} notes={contextNotes.notes} />}
+      {tab === 'personal' && <>
+        <FitnessPersonaEditor key={fitnessPersona.persona ?? 'fitness-persona-draft'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
+        <ContextNotes ready={contextNotes.ready} notes={contextNotes.notes} />
+      </>}
       {tab === 'investment' && <InvestmentHoldings summary={investmentSummary} />}
     </div>
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, investmentSummary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; investmentSummary: InvestmentSummary }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, investmentSummary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; investmentSummary: InvestmentSummary }) {
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
 
@@ -317,9 +322,9 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, i
   const screen = useMemo(() => {
     if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} openHealth={() => setTab('health')} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} />;
-    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} investmentSummary={investmentSummary} />;
-  }, [contextNotes, financeSummary, gmailNotice, goalsSummary, investmentSummary, tab]);
+    if (tab === 'health') return <HealthScreen savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} />;
+    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} investmentSummary={investmentSummary} />;
+  }, [contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, investmentSummary, tab]);
 
   return (
     <main className="stage">

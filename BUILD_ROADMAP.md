@@ -4,7 +4,7 @@ Use this file to see where the project stands and what to do next, even between 
 
 **Last updated:** 2026-09-24
 **Current app:** `http://localhost:3000` (`pnpm dev`)
-**Current focus:** Complete Supabase migrations and OAuth redirect setup, then verify production sign-in and connected features
+**Current focus:** Apply the Supabase migrations through `202609240008_fitness_persona.sql`, finish redirect setup, then verify production sign-in and connected features
 
 ## Status key
 
@@ -89,6 +89,9 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Store notes in a private RLS-protected table
 - [x] Add an explicit opt-in to include up to five recent saved notes in workbook advice
 - [x] Retrieve up to five relevant notes from a bounded set of the user's own notes when the user opts in
+- [x] Add an editable account-private fitness coaching persona derived from the uploaded historical plan
+- [x] Include the persona only after separate opt-in and only for health/fitness workbooks
+- [ ] Apply `supabase/migrations/202609240008_fitness_persona.sql` and save the persona from the Personal tab
 - [ ] Consider semantic pgvector search after real usage demonstrates a need; current retrieval is private, bounded, and keyword-ranked
 
 ### 6. AI gateway and usage limits — Code complete; database/provider setup pending
@@ -141,7 +144,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 ## One-time external setup checklist
 
-1. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240007` in filename order.
+1. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240008` in filename order.
 2. In Supabase **Authentication → URL Configuration**, allow `http://localhost:3000/auth/callback`, `http://localhost:3000/auth/gmail/callback`, `https://orbis-starter.vercel.app/auth/callback`, and `https://orbis-starter.vercel.app/auth/gmail/callback`.
 3. In Google Cloud, enable Gmail API, add `https://orbis-starter.vercel.app/auth/gmail/callback` to the OAuth web client, and add the Google account as a consent-screen test user.
 4. In the production Supabase settings, set the site URL to `https://orbis-starter.vercel.app`.
@@ -156,7 +159,7 @@ When returning to the project:
 3. Before ending a work session, update the relevant phase status, checkboxes, and **Last updated** date.
 4. Record decisions or blockers in the relevant phase so the next session can continue without rediscovery.
 
-**Current external blockers:** Production is live at https://orbis-starter.vercel.app and all required environment variables are set in Vercel Production. Supabase migrations and production redirect settings, plus the Google OAuth callback allowlist, still require dashboard access before connected features can be verified. The login page returns successfully; authentication against Supabase is not yet confirmed.
+**Current external blockers:** Production is live at https://orbis-starter.vercel.app and all required environment variables are set in Vercel Production. Supabase migrations and production redirect settings, plus the Google OAuth callback allowlist, still require dashboard access before connected features can be verified. Migration 008 is also required to save and share the new fitness persona. The login page returns successfully; authentication against Supabase is not yet confirmed.
 
 ## Project notes
 

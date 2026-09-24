@@ -20,7 +20,7 @@ export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextN
   if (!ready) return <div className="empty-state"><strong>Memory is not set up</strong><p>Apply the Orbis Memory migration in Supabase, then refresh.</p></div>;
 
   return <>
-    <div className="memory-info"><strong>Your saved context</strong><p>These are notes you chose to save. You can review or delete them at any time. They are not included in workbook advice.</p></div>
+    <div className="memory-info"><strong>Your saved context</strong><p>These are notes you chose to save. You can review or delete them at any time. They are sent to OpenRouter only when you opt in for an individual workbook request.</p></div>
     <form className="personal-form stack-card" onSubmit={(event) => {
       event.preventDefault();
       const form = event.currentTarget;
