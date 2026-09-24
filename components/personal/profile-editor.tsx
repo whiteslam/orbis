@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deletePersonalProfileAction, savePersonalProfileAction } from '@/app/personal/actions';
 import type { PersonalDataState, PersonalProfile } from '@/lib/personal/repository';
+import { safeAction } from '@/lib/client/safe-action';
 
 const EMPTY_PROFILE: PersonalProfile = { preferredName: '', role: '', aboutMe: '' };
 
@@ -34,7 +35,7 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
     {state === 'unavailable' && <p className="finance-notice error" role="status">Your profile could not be loaded. Refresh and try again.</p>}
     <form className="personal-form stack-card" onSubmit={(event) => {
       event.preventDefault();
-      startTransition(async () => show(await savePersonalProfileAction(draft)));
+      startTransition(async () => show(await safeAction(savePersonalProfileAction)(draft)));
     }}>
       <label htmlFor="profile-name">Name to use<input id="profile-name" autoComplete="name" maxLength={80} value={draft.preferredName} onChange={(event) => setDraft({ ...draft, preferredName: event.currentTarget.value })} disabled={pending || state !== 'ready'} placeholder="Your preferred name" /></label>
       <label htmlFor="profile-role">Work or role<input id="profile-role" maxLength={120} value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.currentTarget.value })} disabled={pending || state !== 'ready'} placeholder="For example: student, designer, business owner" /></label>
@@ -42,7 +43,7 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
       <small>{draft.aboutMe.length.toLocaleString('en-IN')} / 3,000 characters</small>
       <button className="finance-button primary" type="submit" disabled={pending || state !== 'ready'}>{pending ? 'Saving…' : profile ? 'Update profile' : 'Save profile'}</button>
     </form>
-    {profile && state === 'ready' && <button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await deletePersonalProfileAction()))}>Remove profile</button>}
+    {profile && state === 'ready' && <button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await safeAction(deletePersonalProfileAction)()))}>Remove profile</button>}
     {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
   </section>;
 }

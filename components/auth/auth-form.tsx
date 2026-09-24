@@ -8,6 +8,7 @@ import { signIn, signUp, type AuthActionState } from '@/app/auth/actions';
 import { confirmUnlockAction } from '@/app/security/actions';
 import { createClient } from '@/lib/supabase/client';
 import { passkeyErrorMessage, supportsPasskeys } from '@/components/security/passkey-errors';
+import { safeAction } from '@/lib/client/safe-action';
 
 const initialState: AuthActionState = { error: null, message: null };
 
@@ -27,7 +28,7 @@ export function AuthForm({ initialMessage }: { initialMessage?: string }) {
       if (message) setState({ error: message, message: null });
       return;
     }
-    const result = await confirmUnlockAction();
+    const result = await safeAction(confirmUnlockAction)();
     if (!result.success) {
       setState({ error: result.message, message: null });
       return;

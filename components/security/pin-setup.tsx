@@ -8,6 +8,7 @@ import { SignOutButton } from '@/components/auth/sign-out-button';
 import { setPinAction } from '@/app/security/actions';
 import { PinInput } from '@/components/security/pin-input';
 import { PIN_LENGTH, pinProblem } from '@/lib/security/pin-rules';
+import { safeAction } from '@/lib/client/safe-action';
 
 // Required step after sign-in until the account has a device PIN (or after too many wrong PINs).
 export function PinSetup({ reset }: { reset: boolean }) {
@@ -39,7 +40,7 @@ export function PinSetup({ reset }: { reset: boolean }) {
     }
     setMessage(null);
     startTransition(async () => {
-      const result = await setPinAction(first, value);
+      const result = await safeAction(setPinAction)(first, value);
       if (result.success) return router.refresh();
       setMessage(result.message);
       setFirst('');

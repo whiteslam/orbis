@@ -24,6 +24,10 @@ function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   return isDay ? <Sun {...props} /> : <Moon {...props} />;
 }
 
+// Home remounts on every tab switch; reuse the last result for 10 minutes.
+let lastResult: { at: number; state: State; weather: BriefWeather | null } | null = null;
+const CLIENT_TTL_MS = 10 * 60 * 1000;
+
 async function fetchWeather(query: string) {
   const response = await fetch(`/api/weather${query}`, { cache: 'no-store' });
   const body = await response.json().catch(() => ({}));
@@ -38,10 +42,18 @@ function currentPosition() {
 }
 
 export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: BriefWeather | null) => void; openPersonal: () => void }) {
-  const [state, setState] = useState<State>({ status: 'loading' });
+  const [state, setState] = useState<State>(() => (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS ? lastResult.state : { status: 'loading' }));
 
   useEffect(() => {
+    if (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS) {
+      if (lastResult.weather) onWeather(lastResult.weather);
+      return;
+    }
     let cancelled = false;
+    const remember = (next: State, weather: BriefWeather | null) => {
+      lastResult = { at: Date.now(), state: next, weather };
+      setState(next);
+    };
     (async () => {
       let result: Awaited<ReturnType<typeof fetchWeather>> | null = null;
       let place = 'Your location';
@@ -56,12 +68,13 @@ export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: 
         place = result?.body?.place ?? place;
       }
       if (cancelled) return;
-      if (result?.status === 200) {
-        setState({ status: 'ready', weather: result.body as WeatherResponse, place });
+      if (result?.status === 200 && result.body?.needsCity) {
+        remember({ status: 'needs-city' }, null);
+      } else if (result?.status === 200) {
+        remember({ status: 'ready', weather: result.body as WeatherResponse, place }, result.body as WeatherResponse);
         onWeather(result.body as WeatherResponse);
-      } else if (result?.status === 404) {
-        setState({ status: 'needs-city' });
       } else {
+        // Errors are not cached, so the next visit retries.
         setState({ status: 'error', message: result?.body?.error ?? 'Weather is unavailable right now.' });
       }
     })();

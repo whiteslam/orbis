@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, LoaderCircle, PenLine, Plus, X } from 'lucide-react';
 import { addManualTransactionAction } from '@/app/finance/actions';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
+import { safeAction } from '@/lib/client/safe-action';
 
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY'];
 
@@ -72,7 +73,7 @@ export function ManualTransactionForm({ disabled = false }: { disabled?: boolean
     }
     setMessage(null);
     startTransition(async () => {
-      const result = await addManualTransactionAction({
+      const result = await safeAction(addManualTransactionAction)({
         amount,
         currency,
         direction,

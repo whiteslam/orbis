@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, BellOff, LoaderCircle, Smartphone } from 'lucide-react';
 import { saveNotificationPreferencesAction, subscribePushAction, unsubscribePushAction } from '@/app/personal/notification-actions';
 import { NOTIFICATION_SLOTS, type NotificationPreferences, type NotificationSettings as Settings } from '@/lib/notifications/preferences';
+import { safeAction } from '@/lib/client/safe-action';
 
 type DeviceState = 'checking' | 'unsupported' | 'ios-install' | 'blocked' | 'off' | 'on';
 
@@ -65,7 +66,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
       const subscription = (await registration.pushManager.getSubscription())
         ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
       const json = subscription.toJSON();
-      const result = await subscribePushAction({ endpoint: subscription.endpoint, p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '', userAgent: navigator.userAgent });
+      const result = await safeAction(subscribePushAction)({ endpoint: subscription.endpoint, p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '', userAgent: navigator.userAgent });
       if (result.success) {
         setEndpoint(subscription.endpoint);
         setDevice('on');
@@ -81,7 +82,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
       const target = subscription?.endpoint ?? endpoint;
       await subscription?.unsubscribe();
       setDevice('off');
-      return target ? unsubscribePushAction(target) : { success: true, message: 'Notifications turned off on this device.' };
+      return target ? safeAction(unsubscribePushAction)(target) : { success: true, message: 'Notifications turned off on this device.' };
     });
   }
 
@@ -108,7 +109,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         })}
       </div>
       <p className="groww-muted">Times are in {prefs.timezone.replace('_', ' ')}.</p>
-      {dirty && <button className="finance-button primary" type="button" onClick={() => run(() => saveNotificationPreferencesAction(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button>}
+      {dirty && <button className="finance-button primary" type="button" onClick={() => run(() => safeAction(saveNotificationPreferencesAction)(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button>}
 
       <div className="notify-device">
         <Smartphone size={16} aria-hidden="true" />

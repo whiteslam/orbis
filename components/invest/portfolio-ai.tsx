@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { AlertTriangle, Lightbulb, ListChecks, LoaderCircle, Sparkles } from 'lucide-react';
 import { generatePortfolioAdviceAction } from '@/app/invest/ai-actions';
 import type { PortfolioAdvice } from '@/lib/invest/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 const KIND = {
   risk: { label: 'Risk', icon: AlertTriangle },
@@ -22,7 +23,7 @@ export function PortfolioAi({ goalCount, hasGroww }: { goalCount: number; hasGro
     if (!consent) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await generatePortfolioAdviceAction({ consented: true, includeGoals: includeGoals && goalCount > 0 });
+      const result = await safeAction(generatePortfolioAdviceAction)({ consented: true, includeGoals: includeGoals && goalCount > 0 });
       if (result.success) setAdvice(result.data);
       else setMessage(result.message);
     });

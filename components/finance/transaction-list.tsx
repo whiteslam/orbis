@@ -7,6 +7,7 @@ import { categoryStyle } from '@/components/finance/category-style';
 import { deleteManualTransactionAction } from '@/app/finance/actions';
 import { paymentMethodLabel } from '@/lib/finance/manual';
 import type { FinanceTransactionSummary } from '@/lib/finance/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 function money(amount: number, currency: string) {
   try {
@@ -38,7 +39,7 @@ export function TransactionList({ transactions }: { transactions: FinanceTransac
     setMessage(null);
     setDeletingId(transaction.id);
     startTransition(async () => {
-      const result = await deleteManualTransactionAction(transaction.id);
+      const result = await safeAction(deleteManualTransactionAction)(transaction.id);
       if (!result.success) setMessage(result.message);
       setDeletingId(null);
       router.refresh();

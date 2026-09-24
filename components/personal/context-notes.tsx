@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addContextNoteAction, deleteContextNoteAction } from '@/app/personal/actions';
 import type { ContextNote } from '@/lib/goals/memory';
+import { safeAction } from '@/lib/client/safe-action';
 
 export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextNote[] }) {
   const router = useRouter();
@@ -25,14 +26,14 @@ export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextN
       event.preventDefault();
       const form = event.currentTarget;
       const note = new FormData(form).get('note');
-      startTransition(async () => { const result = await addContextNoteAction(String(note ?? '')); show(result); if (result.success) form.reset(); });
+      startTransition(async () => { const result = await safeAction(addContextNoteAction)(String(note ?? '')); show(result); if (result.success) form.reset(); });
     }}>
       <label>Save a note for yourself<textarea name="note" maxLength={1000} rows={4} required placeholder="For example: I prefer simple meal plans and have 30 minutes for exercise." /></label>
       <button className="finance-button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save note'}</button>
     </form>
     {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
     {notes.length ? <div className="memory-list">{notes.map((item) => <article className="stack-card memory-note" key={item.id}>
-      <p>{item.note}</p><div><small>{new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(item.updatedAt))}</small><button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await deleteContextNoteAction(item.id)))}>Delete</button></div>
+      <p>{item.note}</p><div><small>{new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(item.updatedAt))}</small><button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await safeAction(deleteContextNoteAction)(item.id)))}>Delete</button></div>
     </article>)}</div> : <div className="empty-state"><strong>No saved context yet</strong><p>Add a note above when there is something you want to keep handy.</p></div>}
   </>;
 }

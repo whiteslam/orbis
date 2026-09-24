@@ -9,13 +9,14 @@ import { InvestmentHoldings } from '@/components/invest/investment-holdings';
 import { PortfolioAi } from '@/components/invest/portfolio-ai';
 import { AllocationCharts, GrowthProjector, PortfolioIndicators } from '@/components/invest/portfolio-charts';
 import { inr, percent, signedInr } from '@/components/invest/format';
+import { safeAction } from '@/lib/client/safe-action';
 
 export function InvestDashboard({ summary, goalCount }: { summary: InvestmentSummary; goalCount: number }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
 
   function load() {
-    startTransition(async () => setLive(await loadInvestLiveAction()));
+    startTransition(async () => setLive(await safeAction(loadInvestLiveAction, () => null)()));
   }
 
   // Reload when holdings change (add, edit, delete) so live prices follow.

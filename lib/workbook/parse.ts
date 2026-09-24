@@ -92,7 +92,7 @@ type PdfTextSegment = { x: number; text: string };
 // makes pdfjs use it directly.
 (globalThis as typeof globalThis & { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
-async function parsePdf(file: File, bytes: Buffer): Promise<ParsedWorkbookPreview> {
+async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
   if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
     throw new Error('This file does not look like a valid PDF. Choose an Excel workbook or text-based PDF.');
   }
@@ -184,7 +184,7 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedWorkbookPrevie
     if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
       throw new Error('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
     }
-    return preview;
+    return { preview, textLines: lines.map((line) => `Page ${line.pageNumber}: ${line.text}`) };
   } catch (error) {
     if (error instanceof Error && /^(This PDF|Orbis could not find selectable text)/.test(error.message)) throw error;
     throw new Error('Orbis could not read this file. Check that it is a valid, unprotected PDF.');
@@ -193,7 +193,14 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedWorkbookPrevie
   }
 }
 
+export type ParsedDocument = { preview: ParsedWorkbookPreview; textLines: string[] };
+
 export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> {
+  return (await parseDocument(file)).preview;
+}
+
+// Preview plus the full text as lines, for saving and search (RAG).
+export async function parseDocument(file: File): Promise<ParsedDocument> {
   if (!(file instanceof File)) throw new Error('Choose an Excel workbook or PDF file.');
   const extension = file.name.toLowerCase().split('.').pop();
   if (extension !== 'xlsx' && extension !== 'pdf') {
@@ -221,6 +228,7 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
   let observationNumber = 0;
   const observations: WorkbookObservation[] = [];
   const sheets: ParsedWorkbookPreview['sheets'] = [];
+  const textLines: string[] = [];
 
   for (const worksheet of workbook.worksheets) {
     let maxColumn = 0;
@@ -244,6 +252,10 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
       return (heading || `Column ${index + 1}`).slice(0, 48);
     });
     const dataRows = rows.slice(1);
+    for (const row of dataRows) {
+      const cells = columns.map((column, index) => (row.values[index] ? `${column}: ${row.values[index]}` : '')).filter(Boolean);
+      if (cells.length) textLines.push(`${worksheet.name.slice(0, 48)} row ${row.rowNumber}: ${cells.join('; ')}`);
+    }
     const visibleColumnCount = Math.min(columns.length, 10);
     const previewRows = dataRows.slice(0, 2).map((row) => ({
       rowNumber: row.rowNumber,
@@ -280,5 +292,5 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
   if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
     throw new Error('This workbook is too complex to preview safely. Reduce its worksheets, columns, or cell text and try again.');
   }
-  return preview;
+  return { preview, textLines };
 }

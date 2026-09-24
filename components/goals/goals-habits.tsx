@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Plus, Target } from 'lucide-react';
 import { checkInHabitAction, createGoalAction, createHabitAction, updateGoalProgressAction } from '@/app/goals/actions';
 import type { GoalsSummary } from '@/lib/goals/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 function todayInAppTimezone() {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
@@ -42,7 +43,7 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
             event.preventDefault();
             const form = event.currentTarget;
             const fields = new FormData(form);
-            run(() => createGoalAction({ title: String(fields.get('title') ?? ''), target: String(fields.get('target') ?? ''), current: String(fields.get('current') ?? '0'), unit: String(fields.get('unit') ?? ''), dueDate: String(fields.get('dueDate') ?? '') }));
+            run(() => safeAction(createGoalAction)({ title: String(fields.get('title') ?? ''), target: String(fields.get('target') ?? ''), current: String(fields.get('current') ?? '0'), unit: String(fields.get('unit') ?? ''), dueDate: String(fields.get('dueDate') ?? '') }));
             form.reset();
           }}>
             <strong><Plus size={15} /> Add a goal</strong>
@@ -57,7 +58,7 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
               <div className="goal-item-head"><strong>{goal.title}</strong><span>{progress}%</span></div>
               <small>{goal.current.toLocaleString()} / {goal.target.toLocaleString()}{goal.unit ? ` ${goal.unit}` : ''}{goal.dueDate ? ` · by ${goal.dueDate}` : ''}</small>
               <div className="progress"><i style={{ width: `${progress}%` }} /></div>
-              <form className="progress-form" onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('current'); run(() => updateGoalProgressAction(goal.id, String(value ?? ''))); }}>
+              <form className="progress-form" onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('current'); run(() => safeAction(updateGoalProgressAction)(goal.id, String(value ?? ''))); }}>
                 <label>Update progress<input name="current" type="number" min="0" max={goal.target} step="0.01" defaultValue={goal.current} /></label>
                 <button className="finance-button secondary" type="submit" disabled={isPending}>Update</button>
               </form>
@@ -70,7 +71,7 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
             event.preventDefault();
             const form = event.currentTarget;
             const title = new FormData(form).get('title');
-            run(() => createHabitAction(String(title ?? '')));
+            run(() => safeAction(createHabitAction)(String(title ?? '')));
             form.reset();
           }}>
             <strong><Plus size={15} /> Add a habit</strong>
@@ -78,7 +79,7 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
             <button className="finance-button primary" type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save habit'}</button>
           </form>
           {data.habits.length ? <div className="stack-card habit-list">{data.habits.map((habit) => <article className="habit" key={habit.id}>
-            <button type="button" className={habit.checkedToday ? 'done' : ''} aria-label={habit.checkedToday ? `${habit.title} completed today` : `Check in: ${habit.title}`} disabled={isPending || habit.checkedToday} onClick={() => run(() => checkInHabitAction(habit.id, todayInAppTimezone()))}>{habit.checkedToday ? <Check size={14} /> : ''}</button>
+            <button type="button" className={habit.checkedToday ? 'done' : ''} aria-label={habit.checkedToday ? `${habit.title} completed today` : `Check in: ${habit.title}`} disabled={isPending || habit.checkedToday} onClick={() => run(() => safeAction(checkInHabitAction)(habit.id, todayInAppTimezone()))}>{habit.checkedToday ? <Check size={14} /> : ''}</button>
             <div><strong>{habit.title}</strong><p>{habit.checkedToday ? 'Done today' : 'Not checked in today'} · {habit.streak} day streak</p></div>
           </article>)}</div> : <div className="empty-state"><Target size={22} /><strong>No habits yet</strong><p>Add a small routine above and check in when you complete it.</p></div>}
         </>

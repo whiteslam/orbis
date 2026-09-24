@@ -11,7 +11,7 @@ export class OpenRouterError extends Error {
 }
 
 // Sends one JSON-mode chat request and returns the model's text.
-export async function requestOpenRouterJson({ system, user, maxTokens, title }: { system: string; user: string; maxTokens: number; title: string }) {
+export async function requestOpenRouterJson({ system, user, maxTokens, title, timeoutMs = 30_000 }: { system: string; user: string; maxTokens: number; title: string; timeoutMs?: number }) {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new OpenRouterError('AI suggestions are not configured yet. Add OPENROUTER_API_KEY to the server environment.', null);
 
@@ -33,7 +33,7 @@ export async function requestOpenRouterJson({ system, user, maxTokens, title }: 
       reasoning: { effort: 'low' },
     }),
     cache: 'no-store',
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {

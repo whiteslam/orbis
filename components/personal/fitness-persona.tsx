@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { deleteFitnessPersonaAction, saveFitnessPersonaAction } from '@/app/personal/actions';
 import { FITNESS_PERSONA_STARTER } from '@/lib/personal/fitness-persona';
 import type { FitnessPersonaState } from '@/lib/personal/repository';
+import { safeAction } from '@/lib/client/safe-action';
 
 export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersonaState; persona: string | null }) {
   const router = useRouter();
@@ -33,13 +34,13 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
     {state === 'unavailable' && <p className="finance-notice error" role="status">Your saved persona could not be loaded. Refresh and try again.</p>}
     <form className="personal-form stack-card" onSubmit={(event) => {
       event.preventDefault();
-      startTransition(async () => show(await saveFitnessPersonaAction(draft)));
+      startTransition(async () => show(await safeAction(saveFitnessPersonaAction)(draft)));
     }}>
       <label htmlFor="fitness-persona">Review and edit your persona<textarea id="fitness-persona" value={draft} maxLength={3000} rows={14} onChange={(event) => setDraft(event.currentTarget.value)} disabled={pending || state !== 'ready'} required /></label>
       <small>{draft.length.toLocaleString('en-IN')} / 3,000 characters</small>
       <button className="finance-button primary" type="submit" disabled={pending || state !== 'ready'}>{pending ? 'Saving…' : persona ? 'Update persona' : 'Save persona'}</button>
     </form>
-    {persona && state === 'ready' && <button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await deleteFitnessPersonaAction()))}>Remove saved persona</button>}
+    {persona && state === 'ready' && <button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await safeAction(deleteFitnessPersonaAction)()))}>Remove saved persona</button>}
     {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
   </section>;
 }

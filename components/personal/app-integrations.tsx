@@ -9,6 +9,7 @@ import { disconnectGrowwAction } from '@/app/invest/actions';
 import { GrowwConnectForm } from '@/components/invest/groww-portfolio';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
+import { safeAction } from '@/lib/client/safe-action';
 
 function when(value: string | null) {
   if (!value) return null;
@@ -56,7 +57,7 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
         <div className="app-card-actions">
           {!google && <a className="finance-button primary" href="/auth/gmail/start?return=settings">Connect Google</a>}
           {google && (googleNeedsReconnect || !google.calendar) && <a className="finance-button primary" href="/auth/gmail/start?return=settings">{googleNeedsReconnect ? 'Reconnect Google' : 'Add Calendar access'}</a>}
-          {google && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading Gmail alerts and Calendar.', disconnectGmailAction)}><Unplug size={13} /> Disconnect</button>}
+          {google && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading Gmail alerts and Calendar.', safeAction(disconnectGmailAction))}><Unplug size={13} /> Disconnect</button>}
         </div>
       </article>
 
@@ -71,7 +72,7 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
           : null}
         <div className="app-card-actions">
           {!groww && !showGrowwForm && <button className="finance-button primary" type="button" onClick={() => setShowGrowwForm(true)}>Connect Groww</button>}
-          {groww?.source === 'account' && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Groww? Orbis will delete the saved key and secret.', disconnectGrowwAction)}><Unplug size={13} /> Disconnect</button>}
+          {groww?.source === 'account' && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Groww? Orbis will delete the saved key and secret.', safeAction(disconnectGrowwAction))}><Unplug size={13} /> Disconnect</button>}
           {groww?.source === 'server' && <small className="groww-muted">Using the server’s Groww keys.</small>}
         </div>
       </article>

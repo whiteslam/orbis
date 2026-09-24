@@ -6,6 +6,7 @@ import { ExternalLink, KeyRound, LoaderCircle, RefreshCw, ShieldCheck, Unplug } 
 import { connectGrowwAction, disconnectGrowwAction } from '@/app/invest/actions';
 import type { GrowwPortfolio as GrowwPortfolioData } from '@/lib/invest/types';
 import { inr, signedInr } from '@/components/invest/format';
+import { safeAction } from '@/lib/client/safe-action';
 
 const SOURCE_LABEL = { groww: 'LTP', amfi: 'NAV', alpha_vantage: 'BSE', coingecko: 'Price' } as const;
 
@@ -28,7 +29,7 @@ export function GrowwConnectForm({ reconnect, setupMessage, onConnected }: { rec
     event.preventDefault();
     setMessage(null);
     startTransition(async () => {
-      const result = await connectGrowwAction({ apiKey, apiSecret });
+      const result = await safeAction(connectGrowwAction)({ apiKey, apiSecret });
       setMessage({ text: result.message, success: result.success });
       if (result.success) {
         setApiKey('');
@@ -70,7 +71,7 @@ export function GrowwPortfolio({ portfolio, isLoading, onRefresh }: { portfolio:
     if (!window.confirm('Disconnect Groww? Orbis will delete the saved key and secret.')) return;
     setNotice(null);
     startDisconnect(async () => {
-      const result = await disconnectGrowwAction();
+      const result = await safeAction(disconnectGrowwAction)();
       setNotice({ text: result.message, success: result.success });
       if (result.success) onRefresh();
     });

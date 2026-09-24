@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { passkeyErrorMessage, supportsPasskeys } from '@/components/security/passkey-errors';
 import { PinInput } from '@/components/security/pin-input';
 import type { PinStatus } from '@/lib/security/pin-store';
+import { safeAction } from '@/lib/client/safe-action';
 
 type Method = 'pin' | 'device' | 'password';
 
@@ -36,7 +37,7 @@ export function LockScreen({ email, pinStatus }: { email: string | null; pinStat
   function submitPin(value: string) {
     setMessage(null);
     startTransition(async () => {
-      const result = await unlockWithPinAction(value);
+      const result = await safeAction(unlockWithPinAction)(value);
       if (result.success) return router.refresh();
       setPin('');
       setMessage(result.message);
@@ -55,7 +56,7 @@ export function LockScreen({ email, pinStatus }: { email: string | null; pinStat
         setMessage(passkeyErrorMessage(error));
         return;
       }
-      const result = await confirmUnlockAction();
+      const result = await safeAction(confirmUnlockAction)();
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -69,7 +70,7 @@ export function LockScreen({ email, pinStatus }: { email: string | null; pinStat
     const password = String(new FormData(event.currentTarget).get('password') ?? '');
     setMessage(null);
     startTransition(async () => {
-      const result = await unlockWithPasswordAction(password);
+      const result = await safeAction(unlockWithPasswordAction)(password);
       if (!result.success) {
         setMessage(result.message);
         return;

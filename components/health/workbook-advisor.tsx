@@ -5,6 +5,7 @@ import { FileSpreadsheet, LoaderCircle, Sparkles, Upload, X } from 'lucide-react
 import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean }) {
   const fileInputId = useId();
@@ -30,7 +31,7 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
     setIncludeGoals(goalCount > 0);
     setIncludeSteps(hasStepData);
     startTransition(async () => {
-      const result = await parseWorkbookAction(formData);
+      const result = await safeAction(parseWorkbookAction)(formData);
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -44,7 +45,7 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
     setMessage(null);
     setAdvice(null);
     startTransition(async () => {
-      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
+      const result = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
       if (!result.success) {
         setMessage(result.message);
         return;

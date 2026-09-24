@@ -35,7 +35,7 @@ export function AppLockGuard({ idleMs, children }: { idleMs: number; children: R
     if (lockedRef.current) return;
     lockedRef.current = true;
     setLocked(true);
-    void lockAppAction().finally(() => router.refresh());
+    void lockAppAction().catch(() => undefined).finally(() => router.refresh());
   }, [router]);
 
   useEffect(() => {

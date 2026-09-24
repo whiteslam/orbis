@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, LoaderCircle, Mail, X } from 'lucide-react';
 import { confirmFinanceCandidateAction, ignoreFinanceCandidateAction, parseFinanceCandidatesAction } from '@/app/finance/actions';
 import type { FinanceCandidateSummary } from '@/lib/finance/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary }) {
   const router = useRouter();
@@ -18,7 +19,7 @@ function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary
   function confirm() {
     setMessage(null);
     startTransition(async () => {
-      const result = await confirmFinanceCandidateAction({
+      const result = await safeAction(confirmFinanceCandidateAction)({
         candidateId: candidate.id,
         amount,
         currency,
@@ -34,7 +35,7 @@ function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary
   function ignore() {
     setMessage(null);
     startTransition(async () => {
-      const result = await ignoreFinanceCandidateAction(candidate.id);
+      const result = await safeAction(ignoreFinanceCandidateAction)(candidate.id);
       setMessage(result.message);
       if (result.success) router.refresh();
     });
@@ -67,7 +68,7 @@ export function GmailReviewQueue({ candidates, unparsedCount }: { candidates: Fi
   function parseNextBatch() {
     setMessage(null);
     startTransition(async () => {
-      const result = await parseFinanceCandidatesAction();
+      const result = await safeAction(parseFinanceCandidatesAction)();
       setMessage(result.message);
       router.refresh();
     });

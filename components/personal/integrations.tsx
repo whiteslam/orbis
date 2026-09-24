@@ -6,6 +6,7 @@ import { MapPin } from 'lucide-react';
 import { clearHomeCityAction, saveHomeCityAction } from '@/app/personal/actions';
 import type { HomeLocation } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
+import { safeAction } from '@/lib/client/safe-action';
 
 const STATE_LABEL: Record<Integration['state'], string> = {
   connected: 'Connected',
@@ -42,13 +43,13 @@ export function HomeCityEditor({ location }: { location: HomeLocation }) {
   if (location.state === 'setup') return null;
 
   return (
-    <form className="personal-form stack-card home-city" onSubmit={(event) => { event.preventDefault(); run(() => saveHomeCityAction(city)); }}>
+    <form className="personal-form stack-card home-city" onSubmit={(event) => { event.preventDefault(); run(() => safeAction(saveHomeCityAction)(city)); }}>
       <strong><MapPin size={15} /> Home city</strong>
       <p className="home-city-note">{location.city ? `Weather uses ${location.city} when your browser location isn’t shared.` : 'Used for weather when your browser location isn’t shared.'}</p>
       <div className="home-city-row">
         <input value={city} onChange={(event) => setCity(event.currentTarget.value)} maxLength={80} placeholder={location.city ?? 'e.g. Pune'} aria-label="Home city" disabled={isPending} />
         <button className="finance-button primary" type="submit" disabled={isPending || city.trim().length < 2}>{isPending ? 'Saving…' : location.city ? 'Change' : 'Save'}</button>
-        {location.city && <button className="finance-button secondary" type="button" disabled={isPending} onClick={() => run(clearHomeCityAction)}>Remove</button>}
+        {location.city && <button className="finance-button secondary" type="button" disabled={isPending} onClick={() => run(safeAction(clearHomeCityAction))}>Remove</button>}
       </div>
       {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
     </form>

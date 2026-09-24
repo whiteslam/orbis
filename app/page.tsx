@@ -6,6 +6,7 @@ import { getContextNotes } from '@/lib/goals/memory';
 import { getFitnessPersona, getHomeLocation, getPersonalProfile } from '@/lib/personal/repository';
 import { getAppConnections, getIntegrationStatus } from '@/lib/providers/status';
 import { getJournal } from '@/lib/journal/repository';
+import { getHealthLibrary } from '@/lib/health-docs/repository';
 import { getNotificationSettings } from '@/lib/notifications/repository';
 import { getInvestmentSummary } from '@/lib/invest/repository';
 import { getStepsSummary } from '@/lib/health/steps-repository';
@@ -35,7 +36,7 @@ export default async function Page() {
   // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
   if (pinStatus === 'none' || pinStatus === 'locked') return <PinSetup reset={pinStatus === 'locked'} />;
 
-  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections] = await Promise.all([
+  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary] = await Promise.all([
     getFinanceSummary(userId),
     getGoalsSummary(userId),
     getContextNotes(userId),
@@ -48,10 +49,11 @@ export default async function Page() {
     getJournal(userId),
     getNotificationSettings(userId),
     getAppConnections(userId, email),
+    getHealthLibrary(userId),
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} />
+      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} />
     </AppLockGuard>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2 } from 'lucide-react';
 import { deleteInvestmentHoldingAction, saveInvestmentHoldingAction } from '@/app/invest/actions';
 import type { InvestmentHolding, InvestmentSummary, LivePrice } from '@/lib/invest/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 const assetTypes = [
   ['stock', 'Stock'], ['fund', 'Mutual fund'], ['etf', 'ETF'], ['crypto', 'Crypto'], ['cash', 'Cash'], ['other', 'Other'],
@@ -73,7 +74,7 @@ export function InvestmentHoldings({ summary, livePrices = {} }: { summary: Inve
     event.preventDefault();
     const form = event.currentTarget;
     const fields = new FormData(form);
-    run(() => saveInvestmentHoldingAction({
+    run(() => safeAction(saveInvestmentHoldingAction)({
       id,
       name: String(fields.get('name') ?? ''),
       assetType: String(fields.get('assetType') ?? ''),
@@ -105,7 +106,7 @@ export function InvestmentHoldings({ summary, livePrices = {} }: { summary: Inve
       const live = liveValueLine(holding, livePrices[holding.id]);
       return <article className="stack-card investment-holding" key={holding.id}>
         <form onSubmit={(event) => onSave(event, holding.id)}>
-          <div className="investment-holding-head"><strong>{holding.name}</strong><button type="button" className="workbook-icon-button" aria-label={`Remove ${holding.name}`} disabled={pending} onClick={() => { if (window.confirm(`Remove ${holding.name} from your holdings?`)) run(() => deleteInvestmentHoldingAction(holding.id)); }}><Trash2 size={15} /></button></div>
+          <div className="investment-holding-head"><strong>{holding.name}</strong><button type="button" className="workbook-icon-button" aria-label={`Remove ${holding.name}`} disabled={pending} onClick={() => { if (window.confirm(`Remove ${holding.name} from your holdings?`)) run(() => safeAction(deleteInvestmentHoldingAction)(holding.id)); }}><Trash2 size={15} /></button></div>
           <small>{assetTypes.find(([value]) => value === holding.assetType)?.[1] ?? 'Other'} · {holding.quantity.toLocaleString()} units · {money(holding.quantity * holding.valuePerUnit, holding.currency)} as of {holding.valueAsOf}</small>
           {live && <small className="groww-price">{live}</small>}
           {!live && holding.marketSymbol && <small className="groww-price missing">No live price for {holding.marketSymbol} right now</small>}

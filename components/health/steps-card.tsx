@@ -7,6 +7,7 @@ import { deleteHealthStepsAction, importAppleHealthStepsAction } from '@/app/hea
 import { ActivityRings } from '@/components/health/activity-rings';
 import type { StepsSummary } from '@/lib/health/types';
 import type { WorkerMessage } from '@/components/health/apple-health.worker';
+import { safeAction } from '@/lib/client/safe-action';
 
 const number = (value: number) => Math.round(value).toLocaleString('en-IN');
 const dayLabel = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { ...options, timeZone: 'UTC' });
@@ -14,6 +15,8 @@ const shiftDate = (date: string, days: number) => new Date(Date.parse(`${date}T0
 
 // Apple Health's Activity colours: steps red-pink, average green, goal days cyan.
 const COLORS = { steps: '#fa114f', average: '#34c759', streak: '#00b7d6', activity: '#fa5b30' };
+// Darker shade of the activity orange for text, so the title meets 4.5:1 contrast.
+const ACTIVITY_TEXT = '#c2410c';
 const RANGES = [['W', 7], ['M', 30], ['3M', 90]] as const;
 
 type Progress = { stage: string; fraction: number };
@@ -64,7 +67,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
       setProgress(null);
       if (!result.days.length) return setMessage({ tone: 'error', text: 'No step records were found in this export.' });
       startSaving(async () => {
-        const saved = await importAppleHealthStepsAction({ fileName: file.name, recordCount: result.recordCount, days: result.days });
+        const saved = await safeAction(importAppleHealthStepsAction)({ fileName: file.name, recordCount: result.recordCount, days: result.days });
         setMessage(saved.success
           ? { tone: 'success', text: `Imported ${number(result.days.length)} days, ${dayLabel(result.firstDate!, { day: 'numeric', month: 'short', year: 'numeric' })} to ${dayLabel(result.lastDate!, { day: 'numeric', month: 'short', year: 'numeric' })}.` }
           : { tone: 'error', text: saved.message });
@@ -77,7 +80,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
 
   function deleteSteps() {
     startSaving(async () => {
-      const result = await deleteHealthStepsAction();
+      const result = await safeAction(deleteHealthStepsAction)();
       setConfirmDelete(false);
       setMessage({ tone: result.success ? 'success' : 'error', text: result.message });
     });
@@ -113,7 +116,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
       <h3 className="apple-section">Activity</h3>
       <section className="apple-card steps-card" aria-labelledby="steps-title">
         <header className="apple-card-head">
-          <strong id="steps-title" style={{ color: COLORS.activity }}><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong>
+          <strong id="steps-title" style={{ color: ACTIVITY_TEXT }}><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong>
           {latest && <span>{dayLabel(latest.date, { day: 'numeric', month: 'short' })}</span>}
         </header>
 

@@ -10,3 +10,8 @@ dist/
 !.env.example
 .vercel
 Excelsheet.pdf
+
+# Playwright: signed-in test sessions and reports (never commit)
+tests/e2e/.auth/
+tests/e2e/.report/
+tests/e2e/.results/

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
@@ -15,7 +14,6 @@ import {
   Landmark,
   Mail,
   PiggyBank,
-  Search,
   Sparkles,
   TrendingUp,
   UserRound,
@@ -27,6 +25,9 @@ import { PasskeyPrompt } from '@/components/security/passkey-prompt';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { disconnectGmailAction, syncFinanceAction } from '@/app/finance/actions';
 import { WorkbookAdvisor } from '@/components/health/workbook-advisor';
+import { HealthLibrary } from '@/components/health/health-library';
+import { PlanBuilder } from '@/components/health/plan-builder';
+import type { LibraryState } from '@/lib/health-docs/repository';
 import { GmailReviewQueue } from '@/components/finance/gmail-review-queue';
 import { ManualTransactionForm } from '@/components/finance/manual-transaction-form';
 import { CurrencyCard } from '@/components/finance/currency-card';
@@ -48,8 +49,12 @@ import { InvestDashboard } from '@/components/invest/invest-dashboard';
 import type { InvestmentSummary } from '@/lib/invest/types';
 import { StepsCard } from '@/components/health/steps-card';
 import type { StepsSummary } from '@/lib/health/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment'; // | 'habits' — hidden for now.
+
+const TAB_TO_HASH: Record<Tab, string> = { home: 'home', finance: 'finance', health: 'health', investment: 'invest', personal: 'profile' };
+const HASH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_HASH).map(([tab, hash]) => [hash, tab as Tab])) as Record<string, Tab>;
 
 const nav = [
   ['home', 'Home', Home],
@@ -84,7 +89,7 @@ function LargeTitle({ title }: { title: string }) {
   );
 }
 
-function SectionTitle({ title, action = 'See all' }: { title: string; action?: string }) {
+function SectionTitle({ title, action = '' }: { title: string; action?: string }) {
   return (
     <div className="section-title">
       <h3>{title}</h3>
@@ -106,7 +111,7 @@ function HomeScreen({ financeSummary, goalsSummary, preferredName, openHealth, o
         <div className="avatar">{firstName?.charAt(0).toLocaleUpperCase() || 'G'}</div>
         <div className="brand"><OrbisMark size={24} />Orbis</div>
         <div className="topbar-actions">
-          <button className="icon-btn" aria-label="Notifications"><Bell size={19} /></button>
+          <button className="icon-btn" type="button" aria-label="Notification settings" title="Notification settings" onClick={openPersonal}><Bell size={19} /></button>
           <LockButton />
           <SignOutButton />
         </div>
@@ -176,7 +181,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   function sync() {
     setActionMessage(null);
     startTransition(async () => {
-      const result = await syncFinanceAction();
+      const result = await safeAction(syncFinanceAction)();
       setActionMessage({ text: result.message, success: result.success });
       if (result.success) router.refresh();
     });
@@ -186,7 +191,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     if (!window.confirm('Disconnect Gmail and remove saved transaction alert IDs from Orbis?')) return;
     setActionMessage(null);
     startTransition(async () => {
-      const result = await disconnectGmailAction();
+      const result = await safeAction(disconnectGmailAction)();
       setActionMessage({ text: result.message, success: result.success });
       if (result.success) router.refresh();
     });
@@ -230,10 +235,10 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
           )}
         </div>
         {summary.databaseReady && !summary.loadError && !summary.connection && (
-          <Link className="finance-button primary" href="/auth/gmail/start">Connect</Link>
+          <a className="finance-button primary" href="/auth/gmail/start">Connect</a>
         )}
         {summary.databaseReady && !summary.loadError && summary.connection?.status === 'reconnect_required' && (
-          <Link className="finance-button primary" href="/auth/gmail/start">Reconnect</Link>
+          <a className="finance-button primary" href="/auth/gmail/start">Reconnect</a>
         )}
         {summary.databaseReady && !summary.loadError && summary.connection?.status === 'connected' && (
           <div className="finance-actions">
@@ -289,12 +294,16 @@ function stepGoal(goalsSummary: GoalsSummary) {
   return goal ? Math.round(goal.target) : 10_000;
 }
 
-function HealthScreen({ goalsSummary, stepsSummary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean }) {
+function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean }) {
   return (
     <div className="screen-body grouped">
       <LargeTitle title="Summary" />
       <StepsCard summary={stepsSummary} stepGoal={stepGoal(goalsSummary)} />
-      <h3 className="apple-section">Workbooks</h3>
+      <h3 className="apple-section">Plan builder</h3>
+      <PlanBuilder plans={healthLibrary.plans} state={healthLibrary.state} />
+      <h3 className="apple-section">Health documents</h3>
+      <HealthLibrary documents={healthLibrary.documents} state={healthLibrary.state} />
+      <h3 className="apple-section">Quick analysis</h3>
       <div className="health-intro"><HeartPulse size={18} /><p>Start with a spreadsheet you already have. Orbis will show what it read before sending a summary for advice.</p></div>
       <WorkbookAdvisor goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} />
       <p className="health-disclaimer">Suggestions are informational and aren’t a medical diagnosis.</p>
@@ -315,7 +324,7 @@ function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, person
 
   return (
     <div className="screen-body">
-      <header className="page-head"><div><small>ORBIS</small><h2>{content.title}</h2></div><button className="icon-btn"><Search size={19}/></button></header>
+      <header className="page-head"><div><small>ORBIS</small><h2>{content.title}</h2></div></header>
       {tab !== 'investment' && <div className="feature-hero"><div className="feature-icon"><Icon size={28}/></div><h3>{content.title}</h3><p>{content.text}</p></div>}
       {/* {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />} */}
       {tab === 'investment' && <InvestDashboard summary={investmentSummary} goalCount={goalsSummary.goals.length} />}
@@ -323,7 +332,7 @@ function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, person
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState }) {
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<ProfileSection>('profile');
@@ -332,6 +341,9 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
     const url = new URL(window.location.href);
     const requestedTab = url.searchParams.get('tab');
     const notice = url.searchParams.get('gmail');
+    // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority.
+    const fromHash = HASH_TO_TAB[url.hash.slice(1)];
+    if (fromHash && !requestedTab) setTab(fromHash);
     if (requestedTab === 'finance') setTab('finance');
     if (requestedTab === 'settings') {
       setProfileSection('settings');
@@ -345,10 +357,15 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
     }
   }, []);
 
+  useEffect(() => {
+    const hash = tab === 'home' ? '' : `#${TAB_TO_HASH[tab]}`;
+    if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
+  }, [tab]);
+
   const screen = useMemo(() => {
-    if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} preferredName={personalProfile.profile?.preferredName ?? null} openHealth={() => setTab('health')} openPersonal={() => setTab('personal')} />;
+    if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} preferredName={personalProfile.profile?.preferredName ?? null} openHealth={() => setTab('health')} openPersonal={() => { setProfileSection('settings'); setTab('personal'); }} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} />;
+    if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} />;
     if (tab === 'personal') {
       return (
         <ProfileScreen
@@ -370,7 +387,7 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
       );
     }
     return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} homeLocation={homeLocation} integrations={integrations} />;
-  }, [appConnections, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, investmentSummary, personalProfile, stepsSummary, tab]);
+  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, investmentSummary, personalProfile, stepsSummary, tab]);
 
   return (
     <main className="stage">

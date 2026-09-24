@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, Flame, LoaderCircle, Trash2 } from 'lucide-react';
 import { deleteJournalEntryAction, saveJournalEntryAction } from '@/app/personal/journal-actions';
 import { MOODS, SUGGESTED_TAGS, type JournalEntry, type JournalSummary } from '@/lib/journal/types';
+import { safeAction } from '@/lib/client/safe-action';
 
 function today() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
@@ -35,7 +36,7 @@ function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: str
     }
     setMessage(null);
     startTransition(async () => {
-      const result = await saveJournalEntryAction({ date, mood, body, tags });
+      const result = await safeAction(saveJournalEntryAction)({ date, mood, body, tags });
       setMessage({ text: result.message, success: result.success });
       if (result.success) {
         router.refresh();
@@ -85,7 +86,7 @@ export function Journal({ journal }: { journal: JournalSummary }) {
   function remove(date: string) {
     if (!window.confirm(`Delete your journal entry for ${prettyDate(date)}?`)) return;
     startTransition(async () => {
-      await deleteJournalEntryAction(date);
+      await safeAction(deleteJournalEntryAction)(date);
       router.refresh();
     });
   }
