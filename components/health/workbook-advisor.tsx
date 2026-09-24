@@ -60,9 +60,11 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
   }
 
   const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
-  const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets));
+  const isPdf = preview?.fileName.toLowerCase().endsWith('.pdf') ?? false;
+  const documentText = preview ? `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}` : '';
+  const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets, documentText));
   const disclosureItems = [
-    'a bounded workbook summary',
+    isPdf ? 'a bounded PDF preview and up to 24 extracted text snippets' : 'a bounded Excel summary',
     includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
     includePersonalProfile ? 'your personal profile (name, role, and More about me text)' : null,
     includeFitnessPersona ? 'your saved fitness persona' : null,
@@ -72,17 +74,17 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     <section className="workbook-advisor" aria-labelledby="workbook-title">
       <div className="workbook-heading">
         <div className="workbook-icon"><FileSpreadsheet size={19} /></div>
-        <div><h3 id="workbook-title">Ask Orbis about a workbook</h3><p>Upload a health, finance, or activity spreadsheet for a clear preview and data-based suggestions.</p></div>
+        <div><h3 id="workbook-title">Ask Orbis about your data</h3><p>Upload a health, finance, or activity Excel or PDF file for a clear preview and data-based suggestions.</p></div>
       </div>
 
       {!preview ? (
         <div className="workbook-upload-form">
           <label className="workbook-dropzone" htmlFor={fileInputId}>
             <Upload size={19} />
-            <strong>Choose an Excel or CSV file</strong>
-            <span>.xlsx or .csv · up to 1.5 MB</span>
+            <strong>Choose an Excel or PDF file</strong>
+            <span>.xlsx or .pdf · up to 1.5 MB</span>
           </label>
-          <input id={fileInputId} name="workbook" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required disabled={isPending} onChange={(event) => {
+          <input id={fileInputId} name="workbook" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" required disabled={isPending} onChange={(event) => {
             const selected = event.currentTarget.files?.[0];
             if (!selected) return;
             const formData = new FormData();
@@ -115,13 +117,13 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
 
           {preview.observations.length > 0 && (
             <div className="workbook-observations">
-              <strong>What Orbis calculated</strong>
+              <strong>{isPdf ? 'What Orbis found in the document' : 'What Orbis calculated'}</strong>
               {preview.observations.map((observation) => <p key={observation.id}><span>{observation.sheet} · {observation.column}</span>{observation.value}</p>)}
             </div>
           )}
 
           {!advice && preview.observations.length === 0 && (
-            <p className="workbook-no-observations" role="status">Orbis needs at least three numeric values in a column to ground its advice. You can still review this preview or choose another workbook.</p>
+            <p className="workbook-no-observations" role="status">Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. You can still review this preview or choose another file.</p>
           )}
 
           {!advice && preview.observations.length > 0 && (

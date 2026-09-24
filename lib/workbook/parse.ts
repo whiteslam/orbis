@@ -1,8 +1,8 @@
 import 'server-only';
 
 import ExcelJS from 'exceljs';
-import { Readable } from 'node:stream';
 import yauzl from 'yauzl';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
 const MAX_FILE_BYTES = 1_572_864;
@@ -13,6 +13,9 @@ const MAX_CELLS = 20_000;
 const MAX_PREVIEW_BYTES = 24 * 1024;
 const MAX_ARCHIVE_EXPANDED_BYTES = 12_000_000;
 const MAX_ARCHIVE_ENTRIES = 1_024;
+const MAX_PDF_PAGES = 50;
+const MAX_PDF_TEXT_ITEMS = 20_000;
+const MAX_PDF_TEXT_CHARS = 120_000;
 
 async function checkXlsxArchiveSize(bytes: Buffer) {
   const archive = await yauzl.fromBufferPromise(bytes, { lazyEntries: true, validateEntrySizes: true });
@@ -81,31 +84,127 @@ function safeFileName(name: string) {
   return basename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'workbook';
 }
 
-export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> {
-  if (!(file instanceof File)) throw new Error('Choose an Excel workbook or CSV file.');
-  const extension = file.name.toLowerCase().split('.').pop();
-  if (extension !== 'xlsx' && extension !== 'csv') {
-    throw new Error('Use an .xlsx workbook or .csv file. Older .xls files are not supported yet.');
+type PdfTextSegment = { x: number; text: string };
+
+async function parsePdf(file: File, bytes: Buffer): Promise<ParsedWorkbookPreview> {
+  if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
+    throw new Error('This file does not look like a valid PDF. Choose an Excel workbook or text-based PDF.');
   }
-  if (!file.size) throw new Error('This file is empty. Choose a workbook with data.');
-  if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 1.5 MB. Save a smaller workbook and try again.');
+
+  const loadingTask = getDocument({
+    data: new Uint8Array(bytes),
+    useSystemFonts: false,
+    disableFontFace: true,
+    verbosity: 0,
+  });
+
+  try {
+    const document = await loadingTask.promise;
+    if (document.numPages > MAX_PDF_PAGES) {
+      throw new Error(`This PDF has more than ${MAX_PDF_PAGES} pages. Split it into smaller files and try again.`);
+    }
+
+    const lines: Array<{ pageNumber: number; lineNumber: number; text: string }> = [];
+    let textItemCount = 0;
+    let textCharacterCount = 0;
+
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const grouped = new Map<number, PdfTextSegment[]>();
+
+      for (const item of content.items) {
+        if (!('str' in item) || typeof item.str !== 'string' || !item.str.trim()) continue;
+        textItemCount += 1;
+        textCharacterCount += item.str.length;
+        if (textItemCount > MAX_PDF_TEXT_ITEMS || textCharacterCount > MAX_PDF_TEXT_CHARS) {
+          throw new Error('This PDF contains too much text to preview safely. Choose a shorter or simpler document.');
+        }
+
+        const y = Math.round(item.transform[5] * 2) / 2;
+        const segments = grouped.get(y) ?? [];
+        segments.push({ x: item.transform[4], text: item.str.trim() });
+        grouped.set(y, segments);
+      }
+
+      const pageLines = [...grouped.entries()]
+        .sort(([leftY], [rightY]) => rightY - leftY)
+        .map(([, segments]) => segments
+          .sort((left, right) => left.x - right.x)
+          .map((segment) => segment.text)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim())
+        .filter(Boolean);
+
+      for (const text of pageLines) {
+        if (lines.length >= MAX_ROWS) {
+          throw new Error(`This PDF has more than ${MAX_ROWS} text lines. Choose a shorter document and try again.`);
+        }
+        lines.push({ pageNumber, lineNumber: lines.length + 1, text });
+      }
+      page.cleanup();
+    }
+
+    if (!lines.length) {
+      throw new Error('Orbis could not find selectable text in this PDF. Scanned image-only PDFs are not supported yet; choose a text-based PDF or Excel workbook.');
+    }
+
+    const meaningfulLines = lines.filter((line) => line.text.length >= 8);
+    const numericLines = meaningfulLines.filter((line) => /\d/.test(line.text));
+    const sourceLines = numericLines.length ? numericLines : meaningfulLines;
+    const observationLines = sourceLines.length <= 24
+      ? sourceLines
+      : Array.from({ length: 24 }, (_, index) => sourceLines[Math.floor(index * (sourceLines.length - 1) / 23)]);
+    const observations: WorkbookObservation[] = observationLines.map((line, index) => ({
+      id: `obs_${index + 1}`,
+      sheet: 'PDF text',
+      column: 'Extracted text',
+      label: `Extracted content from page ${line.pageNumber}`,
+      value: `Page ${line.pageNumber}: ${line.text}`.slice(0, 240),
+    }));
+
+    const sheet: ParsedWorkbookPreview['sheets'][number] = {
+      name: 'PDF text',
+      rowCount: lines.length,
+      columnCount: 2,
+      columns: ['Page', 'Extracted text'],
+      previewRows: lines.slice(0, 2).map((line) => ({
+        rowNumber: line.lineNumber,
+        values: [String(line.pageNumber), line.text.slice(0, 80)],
+      })),
+    };
+    const preview: ParsedWorkbookPreview = { fileName: safeFileName(file.name), sheets: [sheet], observations };
+    if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
+      throw new Error('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
+    }
+    return preview;
+  } catch (error) {
+    if (error instanceof Error && /^(This PDF|Orbis could not find selectable text)/.test(error.message)) throw error;
+    throw new Error('Orbis could not read this file. Check that it is a valid, unprotected PDF.');
+  } finally {
+    await loadingTask.destroy().catch(() => undefined);
+  }
+}
+
+export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> {
+  if (!(file instanceof File)) throw new Error('Choose an Excel workbook or PDF file.');
+  const extension = file.name.toLowerCase().split('.').pop();
+  if (extension !== 'xlsx' && extension !== 'pdf') {
+    throw new Error('Use an .xlsx workbook or .pdf file. CSV and older .xls files are not supported.');
+  }
+  if (!file.size) throw new Error('This file is empty. Choose a workbook or PDF with data.');
+  if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 1.5 MB. Choose a smaller file and try again.');
 
   const bytes = Buffer.from(await file.arrayBuffer());
+  if (extension === 'pdf') return parsePdf(file, bytes);
+
   const workbook = new ExcelJS.Workbook();
   try {
-    if (extension === 'xlsx') {
-      await checkXlsxArchiveSize(bytes);
-      await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
-    } else {
-      const csvType = file.type;
-      if (csvType && !['text/csv', 'application/vnd.ms-excel', 'application/octet-stream'].includes(csvType)) {
-        throw new Error('The selected file does not look like a CSV.');
-      }
-      await workbook.csv.read(Readable.from([bytes]));
-    }
+    await checkXlsxArchiveSize(bytes);
+    await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   } catch (error) {
-    if (error instanceof Error && error.message === 'The selected file does not look like a CSV.') throw error;
-    throw new Error('Orbis could not read this file. Check that it is a valid, unprotected .xlsx or .csv workbook.');
+    throw new Error('Orbis could not read this file. Check that it is a valid, unprotected .xlsx workbook.');
   }
 
   if (workbook.worksheets.length === 0) throw new Error('No worksheets with data were found in this file.');

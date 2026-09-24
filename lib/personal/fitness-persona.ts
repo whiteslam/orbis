@@ -17,6 +17,6 @@ Personalization limits:
 
 const FITNESS_TERMS = /\b(health|fitness|body|weight|steps?|activity|workouts?|exercise|training|sleep|calories?|nutrition|food|meals?|protein|carbs?|fat|blood pressure|glucose|heart rate|wellness|diet|waist|muscle)\b/i;
 
-export function workbookHasFitnessFields(sheets: Array<{ name: string; columns: string[] }>): boolean {
-  return sheets.some((sheet) => FITNESS_TERMS.test([sheet.name, ...sheet.columns].join(' ')));
+export function workbookHasFitnessFields(sheets: Array<{ name: string; columns: string[] }>, documentText = ''): boolean {
+  return FITNESS_TERMS.test(`${sheets.map((sheet) => [sheet.name, ...sheet.columns].join(' ')).join(' ')} ${documentText}`);
 }

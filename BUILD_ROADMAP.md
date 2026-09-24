@@ -72,7 +72,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 
 - [x] Support health, finance, activity, and mixed spreadsheets
 - [x] Use OpenRouter with a server-side key and configurable model
-- [x] Support `.xlsx` and `.csv`, with strict file, row, column, and cell limits
+- [x] Support `.xlsx` and text-based `.pdf` files, with strict size, page, row, and content limits; CSV is not accepted
 - [x] Build a workbook preview before any AI-provider call
 - [x] Extract bounded previews and deterministic numeric observations in memory
 - [x] Generate advice only after user consent, and filter evidence to signed observations
