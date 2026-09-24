@@ -60,7 +60,18 @@ export async function signIn(formData: FormData): Promise<AuthActionState> {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: 'We could not sign you in with those details.', message: null };
+  if (error?.code === 'email_not_confirmed') {
+    return { error: 'Confirm your email using the link we sent before signing in. Check your inbox and spam folder.', message: null };
+  }
+  if (error?.code === 'invalid_credentials') {
+    return { error: 'The email and password did not match. If this is a new account, create it first and confirm your email.', message: null };
+  }
+  if (error?.status === 429) {
+    return { error: 'Too many sign-in attempts. Wait a few minutes, then try again.', message: null };
+  }
+  if (error) {
+    return { error: 'Sign-in is temporarily unavailable. Please try again shortly.', message: null };
+  }
 
   redirect('/');
 }
