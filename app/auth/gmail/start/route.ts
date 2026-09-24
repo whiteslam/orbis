@@ -4,7 +4,8 @@ import { getSiteUrl } from '@/lib/site-url';
 
 export async function GET(request: NextRequest) {
   const userId = await getAuthenticatedUserId();
-  if (!userId) return NextResponse.redirect(new URL('/login?next=%2F', getSiteUrl()));
+  // '/' sends signed-out users to /login and shows the lock screen when Orbis is locked.
+  if (!userId) return NextResponse.redirect(new URL('/', getSiteUrl()));
 
   try {
     const { state, cookieValue } = createSignedGmailState(userId);

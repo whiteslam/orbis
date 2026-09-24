@@ -2,12 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { isAppUnlocked } from '@/lib/security/app-lock';
+import { loadLivePortfolio } from '@/lib/invest/live';
+import { loadManualHoldings } from '@/lib/invest/repository';
+import type { LivePortfolioData } from '@/lib/invest/types';
 
 async function authenticatedClient() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
-  return error || typeof userId !== 'string' ? null : { supabase, userId };
+  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
+  return { supabase, userId };
 }
 
 const validId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
@@ -20,7 +25,32 @@ export type HoldingInput = {
   valuePerUnit: string;
   currency: string;
   valueAsOf: string;
+  marketSource?: string;
+  marketSymbol?: string;
 };
+
+// Normalizes the optional live-price link. Returns null for "no link", or an error message.
+function parseMarketLink(input: HoldingInput): { source: string | null; symbol: string | null } | string {
+  const source = typeof input.marketSource === 'string' ? input.marketSource : '';
+  const rawSymbol = typeof input.marketSymbol === 'string' ? input.marketSymbol.trim() : '';
+  if (!source) return { source: null, symbol: null };
+  if (!rawSymbol) return 'Enter the symbol for the live price, or choose “No live price”.';
+  if (source === 'alpha_vantage') {
+    const symbol = rawSymbol.toUpperCase();
+    if (!/^[A-Z0-9&-]{1,20}(\.[A-Z]{2,4})?$/.test(symbol)) return 'Use a stock symbol such as RELIANCE (India) or AAPL (US).';
+    // Indian shares are quoted on BSE; other markets use the symbol as entered.
+    return { source, symbol: symbol.includes('.') || input.currency.trim().toUpperCase() !== 'INR' ? symbol : `${symbol}.BSE` };
+  }
+  if (source === 'amfi') {
+    const symbol = rawSymbol.toUpperCase();
+    return /^IN[A-Z0-9]{10}$/.test(symbol) ? { source, symbol } : 'Use the fund’s 12-character ISIN, such as INF179K01VQ6.';
+  }
+  if (source === 'coingecko') {
+    const symbol = rawSymbol.toLowerCase();
+    return /^[a-z0-9-]{1,60}$/.test(symbol) ? { source, symbol } : 'Use the CoinGecko coin id, such as bitcoin or ethereum.';
+  }
+  return 'Choose a valid live price source.';
+}
 
 export async function saveInvestmentHoldingAction(input: HoldingInput) {
   const auth = await authenticatedClient();
@@ -39,16 +69,25 @@ export async function saveInvestmentHoldingAction(input: HoldingInput) {
   const date = new Date(`${valueAsOf}T00:00:00.000Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valueAsOf) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== valueAsOf) return { success: false, message: 'Choose a valid value date.' };
 
-  const row = { user_id: auth.userId, name, asset_type: assetType, quantity, value_per_unit: valuePerUnit, currency, value_as_of: valueAsOf, updated_at: new Date().toISOString() };
-  if (input.id) {
-    const { data, error } = await auth.supabase.from('investment_holdings').update(row).eq('id', input.id).eq('user_id', auth.userId).select('id').maybeSingle();
-    if (error || !data) return { success: false, message: 'Holding could not be updated. Check that the Investment migration is applied.' };
-  } else {
-    const { error } = await auth.supabase.from('investment_holdings').insert(row);
-    if (error) return { success: false, message: 'Holding could not be saved. Check that the Investment migration is applied.' };
+  const link = parseMarketLink(input);
+  if (typeof link === 'string') return { success: false, message: link };
+
+  const baseRow = { user_id: auth.userId, name, asset_type: assetType, quantity, value_per_unit: valuePerUnit, currency, value_as_of: valueAsOf, updated_at: new Date().toISOString() };
+  const save = (row: Record<string, unknown>) => input.id
+    ? auth.supabase.from('investment_holdings').update(row).eq('id', input.id).eq('user_id', auth.userId).select('id').maybeSingle()
+    : auth.supabase.from('investment_holdings').insert(row).select('id').maybeSingle();
+
+  let { data, error } = await save({ ...baseRow, market_symbol: link.symbol, market_source: link.source });
+  let linkDropped = false;
+  if (error?.code === 'PGRST204' || error?.code === '42703') {
+    // The api_cache migration adds the market columns; save the rest without them.
+    ({ data, error } = await save(baseRow));
+    linkDropped = Boolean(link.source);
   }
+  if (error || !data) return { success: false, message: input.id ? 'Holding could not be updated. Check that the Investment migration is applied.' : 'Holding could not be saved. Check that the Investment migration is applied.' };
   revalidatePath('/');
-  return { success: true, message: input.id ? 'Holding updated.' : 'Holding added.' };
+  const message = input.id ? 'Holding updated.' : 'Holding added.';
+  return { success: true, message: linkDropped ? `${message} Apply the api_cache migration to enable its live price.` : message };
 }
 
 export async function deleteInvestmentHoldingAction(id: string) {
@@ -59,4 +98,14 @@ export async function deleteInvestmentHoldingAction(id: string) {
   if (error || !data) return { success: false, message: 'Holding could not be removed.' };
   revalidatePath('/');
   return { success: true, message: 'Holding removed.' };
+}
+
+export async function loadInvestLiveAction(): Promise<LivePortfolioData | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
+  const email = typeof data?.claims?.email === 'string' ? data.claims.email.toLowerCase() : null;
+  const { holdings } = await loadManualHoldings(supabase, userId);
+  return loadLivePortfolio(email, holdings);
 }

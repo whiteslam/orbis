@@ -46,9 +46,9 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
             form.reset();
           }}>
             <strong><Plus size={15} /> Add a goal</strong>
-            <label>What do you want to achieve?<input name="title" maxLength={100} required placeholder="Build an emergency fund" /></label>
+            <label>What do you want to achieve?<input name="title" maxLength={100} required placeholder="Lose 5 kg, run a 10K…" /></label>
             <div className="form-row"><label>Target<input name="target" type="number" min="0.01" step="0.01" required placeholder="100000" /></label><label>Current progress<input name="current" type="number" min="0" step="0.01" defaultValue="0" /></label></div>
-            <div className="form-row"><label>Unit<input name="unit" maxLength={24} placeholder="INR, workouts…" /></label><label>Target date<input name="dueDate" type="date" /></label></div>
+            <div className="form-row"><label>Unit<input name="unit" maxLength={24} placeholder="kg, km, workouts…" /></label><label>Target date<input name="dueDate" type="date" /></label></div>
             <button className="finance-button primary" type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save goal'}</button>
           </form>
           {data.goals.length ? <div className="stack-card personal-list">{data.goals.map((goal) => {

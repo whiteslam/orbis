@@ -6,7 +6,7 @@ import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
-export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false }: { savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean }) {
+export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
   const [advice, setAdvice] = useState<WorkbookAdvice | null>(null);
@@ -15,6 +15,8 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
   const [includeFitnessPersona, setIncludeFitnessPersona] = useState(false);
   const [includePersonalProfile, setIncludePersonalProfile] = useState(false);
+  const [includeGoals, setIncludeGoals] = useState(goalCount > 0);
+  const [includeSteps, setIncludeSteps] = useState(hasStepData);
   const [isPending, startTransition] = useTransition();
 
   function parseFile(formData: FormData) {
@@ -25,6 +27,8 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
     setIncludePersonalProfile(false);
+    setIncludeGoals(goalCount > 0);
+    setIncludeSteps(hasStepData);
     startTransition(async () => {
       const result = await parseWorkbookAction(formData);
       if (!result.success) {
@@ -40,7 +44,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setMessage(null);
     setAdvice(null);
     startTransition(async () => {
-      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, consented: consent });
+      const result = await generateWorkbookAdviceAction({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -57,6 +61,8 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
     setIncludePersonalProfile(false);
+    setIncludeGoals(goalCount > 0);
+    setIncludeSteps(hasStepData);
   }
 
   const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
@@ -68,6 +74,8 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
     includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
     includePersonalProfile ? 'your personal profile (name, role, and More about me text)' : null,
     includeFitnessPersona ? 'your saved fitness persona' : null,
+    includeGoals && goalCount > 0 ? 'your goals and progress' : null,
+    includeSteps && hasStepData ? 'your daily step summary' : null,
   ].filter((item): item is string => Boolean(item));
 
   return (
@@ -82,7 +90,7 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
           <label className="workbook-dropzone" htmlFor={fileInputId}>
             <Upload size={19} />
             <strong>Choose an Excel or PDF file</strong>
-            <span>.xlsx or .pdf · up to 1.5 MB</span>
+            <span>.xlsx or .pdf · up to 100 MB</span>
           </label>
           <input id={fileInputId} name="workbook" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" required disabled={isPending} onChange={(event) => {
             const selected = event.currentTarget.files?.[0];
@@ -128,6 +136,8 @@ export function WorkbookAdvisor({ savedContextCount = 0, hasSavedFitnessPersona 
 
           {!advice && preview.observations.length > 0 && (
             <div className="workbook-consent">
+              {goalCount > 0 && <label><input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my {goalCount} {goalCount === 1 ? 'goal' : 'goals'} (title, progress, target date) to tailor advice and a plan.</label>}
+              {hasStepData && <label><input type="checkbox" checked={includeSteps} onChange={(event) => { setIncludeSteps(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my Apple Health step summary (daily averages, trend and the last 14 days).</label>}
               {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => { setIncludeSavedContext(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} relevant saved notes from Personal (up to 3,000 characters).</label>}
               {hasSavedPersonalProfile && <label><input type="checkbox" checked={includePersonalProfile} onChange={(event) => { setIncludePersonalProfile(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my personal profile and “More about me” details for this request.</label>}
               {personaRelevant && <label><input type="checkbox" checked={includeFitnessPersona} onChange={(event) => { setIncludeFitnessPersona(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my saved fitness persona for this health or fitness workbook.</label>}

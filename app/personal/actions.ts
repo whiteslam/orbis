@@ -2,12 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { isAppUnlocked } from '@/lib/security/app-lock';
+import { friendlyProviderMessage, ProviderError } from '@/lib/providers/core';
+import { geocodeCity } from '@/lib/providers/weather';
 
 async function authenticatedClient() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
-  return error || typeof userId !== 'string' ? null : { supabase, userId };
+  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
+  return { supabase, userId };
 }
 
 export async function addContextNoteAction(noteInput: string) {
@@ -97,4 +101,32 @@ export async function deletePersonalProfileAction() {
   if (error) return { success: false, message: 'Profile could not be removed.' };
   revalidatePath('/');
   return { success: true, message: 'Personal profile removed.' };
+}
+
+export async function saveHomeCityAction(cityInput: string) {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to save your city.' };
+  const city = typeof cityInput === 'string' ? cityInput.trim().slice(0, 80) : '';
+  if (city.length < 2) return { success: false, message: 'Enter a city name.' };
+
+  let match: Awaited<ReturnType<typeof geocodeCity>>;
+  try {
+    match = await geocodeCity(city);
+  } catch (error) {
+    return { success: false, message: error instanceof ProviderError && error.kind === 'invalid_request' ? `Couldn’t find “${city}”. Try adding the state or country.` : friendlyProviderMessage(error) };
+  }
+
+  const { error } = await auth.supabase.from('user_locations').upsert({ user_id: auth.userId, city: match.city, latitude: match.latitude, longitude: match.longitude, updated_at: new Date().toISOString() });
+  if (error) return { success: false, message: 'Your city could not be saved. Apply the api_cache migration in Supabase and try again.' };
+  revalidatePath('/');
+  return { success: true, message: `Saved ${match.city} as your home city.` };
+}
+
+export async function clearHomeCityAction() {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to update your city.' };
+  const { error } = await auth.supabase.from('user_locations').delete().eq('user_id', auth.userId);
+  if (error) return { success: false, message: 'Your city could not be removed.' };
+  revalidatePath('/');
+  return { success: true, message: 'Home city removed.' };
 }

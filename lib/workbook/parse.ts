@@ -5,7 +5,7 @@ import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
-const MAX_FILE_BYTES = 1_572_864;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const MAX_SHEETS = 8;
 const MAX_ROWS = 2_000;
 const MAX_COLUMNS = 40;
@@ -194,7 +194,7 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
     throw new Error('Use an .xlsx workbook or .pdf file. CSV and older .xls files are not supported.');
   }
   if (!file.size) throw new Error('This file is empty. Choose a workbook or PDF with data.');
-  if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 1.5 MB. Choose a smaller file and try again.');
+  if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 100 MB. Choose a smaller file and try again.');
 
   const bytes = Buffer.from(await file.arrayBuffer());
   if (extension === 'pdf') return parsePdf(file, bytes);

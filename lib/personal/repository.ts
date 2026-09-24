@@ -42,3 +42,13 @@ export async function getPersonalProfile(userId: string): Promise<PersonalProfil
   if (['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '')) return { state: 'setup', profile: null };
   return { state: 'unavailable', profile: null };
 }
+
+export type HomeLocation = { state: PersonalDataState; city: string | null };
+
+export async function getHomeLocation(userId: string): Promise<HomeLocation> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('user_locations').select('city').eq('user_id', userId).maybeSingle();
+  if (!error) return { state: 'ready', city: data?.city ?? null };
+  if (['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '')) return { state: 'setup', city: null };
+  return { state: 'unavailable', city: null };
+}

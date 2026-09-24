@@ -2,12 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { isAppUnlocked } from '@/lib/security/app-lock';
 
 async function userClient() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
-  return error || typeof userId !== 'string' ? null : { supabase, userId };
+  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
+  return { supabase, userId };
 }
 
 function validId(id: string) {

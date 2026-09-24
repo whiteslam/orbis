@@ -3,6 +3,7 @@ import 'server-only';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { isAppUnlocked } from '@/lib/security/app-lock';
 import { encryptRefreshToken } from '@/lib/gmail/crypto';
 import { getGmailConfig } from '@/lib/gmail/config';
 
@@ -31,6 +32,9 @@ export async function getAuthenticatedUserId() {
   if (error || typeof userId !== 'string') {
     return null;
   }
+
+  // A locked Orbis behaves as signed out for data access until the user unlocks.
+  if (!(await isAppUnlocked(data?.claims))) return null;
 
   return userId;
 }

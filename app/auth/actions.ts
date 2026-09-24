@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { clearAppUnlock, unlockWithFreshAuth } from '@/lib/security/app-lock';
 
 export type AuthActionState = {
   error: string | null;
@@ -14,6 +15,12 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function readEmail(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim();
   return emailPattern.test(email) ? email : null;
+}
+
+// A fresh sign-in also unlocks Orbis on this device.
+async function unlockForSession(supabase: Awaited<ReturnType<typeof createClient>>, accessToken: string) {
+  const { data } = await supabase.auth.getClaims(accessToken);
+  await unlockWithFreshAuth(data?.claims);
 }
 
 function siteUrl() {
@@ -44,7 +51,10 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
   });
 
   if (error) return { error: 'We could not create your account. Check your details and try again.', message: null };
-  if (data.session) redirect('/');
+  if (data.session) {
+    await unlockForSession(supabase, data.session.access_token);
+    redirect('/');
+  }
 
   return {
     ...emptyState,
@@ -59,7 +69,7 @@ export async function signIn(formData: FormData): Promise<AuthActionState> {
   if (!email || !password) return { error: 'Enter your email and password.', message: null };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error?.code === 'email_not_confirmed') {
     return { error: 'Confirm your email using the link we sent before signing in. Check your inbox and spam folder.', message: null };
   }
@@ -73,12 +83,14 @@ export async function signIn(formData: FormData): Promise<AuthActionState> {
     return { error: 'Sign-in is temporarily unavailable. Please try again shortly.', message: null };
   }
 
+  if (data.session) await unlockForSession(supabase, data.session.access_token);
   redirect('/');
 }
 
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  await clearAppUnlock();
   redirect('/login');
 }
 
