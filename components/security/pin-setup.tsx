@@ -50,7 +50,7 @@ export function PinSetup({ reset }: { reset: boolean }) {
   }
 
   return (
-    <AuthShell>
+    <AuthShell centered>
       <div className="lock-heading">
         <div className="lock-icon"><KeyRound size={20} aria-hidden="true" /></div>
         <h1>{reset ? 'Set a new Orbis PIN' : 'Set your Orbis PIN'}</h1>

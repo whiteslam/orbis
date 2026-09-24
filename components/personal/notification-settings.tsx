@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, BellOff, LoaderCircle, Smartphone } from 'lucide-react';
-import { saveNotificationPreferencesAction, subscribePushAction, unsubscribePushAction } from '@/app/personal/notification-actions';
+import { Bell, BellOff, LoaderCircle, Send, Smartphone } from 'lucide-react';
+import { saveNotificationPreferencesAction, sendTestNotificationAction, subscribePushAction, unsubscribePushAction } from '@/app/personal/notification-actions';
 import { NOTIFICATION_SLOTS, type NotificationPreferences, type NotificationSettings as Settings } from '@/lib/notifications/preferences';
 import { safeAction } from '@/lib/client/safe-action';
 
@@ -127,6 +127,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         {device === 'off' && settings.pushConfigured && <button className="finance-button primary" type="button" onClick={enableDevice} disabled={isPending}>{isPending ? <LoaderCircle className="workbook-spinner" size={13} /> : <Bell size={13} />} Enable</button>}
         {device === 'on' && <button className="finance-button secondary" type="button" onClick={disableDevice} disabled={isPending}><BellOff size={13} /> Turn off</button>}
       </div>
+      {device === 'on' && <button className="finance-button secondary notify-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)())} disabled={isPending}><Send size={13} /> Send test notification</button>}
       {!settings.pushConfigured && <p className="groww-muted">Push keys aren’t set on the server yet (NEXT_PUBLIC_VAPID_PUBLIC_KEY).</p>}
       {message && <p className={`finance-notice ${message.success ? 'success' : 'error'}`} role="status">{message.text}</p>}
     </div>

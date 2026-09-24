@@ -305,11 +305,11 @@ button { font: inherit; }
 .bottom-nav button span { font-size: 8px; letter-spacing: -.02em; }
 .bottom-nav button.active { color: #101922; font-weight: 800; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
-.auth-stage { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top, #fff 0, #eef5f7 48%, #e8eef5 100%); position: relative; overflow: hidden; }
+.auth-stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px; background: radial-gradient(circle at top, #fff 0, #eef5f7 48%, #e8eef5 100%); position: relative; overflow: hidden; }
 .auth-stage::before, .auth-stage::after { content: ''; position: absolute; width: 330px; height: 330px; border-radius: 50%; filter: blur(12px); opacity: .45; pointer-events: none; }
 .auth-stage::before { background: #d9f6ef; top: -170px; right: -100px; }
 .auth-stage::after { background: #dce9ff; bottom: -190px; left: -110px; }
-.auth-card { width: min(100%, 440px); padding: 30px; position: relative; z-index: 1; border: 1px solid rgba(222,230,237,.9); border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 28px 80px rgba(26,43,57,.13); backdrop-filter: blur(18px); }
+.auth-card { width: min(100%, 440px); margin: auto; padding: 30px; position: relative; z-index: 1; border: 1px solid rgba(222,230,237,.9); border-radius: 28px; background: rgba(255,255,255,.9); box-shadow: 0 28px 80px rgba(26,43,57,.13); backdrop-filter: blur(18px); }
 .auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
 .auth-brand > div:last-child { display: flex; flex-direction: column; gap: 3px; }
 .auth-brand strong { font-size: 20px; letter-spacing: -.04em; }
@@ -355,7 +355,19 @@ button { font: inherit; }
 .pin-dots span { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #b8c3cd; transition: background .12s, border-color .12s; }
 .pin-dots span.filled { background: var(--ink); border-color: var(--ink); }
 .lock-signout { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px; color: var(--muted); font-size: 12px; }
-.lock-cover { gap: 12px; align-content: center; justify-items: center; color: var(--muted); font-size: 13px; }
+/* Lock and PIN screens: one centred column. Form labels and fields stay left-aligned for readability. */
+.auth-card.centered { text-align: center; }
+.auth-card.centered .auth-brand { justify-content: center; text-align: left; }
+.auth-card.centered .lock-icon { margin: 0 auto; }
+.auth-card.centered .lock-pin { margin: 6px 0 4px; }
+.auth-card.centered .auth-form { text-align: left; }
+.auth-card.centered .auth-feedback { text-align: left; }
+.auth-card.centered .lock-signout { justify-content: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+/* Keyboard open: pin the card to the top of the visible area so the field sits right above the keyboard. */
+.keyboard-open .auth-stage { padding-top: max(12px, env(safe-area-inset-top, 0px)); }
+.keyboard-open .auth-card { margin-top: 0; }
+.keyboard-open .auth-card .auth-brand { margin-bottom: 16px; }
+.lock-cover { gap: 12px; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
 .lock-cover p { margin: 0; position: relative; z-index: 1; }
 .lock-cover .lock-icon { position: relative; z-index: 1; }
 .passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
@@ -777,6 +789,7 @@ button { font: inherit; }
 .notify-device { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 13px; background: #f6f8fb; }
 .notify-device > svg { color: var(--accent); flex: 0 0 auto; }
 .notify-device > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notify-test { gap: 6px; margin-top: 8px; }
 .notify-device strong { font-size: 12px; }
 .notify-device small { color: var(--muted); font-size: 10px; line-height: 1.4; }
 .notify-device .finance-button { gap: 5px; }

@@ -22,6 +22,7 @@
     "react-dom": "latest",
     "recharts": "latest",
     "server-only": "^0.0.1",
+    "web-push": "^3.6.7",
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/web-push": "^3.6.4",
     "@types/yauzl": "^3.4.0",
     "typescript": "latest",
     "vitest": "^5.0.1"
