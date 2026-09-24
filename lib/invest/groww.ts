@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createHash } from 'node:crypto';
-import type { GrowwHolding, GrowwPortfolio } from '@/lib/invest/types';
+import type { BrokerHolding, BrokerPortfolio } from '@/lib/invest/types';
 import { getFundNavs, getStockQuotes } from '@/lib/providers/markets';
 
 // Read-only Groww Trade API client: access token, holdings, and (when the plan
@@ -91,7 +91,7 @@ async function loadPrices(symbols: string[], token: string) {
   return prices;
 }
 
-export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promise<Pick<GrowwPortfolio, 'livePrices' | 'fetchedAt' | 'holdings'>> {
+export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promise<Pick<BrokerPortfolio, 'livePrices' | 'fetchedAt' | 'holdings'>> {
   const token = await getAccessToken(credentials);
   const holdingsResult = await growwGet('/holdings/user', token, tokenCacheKey(credentials));
   if (holdingsResult.status === 401 || holdingsResult.status === 403) throw new GrowwAuthError('Groww rejected this connection. Approve today’s access on the Groww API keys page, or reconnect with a new key.');
@@ -106,7 +106,7 @@ export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promis
   });
 
   const growwPrices = holdings.length ? await loadPrices(holdings.map((holding) => holding.symbol), token) : null;
-  const priced: GrowwHolding[] = holdings.map((holding) => {
+  const priced: BrokerHolding[] = holdings.map((holding) => {
     const lastPrice = growwPrices?.get(holding.symbol) ?? null;
     return { ...holding, lastPrice, priceSource: lastPrice === null ? null : 'groww', priceAsOf: lastPrice === null ? null : new Date().toISOString(), priceStale: false };
   });

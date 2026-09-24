@@ -3,26 +3,20 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Activity,
   Bell,
-  Brain,
   // CheckCircle2, // Habits tab is hidden for now.
-  CircleDollarSign,
-  Goal,
   HeartPulse,
   Home,
   Landmark,
   Mail,
-  PiggyBank,
   Sparkles,
   TrendingUp,
   UserRound,
   WalletCards,
 } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
-import { LockButton } from '@/components/security/app-lock-guard';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
-import { SignOutButton } from '@/components/auth/sign-out-button';
 import { disconnectGmailAction, syncFinanceAction } from '@/app/finance/actions';
 import { WorkbookAdvisor } from '@/components/health/workbook-advisor';
 import { HealthLibrary } from '@/components/health/health-library';
@@ -34,7 +28,10 @@ import { CurrencyCard } from '@/components/finance/currency-card';
 import { TransactionList } from '@/components/finance/transaction-list';
 import { SpendingSummary } from '@/components/finance/spending-summary';
 import type { FinanceSummary } from '@/lib/finance/types';
-import { composeBrief, type BriefWeather } from '@/lib/home/brief';
+import type { BriefWeather } from '@/lib/home/brief';
+import { composeFocus, composeQuietRows } from '@/lib/focus/home';
+import type { FocusTarget } from '@/lib/focus/types';
+import { FieldHead, FieldLabel, FocusSlides, FocusSurface, QuietList } from '@/components/field/field';
 import { WeatherCard } from '@/components/home/weather-card';
 import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
@@ -46,10 +43,10 @@ import type { JournalSummary } from '@/lib/journal/types';
 import type { NotificationSettings } from '@/lib/notifications/preferences';
 import type { AppConnections } from '@/lib/providers/status';
 import { InvestDashboard } from '@/components/invest/invest-dashboard';
-import type { InvestmentSummary } from '@/lib/invest/types';
 import { StepsCard } from '@/components/health/steps-card';
 import type { StepsSummary } from '@/lib/health/types';
 import { safeAction } from '@/lib/client/safe-action';
+import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 
 type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment'; // | 'habits' — hidden for now.
 
@@ -65,19 +62,6 @@ const nav = [
   // ['habits', 'Habits', CheckCircle2], // Hidden for now.
 ] as const;
 
-function MetricCard({ title, value, sub, icon: Icon }: { title: string; value: string; sub?: string; icon: React.ElementType }) {
-  return (
-    <div className="metric-card">
-      <div className="metric-icon"><Icon size={18} /></div>
-      <div className="metric-copy">
-        <span>{title}</span>
-        <strong>{value}</strong>
-        {sub && <small>{sub}</small>}
-      </div>
-    </div>
-  );
-}
-
 // iOS-style large title with today's date, as in the Health app's Summary.
 function LargeTitle({ title }: { title: string }) {
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
@@ -89,82 +73,44 @@ function LargeTitle({ title }: { title: string }) {
   );
 }
 
-function SectionTitle({ title, action = '' }: { title: string; action?: string }) {
-  return (
-    <div className="section-title">
-      <h3>{title}</h3>
-      {action && <button>{action}</button>}
-    </div>
-  );
-}
-
-function HomeScreen({ financeSummary, goalsSummary, preferredName, openHealth, openPersonal }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; preferredName: string | null; openHealth: () => void; openPersonal: () => void }) {
+// Home leads with one decision on a single lifted surface; everything else is a
+// quiet row. What that decision is comes from composeFocus, not from the layout.
+function HomeScreen({ financeSummary, goalsSummary, stepsSummary, documentCount, savedAdviceAt, preferredName, openTab, openSettings }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; stepsSummary: StepsSummary; documentCount: number; savedAdviceAt: string | null; preferredName: string | null; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
-  const monthlyTotal = financeSummary.monthlyExpenses.length === 1 ? financeSummary.monthlyExpenses[0] : null;
-  const monthlyDisplay = monthlyTotal ? money(monthlyTotal.amount, monthlyTotal.currency) : financeSummary.monthlyExpenses.length > 1 ? 'Multiple' : '—';
   const firstName = preferredName?.trim().split(/\s+/)[0] || null;
-  const brief = composeBrief({ finance: financeSummary, goals: goalsSummary, name: firstName, weather });
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+
+  const input = { finance: financeSummary, goals: goalsSummary, steps: stepsSummary, documentCount };
+  const brief = composeFocus({ ...input, weather, name: preferredName, savedAdviceAt });
+  const quiet = composeQuietRows(input);
+  const heading = quiet.every((row) => row.empty) ? 'Quiet today' : 'Everything else';
+  // Scenes switch to their night variant from the weather service, or the clock if it has not answered.
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+  const night = weather?.isDay === undefined ? hour < 6 || hour >= 19 : !weather.isDay;
 
   return (
-    <div className="screen-body">
-      <header className="topbar">
-        <div className="avatar">{firstName?.charAt(0).toLocaleUpperCase() || 'G'}</div>
-        <div className="brand"><OrbisMark size={24} />Orbis</div>
-        <div className="topbar-actions">
-          <button className="icon-btn" type="button" aria-label="Notification settings" title="Notification settings" onClick={openPersonal}><Bell size={19} /></button>
-          <LockButton />
-          <SignOutButton />
+    <div className="screen-body field">
+      <header className="fd-top">
+        {/* The date is rendered in IST on both sides, but the day can turn between them. */}
+        <p className="fd-date" suppressHydrationWarning>{today}</p>
+        <div className="fd-top-actions">
+          <ThemeToggle />
+          <button className="icon-btn" type="button" aria-label="Notification settings" title="Notification settings" onClick={openSettings}><Bell size={18} /></button>
+          <button className="avatar" type="button" aria-label="Open your profile" title="Profile" onClick={() => openTab('personal')}>{firstName?.charAt(0).toLocaleUpperCase() || 'G'}</button>
         </div>
       </header>
 
-      <section className="hero-copy">
-        <p className="eyebrow">YOUR PERSONAL INTELLIGENCE SYSTEM</p>
-        <h1>{firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}</h1>
-        <p>Your life at a glance.</p>
-      </section>
-
       <PasskeyPrompt />
 
-      <div className="ai-brief">
-        <div className="sparkle brief-monogram" aria-hidden="true">O</div>
-        <div>
-          <small>FROM ORBIS</small>
-          {/* The greeting depends on the time of day, which can differ between server and browser render. */}
-          <p suppressHydrationWarning>{brief}</p>
-        </div>
-      </div>
+      <FocusSlides slides={brief} onAction={openTab} night={night} />
 
-      <WeatherCard onWeather={setWeather} openPersonal={openPersonal} />
+      <WeatherCard onWeather={setWeather} openPersonal={() => openTab('personal')} />
 
-      <div className="metric-grid">
-        <MetricCard title="Expenses this month" value={monthlyDisplay} sub={financeSummary.monthlyExpenses.length ? 'From saved transactions' : 'No expense data yet'} icon={CircleDollarSign} />
-        <MetricCard title="Transaction alerts" value={String(financeSummary.pendingCandidateCount)} sub="Saved for review" icon={Mail} />
-        <MetricCard title="Health data" value="Not added" sub="Upload a workbook" icon={Activity} />
-        <MetricCard title="Goals" value={String(goalsSummary.goals.length)} sub={goalsSummary.goals.length === 1 ? 'Active goal' : 'Active goals'} icon={Goal} />
-      </div>
+      <QuietList heading={heading} rows={quiet} onOpen={openTab} />
 
-      <SectionTitle title="Today's insights" />
-      <div className="stack-card">
-        <div className="insight"><PiggyBank size={18} /><p>{financeSummary.transactions.length ? `${financeSummary.transactions.length} recent transactions are available in Finance.` : 'No saved transactions yet. Add one manually or connect Gmail in Finance.'}</p></div>
-        <div className="insight"><HeartPulse size={18} /><p>Health insights will appear after you upload a workbook.</p></div>
-        <div className="insight"><Activity size={18} /><p>Orbis only makes suggestions from information you connect or upload.</p></div>
-      </div>
-
-      <button className="coach-card coach-card-button" type="button" onClick={openHealth}>
-        <div><Brain size={21} /></div>
-        <div><strong>Analyze a workbook</strong><p>Preview your data, then ask Orbis for grounded suggestions.</p></div>
-        <span>›</span>
-      </button>
+      <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
     </div>
   );
-}
-
-function money(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(amount);
-  } catch {
-    return `${currency} ${amount.toLocaleString('en-IN')}`;
-  }
 }
 
 function financeDate(value: string, withTime = false) {
@@ -197,58 +143,21 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     });
   }
 
-  const monthlyTotal = summary.monthlyExpenses.length === 1 ? summary.monthlyExpenses[0] : null;
-  const monthlyDisplay = monthlyTotal ? money(monthlyTotal.amount, monthlyTotal.currency) : summary.monthlyExpenses.length > 1 ? 'Multiple currencies' : '—';
-  const monthlyCaption = summary.loadError ? 'Finance data could not be loaded' : summary.monthlyExpenses.length ? 'From saved transactions' : 'No expenses yet';
-
   return (
-    <div className="screen-body grouped">
-      <LargeTitle title="Finance" />
-      {summary.month && summary.databaseReady && !summary.loadError ? (
-        <SpendingSummary month={summary.month} />
-      ) : (
-        <div className="big-stat"><span>Expenses this month</span><strong>{monthlyDisplay}</strong><small>{monthlyCaption}</small></div>
-      )}
-
-      <ManualTransactionForm disabled={!summary.databaseReady || summary.loadError} />
-      <CurrencyCard />
-
-      <section className="apple-row finance-connection" aria-labelledby="gmail-title">
-        <span className="category-tile" style={{ background: '#ea4335' }} aria-hidden="true"><Mail size={16} strokeWidth={2.2} /></span>
-        <div className="finance-connection-copy">
-          <strong id="gmail-title">Gmail alerts</strong>
-          {!summary.databaseReady ? (
-            <p>Apply all finance, Gmail, workbook-usage, and transaction-review migrations in Supabase before connecting Gmail.</p>
-          ) : summary.loadError ? (
-            <p>Finance data could not be loaded. Refresh the app and try again.</p>
-          ) : summary.connection ? (
-            <>
-              <p>{summary.connection.email}</p>
-              <small className={summary.connection.status === 'connected' ? 'connection-status' : 'connection-status needs-reconnect'}>
-                {summary.connection.status === 'connected' ? 'Connected, read-only' : 'Reconnect required'}
-                {summary.connection.lastSyncAt && ` · synced ${financeDate(summary.connection.lastSyncAt, true)}`}
-              </small>
-              {summary.pendingCandidateCount > 0 && <small>{summary.pendingCandidateCount} {summary.pendingCandidateCount === 1 ? 'alert' : 'alerts'} to review. Alerts only count as spending after you confirm them.</small>}
-            </>
-          ) : (
-            <p>Connect Gmail to find bank and card alerts. Orbis can read email but never sends, edits, or deletes it.</p>
-          )}
-        </div>
-        {summary.databaseReady && !summary.loadError && !summary.connection && (
-          <a className="finance-button primary" href="/auth/gmail/start">Connect</a>
+    <div className="screen-body field">
+      <FieldHead title="Finance" />
+      {/* The composed statement and the "This month" rows are gone; the month
+          is read off the spending card below instead of being narrated above
+          it. The controls that lived inside that statement are not — connect,
+          reconnect and sync are the only entry points on this screen, so they
+          stay under the title as a plain row. */}
+      <div className="fd-act">
+        {summary.databaseReady && !summary.loadError && !summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
+        {summary.connection?.status === 'reconnect_required' && <a className="fd-button" href="/auth/gmail/start">Reconnect Gmail</a>}
+        {summary.connection?.status === 'connected' && (
+          <button className="fd-button" type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>
         )}
-        {summary.databaseReady && !summary.loadError && summary.connection?.status === 'reconnect_required' && (
-          <a className="finance-button primary" href="/auth/gmail/start">Reconnect</a>
-        )}
-        {summary.databaseReady && !summary.loadError && summary.connection?.status === 'connected' && (
-          <div className="finance-actions">
-            <button className="finance-button primary" type="button" disabled={isPending} onClick={sync}>
-              {isPending ? 'Syncing…' : 'Sync'}
-            </button>
-            <button className="finance-button secondary" type="button" disabled={isPending} onClick={disconnect}>Disconnect</button>
-          </div>
-        )}
-      </section>
+      </div>
 
       {notice && (
         <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
@@ -258,84 +167,118 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
       )}
       {actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>}
 
-      {summary.connection && summary.databaseReady && !summary.loadError && (
-        <GmailReviewQueue candidates={summary.reviewCandidates} unparsedCount={summary.unparsedCandidateCount} />
+      {summary.month && summary.databaseReady && !summary.loadError && (
+        <SpendingSummary month={summary.month} />
       )}
 
-      <h3 className="apple-section">Latest transactions</h3>
+      {summary.connection && summary.databaseReady && !summary.loadError && summary.pendingCandidateCount > 0 && (
+        <>
+          <FieldLabel>Waiting on you</FieldLabel>
+          <GmailReviewQueue candidates={summary.reviewCandidates} unparsedCount={summary.unparsedCandidateCount} />
+        </>
+      )}
+
+      <FieldLabel>Latest transactions</FieldLabel>
       {summary.transactions.length ? (
         <TransactionList transactions={summary.transactions} />
-      ) : !summary.databaseReady ? (
-        <div className="empty-state finance-empty">
-          <Sparkles size={22} />
-          <strong>Finance data is not set up</strong>
-          <p>Apply the Supabase migration to enable saved transactions.</p>
-        </div>
-      ) : summary.loadError ? (
-        <div className="empty-state finance-empty">
-          <Sparkles size={22} />
-          <strong>Finance data could not be loaded</strong>
-          <p>Refresh the app to try again.</p>
-        </div>
       ) : (
-        <div className="empty-state finance-empty">
-          <Sparkles size={22} />
-          <strong>No saved transactions yet</strong>
-          <p>Add one manually above, or connect Gmail. Transaction alerts never count as expenses until you confirm them.</p>
-        </div>
+        <p className="fd-empty">
+          {!summary.databaseReady
+            ? 'Saved transactions need the finance migration applied in Supabase.'
+            : summary.loadError
+              ? 'Transactions could not be loaded. Refreshing the app tries again.'
+              : 'Nothing saved yet. Add one below, or connect Gmail — alerts only count as spending once you confirm them.'}
+        </p>
       )}
+
+      <FieldLabel>Add and connect</FieldLabel>
+      <ManualTransactionForm disabled={!summary.databaseReady || summary.loadError} />
+      <CurrencyCard />
+
+      <section className="fd-source" aria-labelledby="gmail-title">
+        <div>
+          <strong id="gmail-title">Gmail alerts</strong>
+          {!summary.databaseReady ? (
+            <p>Apply all finance, Gmail, workbook-usage and transaction-review migrations in Supabase before connecting Gmail.</p>
+          ) : summary.loadError ? (
+            <p>Finance data could not be loaded. Refresh the app and try again.</p>
+          ) : summary.connection ? (
+            <p>
+              {summary.connection.email} · {summary.connection.status === 'connected' ? 'connected, read-only' : 'reconnect required'}
+              {summary.connection.lastSyncAt && ` · synced ${financeDate(summary.connection.lastSyncAt, true)}`}
+            </p>
+          ) : (
+            <p>Orbis can read bank and card alerts, but never sends, edits or deletes email.</p>
+          )}
+        </div>
+        {summary.databaseReady && !summary.loadError && summary.connection?.status === 'connected' && (
+          <button className="fd-link" type="button" disabled={isPending} onClick={disconnect}>Disconnect</button>
+        )}
+      </section>
     </div>
   );
 }
 
-// Use the user's own step goal when they have one (a goal measured in steps); a yearly or lifetime total wouldn't make sense as a daily ring, so fall back to 10,000.
+// A step goal in the user's own goals wins over the default.
 function stepGoal(goalsSummary: GoalsSummary) {
   const goal = goalsSummary.goals.find((item) => /step/i.test(item.unit ?? '') && item.target >= 1_000 && item.target <= 50_000);
   return goal ? Math.round(goal.target) : 10_000;
 }
 
-function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean }) {
+function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
   return (
-    <div className="screen-body grouped">
-      <LargeTitle title="Summary" />
+    <div className="screen-body field">
+      <FieldHead title="Health" />
+      {/* Health opens on the rings themselves. The composed statement and the
+          "Your numbers" rows said the same thing in words directly above the
+          card that shows it, so both are gone rather than restated here. */}
       <StepsCard summary={stepsSummary} stepGoal={stepGoal(goalsSummary)} />
-      <h3 className="apple-section">Plan builder</h3>
+
+      <FieldLabel>Ask about a file</FieldLabel>
+      <WorkbookAdvisor goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} saved={savedWorkbookAdvice} />
+      <p className="fd-note">Suggestions are informational and aren’t a medical diagnosis.</p>
+
+      <FieldLabel>Plans</FieldLabel>
       <PlanBuilder plans={healthLibrary.plans} state={healthLibrary.state} />
-      <h3 className="apple-section">Health documents</h3>
+
+      <FieldLabel>Documents</FieldLabel>
       <HealthLibrary documents={healthLibrary.documents} state={healthLibrary.state} />
-      <h3 className="apple-section">Quick analysis</h3>
-      <div className="health-intro"><HeartPulse size={18} /><p>Start with a spreadsheet you already have. Orbis will show what it read before sending a summary for advice.</p></div>
-      <WorkbookAdvisor goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} />
-      <p className="health-disclaimer">Suggestions are informational and aren’t a medical diagnosis.</p>
-      <h3 className="apple-section">Your goals</h3>
-      <p className="health-goals-hint">Orbis uses these goals to shape its advice and plans when you ask about your data.</p>
+
+      <FieldLabel>Goals</FieldLabel>
+      <p className="fd-note">Orbis shapes its advice and plans around these whenever you ask about your data.</p>
       <GoalsHabits kind="goals" data={goalsSummary} />
     </div>
   );
 }
 
-function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, homeLocation, integrations }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; homeLocation: HomeLocation; integrations: Integration[] }) {
-  const content = {
-    personal: { title: 'Personal', icon: UserRound, text: 'Your profile, preferences, memory and important life context.' },
-    investment: { title: 'Investment', icon: Landmark, text: 'Portfolio tracking and future investment intelligence will live here.' },
-    // habits: { title: 'Habits', icon: CheckCircle2, text: 'Track routines, streaks and behavioral patterns.' },
-  }[tab];
-  const Icon = content.icon;
-
+function GenericScreen({ tab, goalsSummary, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+  if (tab !== 'investment') return null;
   return (
-    <div className="screen-body">
-      <header className="page-head"><div><small>ORBIS</small><h2>{content.title}</h2></div></header>
-      {tab !== 'investment' && <div className="feature-hero"><div className="feature-icon"><Icon size={28}/></div><h3>{content.title}</h3><p>{content.text}</p></div>}
-      {/* {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />} */}
-      {tab === 'investment' && <InvestDashboard summary={investmentSummary} goalCount={goalsSummary.goals.length} />}
+    <div className="screen-body field">
+      <FieldHead title="Invest" />
+      <InvestDashboard goalCount={goalsSummary.goals.length} savedAdvice={savedPortfolioAdvice} />
     </div>
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
-  const [profileSection, setProfileSection] = useState<ProfileSection>('profile');
+  // Journal is the only section with a reason to open today, so it is the landing
+  // one. Deep links (Home's "open settings", the Google callback) still say where to go.
+  const [profileSection, setProfileSection] = useState<ProfileSection>('journal');
+
+  // The brief is only true for as long as its data is. Re-read from the server
+  // when Home comes back into view — after finishing a task in another tab, or
+  // after the app has been in the background — so a done task never lingers.
+  useEffect(() => {
+    if (tab !== 'home') return;
+    router.refresh();
+    const onVisible = () => { if (document.visibilityState === 'visible') router.refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [router, tab]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -363,9 +306,20 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
   }, [tab]);
 
   const screen = useMemo(() => {
-    if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} preferredName={personalProfile.profile?.preferredName ?? null} openHealth={() => setTab('health')} openPersonal={() => { setProfileSection('settings'); setTab('personal'); }} />;
+    if (tab === 'home') return (
+      <HomeScreen
+        financeSummary={financeSummary}
+        goalsSummary={goalsSummary}
+        stepsSummary={stepsSummary}
+        documentCount={healthLibrary.documents.length}
+        savedAdviceAt={savedWorkbookAdvice?.createdAt ?? null}
+        preferredName={personalProfile.profile?.preferredName ?? null}
+        openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
+        openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
+      />
+    );
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} />;
+    if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'personal') {
       return (
         <ProfileScreen
@@ -386,8 +340,8 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
         />
       );
     }
-    return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} homeLocation={homeLocation} integrations={integrations} />;
-  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, investmentSummary, personalProfile, stepsSummary, tab]);
+    return <GenericScreen tab={tab} goalsSummary={goalsSummary} savedPortfolioAdvice={savedPortfolioAdvice} />;
+  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab]);
 
   return (
     <main className="stage">

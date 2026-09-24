@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSun, Droplets, LoaderCircle, MapPin, Moon, Snowflake, Sun } from 'lucide-react';
+import { Cloud, LoaderCircle, MapPin } from 'lucide-react';
 import type { BriefWeather } from '@/lib/home/brief';
 
 type WeatherResponse = BriefWeather & { feelsLike: number; humidity: number; windSpeed: number; isDay: boolean; place: string | null; stale: boolean };
@@ -11,18 +11,6 @@ type State =
   | { status: 'ready'; weather: WeatherResponse; place: string }
   | { status: 'needs-city' }
   | { status: 'error'; message: string };
-
-function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
-  const props = { size: 30, 'aria-hidden': true } as const;
-  if (code >= 95) return <CloudLightning {...props} />;
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return <Snowflake {...props} />;
-  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return <CloudRain {...props} />;
-  if (code >= 51 && code <= 57) return <CloudDrizzle {...props} />;
-  if (code === 45 || code === 48) return <CloudFog {...props} />;
-  if (code === 3) return <Cloud {...props} />;
-  if (code >= 1) return <CloudSun {...props} />;
-  return isDay ? <Sun {...props} /> : <Moon {...props} />;
-}
 
 // Home remounts on every tab switch; reuse the last result for 10 minutes.
 let lastResult: { at: number; state: State; weather: BriefWeather | null } | null = null;
@@ -81,36 +69,35 @@ export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: 
     return () => { cancelled = true; };
   }, [onWeather]);
 
+  // Weather is a line of text on Home, not a card: one number and the two facts
+  // that change what you'd do about it.
   if (state.status === 'loading') {
-    return <section className="weather-card loading"><LoaderCircle className="workbook-spinner" size={16} /><span>Checking the weather…</span></section>;
+    return <p className="fd-weather-quiet" role="status"><LoaderCircle className="workbook-spinner" size={14} /> Checking the weather…</p>;
   }
   if (state.status === 'needs-city') {
     return (
-      <button type="button" className="weather-card empty" onClick={openPersonal}>
-        <MapPin size={18} aria-hidden="true" />
-        <span><strong>See your local weather</strong><small>Allow location, or set your home city in Personal.</small></span>
+      <button type="button" className="fd-weather-quiet fd-weather-button" onClick={openPersonal}>
+        <MapPin size={14} aria-hidden="true" /> Allow location, or set your home city, for local weather.
       </button>
     );
   }
   if (state.status === 'error') {
-    return <section className="weather-card empty"><Cloud size={18} aria-hidden="true" /><span><strong>Weather</strong><small>{state.message}</small></span></section>;
+    return <p className="fd-weather-quiet"><Cloud size={14} aria-hidden="true" /> {state.message}</p>;
   }
 
   const { weather, place } = state;
+  const rain = weather.rainProbability >= 50
+    ? `${weather.rainProbability}% chance of rain`
+    : weather.rainProbability > 0
+      ? `${weather.rainProbability}% chance of rain, so probably dry`
+      : 'No rain expected';
   return (
-    <section className={`weather-card ${weather.isDay ? 'day' : 'night'}`} aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
-      <div className="weather-main">
-        <WeatherIcon code={weather.weatherCode} isDay={weather.isDay} />
-        <div>
-          <strong>{weather.temperature}°C</strong>
-          <span>{weather.condition}</span>
-        </div>
-      </div>
-      <div className="weather-meta">
-        <small><MapPin size={11} aria-hidden="true" />{place}</small>
-        <small>Feels like {weather.feelsLike}°</small>
-        <small><Droplets size={11} aria-hidden="true" />{weather.rainProbability}% chance of rain</small>
-      </div>
+    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
+      <b>{weather.temperature}°</b>
+      <p>
+        {weather.condition}, feels like {weather.feelsLike}°<br />
+        {rain} · {place}
+      </p>
     </section>
   );
 }

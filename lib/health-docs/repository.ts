@@ -40,7 +40,7 @@ export type LibraryState = { state: 'ready' | 'setup' | 'unavailable'; documents
 export async function getHealthLibrary(userId: string): Promise<LibraryState> {
   const supabase = await createClient();
   const [documents, plans] = await Promise.all([
-    supabase.from('health_documents').select('id,file_name,kind,size_bytes,storage_path,chunk_count,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
+    supabase.from('health_documents').select('id,file_name,kind,size_bytes,storage_path,chunk_count,created_at,always_include').eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
     supabase.from('health_plans').select('id,title,plan,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
   ]);
   const error = documents.error ?? plans.error;
@@ -55,6 +55,7 @@ export async function getHealthLibrary(userId: string): Promise<LibraryState> {
       hasOriginal: Boolean(row.storage_path),
       chunkCount: row.chunk_count,
       createdAt: row.created_at,
+      alwaysInclude: Boolean(row.always_include),
     })),
     plans: (plans.data ?? []).map((row) => ({ id: row.id, title: row.title, plan: row.plan, createdAt: row.created_at })),
   };
@@ -122,6 +123,39 @@ export async function signedDownloadUrl(userId: string, documentId: string) {
 }
 
 // Retrieval: the user's most relevant document passages for a question.
+/**
+ * The opening chunks of every document marked "always use", so the plan builder
+ * starts from the user's own baseline before retrieval adds anything else.
+ */
+export async function alwaysIncludedPassages(userId: string, perDocument = 4) {
+  const admin = createAdminClient();
+  const { data: documents, error } = await admin
+    .from('health_documents')
+    .select('id,file_name')
+    .eq('user_id', userId)
+    .eq('always_include', true)
+    .order('created_at', { ascending: true })
+    .limit(3);
+  if (error || !documents?.length) return [];
+
+  const { data: chunks } = await admin
+    .from('health_document_chunks')
+    .select('document_id,chunk_index,content')
+    .in('document_id', documents.map((document) => document.id))
+    .order('chunk_index', { ascending: true })
+    .limit(perDocument * documents.length);
+  const names = new Map(documents.map((document) => [document.id, document.file_name as string]));
+  const perDoc = new Map<string, number>();
+  const passages: Array<{ document_id: string; chunk_index: number; content: string; fileName: string }> = [];
+  for (const chunk of chunks ?? []) {
+    const used = perDoc.get(chunk.document_id) ?? 0;
+    if (used >= perDocument) continue;
+    perDoc.set(chunk.document_id, used + 1);
+    passages.push({ document_id: chunk.document_id, chunk_index: chunk.chunk_index, content: chunk.content, fileName: names.get(chunk.document_id) ?? 'document' });
+  }
+  return passages;
+}
+
 export async function searchHealthDocuments(userId: string, query: string, count = 8) {
   const admin = createAdminClient();
   const { count: total } = await admin.from('health_document_chunks').select('id', { count: 'exact', head: true }).eq('user_id', userId);

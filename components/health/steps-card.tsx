@@ -13,10 +13,14 @@ const number = (value: number) => Math.round(value).toLocaleString('en-IN');
 const dayLabel = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { ...options, timeZone: 'UTC' });
 const shiftDate = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
-// Apple Health's Activity colours: steps red-pink, average green, goal days cyan.
-const COLORS = { steps: '#fa114f', average: '#34c759', streak: '#00b7d6', activity: '#fa5b30' };
-// Darker shade of the activity orange for text, so the title meets 4.5:1 contrast.
-const ACTIVITY_TEXT = '#c2410c';
+// Health used to carry Apple's Activity palette — pink, green, cyan, orange —
+// which is a fourth colour system on top of the app's own. These read from the
+// theme instead: the three rings use the validated categorical series the
+// spending donut already uses, and the step bars use the Field accent, so
+// every screen draws from one palette and both themes are covered.
+const COLORS = { steps: 'var(--series-3)', average: 'var(--series-1)', streak: 'var(--series-4)', activity: 'var(--fd-accent)' };
+const TRACK = 'var(--fd-ring-track)';
+const AXIS = { line: 'var(--fd-rule)', text: 'var(--fd-faint)' };
 const RANGES = [['W', 7], ['M', 30], ['3M', 90]] as const;
 
 type Progress = { stage: string; fraction: number };
@@ -101,14 +105,16 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
       {latest && (
         <section className="apple-card rings-card" aria-label="Activity summary">
           <ActivityRings rings={[
-            { label: 'Steps', value: latest.steps / stepGoal, color: COLORS.steps, track: '#fde1e8' },
-            { label: '7-day average', value: (summary.average7 ?? 0) / stepGoal, color: COLORS.average, track: '#dcf5e2' },
-            { label: 'Goal days', value: goalDays / 7, color: COLORS.streak, track: '#d6f2f7' },
+            { label: 'Steps', value: latest.steps / stepGoal, color: COLORS.steps, track: TRACK },
+            { label: '7-day average', value: (summary.average7 ?? 0) / stepGoal, color: COLORS.average, track: TRACK },
+            { label: 'Goal days', value: goalDays / 7, color: COLORS.streak, track: TRACK },
           ]} />
+          {/* The ring's colour is a swatch, not the label's text colour: an amber
+              or cyan word is unreadable at this size against the card. */}
           <dl className="rings-legend">
-            <div><dt style={{ color: COLORS.steps }}>Steps</dt><dd><b>{number(latest.steps)}</b>/{number(stepGoal)}</dd></div>
-            <div><dt style={{ color: COLORS.average }}>7-day average</dt><dd><b>{number(summary.average7 ?? 0)}</b>/{number(stepGoal)}</dd></div>
-            <div><dt style={{ color: COLORS.streak }}>Goal days</dt><dd><b>{goalDays}</b>/7</dd></div>
+            <div><dt><i style={{ background: COLORS.steps }} aria-hidden="true" />Steps</dt><dd><b>{number(latest.steps)}</b>/{number(stepGoal)}</dd></div>
+            <div><dt><i style={{ background: COLORS.average }} aria-hidden="true" />7-day average</dt><dd><b>{number(summary.average7 ?? 0)}</b>/{number(stepGoal)}</dd></div>
+            <div><dt><i style={{ background: COLORS.streak }} aria-hidden="true" />Goal days</dt><dd><b>{goalDays}</b>/7</dd></div>
           </dl>
         </section>
       )}
@@ -116,7 +122,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
       <h3 className="apple-section">Activity</h3>
       <section className="apple-card steps-card" aria-labelledby="steps-title">
         <header className="apple-card-head">
-          <strong id="steps-title" style={{ color: ACTIVITY_TEXT }}><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong>
+          <strong id="steps-title"><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong>
           {latest && <span>{dayLabel(latest.date, { day: 'numeric', month: 'short' })}</span>}
         </header>
 
@@ -134,10 +140,10 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
             <p className="apple-metric-range">{dayLabel(chart[0].date, { day: 'numeric', month: 'short' })} – {dayLabel(latest.date, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
             <ResponsiveContainer width="100%" height={170}>
               <BarChart data={chart} margin={{ top: 8, right: 0, bottom: 0, left: 0 }} barCategoryGap={span > 30 ? 1 : '22%'}>
-                <CartesianGrid vertical={false} stroke="#e5e5ea" strokeDasharray="2 3" />
-                <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: '#e5e5ea' }} tick={{ fontSize: 10, fill: '#8e8e93' }} interval={span === 7 ? 0 : span === 30 ? 6 : 29} tickFormatter={(date: string) => dayLabel(date, span === 7 ? { weekday: 'narrow' } : { day: 'numeric', month: span > 30 ? 'short' : undefined })} />
-                <YAxis orientation="right" tickLine={false} axisLine={false} width={36} tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={(value: number) => (value >= 1000 ? `${Math.round(value / 1000)}k` : String(value))} />
-                <Tooltip cursor={{ fill: 'rgba(250,91,48,.08)' }} formatter={(value) => [`${number(Number(value))} steps`, '']} separator="" labelFormatter={(date) => dayLabel(String(date), { weekday: 'short', day: 'numeric', month: 'short' })} />
+                <CartesianGrid vertical={false} stroke={AXIS.line} strokeDasharray="2 3" />
+                <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: AXIS.line }} tick={{ fontSize: 10, fill: AXIS.text }} interval={span === 7 ? 0 : span === 30 ? 6 : 29} tickFormatter={(date: string) => dayLabel(date, span === 7 ? { weekday: 'narrow' } : { day: 'numeric', month: span > 30 ? 'short' : undefined })} />
+                <YAxis orientation="right" tickLine={false} axisLine={false} width={36} tick={{ fontSize: 10, fill: AXIS.text }} tickFormatter={(value: number) => (value >= 1000 ? `${Math.round(value / 1000)}k` : String(value))} />
+                <Tooltip cursor={{ fill: 'var(--fd-wash)' }} formatter={(value) => [`${number(Number(value))} steps`, '']} separator="" labelFormatter={(date) => dayLabel(String(date), { weekday: 'short', day: 'numeric', month: 'short' })} />
                 <ReferenceLine y={rangeAverage} stroke={COLORS.activity} strokeDasharray="3 3" strokeOpacity={0.7} />
                 <Bar dataKey="steps" fill={COLORS.activity} radius={[3, 3, 0, 0]} maxBarSize={28} isAnimationActive={false} />
               </BarChart>
@@ -154,7 +160,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
         <>
           <h3 className="apple-section">Highlights</h3>
           <section className="apple-card highlight-card">
-            <header className="apple-card-head"><strong style={{ color: COLORS.activity }}><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong></header>
+            <header className="apple-card-head"><strong><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong></header>
             <p className="highlight-text">
               {trendUp ? 'You’re averaging more steps over the last 30 days than the 30 days before.' : 'You’re averaging fewer steps over the last 30 days than the 30 days before.'}
             </p>
@@ -166,7 +172,7 @@ export function StepsCard({ summary, stepGoal }: { summary: StepsSummary; stepGo
               </div>
               <div>
                 <p><b>{number(summary.previous30)}</b> steps/day</p>
-                <i style={{ width: `${(summary.previous30 / trendMax) * 100}%`, background: '#c7c7cc' }} />
+                <i style={{ width: `${(summary.previous30 / trendMax) * 100}%`, background: 'var(--fd-rule)' }} />
                 <small>Previous 30 days</small>
               </div>
             </div>

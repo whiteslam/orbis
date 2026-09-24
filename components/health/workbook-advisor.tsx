@@ -1,16 +1,50 @@
 'use client';
 
 import { useId, useState, useTransition } from 'react';
-import { FileSpreadsheet, LoaderCircle, Sparkles, Upload, X } from 'lucide-react';
+import { FileSpreadsheet, LoaderCircle, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { deleteSavedAiResultAction } from '@/app/ai/result-actions';
 import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
-import type { WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
+import type { SavedWorkbookAdvice } from '@/lib/ai/saved';
+import type { WorkbookAdvice, WorkbookObservation, WorkbookPreview } from '@/lib/workbook/types';
 import { safeAction } from '@/lib/client/safe-action';
 
-export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean }) {
+// What is on screen: either advice just generated, or advice restored from an earlier session.
+// The cited observations travel with it, because the workbook itself is never stored.
+type ShownAdvice = {
+  advice: WorkbookAdvice;
+  observations: WorkbookObservation[];
+  title: string | null;
+  savedAt: string | null;
+  savedId: string | null;
+};
+
+function fromSaved(saved: SavedWorkbookAdvice | null): ShownAdvice | null {
+  if (!saved) return null;
+  return {
+    advice: saved.result,
+    observations: saved.context?.observations ?? [],
+    title: saved.title,
+    savedAt: saved.createdAt,
+    savedId: saved.id,
+  };
+}
+
+function savedWhen(iso: string) {
+  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+}
+
+/** Splits the model's summary into a headline sentence and whatever follows it. */
+function splitSummary(summary: string) {
+  const match = summary.match(/^([\s\S]+?[.!?])\s+([\s\S]*)$/);
+  if (!match || match[1].length > 120) return { headline: summary, rest: '' };
+  return { headline: match[1], rest: match[2].trim() };
+}
+
+export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false, saved = null }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean; saved?: SavedWorkbookAdvice | null }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
-  const [advice, setAdvice] = useState<WorkbookAdvice | null>(null);
+  const [result, setResult] = useState<ShownAdvice | null>(() => fromSaved(saved));
   const [message, setMessage] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
@@ -20,16 +54,19 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
   const [includeSteps, setIncludeSteps] = useState(hasStepData);
   const [isPending, startTransition] = useTransition();
 
-  function parseFile(formData: FormData) {
-    setMessage(null);
-    setPreview(null);
-    setAdvice(null);
+  function resetChoices() {
     setConsent(false);
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
     setIncludePersonalProfile(false);
     setIncludeGoals(goalCount > 0);
     setIncludeSteps(hasStepData);
+  }
+
+  function parseFile(formData: FormData) {
+    setMessage(null);
+    setPreview(null);
+    resetChoices();
     startTransition(async () => {
       const result = await safeAction(parseWorkbookAction)(formData);
       if (!result.success) {
@@ -43,33 +80,50 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
   function requestAdvice() {
     if (!preview || !consent) return;
     setMessage(null);
-    setAdvice(null);
     startTransition(async () => {
-      const result = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
-      if (!result.success) {
-        setMessage(result.message);
+      const response = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
+      if (!response.success) {
+        setMessage(response.message);
         return;
       }
-      setAdvice(result.data);
+      setResult({
+        advice: response.data,
+        observations: preview.observations,
+        title: preview.fileName,
+        savedAt: response.saved?.createdAt ?? new Date().toISOString(),
+        savedId: response.saved?.id ?? null,
+      });
     });
   }
 
   function clearWorkbook() {
     setPreview(null);
-    setAdvice(null);
     setMessage(null);
-    setConsent(false);
-    setIncludeSavedContext(false);
-    setIncludeFitnessPersona(false);
-    setIncludePersonalProfile(false);
-    setIncludeGoals(goalCount > 0);
-    setIncludeSteps(hasStepData);
+    resetChoices();
   }
 
-  const observations = new Map((preview?.observations ?? []).map((observation) => [observation.id, observation]));
+  function deleteAdvice() {
+    setMessage(null);
+    startTransition(async () => {
+      if (result?.savedId) {
+        const response = await safeAction(deleteSavedAiResultAction)(result.savedId);
+        if (!response.success) {
+          setMessage(response.message);
+          return;
+        }
+      }
+      setResult(null);
+      setConsent(false);
+    });
+  }
+
+  const observations = new Map(result?.observations.map((observation) => [observation.id, observation]) ?? []);
+  const summary = splitSummary(result?.advice.summary ?? '');
   const isPdf = preview?.fileName.toLowerCase().endsWith('.pdf') ?? false;
   const documentText = preview ? `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}` : '';
   const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets, documentText));
+  // Advice generated for the workbook on screen; saved advice for another file keeps its own label.
+  const adviceIsForPreview = Boolean(preview && result && result.title === preview.fileName);
   const disclosureItems = [
     isPdf ? 'a bounded PDF preview and up to 24 extracted text snippets' : 'a bounded Excel summary',
     includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
@@ -131,42 +185,55 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
             </div>
           )}
 
-          {!advice && preview.observations.length === 0 && (
+          {!adviceIsForPreview && preview.observations.length === 0 && (
             <p className="workbook-no-observations" role="status">Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. You can still review this preview or choose another file.</p>
           )}
 
-          {!advice && preview.observations.length > 0 && (
+          {!adviceIsForPreview && preview.observations.length > 0 && (
             <div className="workbook-consent">
               {goalCount > 0 && <label><input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my {goalCount} {goalCount === 1 ? 'goal' : 'goals'} (title, progress, target date) to tailor advice and a plan.</label>}
               {hasStepData && <label><input type="checkbox" checked={includeSteps} onChange={(event) => { setIncludeSteps(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my Apple Health step summary (daily averages, trend and the last 14 days).</label>}
               {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => { setIncludeSavedContext(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} relevant saved notes from Personal (up to 3,000 characters).</label>}
               {hasSavedPersonalProfile && <label><input type="checkbox" checked={includePersonalProfile} onChange={(event) => { setIncludePersonalProfile(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my personal profile and “More about me” details for this request.</label>}
               {personaRelevant && <label><input type="checkbox" checked={includeFitnessPersona} onChange={(event) => { setIncludeFitnessPersona(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my saved fitness persona for this health or fitness workbook.</label>}
-              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {disclosureItems.join(' and ')} will be sent to OpenRouter for advice. The original file is not sent.</label>
+              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {disclosureItems.join(' and ')} will be sent to OpenRouter for advice. The original file is not sent, and the advice is saved to your account so you can read it again.</label>
               <button className="finance-button primary" type="button" onClick={requestAdvice} disabled={!consent || isPending}>
                 {isPending ? <><LoaderCircle className="workbook-spinner" size={15} /> Analyzing…</> : <><Sparkles size={15} /> Get advice</>}
               </button>
             </div>
           )}
-
-          {advice && (
-            <div className="workbook-advice" aria-live="polite">
-              <div className="workbook-advice-heading"><Sparkles size={17} /><strong>Orbis advice</strong></div>
-              <p className="workbook-advice-summary">{advice.summary}</p>
-              {advice.advice.map((item, index) => (
-                <article className="workbook-advice-item" key={`${item.title}-${index}`}>
-                  <strong>{item.title}</strong><p>{item.action}</p>
-                  {item.evidenceIds.map((id) => {
-                    const observation = observations.get(id);
-                    return observation ? <small key={id}>Based on {observation.sheet} · {observation.column}: {observation.value}</small> : null;
-                  })}
-                </article>
-              ))}
-              {advice.caveats.map((caveat, index) => <p className="workbook-caveat" key={`${caveat}-${index}`}>{caveat}</p>)}
-              <button className="finance-button secondary" type="button" onClick={() => setAdvice(null)}>Ask again</button>
-            </div>
-          )}
         </div>
+      )}
+
+      {result && (
+        <section className="workbook-advice" aria-live="polite">
+          <div className="fd-focus">
+            <p className="fd-kicker">What Orbis sees</p>
+            <h3>{summary.headline}</h3>
+            {summary.rest && <p>{summary.rest}</p>}
+            <small className="fd-src">{result.title ?? 'Saved advice'}{result.savedAt ? ` · saved ${savedWhen(result.savedAt)}` : ''}</small>
+          </div>
+
+          <p className="fd-label">{result.advice.advice.length === 1 ? 'One step' : `${result.advice.advice.length} steps`}</p>
+          {result.advice.advice.map((item, index) => (
+            <article className="fd-step" key={`${item.title}-${index}`}>
+              <i aria-hidden="true">{index + 1}</i>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.action}</p>
+                {item.evidenceIds.map((id) => {
+                  const observation = observations.get(id);
+                  return observation ? <small className="fd-src" key={id}>{observation.sheet} · {observation.column}: {observation.value}</small> : null;
+                })}
+              </div>
+            </article>
+          ))}
+
+          {result.advice.caveats.map((caveat, index) => <p className="fd-note" key={`${caveat}-${index}`}>{caveat}</p>)}
+          <button className="finance-button secondary" type="button" onClick={deleteAdvice} disabled={isPending}>
+            <Trash2 size={14} /> Delete this advice
+          </button>
+        </section>
       )}
 
       {message && <p className="finance-notice error workbook-message" role="status">{message}</p>}

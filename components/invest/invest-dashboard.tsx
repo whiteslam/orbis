@@ -3,15 +3,26 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { loadInvestLiveAction } from '@/app/invest/actions';
 import { analysePortfolio } from '@/lib/invest/analysis';
-import type { InvestmentSummary, LivePortfolioData } from '@/lib/invest/types';
-import { GrowwPortfolio } from '@/components/invest/groww-portfolio';
-import { InvestmentHoldings } from '@/components/invest/investment-holdings';
+import { BROKERS, brokerMeta } from '@/lib/invest/brokers';
+import type { LivePortfolioData } from '@/lib/invest/types';
+import { BrokerCard } from '@/components/invest/broker-card';
 import { PortfolioAi } from '@/components/invest/portfolio-ai';
-import { AllocationCharts, GrowthProjector, PortfolioIndicators } from '@/components/invest/portfolio-charts';
-import { inr, percent, signedInr } from '@/components/invest/format';
-import { safeAction } from '@/lib/client/safe-action';
+import { AllocationBreakdown, PortfolioHealth } from '@/components/invest/portfolio-charts';
 
-export function InvestDashboard({ summary, goalCount }: { summary: InvestmentSummary; goalCount: number }) {
+import { safeAction } from '@/lib/client/safe-action';
+import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
+import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
+import { FieldLabel, FocusSurface, QuietList } from '@/components/field/field';
+
+/**
+ * Reading order, worst-first as the audit found it: the screen used to open on
+ * a statement and then spend four sections analysing holdings the user had not
+ * been shown yet, with the connect form last. Now it runs statement → numbers →
+ * shape → the accounts themselves → suggestions, and when nothing is connected
+ * the analysis sections drop out, so the connect form sits directly under the
+ * opening line instead of below everything else.
+ */
+export function InvestDashboard({ goalCount, savedAdvice }: { goalCount: number; savedAdvice: SavedPortfolioAdvice | null }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
 
@@ -19,43 +30,45 @@ export function InvestDashboard({ summary, goalCount }: { summary: InvestmentSum
     startTransition(async () => setLive(await safeAction(loadInvestLiveAction, () => null)()));
   }
 
-  // Reload when holdings change (add, edit, delete) so live prices follow.
-  useEffect(load, [summary.holdings]);
+  useEffect(load, []);
 
-  const groww = live?.groww ?? null;
-  const growwHoldings = useMemo(() => (groww?.state === 'ok' ? groww.holdings : []), [groww]);
-  const analysis = useMemo(
-    () => analysePortfolio(growwHoldings, summary.holdings, { manualPrices: live?.manualPrices, fxToInr: live?.fxToInr }),
-    [growwHoldings, live, summary.holdings],
-  );
+  const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
   const hasData = analysis.positions.length > 0;
+  const failures = (live?.brokers ?? [])
+    .filter((broker) => broker.state === 'error')
+    .map((broker) => ({ name: brokerMeta(broker.broker).name, message: broker.message ?? 'The connection failed.' }));
+  const connected = (live?.brokers ?? []).some((broker) => broker.state !== 'not_connected');
+
+  const focus = composeInvestFocus({
+    analysis,
+    loaded: Boolean(live),
+    failures,
+    connected,
+    savedAdviceAt: savedAdvice?.createdAt ?? null,
+  });
 
   return (
     <>
-      <section className="invest-hero">
-        <small>TOTAL PORTFOLIO</small>
-        <strong>{!live && !hasData ? '…' : inr(analysis.total)}</strong>
-        <div className="invest-hero-meta">
-          {analysis.livePnl !== null && analysis.liveInvested > 0 ? (
-            <span className={analysis.livePnl >= 0 ? 'up' : 'down'}>{signedInr(analysis.livePnl)} ({analysis.livePnl >= 0 ? '+' : '−'}{percent(Math.abs(analysis.livePnl / analysis.liveInvested))})</span>
-          ) : (
-            <span>{live ? 'At entered values' : 'Fetching prices…'}</span>
-          )}
-          <span>{analysis.positions.length} {analysis.positions.length === 1 ? 'holding' : 'holdings'}</span>
-          {analysis.byClass[0] && <span>Mostly {analysis.byClass.slice().sort((left, right) => right.value - left.value)[0].assetClass}</span>}
-        </div>
-        {hasData && !analysis.allLive && live && <p>Some holdings have no live price, so they count at invested or entered value.</p>}
-        {analysis.excludedCurrencies.length > 0 && <p>Holdings in {analysis.excludedCurrencies.join(', ')} are listed below but not in this INR total, because no exchange rate was available.</p>}
-      </section>
+      <FocusSurface focus={focus} />
 
-      {live?.notices.map((notice) => <p className="finance-notice error" role="status" key={notice}>{notice}</p>)}
+      {/* Six rows of dashes tell a new user nothing, so the numbers wait until there are numbers. */}
+      {hasData && <QuietList heading="Position" rows={composeInvestRows({ analysis })} />}
 
-      {hasData && <PortfolioIndicators analysis={analysis} />}
-      {hasData && <AllocationCharts analysis={analysis} />}
-      <GrowwPortfolio portfolio={groww} isLoading={isLoading} onRefresh={load} />
-      {hasData && <PortfolioAi goalCount={goalCount} hasGroww={growwHoldings.length > 0} />}
-      <GrowthProjector startValue={analysis.total} />
-      <InvestmentHoldings summary={summary} livePrices={live?.manualPrices ?? {}} />
+      {hasData && <><FieldLabel>Health of the mix</FieldLabel><PortfolioHealth analysis={analysis} /></>}
+      {hasData && <><FieldLabel>Allocation</FieldLabel><AllocationBreakdown analysis={analysis} /></>}
+
+      <FieldLabel>Accounts</FieldLabel>
+      {BROKERS.map((meta) => (
+        <BrokerCard
+          key={meta.id}
+          meta={meta}
+          portfolio={live?.brokers.find((broker) => broker.broker === meta.id) ?? null}
+          isLoading={isLoading}
+          onRefresh={load}
+        />
+      ))}
+
+      {hasData && <><FieldLabel>Suggestions</FieldLabel><PortfolioAi goalCount={goalCount} saved={savedAdvice} /></>}
     </>
   );
 }

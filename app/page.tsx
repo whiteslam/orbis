@@ -8,8 +8,9 @@ import { getAppConnections, getIntegrationStatus } from '@/lib/providers/status'
 import { getJournal } from '@/lib/journal/repository';
 import { getHealthLibrary } from '@/lib/health-docs/repository';
 import { getNotificationSettings } from '@/lib/notifications/repository';
-import { getInvestmentSummary } from '@/lib/invest/repository';
 import { getStepsSummary } from '@/lib/health/steps-repository';
+import { getLatestAiResult } from '@/lib/ai/results';
+import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 import { createClient } from '@/lib/supabase/server';
 import { APP_LOCK_IDLE_MS, isAppUnlocked } from '@/lib/security/app-lock';
 import { AppLockGuard } from '@/components/security/app-lock-guard';
@@ -36,13 +37,12 @@ export default async function Page() {
   // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
   if (pinStatus === 'none' || pinStatus === 'locked') return <PinSetup reset={pinStatus === 'locked'} />;
 
-  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary] = await Promise.all([
+  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice] = await Promise.all([
     getFinanceSummary(userId),
     getGoalsSummary(userId),
     getContextNotes(userId),
     getFitnessPersona(userId),
     getPersonalProfile(userId),
-    getInvestmentSummary(userId),
     getStepsSummary(userId),
     getHomeLocation(userId),
     getIntegrationStatus(userId, email),
@@ -50,10 +50,13 @@ export default async function Page() {
     getNotificationSettings(userId),
     getAppConnections(userId, email),
     getHealthLibrary(userId),
+    // Saved AI results, so advice generated earlier is shown again instead of regenerated.
+    getLatestAiResult(userId, 'workbook_advice') as Promise<SavedWorkbookAdvice | null>,
+    getLatestAiResult(userId, 'portfolio_advice') as Promise<SavedPortfolioAdvice | null>,
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} />
+      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} />
     </AppLockGuard>
   );
 }

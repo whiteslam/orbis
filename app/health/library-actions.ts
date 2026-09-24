@@ -50,6 +50,26 @@ async function logAi(userId: string, feature: 'health_plan_questions' | 'health_
   }
 }
 
+/** Marks a document as one the plan builder reads every time. */
+export async function setHealthDocumentAlwaysAction(input: unknown): Promise<Result<null>> {
+  const auth = await authenticatedUser();
+  if (!auth) return { success: false, message: 'Sign in again to change this.' };
+  if (!input || typeof input !== 'object') return { success: false, message: 'That document could not be found.' };
+  const { id, always } = input as { id?: unknown; always?: unknown };
+  if (!validId(id) || typeof always !== 'boolean') return { success: false, message: 'That document could not be found.' };
+
+  const { error } = await auth.supabase
+    .from('health_documents')
+    .update({ always_include: always })
+    .eq('id', id)
+    .eq('user_id', auth.userId);
+  if (error) {
+    return { success: false, message: error.code === '42703' ? 'Apply the master document migration in Supabase first.' : 'That change could not be saved. Try again.' };
+  }
+  revalidatePath('/');
+  return { success: true, data: null, message: always ? 'Orbis will read this in every plan.' : 'Removed from every plan.' };
+}
+
 export async function uploadHealthDocumentAction(formData: FormData): Promise<Result<{ id: string; chunkCount: number }>> {
   const auth = await authenticatedUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };

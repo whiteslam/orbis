@@ -7,40 +7,83 @@ import { FITNESS_PERSONA_STARTER } from '@/lib/personal/fitness-persona';
 import type { FitnessPersonaState } from '@/lib/personal/repository';
 import { safeAction } from '@/lib/client/safe-action';
 
+/**
+ * How you want to be coached about fitness.
+ *
+ * This used to open as a fourteen-row textarea pre-filled with the starter
+ * draft — a coaching brief mentioning a 2021 plan and a 92 kg starting weight —
+ * on the profile of anyone who had never asked for coaching. Nothing said what
+ * it was for, so it read as something Orbis had decided about you.
+ *
+ * Now it starts closed and empty. The starter is an action you take, not a
+ * default you inherit, and the copy says who reads this: Health, and only when
+ * you tick the box for that request.
+ */
 export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersonaState; persona: string | null }) {
   const router = useRouter();
-  const [draft, setDraft] = useState(persona ?? FITNESS_PERSONA_STARTER);
+  const [draft, setDraft] = useState(persona ?? '');
+  const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    setDraft(persona ?? FITNESS_PERSONA_STARTER);
+    setDraft(persona ?? '');
   }, [persona]);
 
   function show(result: { success: boolean; message: string }) {
     setMessage(result.message);
     setSuccess(result.success);
-    if (result.success) router.refresh();
+    if (result.success) {
+      setEditing(false);
+      router.refresh();
+    }
   }
 
-  return <section aria-labelledby="fitness-persona-title">
-    <div className="memory-info">
-      <strong id="fitness-persona-title">Your fitness coaching persona</strong>
-      <p>Orbis can use this as coaching preferences. It is saved to your account and is only sent with a health or fitness workbook when you select it for that request.</p>
-      <p>The starter draft comes from your 2021 plan. It treats old measurements and targets as historical, not current.</p>
-    </div>
-    {state === 'setup' && <p className="finance-notice error" role="status">Apply `202609240008_fitness_persona.sql` in Supabase to save this persona.</p>}
-    {state === 'unavailable' && <p className="finance-notice error" role="status">Your saved persona could not be loaded. Refresh and try again.</p>}
+  const blocked = pending || state !== 'ready';
+  const notice = state === 'setup'
+    ? 'Coaching style can’t be saved yet. Apply the pending Supabase migration (202609240008_fitness_persona.sql), then refresh.'
+    : state === 'unavailable' ? 'Your saved coaching style could not be loaded. Refresh and try again.' : null;
+
+  function open(seed: string) {
+    setDraft(seed);
+    setEditing(true);
+    setMessage('');
+  }
+
+  if (!editing) {
+    return <section aria-label="Your fitness coaching style">
+      {notice && <p className="finance-notice error" role="status">{notice}</p>}
+      {persona ? <>
+        <p className="fd-prose clamp">{persona}</p>
+        <div className="fd-row-actions">
+          <button className="finance-button primary" type="button" onClick={() => open(persona)}>Edit</button>
+          <button className="finance-button secondary" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deleteFitnessPersonaAction)()))}>Remove</button>
+        </div>
+      </> : <>
+        <p className="fd-note fd-note-lead">Nothing set, and nothing is assumed. Health asks for this only when a workbook or plan you upload has fitness in it, and even then it is included for that one request.</p>
+        <div className="fd-row-actions">
+          <button className="finance-button primary" type="button" disabled={blocked} onClick={() => open('')}>Write mine</button>
+          <button className="finance-button secondary" type="button" disabled={blocked} onClick={() => open(FITNESS_PERSONA_STARTER)}>Start from a draft</button>
+        </div>
+      </>}
+      {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
+    </section>;
+  }
+
+  return <section aria-label="Your fitness coaching style">
+    {notice && <p className="finance-notice error" role="status">{notice}</p>}
     <form className="personal-form stack-card" onSubmit={(event) => {
       event.preventDefault();
       startTransition(async () => show(await safeAction(saveFitnessPersonaAction)(draft)));
     }}>
-      <label htmlFor="fitness-persona">Review and edit your persona<textarea id="fitness-persona" value={draft} maxLength={3000} rows={14} onChange={(event) => setDraft(event.currentTarget.value)} disabled={pending || state !== 'ready'} required /></label>
+      <label htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} maxLength={3000} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
       <small>{draft.length.toLocaleString('en-IN')} / 3,000 characters</small>
-      <button className="finance-button primary" type="submit" disabled={pending || state !== 'ready'}>{pending ? 'Saving…' : persona ? 'Update persona' : 'Save persona'}</button>
+      <div className="fd-row-actions">
+        <button className="finance-button primary" type="submit" disabled={blocked}>{pending ? 'Saving…' : persona ? 'Save changes' : 'Save coaching style'}</button>
+        <button className="finance-button secondary" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
+      </div>
     </form>
-    {persona && state === 'ready' && <button className="finance-button secondary" type="button" disabled={pending} onClick={() => startTransition(async () => show(await safeAction(deleteFitnessPersonaAction)()))}>Remove saved persona</button>}
     {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
   </section>;
 }

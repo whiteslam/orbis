@@ -6,6 +6,8 @@ export type HealthDocument = {
   hasOriginal: boolean;
   chunkCount: number;
   createdAt: string;
+  /** Read into every plan, rather than only when a search surfaces it. */
+  alwaysInclude: boolean;
 };
 
 export type PlanQuestion = {

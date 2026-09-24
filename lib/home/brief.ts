@@ -32,7 +32,7 @@ function greeting(hour: number, name: string | null, seed: number) {
   return pick([`Winding down${who}?`, `Late one tonight${who}.`], seed);
 }
 
-export type BriefWeather = { temperature: number; rainProbability: number; condition: string; weatherCode: number };
+export type BriefWeather = { temperature: number; rainProbability: number; condition: string; weatherCode: number; isDay?: boolean };
 
 function weatherLine(weather: BriefWeather, seed: number) {
   const temp = `${weather.temperature}°`;

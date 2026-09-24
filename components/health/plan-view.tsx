@@ -38,11 +38,11 @@ function TargetChart({ metric, unit, points }: HealthPlan['targets'][number]) {
       </div>
       <ResponsiveContainer width="100%" height={120}>
         <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid vertical={false} stroke="#e8edf3" />
-          <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: '#75808f' }} tickFormatter={(week: number) => (week === 0 ? 'Now' : `W${week}`)} />
-          <YAxis tickLine={false} axisLine={false} width={40} tick={{ fontSize: 9, fill: '#75808f' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString('en-IN', { notation: 'compact' })} />
-          <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e8edf3', fontSize: 11 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString('en-IN')} ${unit}`, metric]} />
-          <Line type="monotone" dataKey="value" stroke="#2a78d6" strokeWidth={2} dot={{ r: 3, fill: '#2a78d6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+          <CartesianGrid vertical={false} stroke={'var(--fd-rule)'} />
+          <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} tickFormatter={(week: number) => (week === 0 ? 'Now' : `W${week}`)} />
+          <YAxis tickLine={false} axisLine={false} width={40} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString('en-IN', { notation: 'compact' })} />
+          <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--fd-rule)', background: 'var(--fd-surface)', color: 'var(--fd-ink)', fontSize: 11 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString('en-IN')} ${unit}`, metric]} />
+          <Line type="monotone" dataKey="value" stroke="var(--series-1)" strokeWidth={2} dot={{ r: 3, fill: 'var(--series-1)', stroke: 'var(--fd-surface)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>

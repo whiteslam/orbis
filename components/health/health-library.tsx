@@ -2,8 +2,8 @@
 
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, FileSpreadsheet, FileText, LoaderCircle, Trash2, Upload } from 'lucide-react';
-import { deleteHealthDocumentAction, downloadHealthDocumentAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
+import { Download, FileSpreadsheet, FileText, LoaderCircle, Pin, Trash2, Upload } from 'lucide-react';
+import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
 import type { HealthDocument } from '@/lib/health-docs/types';
 import { safeAction } from '@/lib/client/safe-action';
 
@@ -36,6 +36,16 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
     });
   }
 
+  function toggleAlways(document: HealthDocument) {
+    setBusy(document.id);
+    startTransition(async () => {
+      const result = await safeAction(setHealthDocumentAlwaysAction)({ id: document.id, always: !document.alwaysInclude });
+      setBusy(null);
+      setMessage({ text: result.success ? result.message ?? 'Saved.' : result.message, success: result.success });
+      if (result.success) router.refresh();
+    });
+  }
+
   function download(id: string) {
     setBusy(id);
     startTransition(async () => {
@@ -63,9 +73,9 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
   return (
     <section className="health-library">
       <label className={`health-drop ${busy === 'upload' ? 'busy' : ''}`} htmlFor={inputId}>
-        {busy === 'upload' ? <LoaderCircle className="workbook-spinner" size={20} /> : <Upload size={20} />}
-        <strong>{busy === 'upload' ? 'Reading and indexing…' : 'Add a health document'}</strong>
-        <span>Lab reports, fitness logs, diet sheets · PDF or .xlsx</span>
+        {busy === 'upload' ? <LoaderCircle className="workbook-spinner" size={16} /> : <Upload size={16} />}
+        <strong>{busy === 'upload' ? 'Reading and indexing…' : 'Add a document'}</strong>
+        <span>PDF or .xlsx</span>
       </label>
       <input id={inputId} type="file" className="sr-only" accept=".xlsx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={isPending} onChange={(event) => {
         const file = event.currentTarget.files?.[0];
@@ -81,15 +91,25 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
               <span className={`health-doc-icon ${document.kind}`}>{document.kind === 'pdf' ? <FileText size={16} /> : <FileSpreadsheet size={16} />}</span>
               <div>
                 <strong>{document.fileName}</strong>
-                <small>{added(document.createdAt)} · {size(document.sizeBytes)} · {document.chunkCount} sections indexed</small>
+                <small>{document.alwaysInclude ? 'Read in every plan' : `${added(document.createdAt)} · ${size(document.sizeBytes)}`}</small>
               </div>
+              <button
+                type="button"
+                className={`health-doc-pin ${document.alwaysInclude ? 'on' : ''}`}
+                onClick={() => toggleAlways(document)}
+                disabled={isPending}
+                aria-pressed={document.alwaysInclude}
+                title={document.alwaysInclude ? 'Read in every plan' : 'Read this in every plan'}
+              >
+                <Pin size={13} />
+              </button>
               {document.hasOriginal && <button type="button" className="workbook-icon-button" onClick={() => download(document.id)} disabled={isPending} aria-label={`Download ${document.fileName}`}>{busy === document.id ? <LoaderCircle className="workbook-spinner" size={14} /> : <Download size={14} />}</button>}
               <button type="button" className="workbook-icon-button" onClick={() => remove(document)} disabled={isPending} aria-label={`Delete ${document.fileName}`}><Trash2 size={14} /></button>
             </li>
           ))}
         </ul>
-      ) : <p className="groww-muted">Saved documents appear here. Orbis searches them when building your plan.</p>}
-      <p className="groww-muted">Files are private to your account. Uploading sends the document’s text to OpenRouter once to index it for search; relevant passages are sent again when you build a plan.</p>
+      ) : <p className="fd-note">Saved documents stay private to your account. Orbis searches them when building a plan — pin one and it is read every time.</p>}
+      {documents.length > 0 && <p className="fd-note">Pinned documents are read into every plan; the rest are searched when relevant.</p>}
     </section>
   );
 }

@@ -2,6 +2,8 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getAuthenticatedUserId } from '@/lib/gmail/oauth';
+import { saveAiResult } from '@/lib/ai/results';
+import type { AiResultStamp } from '@/lib/ai/saved';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import { stepContext } from '@/lib/health/steps-stats';
@@ -179,7 +181,7 @@ function parseAdvice(text: string, preview: WorkbookPreview): WorkbookAdvice | n
   };
 }
 
-export async function generateWorkbookAdviceAction(value: unknown): Promise<WorkbookActionResult<WorkbookAdvice>> {
+export async function generateWorkbookAdviceAction(value: unknown): Promise<{ success: true; data: WorkbookAdvice; saved: AiResultStamp | null } | { success: false; message: string }> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before requesting advice.' };
 
@@ -334,11 +336,23 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<Work
     const advice = text ? parseAdvice(text, preview) : null;
     if (!advice) return { success: false, message: 'The AI returned an incomplete result. Try asking again.' };
     outcome = 'succeeded';
-    return { success: true, data: advice };
+    // The advice is kept so it can be read again later. The cited observations travel with it,
+    // because the workbook itself is never saved and could not otherwise be quoted again.
+    const citedIds = new Set(advice.advice.flatMap((item) => item.evidenceIds));
+    const saved = await saveAiResult({
+      userId,
+      feature: 'workbook_advice',
+      result: advice,
+      model: adviceModel(),
+      title: preview.fileName,
+      context: { observations: preview.observations.filter((observation) => citedIds.has(observation.id)) },
+    });
+    return { success: true, data: advice, saved };
   } catch {
     return { success: false, message: 'The AI provider could not be reached. Check your connection and try again.' };
   } finally {
-    // Keep only operational metadata. Never persist workbook content, notes, or advice.
+    // Keep only operational metadata here. Workbook content and notes are never persisted;
+    // the advice itself is saved separately through saveAiResult.
     try {
       await admin.from('ai_generation_events').insert({
         user_id: userId,

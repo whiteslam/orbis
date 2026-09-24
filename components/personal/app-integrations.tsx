@@ -5,8 +5,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, HeartPulse, Mail, Unplug } from 'lucide-react';
 import { disconnectGmailAction } from '@/app/finance/actions';
-import { disconnectGrowwAction } from '@/app/invest/actions';
-import { GrowwConnectForm } from '@/components/invest/groww-portfolio';
+import { disconnectBrokerAction } from '@/app/invest/actions';
+import { BrokerConnectForm } from '@/components/invest/broker-card';
+import { brokerMeta } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
 import { safeAction } from '@/lib/client/safe-action';
@@ -26,6 +27,7 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
   const [showGrowwForm, setShowGrowwForm] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { google, groww } = connections;
+  const growwMeta = brokerMeta('groww');
 
   function run(confirmText: string, action: () => Promise<{ success: boolean; message: string }>) {
     if (!window.confirm(confirmText)) return;
@@ -68,11 +70,11 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
           {groww ? <Status state={groww.status === 'connected' ? 'on' : 'warn'}>{groww.status === 'connected' ? 'Connected' : 'Reconnect'}</Status> : <Status state="off">Not connected</Status>}
         </div>
         {(!groww || groww.status !== 'connected') && (showGrowwForm || groww)
-          ? <GrowwConnectForm reconnect={Boolean(groww)} setupMessage={connections.growwSetupMessage ?? undefined} onConnected={() => { setShowGrowwForm(false); router.refresh(); }} />
+          ? <BrokerConnectForm meta={growwMeta} reconnect={Boolean(groww)} setupMessage={connections.growwSetupMessage ?? undefined} onConnected={() => { setShowGrowwForm(false); router.refresh(); }} />
           : null}
         <div className="app-card-actions">
           {!groww && !showGrowwForm && <button className="finance-button primary" type="button" onClick={() => setShowGrowwForm(true)}>Connect Groww</button>}
-          {groww?.source === 'account' && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Groww? Orbis will delete the saved key and secret.', safeAction(disconnectGrowwAction))}><Unplug size={13} /> Disconnect</button>}
+          {groww?.source === 'account' && <button className="finance-button secondary app-disconnect" type="button" disabled={isPending} onClick={() => run('Disconnect Groww? Orbis will delete the saved key and secret.', () => safeAction(disconnectBrokerAction)('groww'))}><Unplug size={13} /> Disconnect</button>}
           {groww?.source === 'server' && <small className="groww-muted">Using the server’s Groww keys.</small>}
         </div>
       </article>

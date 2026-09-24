@@ -30,7 +30,8 @@ function CategoryRing({ month, active, onSelect }: { month: Month; active: strin
   return (
     <div className="spend-ring">
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Spending by category: ${segments.map((segment) => `${segment.category} ${money(segment.amount, month.currency)}`).join(', ')}`}>
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke="#eeeef3" strokeWidth={STROKE} />
+        {/* The unspent remainder. Its colour is a theme token, not a fixed grey. */}
+        <circle className="spend-ring-track" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} />
         {segments.map((segment) => {
           const length = (segment.amount / month.spent) * CIRCUMFERENCE;
           const visible = Math.max(length - (segments.length > 1 ? GAP : 0), 1.5);

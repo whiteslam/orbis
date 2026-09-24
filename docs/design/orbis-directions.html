@@ -1,0 +1,848 @@
+<title>Orbis Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+  /* ---- page chrome tokens (light is the base; both dark states redefine) ---- */
+  :root {
+    --page: #e9ebec;
+    --panel: #ffffff;
+    --ink: #14181b;
+    --ink-soft: #4c565c;
+    --ink-faint: #7b858b;
+    --rule: #d3d7d9;
+    --rule-soft: #e3e6e7;
+    --brand: #0b6e69;
+    --brand-soft: #dcefec;
+    --flag: #9a4a2a;
+    --shadow: 0 24px 60px rgba(14, 24, 28, .12);
+    --stage: #dfe2e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #101315;
+      --panel: #181c1f;
+      --ink: #eef1f1;
+      --ink-soft: #a9b3b6;
+      --ink-faint: #7d888c;
+      --rule: #2a3033;
+      --rule-soft: #22282b;
+      --brand: #6ec9bd;
+      --brand-soft: #16302e;
+      --flag: #e0997a;
+      --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+      --stage: #0b0e10;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #101315;
+    --panel: #181c1f;
+    --ink: #eef1f1;
+    --ink-soft: #a9b3b6;
+    --ink-faint: #7d888c;
+    --rule: #2a3033;
+    --rule-soft: #22282b;
+    --brand: #6ec9bd;
+    --brand-soft: #16302e;
+    --flag: #e0997a;
+    --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+    --stage: #0b0e10;
+  }
+
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 0 72px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); margin: 0;
+  }
+  h1 { font-size: clamp(30px, 5.2vw, 46px); line-height: 1.05; letter-spacing: -.035em; margin: 10px 0 0; text-wrap: balance; font-weight: 600; }
+  h2 { font-size: 24px; letter-spacing: -.02em; margin: 0; font-weight: 600; }
+  h3 { font-size: 15px; margin: 0; font-weight: 600; }
+  p { margin: 0; }
+  .lede { max-width: 62ch; color: var(--ink-soft); margin-top: 14px; font-size: 16px; }
+
+  /* ---- masthead ---- */
+  .masthead { padding-block: 52px 34px; border-bottom: 1px solid var(--rule); }
+  .counts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 26px; }
+  .count { display: flex; flex-direction: column; gap: 2px; }
+  .count b { font-size: 26px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .count span { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+
+  /* ---- audit ---- */
+  .audit { padding-block: 34px 10px; }
+  .findings { display: grid; gap: 0; margin-top: 20px; }
+  .finding { display: grid; grid-template-columns: 116px 1fr; gap: 20px; padding-block: 16px; border-top: 1px solid var(--rule-soft); align-items: start; }
+  .finding:first-child { border-top: 0; }
+  .tag {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); padding-top: 3px;
+  }
+  .finding p { color: var(--ink-soft); font-size: 14px; margin-top: 3px; }
+  .finding code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--ink); background: var(--rule-soft); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- direction switcher ---- */
+  .switcher { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--page); border-block: 1px solid var(--rule); margin-top: 30px; }
+  .switcher-inner { max-width: 1120px; margin: 0 auto; padding-inline: 20px; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .switcher-inner::-webkit-scrollbar { display: none; }
+  .tab {
+    appearance: none; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer;
+    font: inherit; font-size: 13.5px; padding: 14px 12px; white-space: nowrap; border-bottom: 2px solid transparent;
+  }
+  .tab b { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; margin-right: 7px; font-weight: 500; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brand); }
+  .tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -4px; }
+
+  /* ---- direction panel ---- */
+  .direction { padding-block: 34px; }
+  .dir-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 28px; align-items: start; }
+  .dir-head .thesis { color: var(--ink-soft); margin-top: 10px; max-width: 54ch; }
+  .spec { display: grid; gap: 10px; font-size: 13px; }
+  .spec-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; align-items: center; }
+  .spec-row > span:first-child { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+  .swatches { display: flex; gap: 6px; }
+  .swatches i { width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(0,0,0,.12); }
+  .spec-row em { font-style: normal; color: var(--ink-soft); }
+
+  .stage {
+    display: flex; flex-wrap: wrap; gap: 26px; justify-content: center;
+    background: var(--stage); border-radius: 18px; padding: 30px 20px; margin-top: 26px;
+  }
+  .frame { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .frame > figcaption { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+  .phone { width: 322px; max-width: 100%; padding: 9px; border-radius: 40px; background: #0c0e10; box-shadow: var(--shadow); }
+  .screen { height: 620px; overflow-y: auto; border-radius: 32px; scrollbar-width: none; position: relative; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  .notes { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 28px; }
+  .note { padding-block: 14px; border-top: 1px solid var(--rule-soft); }
+  .note h3 { font-size: 13.5px; }
+  .note p { font-size: 13.5px; color: var(--ink-soft); margin-top: 3px; }
+  .note code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 26px; margin-top: 10px; }
+  footer p { color: var(--ink-soft); max-width: 62ch; }
+  footer p + p { margin-top: 12px; }
+
+  @media (max-width: 720px) {
+    .dir-head { grid-template-columns: 1fr; }
+    .finding { grid-template-columns: 1fr; gap: 4px; }
+    .stage { padding-inline: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ==========================================================================
+     MOCKUPS
+     Each direction paints its own ground and every colour explicitly, so the
+     artwork reads the same on a light or dark host. That is deliberate: these
+     are design proposals, not themed page furniture.
+     ========================================================================== */
+  .m { height: 100%; box-sizing: border-box; }
+  .m * { box-sizing: border-box; }
+  .m h4, .m h5, .m p, .m ul, .m li { margin: 0; padding: 0; list-style: none; }
+
+  /* ---------- 1. Ledger ---------- */
+  .ledger { background: #f6f6f4; color: #16191c; font-family: 'Instrument Sans', system-ui, sans-serif; padding: 34px 22px 30px; font-size: 13px; }
+  .ledger .lg-top { display: flex; justify-content: space-between; align-items: baseline; font-family: 'Fraunces', Georgia, serif; }
+  .ledger .lg-top b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .ledger .lg-top span { font-size: 11px; color: #6a726f; font-family: 'Instrument Sans', sans-serif; }
+  .ledger h4 { font-family: 'Fraunces', Georgia, serif; font-size: 27px; font-weight: 300; line-height: 1.18; letter-spacing: -.02em; margin-top: 26px; text-wrap: balance; }
+  .ledger .lg-brief { color: #4b524f; margin-top: 12px; line-height: 1.6; font-size: 13px; max-width: 30ch; }
+  .ledger .lg-label { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #8b918d; margin-top: 30px; padding-bottom: 8px; border-bottom: 1px solid #16191c; }
+  .ledger .lg-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 13px 0; border-bottom: 1px solid #dedfda; }
+  .ledger .lg-row span { color: #4b524f; }
+  .ledger .lg-row b { font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .ledger .lg-row small { display: block; font-size: 10.5px; color: #8b918d; margin-top: 2px; }
+  .ledger .lg-weather { display: flex; justify-content: space-between; align-items: flex-end; padding: 16px 0; border-bottom: 1px solid #16191c; }
+  .ledger .lg-weather b { font-family: 'Fraunces', Georgia, serif; font-size: 34px; font-weight: 300; letter-spacing: -.03em; }
+  .ledger .lg-weather em { font-style: normal; font-size: 11px; color: #4b524f; display: block; }
+  .ledger .lg-note { margin-top: 24px; padding-left: 14px; border-left: 2px solid #1f4f45; color: #2f3a37; font-size: 12.5px; line-height: 1.6; }
+  .ledger .lg-foot { margin-top: 26px; display: flex; gap: 18px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #a3a8a4; }
+  .ledger .lg-foot b { color: #16191c; font-weight: 500; }
+  .ledger .lg-fn { font-size: 11px; color: #6a726f; line-height: 1.55; padding: 8px 0; border-top: 1px solid #dedfda; }
+  .ledger .lg-fn sup { color: #1f4f45; font-weight: 600; margin-right: 5px; }
+  .ledger .lg-arg { padding: 16px 0; border-bottom: 1px solid #dedfda; }
+  .ledger .lg-arg b { font-family: 'Fraunces', Georgia, serif; font-size: 16px; font-weight: 600; }
+  .ledger .lg-arg sup { color: #1f4f45; font-size: 10px; }
+  .ledger .lg-arg p { color: #4b524f; margin-top: 5px; line-height: 1.6; }
+  .ledger .lg-btn { margin-top: 22px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #1f4f45; border-bottom: 1px solid #1f4f45; display: inline-block; padding-bottom: 3px; }
+
+  /* ---------- 2. Console ---------- */
+  .console { background: #0d0f11; color: #e7eae7; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 18px 92px; position: relative; }
+  .console .cs-bar { display: flex; align-items: center; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #6d7a77; }
+  .console .cs-bar b { color: #6fd3c2; font-weight: 500; }
+  .console .cs-turn { margin-top: 24px; }
+  .console .cs-from { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em; color: #6d7a77; }
+  .console .cs-from b { color: #6fd3c2; }
+  .console .cs-turn p { margin-top: 9px; line-height: 1.62; color: #dfe4e2; }
+  .console .cs-turn p.user { color: #9aa5a2; }
+  .console .cs-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .console .cs-chip { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8fa09c; border: 1px solid #23282b; background: #15181b; border-radius: 999px; padding: 4px 9px; }
+  .console .cs-chip b { color: #6fd3c2; font-weight: 500; }
+  .console .cs-facts { margin-top: 16px; border-top: 1px solid #1c2124; }
+  .console .cs-fact { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 0; border-bottom: 1px solid #1c2124; }
+  .console .cs-fact span { color: #8b9490; font-size: 12.5px; }
+  .console .cs-fact b { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .console .cs-fact em { font-style: normal; font-size: 10.5px; color: #6d7a77; }
+  .console .cs-ask { position: absolute; left: 14px; right: 14px; bottom: 16px; background: #15181b; border: 1px solid #262b2f; border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .console .cs-ask span { color: #6d7a77; font-size: 12.5px; }
+  .console .cs-ask i { width: 26px; height: 26px; border-radius: 9px; background: #6fd3c2; display: grid; place-items: center; color: #08302b; font-style: normal; font-size: 13px; font-weight: 700; }
+  .console .cs-perm { margin-top: 16px; border: 1px solid #2a2f33; border-radius: 12px; padding: 12px 13px; background: #131719; }
+  .console .cs-perm p { font-size: 12px; color: #9aa5a2; line-height: 1.55; margin: 0; }
+  .console .cs-perm .cs-perm-actions { display: flex; gap: 8px; margin-top: 11px; }
+  .console .cs-perm b { font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 6px 12px; border-radius: 8px; font-weight: 500; }
+  .console .cs-perm b.yes { background: #6fd3c2; color: #08302b; }
+  .console .cs-perm b.no { border: 1px solid #2a2f33; color: #8b9490; }
+  .console .cs-cite { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6d7a77; margin-top: 8px; padding-left: 10px; border-left: 1px solid #6fd3c2; line-height: 1.6; }
+  .console .cs-caret { display: inline-block; width: 7px; height: 14px; background: #6fd3c2; vertical-align: -2px; margin-left: 2px; animation: blink 1.1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- 3. Signal ---------- */
+  .signal { background: #ffffff; color: #0a0c0f; font-family: 'Archivo', system-ui, sans-serif; font-size: 12.5px; padding: 26px 0 26px; font-variant-numeric: tabular-nums; }
+  .signal .sg-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 18px 14px; border-bottom: 1px solid #0a0c0f; }
+  .signal .sg-head b { font-size: 13px; letter-spacing: -.01em; }
+  .signal .sg-head span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8d949c; }
+  .signal .sg-row { display: grid; grid-template-columns: 1fr 66px auto; gap: 10px; align-items: center; padding: 13px 18px; border-bottom: 1px solid #eceef1; }
+  .signal .sg-row .sg-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .signal .sg-row .sg-name b { font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+  .signal .sg-row .sg-name span { font-size: 10.5px; color: #8d949c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signal .sg-val { text-align: right; font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+  .signal .sg-val small { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0; }
+  .signal .up { color: #1baf7a; } .signal .down { color: #d24a3a; } .signal .flat { color: #8d949c; }
+  .signal .sg-strip { padding: 16px 18px; border-bottom: 1px solid #eceef1; display: flex; justify-content: space-between; align-items: flex-end; }
+  .signal .sg-strip b { font-size: 30px; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+  .signal .sg-strip span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8d949c; display: block; margin-bottom: 6px; }
+  .signal .sg-legend { display: flex; gap: 12px; padding: 12px 18px; font-size: 10px; color: #6b727a; }
+  .signal .sg-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+  .signal .sg-sub { padding: 18px 18px 8px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #8d949c; }
+  .signal .sg-out { margin: 0 18px; border: 1px solid #0a0c0f; }
+  .signal .sg-out .sg-out-head { display: flex; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid #0a0c0f; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .signal .sg-out p { padding: 12px; line-height: 1.6; font-size: 12.5px; border-bottom: 1px solid #eceef1; }
+  .signal .sg-cite { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 12px; border-bottom: 1px solid #eceef1; font-size: 11px; color: #4b525a; }
+  .signal .sg-cite b { font-weight: 600; color: #0a0c0f; }
+  .signal .sg-meter { display: flex; gap: 3px; padding: 11px 12px; }
+  .signal .sg-meter i { height: 4px; flex: 1; background: #e4e7ea; }
+  .signal .sg-meter i.on { background: #2a78d6; }
+
+  /* ---------- 4. Field ---------- */
+  .field { background: linear-gradient(176deg, #eef2ef 0%, #e2eae7 46%, #d7e2de 100%); color: #1b2320; font-family: 'Figtree', system-ui, sans-serif; font-size: 13px; padding: 32px 20px 28px; }
+  .field .fd-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64736d; letter-spacing: .04em; }
+  .field .fd-focus { margin-top: 22px; background: #ffffff; border-radius: 26px; padding: 22px 20px 20px; box-shadow: 0 18px 40px rgba(37, 61, 53, .12); }
+  .field .fd-kicker { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: #5b7f73; font-weight: 600; }
+  .field .fd-focus h4 { font-size: 22px; line-height: 1.25; letter-spacing: -.02em; font-weight: 600; margin-top: 10px; text-wrap: balance; }
+  .field .fd-focus p { color: #4f5b57; margin-top: 10px; line-height: 1.6; }
+  .field .fd-act { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; }
+  .field .fd-act b { background: #1b2320; color: #f2f6f4; border-radius: 999px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; }
+  .field .fd-act span { font-size: 11px; color: #7b8781; }
+  .field .fd-quiet { margin-top: 26px; }
+  .field .fd-quiet h5 { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: #77857f; font-weight: 600; }
+  .field .fd-line { display: flex; justify-content: space-between; align-items: center; padding: 13px 2px; border-bottom: 1px solid rgba(27, 35, 32, .09); }
+  .field .fd-line span { color: #46524e; }
+  .field .fd-line b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .field .fd-line b.muted { color: #8a948f; font-weight: 500; }
+  .field .fd-weather { display: flex; align-items: center; gap: 12px; margin-top: 22px; color: #46524e; font-size: 12px; }
+  .field .fd-weather b { font-size: 26px; font-weight: 600; letter-spacing: -.03em; color: #1b2320; }
+  .field .fd-step { display: flex; gap: 13px; padding: 16px 0; border-bottom: 1px solid rgba(27, 35, 32, .09); }
+  .field .fd-step i { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #5b7f73; color: #5b7f73; font-style: normal; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .field .fd-step b { font-size: 14px; font-weight: 600; }
+  .field .fd-step p { color: #4f5b57; margin-top: 4px; line-height: 1.6; font-size: 12.5px; }
+  .field .fd-src { font-size: 11px; color: #7b8781; margin-top: 6px; }
+
+  /* ---------- 5. Grouped ---------- */
+  .grouped { background: #f2f2f7; color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; padding: 26px 0 26px; }
+  .grouped .gr-title { padding: 0 18px; }
+  .grouped .gr-title small { color: #8e8e93; font-size: 12px; }
+  .grouped .gr-title h4 { font-size: 30px; font-weight: 700; letter-spacing: -.03em; margin-top: 2px; }
+  .grouped .gr-sec { font-size: 12px; color: #6d6d72; padding: 24px 18px 7px; }
+  .grouped .gr-list { background: #ffffff; margin: 0 14px; border-radius: 12px; overflow: hidden; }
+  .grouped .gr-item { display: flex; align-items: center; gap: 11px; padding: 10px 13px; position: relative; }
+  .grouped .gr-item + .gr-item::before { content: ''; position: absolute; top: 0; left: 47px; right: 0; border-top: .5px solid #d8d8dc; }
+  .grouped .gr-item i { flex: 0 0 auto; width: 27px; height: 27px; border-radius: 7px; display: grid; place-items: center; color: #ffffff; font-style: normal; font-size: 12px; font-weight: 700; }
+  .grouped .gr-item .gr-copy { flex: 1; min-width: 0; }
+  .grouped .gr-item b { font-size: 14px; font-weight: 400; display: block; }
+  .grouped .gr-item small { color: #8e8e93; font-size: 11.5px; }
+  .grouped .gr-item .gr-val { color: #8e8e93; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .grouped .gr-item .gr-chev { color: #c4c4c6; font-size: 15px; }
+  .grouped .gr-hero { background: #ffffff; margin: 0 14px; border-radius: 12px; padding: 15px 16px; }
+  .grouped .gr-hero .gr-hero-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .grouped .gr-hero b { font-size: 32px; font-weight: 600; letter-spacing: -.03em; }
+  .grouped .gr-hero span { color: #8e8e93; font-size: 12px; }
+  .grouped .gr-hero p { color: #3c3c43; margin-top: 8px; line-height: 1.5; font-size: 12.5px; }
+  .grouped .gr-ai { background: linear-gradient(100deg, #ffffff 0%, #f4fbfa 55%, #ffffff 100%); background-size: 220% 100%; animation: sheen 5.5s ease-in-out infinite; }
+  @keyframes sheen { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+  .grouped .gr-foot { color: #8e8e93; font-size: 11.5px; padding: 8px 18px 0; line-height: 1.45; }
+  .grouped .gr-btn { margin: 16px 14px 0; background: #0b6e69; color: #ffffff; border-radius: 12px; text-align: center; padding: 12px; font-size: 15px; font-weight: 600; }
+  .grouped .gr-quote { background: #ffffff; margin: 0 14px; border-radius: 12px; padding: 14px 16px; }
+  .grouped .gr-quote p { line-height: 1.5; font-size: 13px; }
+  .grouped .gr-quote small { display: block; color: #8e8e93; font-size: 11.5px; margin-top: 8px; }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Orbis · interface audit</p>
+    <h1>Five directions out of the card soup</h1>
+    <p class="lede">
+      Orbis today renders almost every piece of content inside the same rounded, shadowed box — on Home, in Finance,
+      around the AI. Five directions below, each one a complete position on how a personal intelligence app should look.
+      Every mockup uses the app's real content: the live weather tile, the empty finance state, the workbook advice
+      with its cited observations.
+    </p>
+    <div class="counts">
+      <span class="count"><b>19</b><span>card classes in globals.css</span></span>
+      <span class="count"><b>2</b><span>design languages in one app</span></span>
+      <span class="count"><b>4</b><span>nested boxes at deepest point</span></span>
+      <span class="count"><b>1</b><span>accent doing five jobs</span></span>
+    </div>
+  </header>
+
+  <section class="audit">
+    <h2>What the audit found</h2>
+    <div class="findings">
+      <div class="finding">
+        <span class="tag">Hierarchy</span>
+        <div>
+          <h3>Nineteen card classes, one visual weight</h3>
+          <p><code>.metric-card</code>, <code>.stack-card</code>, <code>.coach-card</code>, <code>.currency-card</code>,
+            <code>.groww-card</code>, <code>.rings-card</code> and thirteen more all resolve to roughly the same radius,
+            border and shadow. When every block is lifted, nothing is lifted — the eye has no entry point on any screen.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Consistency</span>
+        <div>
+          <h3>Two design languages, switched by tab</h3>
+          <p>Home and Invest float custom cards on a tinted ground. Finance and Health run <code>.screen-body.grouped</code>
+            with iOS inset lists (<code>.apple-list</code>, <code>.apple-section</code>). Moving between tabs feels like
+            moving between two apps that share a nav bar.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Structure</span>
+        <div>
+          <h3>Cards inside cards inside cards</h3>
+          <p><code>.workbook-advisor</code> → <code>.workbook-preview</code> → <code>.workbook-sheet</code> →
+            <code>.workbook-advice</code> puts four rounded containers between the screen edge and a sentence of advice.
+            The nesting reads as indecision about what the unit of content is.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Colour</span>
+        <div>
+          <h3>One accent carries links, icons, status and CTAs</h3>
+          <p><code>--accent: #0b6e69</code> marks metric captions, section actions, primary buttons and success states
+            at once, so colour can no longer signal <em>this one matters</em>. Semantic status has no separate voice.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Product</span>
+        <div>
+          <h3>The AI is a feature in a box, not the spine</h3>
+          <p>Orbis brief, workbook advice and portfolio suggestions each sit inside their own card, below the fold,
+            behind a consent checkbox. The most distinctive thing the product does looks like the least important thing
+            on the screen.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Empty state</span>
+        <div>
+          <h3>A new account renders eight identical boxes saying "not added"</h3>
+          <p>Empty states use the same card treatment as full ones, so the first-run screen has the density of a full
+            dashboard and none of the information. Emptiness should be quiet, not furniture.</p>
+        </div>
+      </div>
+      <div class="finding">
+        <span class="tag">Tokens</span>
+        <div>
+          <h3>Two token systems mid-migration</h3>
+          <p>46 <code>--sys-*</code> variables now coexist with the original <code>--bg</code>/<code>--ink</code>/<code>--card</code>
+            set. Whichever direction you pick, finish on one set — the migration is most of the work either way.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="switcher" aria-label="Design directions">
+  <div class="switcher-inner" role="tablist">
+    <button class="tab" role="tab" id="tab-ledger" aria-controls="p-ledger" aria-selected="true"><b>01</b>Ledger</button>
+    <button class="tab" role="tab" id="tab-console" aria-controls="p-console" aria-selected="false"><b>02</b>Console</button>
+    <button class="tab" role="tab" id="tab-signal" aria-controls="p-signal" aria-selected="false"><b>03</b>Signal</button>
+    <button class="tab" role="tab" id="tab-field" aria-controls="p-field" aria-selected="false"><b>04</b>Field</button>
+    <button class="tab" role="tab" id="tab-grouped" aria-controls="p-grouped" aria-selected="false"><b>05</b>Grouped</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ============================ 01 LEDGER ============================ -->
+  <section class="direction" id="p-ledger" role="tabpanel" aria-labelledby="tab-ledger">
+    <div class="dir-head">
+      <div>
+        <h2>Ledger</h2>
+        <p class="thesis">No containers at all. Orbis reads as a printed statement of your life: hairline rules,
+          figures set in a serif and aligned in a column, advice written as an argument with numbered evidence.
+          The authority comes from typography, not from boxes.</p>
+      </div>
+      <div class="spec">
+        <div class="spec-row"><span>Colour</span><div class="swatches"><i style="background:#f6f6f4"></i><i style="background:#16191c"></i><i style="background:#4b524f"></i><i style="background:#1f4f45"></i><i style="background:#8a2f2a"></i></div></div>
+        <div class="spec-row"><span>Type</span><em>Fraunces for figures and headings, Instrument Sans for prose, tabular numerals throughout</em></div>
+        <div class="spec-row"><span>Layout</span><em>One column, rules instead of cards, values right-aligned on a shared axis</em></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m ledger">
+          <div class="lg-top"><b>Orbis</b><span>Wed 24 Sep</span></div>
+          <h4>Nothing needs your attention this evening.</h4>
+          <p class="lg-brief">Two things changed today: rain arrived, and your Gmail sync found no new alerts.</p>
+
+          <div class="lg-weather">
+            <div><b>24°C</b><em>Rain showers · feels like 27°</em></div>
+            <div style="text-align:right"><em>Your location</em><em>100% chance of rain</em></div>
+          </div>
+
+          <p class="lg-label">This month</p>
+          <div class="lg-row"><span>Expenses<small>No expense data yet</small></span><b>—</b></div>
+          <div class="lg-row"><span>Transaction alerts<small>Saved for review</small></span><b>0</b></div>
+          <div class="lg-row"><span>Active goals<small>Nothing set</small></span><b>0</b></div>
+          <div class="lg-row"><span>Health data<small>No workbook uploaded</small></span><b>—</b></div>
+
+          <p class="lg-note">Orbis only draws on what you connect or upload. Connect Gmail in Finance to start the
+            expense column.</p>
+
+          <div class="lg-foot"><span><b>Home</b></span><span>Finance</span><span>Health</span><span>Invest</span><span>You</span></div>
+        </div></div></div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m ledger">
+          <div class="lg-top"><b>Advice</b><span>Weights.xlsx</span></div>
+          <h4>Your weight trend is flat, not falling.</h4>
+          <p class="lg-brief">Read from 90 rows across one sheet, 24 Sep, 9:12 pm.</p>
+
+          <p class="lg-label">What to do</p>
+          <div class="lg-arg">
+            <b>Hold intake, add two walks<sup>1</sup></b>
+            <p>The 30-day average moved 0.3 kg against a 4 kg goal. Two 30-minute walks a week closes the gap by
+              December without changing what you eat.</p>
+          </div>
+          <div class="lg-arg">
+            <b>Weigh on the same day<sup>2</sup></b>
+            <p>Entries cluster on Mondays and Fridays. A single weekly reading removes most of the noise you are
+              currently reading as progress.</p>
+          </div>
+
+          <p class="lg-label">Evidence</p>
+          <p class="lg-fn"><sup>1</sup>Sheet1 · Weight (kg): average 74.2 over 90 rows</p>
+          <p class="lg-fn"><sup>2</sup>Sheet1 · Date: 41 of 90 entries fall on Mon or Fri</p>
+          <p class="lg-fn" style="color:#8b918d">Informational, not a medical diagnosis. 4 of 5 daily AI requests left.</p>
+
+          <span class="lg-btn">Delete this advice</span>
+        </div></div></div>
+        <figcaption>Workbook advice</figcaption>
+      </figure>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>What it replaces</h3><p>All 19 card classes collapse into rules and spacing. <code>.metric-card</code> becomes a row; <code>.stack-card</code> becomes a labelled group.</p></div>
+      <div class="note"><h3>Where the AI lives</h3><p>Advice is the page, not a panel inside one. Evidence IDs you already return become real footnotes.</p></div>
+      <div class="note"><h3>Risk</h3><p>Needs disciplined copy — a serif statement exposes vague sentences. Charts have to earn their place.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================ 02 CONSOLE ============================ -->
+  <section class="direction" id="p-console" role="tabpanel" aria-labelledby="tab-console" hidden>
+    <div class="dir-head">
+      <div>
+        <h2>Console</h2>
+        <p class="thesis">Conversation is the interface. The home screen is a thread Orbis has already started, the
+          data appears as the result of visible work ("read 32 transactions"), and consent is a permission prompt in
+          the flow rather than a checkbox in a card. This is the direction that most reads as an AI product.</p>
+      </div>
+      <div class="spec">
+        <div class="spec-row"><span>Colour</span><div class="swatches"><i style="background:#0d0f11"></i><i style="background:#15181b"></i><i style="background:#e7eae7"></i><i style="background:#8b9490"></i><i style="background:#6fd3c2"></i></div></div>
+        <div class="spec-row"><span>Type</span><em>IBM Plex Mono for labels, chips and numbers; Instrument Sans for everything Orbis says</em></div>
+        <div class="spec-row"><span>Layout</span><em>Single thread, fixed ask bar, facts as inline rows inside the answer</em></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m console">
+          <div class="cs-bar"><span>ORBIS</span><b>● ready</b></div>
+
+          <div class="cs-turn">
+            <p class="cs-from"><b>orbis</b> · 8:42 pm</p>
+            <p>Good evening. Nothing needs your attention right now — no new transaction alerts since this morning,
+              and rain is expected all evening, so the run you planned is probably a treadmill one.</p>
+            <div class="cs-chips">
+              <span class="cs-chip">read <b>32</b> transactions</span>
+              <span class="cs-chip">checked <b>gmail</b></span>
+              <span class="cs-chip">weather <b>open-meteo</b></span>
+            </div>
+          </div>
+
+          <div class="cs-facts">
+            <div class="cs-fact"><span>Expenses this month</span><b>—</b></div>
+            <div class="cs-fact"><span>Transaction alerts<br><em>saved for review</em></span><b>0</b></div>
+            <div class="cs-fact"><span>Now<br><em>rain showers · 100%</em></span><b>24°</b></div>
+            <div class="cs-fact"><span>Active goals</span><b>0</b></div>
+          </div>
+
+          <div class="cs-turn">
+            <p class="cs-from">you · 8:44 pm</p>
+            <p class="user">what did I spend on food last month</p>
+          </div>
+
+          <div class="cs-turn">
+            <p class="cs-from"><b>orbis</b></p>
+            <p>I have no saved transactions yet, so I can't answer that honestly. Connect Gmail in Finance and I'll
+              read the alerts your bank already sends you.<span class="cs-caret"></span></p>
+          </div>
+
+          <div class="cs-ask"><span>Ask about money, health or goals</span><i>↑</i></div>
+        </div></div></div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m console">
+          <div class="cs-bar"><span>WEIGHTS.XLSX</span><b>4/5 today</b></div>
+
+          <div class="cs-turn">
+            <p class="cs-from">you</p>
+            <p class="user">what does this say about my weight goal</p>
+          </div>
+
+          <div class="cs-perm">
+            <p>To answer this I'll send a bounded summary of the sheet plus your 2 goals. The file itself never leaves
+              your device.</p>
+            <div class="cs-perm-actions"><b class="yes">Send summary</b><b class="no">Not the goals</b></div>
+          </div>
+
+          <div class="cs-turn">
+            <p class="cs-from"><b>orbis</b> · 9:12 pm</p>
+            <p>Your weight is flat, not falling. The 30-day average moved 0.3 kg against a 4 kg goal, and entries
+              cluster on Mondays and Fridays, which is most of the noise you're reading as progress.</p>
+            <p class="cs-cite">Sheet1 · Weight (kg): avg 74.2 over 90 rows<br>Sheet1 · Date: 41/90 entries Mon or Fri</p>
+            <div class="cs-chips">
+              <span class="cs-chip">add <b>2 walks/week</b></span>
+              <span class="cs-chip">weigh <b>weekly</b></span>
+              <span class="cs-chip">saved <b>9:12 pm</b></span>
+            </div>
+          </div>
+
+          <div class="cs-ask"><span>Ask a follow-up</span><i>↑</i></div>
+        </div></div></div>
+        <figcaption>Workbook advice</figcaption>
+      </figure>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>What it replaces</h3><p>Tab screens become views the thread can open. <code>.workbook-consent</code> becomes an inline permission, which is also a clearer disclosure.</p></div>
+      <div class="note"><h3>What it needs</h3><p>A real ask endpoint and routing from question to screen — the biggest build of the five, and the biggest change to what Orbis is.</p></div>
+      <div class="note"><h3>Risk</h3><p>A thread is bad at at-a-glance state. Keep the fact rows so the answer to "how am I doing" doesn't require typing.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================ 03 SIGNAL ============================ -->
+  <section class="direction" id="p-signal" role="tabpanel" aria-labelledby="tab-signal" hidden>
+    <div class="dir-head">
+      <div>
+        <h2>Signal</h2>
+        <p class="thesis">A terminal for one person. White ground, hairline grid, every row a measurement with its
+          trend drawn beside it. Colour is spent only on data — nothing else in the interface is allowed to be
+          coloured — and AI output arrives as a bordered block with its provenance on the frame.</p>
+      </div>
+      <div class="spec">
+        <div class="spec-row"><span>Colour</span><div class="swatches"><i style="background:#ffffff"></i><i style="background:#0a0c0f"></i><i style="background:#2a78d6"></i><i style="background:#1baf7a"></i><i style="background:#d24a3a"></i></div></div>
+        <div class="spec-row"><span>Type</span><em>Archivo, tight and tabular; 10px letterspaced caps for every label</em></div>
+        <div class="spec-row"><span>Layout</span><em>Full-bleed rows on a 1px grid, values right-aligned, sparkline between name and value</em></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m signal">
+          <div class="sg-head"><b>ORBIS</b><span>24 Sep · 20:42 IST</span></div>
+
+          <div class="sg-strip">
+            <div><span>Net position</span><b>₹4,82,300</b></div>
+            <div style="text-align:right"><span>Today</span><b class="up" style="font-size:18px">+₹2,140</b></div>
+          </div>
+
+          <div class="sg-row">
+            <div class="sg-name"><b>Portfolio</b><span>7 holdings · mostly equity</span></div>
+            <svg viewBox="0 0 66 22" width="66" height="22" aria-hidden="true"><polyline points="0,17 9,15 18,16 27,11 36,12 45,7 54,8 63,4" fill="none" stroke="#1baf7a" stroke-width="1.5"></polyline><circle cx="63" cy="4" r="2" fill="#1baf7a"></circle></svg>
+            <div class="sg-val">₹4,82,300<small class="up">+0.44%</small></div>
+          </div>
+
+          <div class="sg-row">
+            <div class="sg-name"><b>Expenses</b><span>no saved transactions</span></div>
+            <svg viewBox="0 0 66 22" width="66" height="22" aria-hidden="true"><line x1="0" y1="11" x2="63" y2="11" stroke="#d6dade" stroke-width="1.5" stroke-dasharray="2 3"></line></svg>
+            <div class="sg-val flat">—<small class="flat">no data</small></div>
+          </div>
+
+          <div class="sg-row">
+            <div class="sg-name"><b>Steps</b><span>14-day average</span></div>
+            <svg viewBox="0 0 66 22" width="66" height="22" aria-hidden="true"><polyline points="0,8 9,12 18,6 27,14 36,10 45,15 54,13 63,16" fill="none" stroke="#d24a3a" stroke-width="1.5"></polyline><circle cx="63" cy="16" r="2" fill="#d24a3a"></circle></svg>
+            <div class="sg-val">6,410<small class="down">−12%</small></div>
+          </div>
+
+          <div class="sg-row">
+            <div class="sg-name"><b>Weather</b><span>rain showers · feels 27°</span></div>
+            <svg viewBox="0 0 66 22" width="66" height="22" aria-hidden="true"><rect x="0" y="4" width="63" height="14" fill="#eef4fb"></rect><polyline points="0,14 9,13 18,9 27,7 36,6 45,6 54,9 63,12" fill="none" stroke="#2a78d6" stroke-width="1.5"></polyline></svg>
+            <div class="sg-val">24°<small style="color:#2a78d6">100% rain</small></div>
+          </div>
+
+          <div class="sg-row">
+            <div class="sg-name"><b>Goals</b><span>none active</span></div>
+            <svg viewBox="0 0 66 22" width="66" height="22" aria-hidden="true"><line x1="0" y1="11" x2="63" y2="11" stroke="#d6dade" stroke-width="1.5" stroke-dasharray="2 3"></line></svg>
+            <div class="sg-val flat">0<small class="flat">—</small></div>
+          </div>
+
+          <div class="sg-legend"><span><i style="background:#1baf7a"></i>gaining</span><span><i style="background:#d24a3a"></i>losing</span><span><i style="background:#2a78d6"></i>external</span><span><i style="background:#d6dade"></i>no data</span></div>
+        </div></div></div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m signal">
+          <div class="sg-head"><b>WEIGHTS.XLSX</b><span>90 rows · 1 sheet</span></div>
+
+          <div class="sg-strip">
+            <div><span>30-day average</span><b>74.2 kg</b></div>
+            <div style="text-align:right"><span>vs previous 30</span><b class="flat" style="font-size:18px">−0.3</b></div>
+          </div>
+
+          <p class="sg-sub">Model output</p>
+          <div class="sg-out">
+            <div class="sg-out-head"><span>ADVICE</span><span>9:12 PM · SAVED</span></div>
+            <p>Weight is flat against a 4 kg goal. Two 30-minute walks a week closes the gap by December with no
+              change to intake. Weigh on one fixed day — Mon/Fri clustering is producing most of the swing you read
+              as progress.</p>
+            <div class="sg-cite"><span>Sheet1 · Weight (kg)</span><b>avg 74.2 / 90 rows</b></div>
+            <div class="sg-cite"><span>Sheet1 · Date</span><b>41/90 Mon or Fri</b></div>
+            <div class="sg-meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          </div>
+          <p class="sg-sub" style="padding-top:10px">4 of 5 daily requests used · informational only</p>
+        </div></div></div>
+        <figcaption>Workbook advice</figcaption>
+      </figure>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>What it replaces</h3><p>Home stops being tiles and becomes one scan column. <code>.chart-card</code> and <code>.rings-card</code> shrink into inline sparklines.</p></div>
+      <div class="note"><h3>Where it shines</h3><p>Once Gmail, Groww and Apple Health are all connected, this is the only direction that shows everything at once without scrolling.</p></div>
+      <div class="note"><h3>Risk</h3><p>Brutal with empty data — half the rows say "no data" on day one. Needs a genuinely different first-run screen.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================ 04 FIELD ============================ -->
+  <section class="direction" id="p-field" role="tabpanel" aria-labelledby="tab-field" hidden>
+    <div class="dir-head">
+      <div>
+        <h2>Field</h2>
+        <p class="thesis">One thing at a time. A soft ground, a single lifted surface carrying the one decision worth
+          making today, and everything else demoted to a quiet list underneath. The opposite of a dashboard: the app
+          decides what matters so you don't have to scan.</p>
+      </div>
+      <div class="spec">
+        <div class="spec-row"><span>Colour</span><div class="swatches"><i style="background:#eef2ef"></i><i style="background:#d7e2de"></i><i style="background:#ffffff"></i><i style="background:#1b2320"></i><i style="background:#5b7f73"></i></div></div>
+        <div class="spec-row"><span>Type</span><em>Figtree throughout — one humanist face, three weights, no display face</em></div>
+        <div class="spec-row"><span>Layout</span><em>Gradient field, one focal surface, hairline list below, nothing else lifted</em></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m field">
+          <div class="fd-top"><span>Wednesday, 24 September</span><span>Orbis</span></div>
+
+          <div class="fd-focus">
+            <p class="fd-kicker">Today</p>
+            <h4>Connect Gmail and Orbis can start your expense picture tonight.</h4>
+            <p>It reads only bank alert emails, keeps the IDs, and never stores the message body. This is the one
+              setup step standing between you and everything else in the app.</p>
+            <div class="fd-act"><b>Connect Gmail</b><span>2 minutes</span></div>
+          </div>
+
+          <div class="fd-weather">
+            <b>24°</b>
+            <div>Rain showers, feels like 27°<br>100% chance of rain this evening</div>
+          </div>
+
+          <div class="fd-quiet">
+            <h5>Quiet today</h5>
+            <div class="fd-line"><span>Expenses this month</span><b class="muted">No data</b></div>
+            <div class="fd-line"><span>Transaction alerts</span><b>0</b></div>
+            <div class="fd-line"><span>Active goals</span><b>0</b></div>
+            <div class="fd-line"><span>Health workbook</span><b class="muted">Not added</b></div>
+          </div>
+        </div></div></div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m field">
+          <div class="fd-top"><span>Weights.xlsx · 90 rows</span><span>9:12 pm</span></div>
+
+          <div class="fd-focus">
+            <p class="fd-kicker">What Orbis sees</p>
+            <h4>Flat, not falling — and the weekend gap is hiding it.</h4>
+            <p>Your 30-day average moved 0.3 kg against a 4 kg goal, and most readings land on Mondays and Fridays.</p>
+            <div class="fd-act"><b>Make it a plan</b><span>Saved 9:12 pm</span></div>
+          </div>
+
+          <div class="fd-quiet">
+            <h5>Two steps</h5>
+            <div class="fd-step"><i>1</i><div><b>Add two 30-minute walks</b><p>Enough to close the gap by December without changing what you eat.</p><p class="fd-src">Sheet1 · Weight (kg): average 74.2 over 90 rows</p></div></div>
+            <div class="fd-step"><i>2</i><div><b>Weigh on one fixed day</b><p>A single weekly reading removes the swing you're currently reading as progress.</p><p class="fd-src">Sheet1 · Date: 41 of 90 entries on Mon or Fri</p></div></div>
+          </div>
+          <p class="fd-src" style="margin-top:16px">Informational, not a medical diagnosis.</p>
+        </div></div></div>
+        <figcaption>Workbook advice</figcaption>
+      </figure>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>What it replaces</h3><p>The metric grid stops being four equal tiles. <code>composeBrief()</code> stops being a sentence in a card and becomes the screen's whole top half.</p></div>
+      <div class="note"><h3>What it needs</h3><p>Real ranking logic: something has to decide the one focal item each day, and be right often enough to be trusted.</p></div>
+      <div class="note"><h3>Risk</h3><p>Hides detail by design. Power users who want the numbers will need a second, denser view behind it.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================ 05 GROUPED ============================ -->
+  <section class="direction" id="p-grouped" role="tabpanel" aria-labelledby="tab-grouped" hidden>
+    <div class="dir-head">
+      <div>
+        <h2>Grouped</h2>
+        <p class="thesis">Finish the migration you already started. Everything becomes an inset list on a grey ground —
+          the pattern Finance and Health are half-way to — with one exception made on purpose: the AI row, which
+          carries a slow sheen so the one generative thing on screen is also the one moving thing.</p>
+      </div>
+      <div class="spec">
+        <div class="spec-row"><span>Colour</span><div class="swatches"><i style="background:#f2f2f7"></i><i style="background:#ffffff"></i><i style="background:#000000"></i><i style="background:#8e8e93"></i><i style="background:#0b6e69"></i></div></div>
+        <div class="spec-row"><span>Type</span><em>System face (SF on iOS), 13–30px, weights 400/600/700 only</em></div>
+        <div class="spec-row"><span>Layout</span><em>Large title, inset lists with 0.5px separators, section captions in sentence case</em></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m grouped">
+          <div class="gr-title"><small>Wednesday, 24 September</small><h4>Today</h4></div>
+
+          <p class="gr-sec">Right now</p>
+          <div class="gr-hero">
+            <div class="gr-hero-top"><b>24°</b><span>Your location</span></div>
+            <p>Rain showers, feels like 27°. 100% chance of rain this evening.</p>
+          </div>
+
+          <p class="gr-sec">From Orbis</p>
+          <div class="gr-list gr-ai">
+            <div class="gr-item">
+              <i style="background:#0b6e69">✳</i>
+              <div class="gr-copy"><b>Nothing needs your attention</b><small>No new alerts since this morning</small></div>
+              <span class="gr-chev">›</span>
+            </div>
+          </div>
+
+          <p class="gr-sec">This month</p>
+          <div class="gr-list">
+            <div class="gr-item"><i style="background:#30b06b">₹</i><div class="gr-copy"><b>Expenses</b><small>No expense data yet</small></div><span class="gr-val">—</span><span class="gr-chev">›</span></div>
+            <div class="gr-item"><i style="background:#e0503f">✉</i><div class="gr-copy"><b>Transaction alerts</b><small>Saved for review</small></div><span class="gr-val">0</span><span class="gr-chev">›</span></div>
+            <div class="gr-item"><i style="background:#f08c1e">◎</i><div class="gr-copy"><b>Goals</b><small>None active</small></div><span class="gr-val">0</span><span class="gr-chev">›</span></div>
+            <div class="gr-item"><i style="background:#c0508f">♥</i><div class="gr-copy"><b>Health data</b><small>Upload a workbook</small></div><span class="gr-val">—</span><span class="gr-chev">›</span></div>
+          </div>
+          <p class="gr-foot">Orbis only uses information you connect or upload.</p>
+        </div></div></div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <figure class="frame">
+        <div class="phone"><div class="screen"><div class="m grouped">
+          <div class="gr-title"><small>Weights.xlsx · 90 rows</small><h4>Advice</h4></div>
+
+          <p class="gr-sec">Summary</p>
+          <div class="gr-quote">
+            <p>Your weight is flat against a 4 kg goal, and most readings land on Mondays and Fridays.</p>
+            <small>Saved 24 Sep, 9:12 pm</small>
+          </div>
+
+          <p class="gr-sec">What to do</p>
+          <div class="gr-list">
+            <div class="gr-item"><i style="background:#0b6e69">1</i><div class="gr-copy"><b>Add two 30-minute walks</b><small>Closes the gap by December</small></div><span class="gr-chev">›</span></div>
+            <div class="gr-item"><i style="background:#0b6e69">2</i><div class="gr-copy"><b>Weigh on one fixed day</b><small>Removes the Mon/Fri swing</small></div><span class="gr-chev">›</span></div>
+          </div>
+
+          <p class="gr-sec">Based on</p>
+          <div class="gr-list">
+            <div class="gr-item"><div class="gr-copy"><b>Weight (kg)</b><small>Sheet1 · average 74.2 over 90 rows</small></div></div>
+            <div class="gr-item"><div class="gr-copy"><b>Date</b><small>Sheet1 · 41 of 90 entries Mon or Fri</small></div></div>
+          </div>
+
+          <div class="gr-btn">Ask again</div>
+          <p class="gr-foot">Informational, not a medical diagnosis. 4 of 5 daily requests used.</p>
+        </div></div></div>
+        <figcaption>Workbook advice</figcaption>
+      </figure>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>What it replaces</h3><p>The custom card classes go; <code>.apple-list</code> and <code>.apple-section</code> become the only containers, already written for Finance and Health.</p></div>
+      <div class="note"><h3>Why it's cheapest</h3><p>Home and Invest move to a pattern the codebase already has. No new type system, and dark mode comes almost free from the <code>--sys-*</code> tokens.</p></div>
+      <div class="note"><h3>Risk</h3><p>It looks like iOS, not like Orbis. The AI sheen is the only thing that distinguishes the product from Settings.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>How to read these.</strong> They are not five coats of paint on the same screen — each one changes what
+      Home <em>is</em>: a statement, a thread, a terminal, a single decision, or a settings list. Pick by answering one
+      question: when someone opens Orbis with nothing connected, what should they see?</p>
+    <p><strong>Cheapest to build:</strong> Grouped, then Ledger. <strong>Most distinctive:</strong> Console, then Signal.
+      <strong>Best fit for the data you actually have today</strong> (mostly empty, one weather call, an occasional
+      workbook): Field or Ledger — both are designed for a quiet screen, while Signal needs connected accounts to look
+      like anything.</p>
+    <p>Every mockup is static HTML in this page — the real screens would keep your existing Supabase data flow,
+      server actions and consent copy untouched. The work is <code>globals.css</code> and the container markup.</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    function select(tab) {
+      tabs.forEach(function (other) {
+        var panel = document.getElementById(other.getAttribute('aria-controls'));
+        var on = other === tab;
+        other.setAttribute('aria-selected', on ? 'true' : 'false');
+        panel.hidden = !on;
+      });
+      try { localStorage.setItem('orbis-direction', tab.id); } catch (e) { /* private mode: selection is per-visit */ }
+    }
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () { select(tab); });
+      tab.addEventListener('keydown', function (event) {
+        var index = tabs.indexOf(tab);
+        if (event.key === 'ArrowRight') { tabs[(index + 1) % tabs.length].focus(); tabs[(index + 1) % tabs.length].click(); }
+        if (event.key === 'ArrowLeft') { tabs[(index - 1 + tabs.length) % tabs.length].focus(); tabs[(index - 1 + tabs.length) % tabs.length].click(); }
+      });
+    });
+    try {
+      var saved = localStorage.getItem('orbis-direction');
+      var match = saved && document.getElementById(saved);
+      if (match) select(match);
+    } catch (e) { /* no stored preference */ }
+  })();
+</script>
