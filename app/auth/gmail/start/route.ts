@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { buildGoogleAuthorizationUrl, createSignedGmailState, getAuthenticatedUserId, gmailStateCookieName } from '@/lib/gmail/oauth';
+import { buildGoogleAuthorizationUrl, createSignedGmailState, getAuthenticatedUserId, gmailStateCookieName, googleReturnCookieName } from '@/lib/gmail/oauth';
 import { getSiteUrl } from '@/lib/site-url';
 
 export async function GET(request: NextRequest) {
@@ -17,6 +17,10 @@ export async function GET(request: NextRequest) {
       path: '/auth/gmail',
       maxAge: 10 * 60,
     });
+    // /auth/gmail/start?return=settings brings the user back to Profile → Settings.
+    if (request.nextUrl.searchParams.get('return') === 'settings') {
+      response.cookies.set(googleReturnCookieName, 'settings', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/auth/gmail', maxAge: 10 * 60 });
+    }
     return response;
   } catch {
     return NextResponse.redirect(new URL('/?tab=finance&gmail=setup-error', getSiteUrl()));

@@ -55,10 +55,10 @@ export function HomeCityEditor({ location }: { location: HomeLocation }) {
   );
 }
 
-export function Integrations({ items }: { items: Integration[] }) {
+export function Integrations({ items, heading = true }: { items: Integration[]; heading?: boolean }) {
   return (
     <section className="integrations" aria-labelledby="integrations-title">
-      <div className="integrations-head"><small>ORBIS SYSTEM</small><h3 id="integrations-title">Integrations</h3></div>
+      {heading && <div className="integrations-head"><small>ORBIS SYSTEM</small><h3 id="integrations-title">Integrations</h3></div>}
       <ul>
         {items.map((item) => (
           <li key={item.id} className={item.state}>

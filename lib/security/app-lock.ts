@@ -56,6 +56,14 @@ export async function unlockWithFreshAuth(claims: LockClaims | null | undefined)
   return true;
 }
 
+// Unlocks after the server itself verified a second factor for this session (the device PIN).
+export async function grantAppUnlock(claims: LockClaims | null | undefined) {
+  const who = identity(claims);
+  if (!who) return false;
+  await writeCookie(who.userId, who.sessionId);
+  return true;
+}
+
 // Slides the idle window forward; never creates an unlock that did not already exist.
 export async function extendAppUnlock(claims: LockClaims | null | undefined) {
   const who = identity(claims);

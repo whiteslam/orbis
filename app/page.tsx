@@ -4,13 +4,17 @@ import { getFinanceSummary } from '@/lib/finance/repository';
 import { getGoalsSummary } from '@/lib/goals/repository';
 import { getContextNotes } from '@/lib/goals/memory';
 import { getFitnessPersona, getHomeLocation, getPersonalProfile } from '@/lib/personal/repository';
-import { getIntegrationStatus } from '@/lib/providers/status';
+import { getAppConnections, getIntegrationStatus } from '@/lib/providers/status';
+import { getJournal } from '@/lib/journal/repository';
+import { getNotificationSettings } from '@/lib/notifications/repository';
 import { getInvestmentSummary } from '@/lib/invest/repository';
 import { getStepsSummary } from '@/lib/health/steps-repository';
 import { createClient } from '@/lib/supabase/server';
 import { APP_LOCK_IDLE_MS, isAppUnlocked } from '@/lib/security/app-lock';
 import { AppLockGuard } from '@/components/security/app-lock-guard';
 import { LockScreen } from '@/components/security/lock-screen';
+import { PinSetup } from '@/components/security/pin-setup';
+import { getPinStatus } from '@/lib/security/pin-store';
 
 export const maxDuration = 60;
 
@@ -26,9 +30,12 @@ export default async function Page() {
   const email = typeof data.claims.email === 'string' ? data.claims.email.toLowerCase() : null;
 
   // While locked, load nothing personal: only the lock screen is rendered.
-  if (!(await isAppUnlocked(data.claims))) return <LockScreen email={email} />;
+  const pinStatus = await getPinStatus(userId);
+  if (!(await isAppUnlocked(data.claims))) return <LockScreen email={email} pinStatus={pinStatus} />;
+  // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
+  if (pinStatus === 'none' || pinStatus === 'locked') return <PinSetup reset={pinStatus === 'locked'} />;
 
-  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations] = await Promise.all([
+  const [financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections] = await Promise.all([
     getFinanceSummary(userId),
     getGoalsSummary(userId),
     getContextNotes(userId),
@@ -38,10 +45,13 @@ export default async function Page() {
     getStepsSummary(userId),
     getHomeLocation(userId),
     getIntegrationStatus(userId, email),
+    getJournal(userId),
+    getNotificationSettings(userId),
+    getAppConnections(userId, email),
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} />
+      <OrbisApp financeSummary={financeSummary} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} />
     </AppLockGuard>
   );
 }

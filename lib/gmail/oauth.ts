@@ -73,13 +73,17 @@ export function verifySignedGmailState(cookieValue: string | undefined, returned
   return userId;
 }
 
+export const googleReturnCookieName = 'orbis_google_return';
+export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
 export function buildGoogleAuthorizationUrl(state: string) {
   const { clientId, redirectUri } = getGmailConfig();
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'openid email https://www.googleapis.com/auth/gmail.readonly');
+  url.searchParams.set('scope', `openid email ${GMAIL_SCOPE} ${CALENDAR_SCOPE}`);
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
   url.searchParams.set('include_granted_scopes', 'true');
@@ -149,7 +153,7 @@ export async function getGoogleAccount(accessToken: string) {
   return { sub: profile.sub, email: profile.email };
 }
 
-export async function saveGmailConnection(userId: string, account: { sub: string; email: string }, refreshToken?: string) {
+export async function saveGmailConnection(userId: string, account: { sub: string; email: string }, refreshToken?: string, grantedScopes: string[] = []) {
   const admin = createAdminClient();
   const { data: existing, error: readError } = await admin
     .from('gmail_connections')
@@ -181,7 +185,9 @@ export async function saveGmailConnection(userId: string, account: { sub: string
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await admin.from('gmail_connections').upsert(values, { onConflict: 'user_id' });
+  // Google can grant a subset of scopes (e.g. Gmail without Calendar); remember which.
+  let { error } = await admin.from('gmail_connections').upsert({ ...values, granted_scopes: grantedScopes }, { onConflict: 'user_id' });
+  if (error?.code === 'PGRST204' || error?.code === '42703') ({ error } = await admin.from('gmail_connections').upsert(values, { onConflict: 'user_id' }));
 
   if (error) throw new Error('Gmail connection could not be saved. Apply the finance database migration and try again.');
 }

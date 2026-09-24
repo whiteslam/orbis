@@ -4,6 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { loadLivePortfolio } from '@/lib/invest/live';
+import { getAccessToken, GrowwAuthError, GrowwError } from '@/lib/invest/groww';
+import { deleteGrowwConnection, saveGrowwConnection } from '@/lib/invest/groww-connection';
+import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import { loadManualHoldings } from '@/lib/invest/repository';
 import type { LivePortfolioData } from '@/lib/invest/types';
 
@@ -107,5 +110,44 @@ export async function loadInvestLiveAction(): Promise<LivePortfolioData | null> 
   if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
   const email = typeof data?.claims?.email === 'string' ? data.claims.email.toLowerCase() : null;
   const { holdings } = await loadManualHoldings(supabase, userId);
-  return loadLivePortfolio(email, holdings);
+  return loadLivePortfolio(userId, email, holdings);
+}
+
+// Checks the key and secret with Groww before saving them encrypted for this user.
+export async function connectGrowwAction(input: { apiKey: string; apiSecret: string }) {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to connect Groww.' };
+  if (!input || typeof input !== 'object' || typeof input.apiKey !== 'string' || typeof input.apiSecret !== 'string') return { success: false, message: 'Enter your Groww API key and secret.' };
+
+  const apiKey = input.apiKey.replace(/\s+/g, '');
+  const apiSecret = input.apiSecret.trim();
+  if (apiKey.length < 20 || apiKey.length > 4000 || !/^[A-Za-z0-9._-]+$/.test(apiKey)) return { success: false, message: 'That doesn’t look like a Groww API key. Copy the full key from the Groww API keys page.' };
+  if (apiSecret.length < 8 || apiSecret.length > 200 || /\s/.test(apiSecret)) return { success: false, message: 'That doesn’t look like a Groww API secret. Copy it exactly as shown.' };
+  if (!credentialEncryptionReady()) return { success: false, message: 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY) first.' };
+
+  try {
+    await getAccessToken({ apiKey, apiSecret });
+  } catch (error) {
+    return { success: false, message: error instanceof GrowwAuthError ? 'Groww didn’t accept this key and secret. Check both, and approve the key on the Groww API keys page if it asks.' : error instanceof GrowwError ? error.message : 'Groww could not be reached. Try again shortly.' };
+  }
+
+  try {
+    await saveGrowwConnection(auth.userId, { apiKey, apiSecret });
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Your Groww connection could not be saved.' };
+  }
+  revalidatePath('/');
+  return { success: true, message: 'Groww connected. Syncing your holdings…' };
+}
+
+export async function disconnectGrowwAction() {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to disconnect Groww.' };
+  try {
+    await deleteGrowwConnection(auth.userId);
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Groww could not be disconnected.' };
+  }
+  revalidatePath('/');
+  return { success: true, message: 'Groww disconnected. Your saved key and secret were deleted from Orbis.' };
 }

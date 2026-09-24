@@ -3,6 +3,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -85,6 +86,11 @@ function safeFileName(name: string) {
 }
 
 type PdfTextSegment = { x: number; text: string };
+
+// On the server pdfjs runs its worker in-process. Left alone it imports pdf.worker.mjs from beside its own file,
+// which does not exist once Next bundles pdfjs into a server chunk. Registering the statically imported worker
+// makes pdfjs use it directly.
+(globalThis as typeof globalThis & { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
 async function parsePdf(file: File, bytes: Buffer): Promise<ParsedWorkbookPreview> {
   if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {

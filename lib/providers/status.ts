@@ -2,6 +2,8 @@ import 'server-only';
 
 import { openRouterModel } from '@/lib/ai/openrouter';
 import { growwConfigured, growwOwnerEmail } from '@/lib/invest/groww';
+import { CALENDAR_SCOPE, GMAIL_SCOPE } from '@/lib/gmail/oauth';
+import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { ProviderId } from '@/lib/providers/core';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -38,21 +40,60 @@ function providerState(row: StatusRow | undefined): Pick<Integration, 'state' | 
   return { state: 'connected', detail: null, lastSyncAt: row.last_success_at };
 }
 
+export type AppConnections = {
+  google: { email: string; status: string; gmail: boolean; calendar: boolean; lastSyncAt: string | null } | null;
+  groww: { status: string; lastSyncAt: string | null; source: 'account' | 'server' } | null;
+  growwSetupMessage: string | null;
+};
+
+// Account-level connections the user links themselves (Settings → App integrations).
+export async function getAppConnections(userId: string, email: string | null): Promise<AppConnections> {
+  const result: AppConnections = { google: null, groww: null, growwSetupMessage: null };
+  try {
+    const admin = createAdminClient();
+    const [google, groww] = await Promise.all([
+      admin.from('gmail_connections').select('*').eq('user_id', userId).maybeSingle(),
+      admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
+    ]);
+    if (google.data) {
+      const scopes: string[] = Array.isArray(google.data.granted_scopes) ? google.data.granted_scopes : [];
+      result.google = {
+        email: google.data.google_email,
+        status: google.data.status,
+        // Connections made before scope tracking only ever had Gmail.
+        gmail: !scopes.length || scopes.includes(GMAIL_SCOPE),
+        calendar: scopes.includes(CALENDAR_SCOPE),
+        lastSyncAt: google.data.last_sync_at,
+      };
+    }
+    if (groww.data) result.groww = { status: groww.data.status, lastSyncAt: groww.data.last_sync_at, source: 'account' };
+    else if (groww.error && ['PGRST205', 'PGRST204', '42P01'].includes(groww.error.code ?? '')) result.growwSetupMessage = 'Apply the Groww connections migration in Supabase to connect Groww.';
+  } catch {
+    // Show everything as not connected.
+  }
+  if (!result.groww && growwConfigured() && growwOwnerEmail() && email === growwOwnerEmail()) result.groww = { status: 'connected', lastSyncAt: null, source: 'server' };
+  if (!result.growwSetupMessage && !credentialEncryptionReady()) result.growwSetupMessage = 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).';
+  return result;
+}
+
 export async function getIntegrationStatus(userId: string, email: string | null): Promise<Integration[]> {
   let statusRows: StatusRow[] = [];
   let usageRows: Array<{ provider: string; calls: number }> = [];
   let gmail: { status: string; last_sync_at: string | null } | null = null;
+  let growwRow: { status: string; last_sync_at: string | null } | null = null;
   try {
     const admin = createAdminClient();
     const today = new Date().toISOString().slice(0, 10);
-    const [status, usage, connection] = await Promise.all([
+    const [status, usage, connection, growwConnection] = await Promise.all([
       admin.from('api_provider_status').select('provider,last_success_at,last_error_at,last_error_kind'),
       admin.from('api_daily_usage').select('provider,calls').eq('usage_date', today),
       admin.from('gmail_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
+      admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
     ]);
     statusRows = (status.data ?? []) as StatusRow[];
     usageRows = (usage.data ?? []) as typeof usageRows;
     gmail = connection.data ?? null;
+    growwRow = growwConnection.data ?? null;
   } catch {
     // Show configuration only.
   }
@@ -60,10 +101,13 @@ export async function getIntegrationStatus(userId: string, email: string | null)
   const integrations: Integration[] = [];
 
   const owner = growwOwnerEmail();
-  if (growwConfigured() && owner && email === owner) {
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'connected', detail: null, lastSyncAt: null, usage: null });
-  } else if (!growwConfigured() || !owner) {
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: owner ? 'Add the API key and secret' : 'Set GROWW_OWNER_EMAIL', lastSyncAt: null, usage: null });
+  if (growwRow) {
+    const ok = growwRow.status === 'connected';
+    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Invest', lastSyncAt: growwRow.last_sync_at, usage: null });
+  } else if (growwConfigured() && owner && email === owner) {
+    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null });
+  } else {
+    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: 'Connect in Invest', lastSyncAt: null, usage: null });
   }
 
   integrations.push({

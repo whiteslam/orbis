@@ -10,11 +10,24 @@ const BASE_URL = 'https://api.groww.in/v1';
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 const LTP_BATCH_SIZE = 50;
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+export type GrowwCredentials = { apiKey: string; apiSecret: string };
+
+// Access tokens per API key, so several connected users never share one.
+const tokenCache = new Map<string, { value: string; expiresAt: number }>();
+const tokenCacheKey = (credentials: GrowwCredentials) => createHash('sha256').update(credentials.apiKey).digest('hex');
 // Groww answers 403 when the API plan has no live data; don't ask every load.
 let livePricesBlockedUntil = 0;
 
 export class GrowwError extends Error {}
+
+export class GrowwAuthError extends GrowwError {}
+
+// Server-wide fallback credentials from the environment (single-owner setups).
+export function envGrowwCredentials(): GrowwCredentials | null {
+  const apiKey = process.env.GROWW_API_KEY?.trim();
+  const apiSecret = process.env.GROWW_API_SECRET?.trim();
+  return apiKey && apiSecret ? { apiKey, apiSecret } : null;
+}
 
 export function growwConfigured() {
   return Boolean(process.env.GROWW_API_KEY?.trim() && process.env.GROWW_API_SECRET?.trim());
@@ -24,12 +37,12 @@ export function growwOwnerEmail() {
   return process.env.GROWW_OWNER_EMAIL?.trim().toLowerCase() || null;
 }
 
-async function getAccessToken() {
-  if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.value;
+export async function getAccessToken(credentials: GrowwCredentials) {
+  const cacheKey = tokenCacheKey(credentials);
+  const cached = tokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  const apiKey = process.env.GROWW_API_KEY?.trim();
-  const secret = process.env.GROWW_API_SECRET?.trim();
-  if (!apiKey || !secret) throw new GrowwError('Groww is not configured.');
+  const { apiKey, apiSecret: secret } = credentials;
 
   const timestamp = String(Math.floor(Date.now() / 1000));
   const checksum = createHash('sha256').update(secret + timestamp).digest('hex');
@@ -42,21 +55,22 @@ async function getAccessToken() {
   });
   const body = await response.json().catch(() => null) as { token?: unknown } | null;
   if (!response.ok || typeof body?.token !== 'string') {
-    throw new GrowwError(response.status === 401 || response.status === 403
+    const ErrorType = response.status === 400 || response.status === 401 || response.status === 403 ? GrowwAuthError : GrowwError;
+    throw new ErrorType(response.status === 400 || response.status === 401 || response.status === 403
       ? 'Groww did not approve the API key. Approve today’s access on the Groww Cloud API keys page, or regenerate the key and secret.'
       : 'Groww could not issue an access token. Try again shortly.');
   }
-  cachedToken = { value: body.token, expiresAt: Date.now() + TOKEN_TTL_MS };
+  tokenCache.set(cacheKey, { value: body.token, expiresAt: Date.now() + TOKEN_TTL_MS });
   return body.token;
 }
 
-async function growwGet(path: string, token: string) {
+async function growwGet(path: string, token: string, cacheKey?: string) {
   const response = await fetch(`${BASE_URL}${path}`, {
     headers: { authorization: `Bearer ${token}`, accept: 'application/json', 'x-api-version': '1.0' },
     cache: 'no-store',
     signal: AbortSignal.timeout(15_000),
   });
-  if (response.status === 401) cachedToken = null;
+  if (response.status === 401 && cacheKey) tokenCache.delete(cacheKey);
   const body = await response.json().catch(() => null) as { status?: string; payload?: unknown } | null;
   return { ok: response.ok && body?.status === 'SUCCESS', status: response.status, payload: body?.payload };
 }
@@ -77,9 +91,10 @@ async function loadPrices(symbols: string[], token: string) {
   return prices;
 }
 
-export async function fetchGrowwPortfolio(): Promise<Omit<GrowwPortfolio, 'state'>> {
-  const token = await getAccessToken();
-  const holdingsResult = await growwGet('/holdings/user', token);
+export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promise<Pick<GrowwPortfolio, 'livePrices' | 'fetchedAt' | 'holdings'>> {
+  const token = await getAccessToken(credentials);
+  const holdingsResult = await growwGet('/holdings/user', token, tokenCacheKey(credentials));
+  if (holdingsResult.status === 401 || holdingsResult.status === 403) throw new GrowwAuthError('Groww rejected this connection. Approve today’s access on the Groww API keys page, or reconnect with a new key.');
   if (!holdingsResult.ok) throw new GrowwError('Groww holdings could not be loaded. Try again shortly.');
 
   const rawHoldings = (holdingsResult.payload as { holdings?: unknown })?.holdings;

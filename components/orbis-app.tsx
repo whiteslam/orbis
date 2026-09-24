@@ -38,12 +38,12 @@ import { WeatherCard } from '@/components/home/weather-card';
 import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
 import type { ContextNote } from '@/lib/goals/memory';
-import { ContextNotes } from '@/components/personal/context-notes';
-import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
-import { ProfileEditor } from '@/components/personal/profile-editor';
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
-import { HomeCityEditor, Integrations } from '@/components/personal/integrations';
+import { ProfileScreen, type ProfileSection } from '@/components/personal/profile-screen';
+import type { JournalSummary } from '@/lib/journal/types';
+import type { NotificationSettings } from '@/lib/notifications/preferences';
+import type { AppConnections } from '@/lib/providers/status';
 import { InvestDashboard } from '@/components/invest/invest-dashboard';
 import type { InvestmentSummary } from '@/lib/invest/types';
 import { StepsCard } from '@/components/health/steps-card';
@@ -55,8 +55,8 @@ const nav = [
   ['home', 'Home', Home],
   ['finance', 'Finance', WalletCards],
   ['health', 'Health', HeartPulse],
-  ['personal', 'Personal', UserRound],
   ['investment', 'Invest', TrendingUp],
+  ['personal', 'Profile', UserRound],
   // ['habits', 'Habits', CheckCircle2], // Hidden for now.
 ] as const;
 
@@ -318,27 +318,25 @@ function GenericScreen({ tab, goalsSummary, contextNotes, fitnessPersona, person
       <header className="page-head"><div><small>ORBIS</small><h2>{content.title}</h2></div><button className="icon-btn"><Search size={19}/></button></header>
       {tab !== 'investment' && <div className="feature-hero"><div className="feature-icon"><Icon size={28}/></div><h3>{content.title}</h3><p>{content.text}</p></div>}
       {/* {tab === 'habits' && <GoalsHabits kind="habits" data={goalsSummary} />} */}
-      {tab === 'personal' && <>
-        <ProfileEditor key={personalProfile.profile?.preferredName ?? personalProfile.profile?.aboutMe ?? 'personal-profile-draft'} state={personalProfile.state} profile={personalProfile.profile} />
-        <FitnessPersonaEditor key={fitnessPersona.persona ?? 'fitness-persona-draft'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
-        <ContextNotes ready={contextNotes.ready} notes={contextNotes.notes} />
-        <HomeCityEditor location={homeLocation} />
-        <Integrations items={integrations} />
-      </>}
       {tab === 'investment' && <InvestDashboard summary={investmentSummary} goalCount={goalsSummary.goals.length} />}
     </div>
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[] }) {
+export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, investmentSummary, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; investmentSummary: InvestmentSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections }) {
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
+  const [profileSection, setProfileSection] = useState<ProfileSection>('profile');
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const requestedTab = url.searchParams.get('tab');
     const notice = url.searchParams.get('gmail');
     if (requestedTab === 'finance') setTab('finance');
+    if (requestedTab === 'settings') {
+      setProfileSection('settings');
+      setTab('personal');
+    }
     if (notice) setGmailNotice(notice);
     if (requestedTab || notice) {
       url.searchParams.delete('tab');
@@ -351,8 +349,28 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
     if (tab === 'home') return <HomeScreen financeSummary={financeSummary} goalsSummary={goalsSummary} preferredName={personalProfile.profile?.preferredName ?? null} openHealth={() => setTab('health')} openPersonal={() => setTab('personal')} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
     if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} />;
+    if (tab === 'personal') {
+      return (
+        <ProfileScreen
+          key={profileSection}
+          initialSection={profileSection}
+          googleNotice={profileSection === 'settings' ? gmailNotice : null}
+          clearGoogleNotice={() => setGmailNotice(null)}
+          openHealth={() => setTab('health')}
+          personalProfile={personalProfile}
+          fitnessPersona={fitnessPersona}
+          contextNotes={contextNotes}
+          journal={journal}
+          notificationSettings={notificationSettings}
+          appConnections={appConnections}
+          homeLocation={homeLocation}
+          integrations={integrations}
+          stepsSummary={stepsSummary}
+        />
+      );
+    }
     return <GenericScreen tab={tab} goalsSummary={goalsSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} investmentSummary={investmentSummary} homeLocation={homeLocation} integrations={integrations} />;
-  }, [contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, investmentSummary, personalProfile, stepsSummary, tab]);
+  }, [appConnections, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, investmentSummary, personalProfile, stepsSummary, tab]);
 
   return (
     <main className="stage">

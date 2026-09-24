@@ -1,9 +1,11 @@
 'use server';
 
-import { clearAppUnlock, extendAppUnlock, unlockWithFreshAuth } from '@/lib/security/app-lock';
+import { clearAppUnlock, extendAppUnlock, grantAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
+import { isPinFormat, PIN_LENGTH, pinProblem } from '@/lib/security/pin';
+import { checkPin, savePin } from '@/lib/security/pin-store';
 import { createClient } from '@/lib/supabase/server';
 
-export type UnlockResult = { success: boolean; message: string | null };
+export type UnlockResult = { success: boolean; message: string | null; pinLocked?: boolean };
 
 async function currentClaims() {
   const supabase = await createClient();
@@ -43,4 +45,35 @@ export async function unlockWithPasswordAction(password: string): Promise<Unlock
   const fresh = await supabase.auth.getClaims(data.session.access_token);
   if (await unlockWithFreshAuth(fresh.data?.claims)) return { success: true, message: null };
   return { success: false, message: 'Unlock is temporarily unavailable. Please try again shortly.' };
+}
+
+export async function unlockWithPinAction(pin: string): Promise<UnlockResult> {
+  if (!isPinFormat(pin)) return { success: false, message: `Enter your ${PIN_LENGTH}-digit PIN.` };
+  const { claims } = await currentClaims();
+  if (typeof claims?.sub !== 'string') return { success: false, message: 'Your session ended. Sign in again.' };
+
+  const result = await checkPin(claims.sub, pin);
+  if (result.outcome === 'ok') {
+    return (await grantAppUnlock(claims)) ? { success: true, message: null } : { success: false, message: 'Your session ended. Sign in again.' };
+  }
+  if (result.outcome === 'wrong') {
+    return { success: false, message: `That PIN is not correct. ${result.remaining} ${result.remaining === 1 ? 'try' : 'tries'} left.` };
+  }
+  if (result.outcome === 'locked') {
+    return { success: false, pinLocked: true, message: 'Too many wrong PINs. Unlock with your password, then set a new PIN.' };
+  }
+  return { success: false, message: 'PIN unlock is unavailable right now. Use your password.' };
+}
+
+// Only an unlocked session (just signed in, or unlocked with a password or passkey) can set or replace the PIN.
+export async function setPinAction(pin: string, confirmPin: string): Promise<UnlockResult> {
+  const { claims } = await currentClaims();
+  if (typeof claims?.sub !== 'string') return { success: false, message: 'Your session ended. Sign in again.' };
+  if (!(await isAppUnlocked(claims))) return { success: false, message: 'Orbis is locked. Unlock to continue.' };
+
+  const problem = pinProblem(pin);
+  if (problem) return { success: false, message: problem };
+  if (pin !== confirmPin) return { success: false, message: 'The two PINs do not match.' };
+  if (!(await savePin(claims.sub, pin))) return { success: false, message: 'Your PIN could not be saved. Check that the app PIN migration is applied.' };
+  return { success: true, message: null };
 }

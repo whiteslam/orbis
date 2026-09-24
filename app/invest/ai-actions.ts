@@ -52,7 +52,7 @@ export async function generatePortfolioAdviceAction(value: unknown): Promise<Adv
   // Rebuild the portfolio on the server; never trust holdings sent by the page.
   const email = typeof claims?.claims?.email === 'string' ? claims.claims.email.toLowerCase() : null;
   const { holdings: manual } = await loadManualHoldings(supabase, userId);
-  const live = await loadLivePortfolio(email, manual);
+  const live = await loadLivePortfolio(userId, email, manual);
   if (live.groww.state === 'error') return { success: false, message: live.groww.message ?? 'Groww could not be reached. Try again shortly.' };
   const groww = live.groww.holdings;
   const analysis = analysePortfolio(groww, manual, live);

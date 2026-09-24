@@ -40,8 +40,12 @@ export type GrowwHolding = {
 };
 
 export type GrowwPortfolio = {
-  state: 'ok' | 'not_configured' | 'owner_not_set' | 'not_owner' | 'error';
+  state: 'ok' | 'not_connected' | 'error';
   message?: string;
+  // How this account is linked: saved in Orbis by the user, or server env keys.
+  connection: { source: 'account' | 'server'; status: 'connected' | 'reconnect_required'; lastSyncAt: string | null } | null;
+  // True when connecting is impossible until the server is set up (migration or encryption key).
+  setupRequired?: boolean;
   livePrices: boolean;
   fetchedAt: string | null;
   holdings: GrowwHolding[];
