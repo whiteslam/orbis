@@ -70,6 +70,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
       body: 'Spending and alerts are stale until that clears. Opening Finance tries again.',
       action: { label: 'Open Finance', target: 'finance' },
       art: 'broken',
+      source: 'Orbis storage · last read failed',
     });
   }
   if (finance.connection?.status === 'reconnect_required') {
@@ -79,6 +80,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
       body: `Google expired access for ${finance.connection.email}, so no new alerts are coming in. Nothing saved is lost.`,
       action: { label: 'Reconnect', target: 'finance' },
       art: 'broken',
+      source: `Gmail · ${finance.connection.email}`,
     });
   }
   if (finance.pendingCandidateCount > 0) {
@@ -89,6 +91,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
       body: `I read the amount and merchant from each email. Nothing counts as spending until you confirm it — ${alerts <= 3 ? 'a minute, tops' : `about ${Math.ceil(alerts / 4)} minutes`}.`,
       action: { label: alerts === 1 ? 'Review it' : 'Review them', target: 'finance' },
       art: 'alerts',
+      source: `Gmail · ${count(alerts, 'alert')} read`,
     });
   }
   const dated = goals.goals
@@ -106,6 +109,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
         body: `${remaining}${unit} to go, ${count(Math.abs(left), 'day')} late. Moving the date is fine — a stale one helps neither of us.`,
         action: { label: 'Set a new date', target: 'health' },
         art: 'goal',
+        source: `Goals · due ${shortDate(dated.dueDate)}`,
       });
     } else if (left <= 14) {
       slides.push({
@@ -114,6 +118,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
         body: `${remaining}${unit} to go. I’ll shape anything you ask me around it until then.`,
         action: { label: 'Open goals', target: 'health' },
         art: 'goal',
+        source: `Goals · due ${shortDate(dated.dueDate)}`,
       });
     }
   }
@@ -131,6 +136,7 @@ function setupTasks({ finance, goals, documentCount, when }: { finance: FinanceS
       body: 'Read-only, bank alerts only, never the message body. Two minutes to set up, one tap to undo.',
       action: { label: 'Connect Gmail', target: 'finance' },
       art: 'link',
+      source: 'Nothing connected yet',
     });
   }
   if (documentCount === 0) {
@@ -140,6 +146,7 @@ function setupTasks({ finance, goals, documentCount, when }: { finance: FinanceS
       body: 'Any Excel or PDF you already keep. You see exactly what I read before a word of it is sent anywhere.',
       action: { label: 'Open Health', target: 'health' },
       art: 'document',
+      source: 'No documents saved',
     });
   }
   if (goals.databaseReady && goals.goals.length === 0) {
@@ -149,6 +156,7 @@ function setupTasks({ finance, goals, documentCount, when }: { finance: FinanceS
       body: 'A title, a number, a date. Without one I can only describe what I see.',
       action: { label: 'Add a goal', target: 'health' },
       art: 'goal',
+      source: 'No goals set',
     });
   }
   return slides;
@@ -169,6 +177,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
       body: `About ${money(perDay, spend.currency)} a day — at this pace the month lands near ${money(projection, spend.currency)}.`,
       action: { label: 'See where', target: 'finance' },
       art: 'money',
+      source: `Gmail · ${count(finance.transactions.length, 'transaction')} confirmed`,
     });
   }
 
@@ -181,6 +190,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
       body: `${whole(steps.average30)} a day, from ${whole(steps.previous30)}. ${falling ? 'Two half-hour walks a week would close that.' : 'Whatever changed, keep it.'}`,
       action: { label: 'See activity', target: 'health' },
       art: falling ? 'steps-down' : 'steps-up',
+      source: `Apple Health · ${count(steps.days.length, 'day')} imported`,
     });
   }
 
@@ -193,6 +203,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
       body: `${moving.target - moving.current}${moving.unit ? ` ${moving.unit}` : ''} to go, no date set. Give it one and I can tell you if you’re on track.`,
       action: { label: 'Open goals', target: 'health' },
       art: 'goal',
+      source: 'Goals · no date set',
     });
   }
 
@@ -213,6 +224,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
             : 'Layer up. Cold days are when step counts quietly slip.',
         action: null,
         art: rain ? 'rain' : hot ? 'sun' : 'cold',
+        source: `Open-Meteo · ${weather.condition}`,
       });
     }
   }
@@ -224,6 +236,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
       body: 'It’s in Health with the numbers it came from, so you can reread it without spending a request.',
       action: { label: 'Read it', target: 'health' },
       art: 'saved',
+      source: `Saved to your account · ${shortDate(savedAdviceAt)}`,
     });
   }
 
@@ -251,6 +264,7 @@ export function composeFocus(input: FocusInput): Focus[] {
     body: 'Nothing needs you: no alerts, no dates coming up, nothing waiting in Finance or Health.',
     action: null,
     art: 'calm',
+    source: 'Checked everything you have connected',
   }];
 }
 

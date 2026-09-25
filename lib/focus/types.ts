@@ -22,6 +22,12 @@ export type Focus = {
   action: { label: string; target: FocusTarget } | null;
   /** The scene drawn behind the copy on Home. Other screens ignore it. */
   art?: ArtScene;
+  /**
+   * Where the claim came from, in the user's terms — "Gmail · 3 alerts · 2 min
+   * ago". The Atlas brief prints it under the copy, so a statement about the
+   * user's money or body always shows which connected source produced it.
+   */
+  source?: string;
 };
 
 export type QuietRow = {

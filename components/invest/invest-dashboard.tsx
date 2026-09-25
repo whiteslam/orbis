@@ -12,7 +12,8 @@ import { AllocationBreakdown, PortfolioHealth } from '@/components/invest/portfo
 import { safeAction } from '@/lib/client/safe-action';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
-import { FieldLabel, FocusSurface, QuietList } from '@/components/field/field';
+import { FieldHero, FieldLabel, FocusSurface, QuietList } from '@/components/field/field';
+import { inr } from '@/components/invest/format';
 
 /**
  * Reading order, worst-first as the audit found it: the screen used to open on
@@ -47,8 +48,23 @@ export function InvestDashboard({ goalCount, savedAdvice }: { goalCount: number;
     savedAdviceAt: savedAdvice?.createdAt ?? null,
   });
 
+  // Atlas leads on the figure; the composed statement below it deliberately
+  // spends its words on what the figure does not say. Gain is only shown where
+  // every contributing position had a live price, which is what livePnl means.
+  const gain = analysis.livePnl !== null && analysis.liveInvested > 0
+    ? { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl))} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const }
+    : null;
+
   return (
     <>
+      {hasData && (
+        <FieldHero
+          value={inr(analysis.total)}
+          label={analysis.positions.length === 1 ? 'in 1 holding' : `across ${analysis.positions.length} holdings`}
+          delta={gain}
+        />
+      )}
+
       <FocusSurface focus={focus} />
 
       {/* Six rows of dashes tell a new user nothing, so the numbers wait until there are numbers. */}

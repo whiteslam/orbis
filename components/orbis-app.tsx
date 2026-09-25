@@ -26,12 +26,12 @@ import { GmailReviewQueue } from '@/components/finance/gmail-review-queue';
 import { ManualTransactionForm } from '@/components/finance/manual-transaction-form';
 import { CurrencyCard } from '@/components/finance/currency-card';
 import { TransactionList } from '@/components/finance/transaction-list';
-import { SpendingSummary } from '@/components/finance/spending-summary';
+import { SpendingSummary, money } from '@/components/finance/spending-summary';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { BriefWeather } from '@/lib/home/brief';
 import { composeFocus, composeQuietRows } from '@/lib/focus/home';
 import type { FocusTarget } from '@/lib/focus/types';
-import { FieldHead, FieldLabel, FocusSlides, FocusSurface, QuietList } from '@/components/field/field';
+import { FieldHead, FieldHero, FieldLabel, FocusSlides, FocusSurface, QuietList } from '@/components/field/field';
 import { WeatherCard } from '@/components/home/weather-card';
 import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
@@ -55,23 +55,12 @@ const HASH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_HASH).map(([tab, ha
 
 const nav = [
   ['home', 'Home', Home],
-  ['finance', 'Finance', WalletCards],
+  ['finance', 'Expense', WalletCards],
   ['health', 'Health', HeartPulse],
   ['investment', 'Invest', TrendingUp],
   ['personal', 'Profile', UserRound],
   // ['habits', 'Habits', CheckCircle2], // Hidden for now.
 ] as const;
-
-// iOS-style large title with today's date, as in the Health app's Summary.
-function LargeTitle({ title }: { title: string }) {
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
-  return (
-    <header className="large-title">
-      <small suppressHydrationWarning>{today}</small>
-      <h2>{title}</h2>
-    </header>
-  );
-}
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
@@ -124,6 +113,14 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   const [isPending, startTransition] = useTransition();
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
 
+  // Atlas opens on the month's figure. The pace beside it is a rate, not a
+  // comparison — nothing here stores last month's total, so claiming a
+  // direction would be inventing one.
+  const month = summary.month;
+  const monthReady = Boolean(month && summary.databaseReady && !summary.loadError);
+  const monthName = month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
+  const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
+
   function sync() {
     setActionMessage(null);
     startTransition(async () => {
@@ -145,7 +142,14 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
 
   return (
     <div className="screen-body field">
-      <FieldHead title="Finance" />
+      <FieldHead title="Expense" />
+      {monthReady && month && month.spent > 0 && (
+        <FieldHero
+          value={money(month.spent, month.currency)}
+          label={`spent in ${monthName}`}
+          delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
+        />
+      )}
       {/* The composed statement and the "This month" rows are gone; the month
           is read off the spending card below instead of being narrated above
           it. The controls that lived inside that statement are not — connect,
@@ -219,6 +223,16 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   );
 }
 
+/**
+ * Month-on-month change in the daily step average, or null when there is not
+ * enough history to state one. Mirrors the rule in lib/focus/home.ts, so the
+ * brief and the Health hero never disagree about the direction.
+ */
+function stepTrend(steps: StepsSummary) {
+  if (steps.average30 === null || steps.previous30 === null || steps.previous30 <= 0) return null;
+  return Math.round(((steps.average30 - steps.previous30) / steps.previous30) * 100);
+}
+
 // A step goal in the user's own goals wins over the default.
 function stepGoal(goalsSummary: GoalsSummary) {
   const goal = goalsSummary.goals.find((item) => /step/i.test(item.unit ?? '') && item.target >= 1_000 && item.target <= 50_000);
@@ -226,9 +240,17 @@ function stepGoal(goalsSummary: GoalsSummary) {
 }
 
 function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+  const trend = stepTrend(stepsSummary);
   return (
     <div className="screen-body field">
       <FieldHead title="Health" />
+      {stepsSummary.average7 !== null && (
+        <FieldHero
+          value={Math.round(stepsSummary.average7).toLocaleString('en-IN')}
+          label="steps a day, 7-day average"
+          delta={trend === null || Math.abs(trend) < 1 ? null : { text: `${Math.abs(trend)}%`, tone: trend > 0 ? 'up' : 'down' }}
+        />
+      )}
       {/* Health opens on the rings themselves. The composed statement and the
           "Your numbers" rows said the same thing in words directly above the
           card that shows it, so both are gone rather than restated here. */}

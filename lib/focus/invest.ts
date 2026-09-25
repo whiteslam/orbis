@@ -90,8 +90,8 @@ export function composeInvestFocus({ analysis, loaded, failures, connected, save
 export function composeInvestRows({ analysis }: { analysis: PortfolioAnalysis }): QuietRow[] {
   const top = analysis.byClass.slice().sort((left, right) => right.value - left.value)[0] ?? null;
   const empty = analysis.positions.length === 0;
+  // The total is the screen's hero figure now, so it is not repeated here.
   return [
-    { label: 'Total value', value: empty ? 'No holdings' : money(analysis.total), empty, target: null },
     { label: 'Invested', value: empty ? '—' : money(analysis.invested), empty, target: null },
     { label: 'Unrealised', value: analysis.livePnl === null ? 'No live prices' : `${analysis.livePnl >= 0 ? '+' : '−'}${money(Math.abs(analysis.livePnl))}`, empty: analysis.livePnl === null, target: null },
     { label: 'Holdings', value: empty ? 'None' : String(analysis.positions.length), empty, target: null },

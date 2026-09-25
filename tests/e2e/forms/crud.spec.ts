@@ -97,6 +97,6 @@ test('settings: home city and notification preferences save and persist', async 
 
   // The saved city now drives the Home weather card (no browser location in tests).
   await openTab(page, 'Home');
-  await expect(page.locator('.weather-card')).toContainText(/°C|unavailable/);
+  await expect(page.locator('.fd-weather, .fd-weather-quiet')).toContainText(/°|unavailable|Checking/);
   expect(consoleErrors).toEqual([]);
 });

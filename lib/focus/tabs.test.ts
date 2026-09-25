@@ -176,7 +176,15 @@ test('invest says plainly when the total is only what the holdings cost', () => 
 
 test('invest rows name what is unknown rather than showing a zero', () => {
   const rows = composeInvestRows({ analysis: analysis() });
-  assert.equal(rows.find((row) => row.label === 'Total value')?.value, 'No holdings');
+  assert.equal(rows.find((row) => row.label === 'Invested')?.value, '—');
   assert.equal(rows.find((row) => row.label === 'Unrealised')?.value, 'No live prices');
   assert.equal(rows.find((row) => row.label === 'Holdings')?.value, 'None');
+  assert.equal(rows.find((row) => row.label === 'Largest position')?.value, 'None');
+});
+
+// The portfolio total is the Invest screen's hero figure, so these rows must not
+// repeat it — the old "Total value" row said the same number twice.
+test('invest rows leave the total to the hero figure', () => {
+  const rows = composeInvestRows({ analysis: analysis() });
+  assert.equal(rows.find((row) => row.label === 'Total value'), undefined);
 });

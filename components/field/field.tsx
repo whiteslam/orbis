@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowDown, ArrowUp, Sparkles } from 'lucide-react';
 import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
 import { BriefArt } from '@/components/field/brief-art';
 
@@ -58,15 +59,50 @@ export function QuietList({ heading, rows, onOpen }: { heading: string; rows: Qu
   );
 }
 
+/**
+ * The one number a screen is about, set on the ground at display size.
+ *
+ * Every tab used to open on a card whose heading restated what the card below
+ * already showed. Atlas replaces that with a single figure, the sentence that
+ * qualifies it, and — where the data supports one — a delta. No container: the
+ * ground carries it, as it carries the brief.
+ */
+export function FieldHero({ value, label, delta }: { value: string; label: string; delta?: { text: string; tone: 'up' | 'down' | 'flat' } | null }) {
+  return (
+    <div className="fd-hero">
+      <p className="fd-hero-value">{value}</p>
+      <div className="fd-hero-meta">
+        <span>{label}</span>
+        {delta && (
+          <span className={`fd-delta ${delta.tone}`}>
+            {delta.tone === 'up' && <ArrowUp size={10} strokeWidth={2.8} aria-hidden="true" />}
+            {delta.tone === 'down' && <ArrowDown size={10} strokeWidth={2.8} aria-hidden="true" />}
+            {delta.text}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Small uppercase label that separates sections without drawing a box. */
 export function FieldLabel({ children }: { children: ReactNode }) {
   return <p className="fd-label">{children}</p>;
 }
 
 /**
- * The Home brief: one statement per slide, swiped sideways. A single slide
- * renders as plain text with no affordance, so the dots only appear when there
- * is somewhere to go.
+ * The Home brief, as a deck.
+ *
+ * One statement per slide over its own illustrated scene, swiped sideways. Two
+ * things make it Atlas rather than a plain carousel. Behind the top card sit the
+ * edges of the cards still to come, so the depth of the brief is visible before
+ * anything is swiped. And the dots move inside the card as a segmented rail at
+ * the top — each segment is a real button, so the rail both reports position and
+ * jumps to a slide.
+ *
+ * Every slide also prints where its claim came from. A statement about someone's
+ * money or body that cannot say which source produced it is the thing this brief
+ * most needs to avoid, so `source` is rendered whenever the composer sets it.
  */
 export function FocusSlides({ slides, onAction, night = false }: { slides: Focus[]; onAction: (target: FocusTarget) => void; night?: boolean }) {
   const track = useRef<HTMLDivElement>(null);
@@ -95,41 +131,58 @@ export function FocusSlides({ slides, onAction, night = false }: { slides: Focus
     setActive(index);
   }
 
+  const many = slides.length > 1;
+
   return (
     <div className="fd-brief">
-      <div className="fd-track" ref={track} onScroll={onScroll}>
-        {slides.map((slide) => (
-          <section className="fd-slide fd-focus" key={slide.id} aria-labelledby={`brief-${slide.id}`}>
-            <BriefArt art={slide.art ?? 'calm'} night={night} />
-            <div className="fd-slide-body">
-              {/* Wording can depend on the time of day, which may differ between server and browser render. */}
-              <h2 id={`brief-${slide.id}`} suppressHydrationWarning>{slide.headline}</h2>
-              <p suppressHydrationWarning>{slide.body}</p>
-              {slide.action && (
-                <div className="fd-act">
-                  <button type="button" onClick={() => onAction(slide.action!.target)}>{slide.action.label}</button>
-                </div>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
-      {slides.length > 1 && (
-        <div className="fd-dots" role="tablist" aria-label="Brief">
+      <div className={`fd-deck ${many ? 'stacked' : ''}`}>
+        {/* The cards still to come, showing only their top edge. */}
+        {many && <><span className="fd-deck-edge far" aria-hidden="true" /><span className="fd-deck-edge near" aria-hidden="true" /></>}
+
+        <div className="fd-track" ref={track} onScroll={onScroll}>
           {slides.map((slide, index) => (
-            <button
-              key={slide.id}
-              className="fd-dot"
-              type="button"
-              role="tab"
-              aria-selected={index === active}
-              aria-current={index === active}
-              aria-label={slide.headline}
-              onClick={() => go(index)}
-            />
+            <section className="fd-slide fd-focus" key={slide.id} aria-labelledby={`brief-${slide.id}`}>
+              <BriefArt art={slide.art ?? 'calm'} night={night} />
+              <div className="fd-slide-body">
+                <p className="fd-slide-kicker">Orbis brief{many ? ` · ${index + 1} of ${slides.length}` : ''}</p>
+                {/* Wording can depend on the time of day, which may differ between server and browser render. */}
+                <h2 id={`brief-${slide.id}`} suppressHydrationWarning>{slide.headline}</h2>
+                <p suppressHydrationWarning>{slide.body}</p>
+                {slide.action && (
+                  <div className="fd-act">
+                    <button type="button" onClick={() => onAction(slide.action!.target)}>{slide.action.label}</button>
+                  </div>
+                )}
+                {slide.source && (
+                  <p className="fd-slide-src" suppressHydrationWarning>
+                    <Sparkles size={11} strokeWidth={2} aria-hidden="true" />
+                    {slide.source}
+                  </p>
+                )}
+              </div>
+            </section>
           ))}
         </div>
-      )}
+
+        {many && (
+          <div className="fd-rail" role="tablist" aria-label="Brief">
+            {slides.map((slide, index) => (
+              <button
+                key={slide.id}
+                className="fd-rail-seg"
+                type="button"
+                role="tab"
+                aria-selected={index === active}
+                aria-current={index === active}
+                aria-label={slide.headline}
+                onClick={() => go(index)}
+              >
+                <span aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { categoryStyle } from '@/components/finance/category-style';
+import { FieldLabel } from '@/components/field/field';
 import type { FinanceSummary } from '@/lib/finance/types';
 
 type Month = NonNullable<FinanceSummary['month']>;
@@ -14,111 +14,82 @@ export function money(amount: number, currency: string, compact = false) {
   }
 }
 
-const SIZE = 148;
-const STROKE = 18;
-const RADIUS = (SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const GAP = 3;
+const SHOWN_CATEGORIES = 5;
 
-// Apple Card-style ring: one arc per category, sized by its share of the month's spending.
-function CategoryRing({ month, active, onSelect }: { month: Month; active: string | null; onSelect: (category: string | null) => void }) {
-  const segments = month.categories.length > 7
-    ? [...month.categories.slice(0, 6), { category: 'Other', amount: month.categories.slice(6).reduce((sum, item) => sum + item.amount, 0) }]
-    : month.categories;
-  let offset = 0;
-  const focused = segments.find((segment) => segment.category === active);
-  return (
-    <div className="spend-ring">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Spending by category: ${segments.map((segment) => `${segment.category} ${money(segment.amount, month.currency)}`).join(', ')}`}>
-        {/* The unspent remainder. Its colour is a theme token, not a fixed grey. */}
-        <circle className="spend-ring-track" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} />
-        {segments.map((segment) => {
-          const length = (segment.amount / month.spent) * CIRCUMFERENCE;
-          const visible = Math.max(length - (segments.length > 1 ? GAP : 0), 1.5);
-          const dash = `${visible} ${CIRCUMFERENCE - visible}`;
-          const element = (
-            <circle
-              key={segment.category}
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={RADIUS}
-              fill="none"
-              stroke={categoryStyle(segment.category).color}
-              strokeWidth={STROKE}
-              strokeDasharray={dash}
-              strokeDashoffset={-offset}
-              opacity={active && active !== segment.category ? 0.25 : 1}
-              transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
-              onClick={() => onSelect(active === segment.category ? null : segment.category)}
-            />
-          );
-          offset += length;
-          return element;
-        })}
-      </svg>
-      <div className="spend-ring-center">
-        <span>{focused ? focused.category : 'Spent'}</span>
-        <strong>{money(focused ? focused.amount : month.spent, month.currency, (focused ? focused.amount : month.spent) >= 100_000)}</strong>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * The month, in the Atlas language.
+ *
+ * This used to be two lifted cards: a tappable category donut whose centre
+ * repeated the month's total, and a 90px bar chart below it. The total is now
+ * the screen's hero figure, so repeating it in a ring was the same sentence
+ * said twice — and a donut only ever showed one category's amount at a time,
+ * behind a tap.
+ *
+ * What replaces it is flush to the ground: a low bar strip for the shape of the
+ * month, then one hairline row per category with its share drawn inline, so
+ * every amount is legible at once without touching anything.
+ */
 export function SpendingSummary({ month }: { month: Month }) {
-  const [active, setActive] = useState<string | null>(null);
   const monthName = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' });
+  const shortMonth = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
   const net = month.received - month.spent;
+
+  if (month.spent <= 0) {
+    return <p className="fd-empty">No spending recorded in {monthName} yet.</p>;
+  }
+
   const peak = Math.max(...month.daily.map((day) => day.amount), 1);
   const today = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
-  const spendDays = month.daily.filter((day) => day.day <= today);
-  const dailyAverage = spendDays.length ? month.spent / spendDays.length : 0;
+  const elapsed = month.daily.filter((day) => day.day <= today).length;
+  const dailyAverage = elapsed ? month.spent / elapsed : 0;
+
+  // Bars are sized against the busiest day so the shape of the month reads;
+  // rows are sized against the biggest category for the same reason.
+  const shown = month.categories.slice(0, SHOWN_CATEGORIES);
+  const rest = month.categories.slice(SHOWN_CATEGORIES);
+  const restTotal = rest.reduce((sum, item) => sum + item.amount, 0);
+  const largest = month.categories[0]?.amount ?? 1;
 
   return (
     <>
-      <section className="apple-card spend-card" aria-label={`${monthName} spending`}>
-        {month.spent > 0 ? (
-          <div className="spend-overview">
-            <CategoryRing month={month} active={active} onSelect={setActive} />
-            <ul className="spend-legend">
-              {month.categories.slice(0, 5).map((item) => (
-                <li key={item.category}>
-                  <button type="button" aria-pressed={active === item.category} className={active && active !== item.category ? 'dim' : ''} onClick={() => setActive(active === item.category ? null : item.category)}>
-                    <i style={{ background: categoryStyle(item.category).color }} />
-                    <span>{item.category}</span>
-                    <b>{Math.round((item.amount / month.spent) * 100)}%</b>
-                  </button>
-                </li>
-              ))}
-              {month.categories.length > 5 && <li className="spend-legend-more">+{month.categories.length - 5} more</li>}
-            </ul>
-          </div>
-        ) : (
-          <p className="apple-card-empty">No spending recorded in {monthName} yet.</p>
-        )}
-        <dl className="spend-totals">
-          <div><dt>Spent</dt><dd>{money(month.spent, month.currency)}</dd></div>
-          <div><dt>Received</dt><dd className="positive">{money(month.received, month.currency)}</dd></div>
-          <div><dt>Net</dt><dd className={net >= 0 ? 'positive' : 'negative'}>{net >= 0 ? '+' : '−'}{money(Math.abs(net), month.currency)}</dd></div>
-        </dl>
-      </section>
+      <div className="fd-bars" role="img" aria-label={`Spending each day in ${monthName}. Busiest day ${money(peak, month.currency)}, averaging ${money(dailyAverage, month.currency)} a day.`}>
+        {month.daily.map((day) => (
+          <span key={day.day} className={day.day === today ? 'today' : day.day > today ? 'future' : undefined}>
+            <i style={{ height: day.amount ? `${Math.max((day.amount / peak) * 100, 4)}%` : 0 }} />
+          </span>
+        ))}
+      </div>
+      <div className="fd-bars-axis">
+        <span suppressHydrationWarning>1 {shortMonth}</span>
+        <span suppressHydrationWarning>{money(dailyAverage, month.currency)} a day</span>
+        <span suppressHydrationWarning>{month.daily.length} {shortMonth}</span>
+      </div>
 
-      {month.spent > 0 && (
-        <section className="apple-card">
-          <header className="apple-card-head">
-            <strong>Daily spending</strong>
-            <span>{monthName}</span>
-          </header>
-          <p className="apple-metric"><b>{money(dailyAverage, month.currency)}</b> average a day</p>
-          <div className="spend-bars" role="img" aria-label={`Daily spending in ${monthName}`}>
-            {month.daily.map((day) => (
-              <div key={day.day} className={day.day === today ? 'today' : day.day > today ? 'future' : ''} title={`${day.day} ${monthName}: ${money(day.amount, month.currency)}`}>
-                <i style={{ height: `${day.amount ? Math.max((day.amount / peak) * 100, 4) : 0}%` }} />
-              </div>
-            ))}
-          </div>
-          <div className="spend-bars-axis"><span>1</span><span>{Math.ceil(month.daily.length / 2)}</span><span>{month.daily.length}</span></div>
-        </section>
+      <FieldLabel>Where it went</FieldLabel>
+      {shown.map((item) => (
+        <div className="fd-cat" key={item.category}>
+          <i className="fd-cat-dot" style={{ background: categoryStyle(item.category).color }} aria-hidden="true" />
+          <span className="fd-cat-name">{item.category}</span>
+          <span className="fd-cat-bar" aria-hidden="true">
+            <i style={{ width: `${Math.max((item.amount / largest) * 100, 3)}%`, background: categoryStyle(item.category).color }} />
+          </span>
+          <b>{money(item.amount, month.currency)}</b>
+        </div>
+      ))}
+      {rest.length > 0 && (
+        <p className="fd-empty">{rest.length} more {rest.length === 1 ? 'category' : 'categories'} · {money(restTotal, month.currency)}</p>
       )}
+
+      <div className="fd-pair">
+        <div>
+          <span>Received</span>
+          <b className="up">{money(month.received, month.currency)}</b>
+        </div>
+        <div>
+          <span>Net</span>
+          <b className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '+' : '−'}{money(Math.abs(net), month.currency)}</b>
+        </div>
+      </div>
     </>
   );
 }
