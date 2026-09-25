@@ -1,16 +1,20 @@
 import type { ReactNode } from 'react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 
-// `centered` lays the card out as one centred column (lock and PIN screens).
-export function AuthShell({ children, centered = false }: { children: ReactNode; centered?: boolean }) {
+// The Atlas sign-in ground: one column on the Field gradient.
+// `centered` is the lock and PIN layout (no brand row, centred column); `footer` sits at the bottom of the column.
+export function AuthShell({ children, centered = false, footer }: { children: ReactNode; centered?: boolean; footer?: ReactNode }) {
   return (
     <main className="auth-stage">
       <section className={centered ? 'auth-card centered' : 'auth-card'}>
-        <div className="auth-brand">
-          <OrbisMark />
-          <div><strong>Orbis</strong><span>Your personal intelligence system</span></div>
-        </div>
+        {!centered && (
+          <div className="auth-brand">
+            <OrbisMark size={40} />
+            <strong>Orbis</strong>
+          </div>
+        )}
         {children}
+        {footer && <div className="auth-foot">{footer}</div>}
       </section>
     </main>
   );

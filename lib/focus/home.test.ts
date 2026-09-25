@@ -94,8 +94,9 @@ test('a falling step average is surfaced with both numbers', () => {
   const slide = composeFocus(settled({ steps: steps({ average7: 6_000, average30: 6_400, previous30: 8_000 }) })).find((item) => item.id === 'steps-falling');
   assert.ok(slide, 'expected a step slide');
   assert.match(slide.headline, /down 20%/);
-  assert.match(slide.body, /6,400/);
+  assert.match(slide.body, /6,400 a day over the last 30 days/);
   assert.match(slide.body, /8,000/);
+  assert.match(slide.source ?? '', /30-day averages/);
 });
 
 test('setup nudges come last, never ahead of what is already true', () => {

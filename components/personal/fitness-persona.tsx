@@ -53,37 +53,37 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
 
   if (!editing) {
     return <section aria-label="Your fitness coaching style">
-      {notice && <p className="finance-notice error" role="status">{notice}</p>}
+      {notice && <p className="fd-msg bad" role="status">{notice}</p>}
       {persona ? <>
         <p className="fd-prose clamp">{persona}</p>
-        <div className="fd-row-actions">
-          <button className="finance-button primary" type="button" onClick={() => open(persona)}>Edit</button>
-          <button className="finance-button secondary" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deleteFitnessPersonaAction)()))}>Remove</button>
+        <div className="fd-act pf-act">
+          <button className="ghost" type="button" onClick={() => open(persona)}>Edit</button>
+          <button className="fd-link alert" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deleteFitnessPersonaAction)()))}>{pending ? 'Removing…' : 'Remove'}</button>
         </div>
       </> : <>
-        <p className="fd-note fd-note-lead">Nothing set, and nothing is assumed. Health asks for this only when a workbook or plan you upload has fitness in it, and even then it is included for that one request.</p>
-        <div className="fd-row-actions">
-          <button className="finance-button primary" type="button" disabled={blocked} onClick={() => open('')}>Write mine</button>
-          <button className="finance-button secondary" type="button" disabled={blocked} onClick={() => open(FITNESS_PERSONA_STARTER)}>Start from a draft</button>
+        <p className="fd-note-lead">Nothing set, and nothing is assumed. Health asks for this only when a workbook or plan you upload has fitness in it, and even then it is included for that one request.</p>
+        <div className="fd-act pf-act">
+          <button type="button" disabled={blocked} onClick={() => open('')}>Write mine</button>
+          <button className="ghost" type="button" disabled={blocked} onClick={() => open(FITNESS_PERSONA_STARTER)}>Start from a draft</button>
         </div>
       </>}
-      {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
+      {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
     </section>;
   }
 
   return <section aria-label="Your fitness coaching style">
-    {notice && <p className="finance-notice error" role="status">{notice}</p>}
-    <form className="personal-form stack-card" onSubmit={(event) => {
+    {notice && <p className="fd-msg bad" role="status">{notice}</p>}
+    <form className="fd-form" onSubmit={(event) => {
       event.preventDefault();
       startTransition(async () => show(await safeAction(saveFitnessPersonaAction)(draft)));
     }}>
-      <label htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} maxLength={3000} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
-      <small>{draft.length.toLocaleString('en-IN')} / 3,000 characters</small>
-      <div className="fd-row-actions">
-        <button className="finance-button primary" type="submit" disabled={blocked}>{pending ? 'Saving…' : persona ? 'Save changes' : 'Save coaching style'}</button>
-        <button className="finance-button secondary" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
+      <label className="fd-field wide" htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} maxLength={3000} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
+      <p className="fd-count">{draft.length.toLocaleString('en-IN')} / 3,000</p>
+      <div className="fd-act">
+        <button type="submit" disabled={blocked}>{pending ? 'Saving…' : persona ? 'Save changes' : 'Save coaching style'}</button>
+        <button className="ghost" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
       </div>
     </form>
-    {message && <p className={`finance-notice ${success ? 'success' : 'error'}`} role="status">{message}</p>}
+    {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
   </section>;
 }

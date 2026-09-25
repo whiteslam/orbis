@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, Sparkles } from 'lucide-react';
-import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
-import { BriefArt } from '@/components/field/brief-art';
+import { ArrowDown, ArrowUp, ChevronLeft, CloudRain, FileText, Footprints, Link2, Mail, Snowflake, Sparkles, Sun, Target, TriangleAlert, WalletCards, X, type LucideIcon } from 'lucide-react';
+import type { ArtScene, Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
 
 /** Screen title with today's date above it, or a caller-supplied line instead. */
 export function FieldHead({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -13,6 +12,51 @@ export function FieldHead({ title, subtitle }: { title: string; subtitle?: strin
       <p className="fd-date" suppressHydrationWarning>{subtitle ?? today}</p>
       <h1>{title}</h1>
     </header>
+  );
+}
+
+/**
+ * Returns a ref for any element inside a screen; the screen scrolls back to the
+ * top whenever `key` changes. Tabs swap views in place (Expense → Add expense),
+ * and a view that opens halfway down the page reads as a glitch.
+ */
+export function useScrollTop(key: unknown) {
+  const anchor = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    anchor.current?.closest('.screen-body')?.scrollTo({ top: 0 });
+  }, [key]);
+  return anchor;
+}
+
+/**
+ * The top of a view opened from a tab: where it sits (`crumb`), the title, and
+ * one way out — back on the left, or close on the right for a form.
+ */
+export function FieldSubHead({ crumb, title, lead, onBack, onClose, backLabel }: { crumb: string; title?: string; lead?: ReactNode; onBack?: () => void; onClose?: () => void; backLabel?: string }) {
+  return (
+    <header className="fd-sub-head">
+      <div className={onClose ? 'fd-crumb end' : 'fd-crumb'}>
+        {onBack && <button className="fd-round" type="button" onClick={onBack} aria-label={backLabel ?? 'Back'}><ChevronLeft size={16} strokeWidth={2.2} aria-hidden="true" /></button>}
+        <p>{crumb}</p>
+        {onClose && <button className="fd-round" type="button" onClick={onClose} aria-label={backLabel ?? 'Close'}><X size={16} strokeWidth={2.2} aria-hidden="true" /></button>}
+      </div>
+      {title && <h1>{title}</h1>}
+      {lead &&<p className="fd-lead">{lead}</p>}
+    </header>
+  );
+}
+
+/** A numbered step: ring, bold line, detail, and an optional footnote. */
+export function FieldStep({ n, title, children, foot }: { n: number; title: ReactNode; children?: ReactNode; foot?: ReactNode }) {
+  return (
+    <div className="fd-step">
+      <i aria-hidden="true">{n}</i>
+      <div>
+        <strong>{title}</strong>
+        {children && <p>{children}</p>}
+        {foot && <small>{foot}</small>}
+      </div>
+    </div>
   );
 }
 
@@ -91,43 +135,67 @@ export function FieldLabel({ children }: { children: ReactNode }) {
 }
 
 /**
- * The Home brief, as a deck.
- *
- * One statement per slide over its own illustrated scene, swiped sideways. Two
- * things make it Atlas rather than a plain carousel. Behind the top card sit the
- * edges of the cards still to come, so the depth of the brief is visible before
- * anything is swiped. And the dots move inside the card as a segmented rail at
- * the top — each segment is a real button, so the rail both reports position and
- * jumps to a slide.
- *
- * Every slide also prints where its claim came from. A statement about someone's
- * money or body that cannot say which source produced it is the thing this brief
- * most needs to avoid, so `source` is rendered whenever the composer sets it.
+ * Each scene's tint and icon. The tint says what a card is about before a word
+ * is read: green for body and goals, amber for money, red for what needs you,
+ * blue for weather, neutral for setup.
  */
-export function FocusSlides({ slides, onAction, night = false }: { slides: Focus[]; onAction: (target: FocusTarget) => void; night?: boolean }) {
+type Tone = 'green' | 'amber' | 'red' | 'blue' | 'plain';
+const TOPIC: Record<ArtScene, { tone: Tone; icon: LucideIcon }> = {
+  rain: { tone: 'blue', icon: CloudRain },
+  sun: { tone: 'amber', icon: Sun },
+  cold: { tone: 'blue', icon: Snowflake },
+  alerts: { tone: 'red', icon: Mail },
+  money: { tone: 'amber', icon: WalletCards },
+  'steps-up': { tone: 'green', icon: Footprints },
+  'steps-down': { tone: 'green', icon: Footprints },
+  goal: { tone: 'green', icon: Target },
+  link: { tone: 'plain', icon: Link2 },
+  document: { tone: 'plain', icon: FileText },
+  saved: { tone: 'blue', icon: Sparkles },
+  broken: { tone: 'red', icon: TriangleAlert },
+  calm: { tone: 'green', icon: Sun },
+};
+
+/**
+ * The Home brief: a row of tinted cards, swiped sideways.
+ *
+ * Each card is tinted by what it is about and carries an icon, the claim, the
+ * sentence behind it, one action and its source. The next card peeks in from
+ * the right, so the swipe explains itself; the dots underneath both report
+ * position and jump to a card.
+ *
+ * It replaced an illustrated dark deck whose scenes drew the same rising line
+ * for any "steps up" slide — decoration that read as data — under a heavy scrim.
+ */
+export function FocusSlides({ slides, onAction }: { slides: Focus[]; onAction: (target: FocusTarget) => void }) {
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const key = slides.map((slide) => slide.id).join('|');
 
-  // A finished task drops out of the brief. When that happens the carousel must
-  // not keep showing a gap where it was, so it returns to the first slide.
+  // A finished task drops out of the brief. When that happens the row must
+  // not keep showing a gap where it was, so it returns to the first card.
   useEffect(() => {
     setActive(0);
     track.current?.scrollTo({ left: 0 });
   }, [key]);
 
+  // Cards are narrower than the track, so position is measured against a card.
+  function cardWidth() {
+    const node = track.current;
+    const first = node?.firstElementChild as HTMLElement | null;
+    return first ? first.offsetWidth + 10 : Math.max(node?.clientWidth ?? 1, 1);
+  }
+
   // The scroll position is the source of truth, so swiping and the dots agree.
   function onScroll() {
     const node = track.current;
     if (!node) return;
-    const index = Math.round(node.scrollLeft / Math.max(node.clientWidth, 1));
+    const index = Math.round(node.scrollLeft / cardWidth());
     setActive(Math.max(0, Math.min(index, slides.length - 1)));
   }
 
   function go(index: number) {
-    const node = track.current;
-    if (!node) return;
-    node.scrollTo({ left: index * node.clientWidth, behavior: 'smooth' });
+    track.current?.scrollTo({ left: index * cardWidth(), behavior: 'smooth' });
     setActive(index);
   }
 
@@ -135,54 +203,43 @@ export function FocusSlides({ slides, onAction, night = false }: { slides: Focus
 
   return (
     <div className="fd-brief">
-      <div className={`fd-deck ${many ? 'stacked' : ''}`}>
-        {/* The cards still to come, showing only their top edge. */}
-        {many && <><span className="fd-deck-edge far" aria-hidden="true" /><span className="fd-deck-edge near" aria-hidden="true" /></>}
-
-        <div className="fd-track" ref={track} onScroll={onScroll}>
-          {slides.map((slide, index) => (
-            <section className="fd-slide fd-focus" key={slide.id} aria-labelledby={`brief-${slide.id}`}>
-              <BriefArt art={slide.art ?? 'calm'} night={night} />
-              <div className="fd-slide-body">
-                <p className="fd-slide-kicker">Orbis brief{many ? ` · ${index + 1} of ${slides.length}` : ''}</p>
-                {/* Wording can depend on the time of day, which may differ between server and browser render. */}
-                <h2 id={`brief-${slide.id}`} suppressHydrationWarning>{slide.headline}</h2>
-                <p suppressHydrationWarning>{slide.body}</p>
-                {slide.action && (
-                  <div className="fd-act">
-                    <button type="button" onClick={() => onAction(slide.action!.target)}>{slide.action.label}</button>
-                  </div>
-                )}
-                {slide.source && (
-                  <p className="fd-slide-src" suppressHydrationWarning>
-                    <Sparkles size={11} strokeWidth={2} aria-hidden="true" />
-                    {slide.source}
-                  </p>
-                )}
-              </div>
+      <div className={many ? 'fd-track many' : 'fd-track'} ref={track} onScroll={onScroll}>
+        {slides.map((slide, index) => {
+          const topic = TOPIC[slide.art ?? 'calm'];
+          const Icon = topic.icon;
+          return (
+            <section className={`fd-card tone-${topic.tone}`} key={slide.id} aria-labelledby={`brief-${slide.id}`} aria-roledescription="card" inert={many && index !== active ? true : undefined}>
+              <i className="fd-card-icon" aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></i>
+              {/* Wording can depend on the time of day, which may differ between server and browser render. */}
+              <h2 id={`brief-${slide.id}`} suppressHydrationWarning>{slide.headline}</h2>
+              <p suppressHydrationWarning>{slide.body}</p>
+              {(slide.action || slide.source) && (
+                <div className="fd-card-foot">
+                  {slide.action && <button type="button" onClick={() => onAction(slide.action!.target)}>{slide.action.label}</button>}
+                  {slide.source && <p className="fd-card-src" suppressHydrationWarning>{slide.source}</p>}
+                </div>
+              )}
             </section>
+          );
+        })}
+      </div>
+
+      {many && (
+        <div className="fd-dots" role="tablist" aria-label="Brief">
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              role="tab"
+              aria-selected={index === active}
+              aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
+              onClick={() => go(index)}
+            >
+              <span aria-hidden="true" />
+            </button>
           ))}
         </div>
-
-        {many && (
-          <div className="fd-rail" role="tablist" aria-label="Brief">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                className="fd-rail-seg"
-                type="button"
-                role="tab"
-                aria-selected={index === active}
-                aria-current={index === active}
-                aria-label={slide.headline}
-                onClick={() => go(index)}
-              >
-                <span aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

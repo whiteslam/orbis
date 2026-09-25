@@ -1,0 +1,170 @@
+/* Atlas: Profile views (Journal, Profile, Settings). Loaded after globals.css. */
+
+/* ─── Identity: the avatar row, then the chips at full width ─── */
+.pf-id { margin-bottom: 10px; }
+.pf-id .fd-id { margin-bottom: 0; }
+.pf-id .fd-id-meta { margin-top: 11px; }
+
+/* ─── Groups: a tracked label, the sentence under it, then the content ─── */
+.pf-group > .fd-label { margin-top: 30px; }
+.pf-screen .fd-tabs + .pf-group > .fd-label,
+.pf-screen .pf-dismiss + .pf-group > .fd-label { margin-top: 22px; }
+.pf-group > .fd-note.tight { margin-top: 7px; font-size: 11.5px; }
+.pf-group .fd-form > .fd-field.wide:first-child { margin-top: 14px; }
+.pf-screen .fd-note-lead { margin: 10px 0 0; }
+.pf-screen .fd-prose { margin-top: 13px; }
+.pf-screen .fd-count { margin-top: 7px; }
+.pf-screen .fd-field textarea { font-size: 13.5px; line-height: 1.6; }
+.pf-screen .fd-field :is(input, textarea)::placeholder { color: var(--fd-faint); font-weight: 400; }
+
+/* Buttons inside a group are a size down from a view's main action. */
+.fd-act.pf-act { margin-top: 14px; gap: 14px; }
+.pf-act button:not(.fd-link), .pf-act .fd-button { padding: 10px 16px; font-size: 12.5px; }
+.pf-act .fd-link { font-size: 12.5px; font-weight: 650; }
+.fd-act .fd-link:disabled { opacity: .5; cursor: default; }
+
+/* A small pill: Delete on a note, Turn off / Enable on this device, Save city. */
+.pf-pill { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: none; min-height: 30px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; }
+.pf-pill.alert { color: var(--fd-alert); }
+.pf-pill.primary { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.pf-pill:disabled { opacity: .5; cursor: default; }
+
+.pf-more { align-self: flex-start; margin-top: 14px; font-size: 12.5px; font-weight: 650; }
+.pf-empty { margin-top: 16px; }
+
+/* ─── Journal ─── */
+.pf-streak { margin-top: 22px; }
+.pf-streak .fd-delta { gap: 4px; }
+.pf-week { display: flex; gap: 7px; margin-top: 18px; }
+.pf-week i { flex: 1; height: 6px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--fd-ink) 12%, transparent); }
+.pf-week i.on { background: var(--fd-accent); }
+.pf-week i.open { background: color-mix(in srgb, var(--fd-accent) 30%, transparent); }
+
+.pf-today > .fd-label { margin-top: 28px; }
+.pf-prompt { margin: 12px 0 0; color: var(--fd-ink); font-size: 15px; font-weight: 650; letter-spacing: -.02em; }
+
+.pf-moods { display: flex; gap: 7px; margin-top: 14px; }
+.pf-moods button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 62px; padding: 9px 0; border: 0; border-radius: 14px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-faint); font: inherit; font-size: 10px; font-weight: 600; cursor: pointer; }
+.pf-moods button span { font-size: 20px; line-height: 1.2; }
+.pf-moods button[aria-checked="true"] { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); font-weight: 700; }
+
+.pf-textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 14px; padding: 13px; border: 1px solid var(--fd-rule); border-radius: 14px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 13.5px; line-height: 1.65; resize: vertical; outline: none; }
+.pf-textarea:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.pf-textarea::placeholder, .pf-city-row input::placeholder { color: var(--fd-faint); }
+
+.fd-chips.pf-tags { margin-top: 13px; }
+.pf-tags > div { gap: 6px; margin-top: 0; }
+.pf-tags button { min-height: 32px; padding: 0 12px; font-size: 12px; }
+
+.fd-form .fd-act.pf-save { margin-top: 16px; gap: 10px; }
+.pf-count { margin-left: auto; color: var(--fd-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+.pf-entry-view .fd-act { margin-top: 14px; }
+.pf-entry-view .fd-act button { padding: 10px 16px; font-size: 12.5px; }
+.pf-entry-tags { margin: 10px 0 0; color: var(--fd-accent); font-size: 12px; font-weight: 600; }
+
+.pf-today + .fd-label { margin-top: 30px; }
+.pf-entries { display: flex; flex-direction: column; margin-top: 2px; }
+.pf-entry { padding: 15px 0; border-bottom: 1px solid var(--fd-rule); }
+.pf-entry .pf-editor .pf-prompt { margin-top: 0; }
+.pf-entry-head { display: flex; align-items: center; gap: 11px; }
+.pf-entry-mood { flex: none; font-size: 20px; line-height: 1; }
+.pf-entry-head > div { flex: 1; min-width: 0; }
+.pf-entry-head strong { display: block; color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
+.pf-entry-head small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 11px; overflow-wrap: anywhere; }
+.pf-delete { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--fd-chip); color: var(--fd-alert); cursor: pointer; }
+.pf-delete:disabled { opacity: .5; cursor: default; }
+.pf-entry-body { margin: 10px 0 0; color: var(--fd-soft); font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pf-edit { display: block; margin-top: 9px; font-weight: 650; }
+.pf-entries + .fd-note, .pf-screen .fd-empty + .fd-note { margin-top: 20px; }
+
+/* ─── Profile: saved notes as soft cards of your own words ─── */
+.pf-notes { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+.pf-card { padding: 14px 15px; border-radius: 16px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.pf-card > p { margin: 0; color: var(--fd-ink); font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pf-card > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 11px; }
+.pf-card small { color: var(--fd-faint); font-size: 11px; }
+.pf-notes .pf-more { margin-top: 3px; }
+
+/* ─── Settings ─── */
+.fd-msg.pf-dismiss { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.pf-dismiss button { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; }
+
+/* App integrations: one hairline block per app */
+.pf-apps > .fd-msg { margin-top: 14px; }
+.pf-app { margin-top: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--fd-rule); }
+.pf-app-head { display: flex; align-items: center; gap: 12px; }
+.fd-tile.pf-tile { width: 36px; height: 36px; box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.pf-tile b { color: var(--fd-ink); font-size: 16px; font-weight: 700; }
+.pf-tile img { border-radius: 5px; }
+.pf-app-head > div { flex: 1; min-width: 0; }
+.pf-app-head strong { display: block; color: var(--fd-ink); font-size: 14px; font-weight: 650; }
+.pf-app-head small { display: block; margin-top: 2px; overflow: hidden; color: var(--fd-faint); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.pf-status { flex: none; display: inline-flex; align-items: center; gap: 5px; color: var(--fd-faint); font-size: 11.5px; font-weight: 650; }
+.pf-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pf-status.on { color: var(--fd-accent); }
+.pf-status.warn { color: var(--fd-alert); }
+.pf-scopes { margin: 12px 0 0; padding: 0; list-style: none; }
+.pf-scopes li { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--fd-faint); font-size: 12px; line-height: 1.45; }
+.pf-scopes li svg { flex: none; }
+.pf-scopes li.on { color: var(--fd-ink); }
+.pf-scopes li.on svg { color: var(--fd-accent); }
+.pf-app .fd-act.pf-act { margin-top: 12px; }
+.pf-app .broker-connect .fd-lead { margin-top: 14px; font-size: 12.5px; }
+.pf-app > .fd-note.tight { margin-top: 12px; }
+
+/* Notifications */
+.pf-master { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--fd-rule); cursor: pointer; }
+.pf-master > span { flex: 1; min-width: 0; }
+.pf-master strong { display: block; color: var(--fd-ink); font-size: 14px; font-weight: 650; }
+.pf-master small { display: block; margin-top: 3px; color: var(--fd-faint); font-size: 11.5px; line-height: 1.5; }
+.pf-master input[role="switch"] { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border-radius: var(--r-pill); background: color-mix(in srgb, var(--fd-ink) 18%, transparent); cursor: pointer; transition: background .18s ease; }
+.pf-master input[role="switch"]::before { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s ease; }
+.pf-master input[role="switch"]:checked { background: var(--fd-accent); }
+.pf-master input[role="switch"]:checked::before { transform: translateX(18px); }
+.pf-master input[role="switch"]:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.pf-master input[role="switch"]:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .pf-master input[role="switch"], .pf-master input[role="switch"]::before { transition: none; } }
+
+.pf-slot { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); }
+.pf-slot input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--fd-accent); }
+.pf-slot > span { flex: 1; min-width: 0; }
+.pf-slot strong { display: block; color: var(--fd-ink); font-size: 13px; font-weight: 650; }
+.pf-slot small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 11px; line-height: 1.45; }
+.pf-slot input[type="time"] { flex: none; box-sizing: border-box; min-height: 36px; padding: 0 8px; border: 1px solid var(--fd-rule); border-radius: 10px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; color-scheme: inherit; }
+.pf-slot input[type="time"]:focus { outline: none; border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+:root[data-theme="dark"] .pf-slot input[type="time"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pf-slot input[type="time"] { color-scheme: dark; } }
+.pf-slot.off strong { color: var(--fd-faint); }
+.pf-slot.off input[type="time"] { background: none; color: var(--fd-faint); font-weight: 500; }
+.pf-notify > .fd-note.tight { margin-top: 11px; font-size: 11.5px; }
+.pf-notify > .fd-act { margin-top: 14px; }
+
+.pf-device { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 14px 15px; border-radius: 16px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.pf-device > svg { flex: none; color: var(--fd-accent); }
+.pf-device > span { flex: 1; min-width: 0; }
+.pf-device strong { display: block; color: var(--fd-ink); font-size: 13px; font-weight: 650; }
+.pf-device small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 11.5px; line-height: 1.5; }
+.pf-device .pf-pill { min-height: 34px; padding: 0 13px; }
+.pf-test { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12.5px; font-weight: 650; }
+
+/* Location */
+.fd-field.pf-city { margin-top: 12px; }
+.pf-city-row { display: flex; gap: 9px; margin-top: 7px; }
+.pf-city-row input { flex: 1; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; outline: none; }
+.pf-city-row input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.pf-city-row .pf-pill { min-height: 44px; padding: 0 16px; color: var(--fd-ink); font-size: 12.5px; }
+.pf-city-row + .fd-note.tight { font-size: 11.5px; }
+
+/* Data services: state, not controls */
+.pf-services { margin-top: 6px; }
+.fd-line.pf-service { cursor: default; }
+.pf-service .fd-two { min-width: 0; }
+.pf-service .fd-two small { margin-top: 1px; }
+.pf-service-state { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 48%; text-align: right; }
+.pf-service-state b { font-size: 12px; }
+.pf-service-state b.pf-warn { color: var(--fd-alert); }
+.pf-service-state small { color: var(--fd-faint); font-size: 11px; line-height: 1.4; }
+
+/* Account */
+.pf-account .auth-signout { flex: none; font-size: 12.5px; }

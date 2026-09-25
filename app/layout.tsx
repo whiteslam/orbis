@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import './atlas-health.css';
+import './atlas-profile.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 
 export const metadata: Metadata = {

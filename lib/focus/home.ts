@@ -12,7 +12,8 @@ import type { FinanceSummary } from '@/lib/finance/types';
 import type { GoalsSummary } from '@/lib/goals/types';
 import type { StepsSummary } from '@/lib/health/types';
 import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
-import { count, istParts, money, shortDate, whole } from '@/lib/focus/types';
+// Relative, so the unit tests can load this module under plain Node.
+import { count, istParts, money, shortDate, whole } from './types.ts';
 import type { BriefWeather } from '@/lib/home/brief';
 
 export type { Focus, FocusTarget, QuietRow };
@@ -53,6 +54,9 @@ function greeting(hour: number, name: string | null) {
   if (hour < 22) return `Good evening${who}.`;
   return `Winding down${who}?`;
 }
+
+// Goal numbers can be kg or rupees as well as steps, so keep up to two decimals.
+const amount = (value: number) => value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 function stepTrend(steps: StepsSummary) {
   if (steps.average30 === null || steps.previous30 === null || steps.previous30 <= 0) return null;
@@ -106,7 +110,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
       slides.push({
         id: 'goal-overdue',
         headline: `“${dated.title}” is past its date at ${progress}%.`,
-        body: `${remaining}${unit} to go, ${count(Math.abs(left), 'day')} late. Moving the date is fine — a stale one helps neither of us.`,
+        body: `${amount(remaining)}${unit} to go, ${count(Math.abs(left), 'day')} late. Moving the date is fine — a stale one helps neither of us.`,
         action: { label: 'Set a new date', target: 'health' },
         art: 'goal',
         source: `Goals · due ${shortDate(dated.dueDate)}`,
@@ -115,7 +119,7 @@ function needsAttention({ finance, goals, now }: { finance: FinanceSummary; goal
       slides.push({
         id: 'goal-due-soon',
         headline: left === 0 ? `Today is your date for “${dated.title}”.` : `${count(left, 'day')} left on “${dated.title}”, at ${progress}%.`,
-        body: `${remaining}${unit} to go. I’ll shape anything you ask me around it until then.`,
+        body: `${amount(remaining)}${unit} to go. I’ll shape anything you ask me around it until then.`,
         action: { label: 'Open goals', target: 'health' },
         art: 'goal',
         source: `Goals · due ${shortDate(dated.dueDate)}`,
@@ -187,10 +191,10 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
     slides.push({
       id: falling ? 'steps-falling' : 'steps-rising',
       headline: `Steps ${falling ? 'down' : 'up'} ${Math.abs(trend)}% on last month.`,
-      body: `${whole(steps.average30)} a day, from ${whole(steps.previous30)}. ${falling ? 'Two half-hour walks a week would close that.' : 'Whatever changed, keep it.'}`,
+      body: `${whole(steps.average30)} a day over the last 30 days, from ${whole(steps.previous30)}. ${falling ? 'Two half-hour walks a week would close that.' : 'Whatever changed, keep it.'}`,
       action: { label: 'See activity', target: 'health' },
       art: falling ? 'steps-down' : 'steps-up',
-      source: `Apple Health · ${count(steps.days.length, 'day')} imported`,
+      source: 'Apple Health · 30-day averages',
     });
   }
 
@@ -200,7 +204,7 @@ function worthKnowing({ finance, goals, steps, weather, savedAdviceAt, now, when
     slides.push({
       id: 'goal-moving',
       headline: `“${moving.title}” is at ${progress}%.`,
-      body: `${moving.target - moving.current}${moving.unit ? ` ${moving.unit}` : ''} to go, no date set. Give it one and I can tell you if you’re on track.`,
+      body: `${amount(moving.target - moving.current)}${moving.unit ? ` ${moving.unit}` : ''} to go, no date set. Give it one and I can tell you if you’re on track.`,
       action: { label: 'Open goals', target: 'health' },
       art: 'goal',
       source: 'Goals · no date set',

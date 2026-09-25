@@ -7,6 +7,7 @@ import { connectBrokerAction, disconnectBrokerAction } from '@/app/invest/action
 import type { BrokerMeta } from '@/lib/invest/brokers';
 import type { BrokerPortfolio, PriceSource } from '@/lib/invest/types';
 import { inr, signedInr } from '@/components/invest/format';
+import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
 const SOURCE_LABEL: Record<PriceSource, string> = { groww: 'LTP', amfi: 'NAV', alpha_vantage: 'BSE', coingecko: 'Price' };
@@ -20,7 +21,12 @@ function syncedAt(value: string) {
   return new Intl.DateTimeFormat('en-IN', { timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
 }
 
-export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; onConnected: () => void }) {
+/**
+ * The key and secret fields for one broker. With `steps` (the default) it
+ * carries its own intro and two-step instructions, for use inline (Profile →
+ * Settings); the Connect screen draws those itself and passes `steps={false}`.
+ */
+export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, steps = true }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; onConnected: () => void; steps?: boolean }) {
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -43,20 +49,73 @@ export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected }
   if (setupMessage) return <p className="finance-notice error">{setupMessage}</p>;
 
   return (
-    <form className="groww-connect" onSubmit={submit}>
-      <p className="groww-connect-intro">{reconnect ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.` : `Link your ${meta.name} account to sync your ${meta.covers} automatically.`}</p>
-      <ol className="groww-steps">
-        <li>Open <a href={meta.keysUrl} target="_blank" rel="noreferrer">{meta.keysLabel} <ExternalLink size={10} /></a> and generate a key.</li>
-        <li>Paste the <b>{meta.fields.key.toLowerCase()}</b> and <b>{meta.fields.secret.replace(/^API /i, '').toLowerCase()}</b> below.</li>
-      </ol>
-      <label>{meta.fields.key}<textarea value={apiKey} onChange={(event) => setApiKey(event.currentTarget.value)} rows={2} required autoComplete="off" spellCheck={false} placeholder={meta.fields.keyPlaceholder} disabled={isPending} /></label>
-      <label>{meta.fields.secret}<input type="password" value={apiSecret} onChange={(event) => setApiSecret(event.currentTarget.value)} required autoComplete="off" placeholder="••••••••••" disabled={isPending} /></label>
-      <button className="finance-button primary" type="submit" disabled={isPending || !apiKey.trim() || !apiSecret.trim()}>
-        {isPending ? <><LoaderCircle className="workbook-spinner" size={14} /> Checking with {meta.name}…</> : <><KeyRound size={14} /> {reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}</>}
-      </button>
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
-      <p className="groww-privacy"><ShieldCheck size={12} aria-hidden="true" /> Read-only. Orbis only reads holdings and can’t place orders. Your key and secret are encrypted and never shown again.</p>
+    <form className="fd-form broker-connect" onSubmit={submit}>
+      {steps && <>
+        <p className="fd-lead">{reconnect ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.` : `Link your ${meta.name} account to sync your ${meta.covers} automatically.`}</p>
+        <BrokerSteps meta={meta} />
+      </>}
+      <label className="fd-field wide">{meta.fields.key}<textarea className="mono" value={apiKey} onChange={(event) => setApiKey(event.currentTarget.value)} rows={2} required autoComplete="off" spellCheck={false} placeholder={meta.fields.keyPlaceholder} disabled={isPending} /></label>
+      <label className="fd-field wide">{meta.fields.secret}<input type="password" value={apiSecret} onChange={(event) => setApiSecret(event.currentTarget.value)} required autoComplete="off" placeholder="••••••••••" disabled={isPending} /></label>
+      <div className="fd-act">
+        <button type="submit" disabled={isPending || !apiKey.trim() || !apiSecret.trim()}>
+          {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Checking with {meta.name}…</> : <><KeyRound size={14} aria-hidden="true" /> {reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}</>}
+        </button>
+      </div>
+      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      <p className="fd-shield"><ShieldCheck size={13} aria-hidden="true" /> Read-only. Orbis only reads holdings and can’t place orders. Your key and secret are encrypted at rest and never shown again.</p>
     </form>
+  );
+}
+
+function BrokerSteps({ meta }: { meta: BrokerMeta }) {
+  return (
+    <>
+      <FieldStep n={1} title={`Generate a key at ${meta.name}`}>
+        Open <a href={meta.keysUrl} target="_blank" rel="noreferrer">{meta.keysLabel} <ExternalLink size={10} aria-hidden="true" /></a> and create a key.
+      </FieldStep>
+      <FieldStep n={2} title="Paste both values below">
+        The {meta.fields.key} and the {meta.fields.secret.replace(/^API /i, '').toLowerCase()}. Orbis encrypts them and never shows them again.
+      </FieldStep>
+    </>
+  );
+}
+
+/** The Connect view: what linking does, the two steps, the form, and what will sync. */
+export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onBack, onConnected, onOpen }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; others: Array<{ meta: BrokerMeta; connected: boolean }>; onBack: () => void; onConnected: () => void; onOpen: (id: BrokerMeta['id']) => void }) {
+  const covers = meta.covers.charAt(0).toLocaleUpperCase() + meta.covers.slice(1);
+  return (
+    <>
+      <FieldSubHead
+        crumb="Invest · accounts"
+        title={reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}
+        lead={reconnect ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.` : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings — it cannot place an order.`}
+        onBack={onBack}
+        backLabel="Back to Invest"
+      />
+      <FieldLabel>Two steps</FieldLabel>
+      <BrokerSteps meta={meta} />
+      <BrokerConnectForm meta={meta} reconnect={reconnect} setupMessage={setupMessage} onConnected={onConnected} steps={false} />
+
+      <section className="fd-quiet">
+        <h2>What syncs</h2>
+        <div className="fd-line"><span>Holdings</span><b>{covers}</b></div>
+        <div className="fd-line"><span>Prices</span><b>{meta.pricesShort}</b></div>
+        <div className="fd-line"><span>Refresh</span><b>When you open Invest</b></div>
+      </section>
+      {meta.gapNote && <p className="fd-note">{meta.gapNote}</p>}
+
+      {others.length > 0 && (
+        <section className="fd-quiet">
+          <h2>Other accounts</h2>
+          {others.map((other) => (
+            <div className="fd-line" key={other.meta.id}>
+              <span className="fd-two">{other.meta.name}<small>{other.connected ? 'connected' : 'not connected'}</small></span>
+              {!other.connected && <button className="fd-link" type="button" onClick={() => onOpen(other.meta.id)}>Connect</button>}
+            </div>
+          ))}
+        </section>
+      )}
+    </>
   );
 }
 
@@ -65,7 +124,7 @@ export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected }
  * connection itself. Every provider renders through this, so the screen grows
  * by adding an entry to the broker registry rather than another component.
  */
-export function BrokerCard({ meta, portfolio, isLoading, onRefresh }: { meta: BrokerMeta; portfolio: BrokerPortfolio | null; isLoading: boolean; onRefresh: () => void }) {
+export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }: { meta: BrokerMeta; portfolio: BrokerPortfolio | null; isLoading: boolean; onRefresh: () => void; onConnect: (reconnect: boolean) => void }) {
   const [notice, setNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [isDisconnecting, startDisconnect] = useTransition();
   const holdings = portfolio?.holdings ?? [];
@@ -81,6 +140,16 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh }: { meta: Br
       setNotice({ text: result.message, success: result.success });
       if (result.success) onRefresh();
     });
+  }
+
+  // Not connected: one quiet row. The form lives on its own Connect view.
+  if (portfolio?.state === 'not_connected' && !notice) {
+    return (
+      <div className="fd-line">
+        <span className="fd-two">{meta.name}<small>{portfolio.setupRequired ? 'not set up on this server' : 'not connected'}</small></span>
+        <button className="fd-link" type="button" onClick={() => onConnect(false)}>Connect</button>
+      </div>
+    );
   }
 
   return (
@@ -100,9 +169,8 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh }: { meta: Br
 
       {!portfolio && <p className="groww-muted">Checking your {meta.name} connection…</p>}
       {notice && <p className={`finance-notice ${notice.success ? 'success' : 'error'}`} role="status">{notice.text}</p>}
-      {portfolio?.state === 'not_connected' && <BrokerConnectForm meta={meta} reconnect={false} setupMessage={portfolio.setupRequired ? portfolio.message : undefined} onConnected={onRefresh} />}
       {portfolio?.state === 'error' && <p className="finance-notice error">{portfolio.message}</p>}
-      {portfolio?.state === 'error' && needsReconnect && connection?.source === 'account' && <BrokerConnectForm meta={meta} reconnect onConnected={onRefresh} />}
+      {portfolio?.state === 'error' && needsReconnect && connection?.source === 'account' && <div className="fd-act"><button type="button" onClick={() => onConnect(true)}>Reconnect {meta.name}</button></div>}
 
       {portfolio?.state === 'ok' && (
         <>

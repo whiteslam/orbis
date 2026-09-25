@@ -8,7 +8,8 @@
 // already shows that state inside the groups that change it, and a status list
 // is not an identity.
 
-import { count } from '@/lib/focus/types';
+// Relative, so the unit tests can load this module under plain Node.
+import { count } from './types.ts';
 import type { QuietRow } from '@/lib/focus/types';
 import type { JournalSummary } from '@/lib/journal/types';
 import type { PersonalProfile } from '@/lib/personal/repository';

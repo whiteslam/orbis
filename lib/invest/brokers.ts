@@ -20,6 +20,8 @@ export type BrokerMeta = {
   fields: { key: string; secret: string; keyPlaceholder: string };
   /** Where the prices behind these holdings come from. */
   priceNote: string;
+  /** The same, in a few words for the connect screen's "What syncs" rows. */
+  pricesShort: string;
   /** What this connection cannot bring in, so a gap is never a mystery. */
   gapNote?: string;
 };
@@ -34,6 +36,7 @@ export const BROKERS: BrokerMeta[] = [
     keysLabel: 'Groww → Trade API keys',
     fields: { key: 'API key', secret: 'API secret', keyPlaceholder: 'eyJraWQiOi…' },
     priceNote: 'Prices: NAV from AMFI for ETFs (published daily), BSE quotes from Alpha Vantage for shares.',
+    pricesShort: 'AMFI NAV · BSE quotes',
     gapNote: 'Mutual funds aren’t available through the Groww Trade API.',
   },
 ];

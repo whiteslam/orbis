@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
-import { FieldLabel, QuietList } from '@/components/field/field';
+import { FieldLabel, QuietList, useScrollTop } from '@/components/field/field';
 import { AppIntegrations } from '@/components/personal/app-integrations';
 import { ContextNotes } from '@/components/personal/context-notes';
 import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
@@ -10,7 +11,7 @@ import { HomeCityEditor, Integrations } from '@/components/personal/integrations
 import { Journal } from '@/components/personal/journal';
 import { NotificationSettings } from '@/components/personal/notification-settings';
 import { ProfileEditor } from '@/components/personal/profile-editor';
-import { composeIdentityMeta, composeProfileRows, composeProfileSummary, initialOf, type ProfileInput } from '@/lib/focus/profile';
+import { composeProfileRows, composeProfileSummary, initialOf, type ProfileInput } from '@/lib/focus/profile';
 import type { ContextNote } from '@/lib/goals/memory';
 import type { StepsSummary } from '@/lib/health/types';
 import type { JournalSummary } from '@/lib/journal/types';
@@ -44,35 +45,55 @@ const GOOGLE_NOTICE: Record<string, { text: string; success: boolean }> = {
  */
 function Group({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <section className="fd-group">
+    <section className="pf-group">
       <FieldLabel>{title}</FieldLabel>
-      {note && <p className="fd-note fd-group-note">{note}</p>}
+      {note && <p className="fd-note tight">{note}</p>}
       {children}
     </section>
   );
 }
 
 /**
- * Who this account belongs to. Shared chrome above the tabs, in place of the
- * generic screen head: the initial, the name, what you do, and only the chips
- * that are actually true.
+ * The chips under your name. Only what is true shows up, so an empty profile is
+ * quiet: the apps that are actually feeding Orbis carry the accent, and the
+ * count of things you asked it to remember sits beside them in neutral.
  */
-function Identity({ input }: { input: ProfileInput }) {
+function identityChips(connections: AppConnections, stepsSummary: StepsSummary, noteCount: number) {
+  const chips: Array<{ key: string; label: string; on: boolean }> = [];
+  const google = connections.google;
+  const googleOk = Boolean(google) && google?.status !== 'reconnect_required';
+  if (googleOk && google?.gmail) chips.push({ key: 'gmail', label: 'Gmail on', on: true });
+  if (googleOk && google?.calendar) chips.push({ key: 'calendar', label: 'Calendar on', on: true });
+  if (connections.groww?.status === 'connected') chips.push({ key: 'groww', label: 'Groww on', on: true });
+  if (stepsSummary.lastImport) chips.push({ key: 'health', label: 'Apple Health on', on: true });
+  if (noteCount) chips.push({ key: 'notes', label: `${noteCount} note${noteCount === 1 ? '' : 's'}`, on: false });
+  return chips;
+}
+
+/**
+ * Who this account belongs to. Shared chrome above the tabs, in place of the
+ * generic screen head: the initial, the name, what you do and where, and only
+ * the chips that are actually true.
+ */
+function Identity({ input, city, stepsSummary }: { input: ProfileInput; city: string | null; stepsSummary: StepsSummary }) {
   const name = input.profile?.preferredName?.trim();
   const role = input.profile?.role?.trim();
-  const chips = composeIdentityMeta(input);
+  const line = [role, city?.trim()].filter(Boolean).join(' · ');
+  const chips = identityChips(input.connections, stepsSummary, input.noteCount);
   return (
-    <header className="fd-id">
-      <span className="fd-avatar" aria-hidden="true">{initialOf(name)}</span>
-      <div className="fd-id-text">
-        <h1>{name || 'Your profile'}</h1>
-        <p>{role || (name ? 'No role set' : 'Not set up yet')}</p>
-        {chips.length > 0 && (
-          <div className="fd-id-meta">
-            {chips.map((chip) => <span key={chip.key} className={chip.accent ? 'on' : undefined}>{chip.label}</span>)}
-          </div>
-        )}
+    <header className="pf-id">
+      <div className="fd-id">
+        <span className="fd-avatar" aria-hidden="true">{initialOf(name)}</span>
+        <div className="fd-id-text">
+          <h1>{name || 'Your profile'}</h1>
+          <p>{line || (name ? 'No role set' : 'Not set up yet')}</p>
+        </div>
       </div>
+      {chips.length > 0 && (
+        <div className="fd-id-meta">
+          {chips.map((chip) => <span key={chip.key} className={chip.on ? 'on' : undefined}>{chip.label}</span>)}
+        </div>
+      )}
     </header>
   );
 }
@@ -93,6 +114,7 @@ export function ProfileScreen(props: {
   stepsSummary: StepsSummary;
 }) {
   const [section, setSection] = useState<ProfileSection>(props.initialSection);
+  const top = useScrollTop(section);
   const profile = props.personalProfile.profile;
   const notice = props.googleNotice ? GOOGLE_NOTICE[props.googleNotice] ?? GOOGLE_NOTICE.error : null;
   // Account connections are managed above; this list shows the data services behind them.
@@ -107,8 +129,9 @@ export function ProfileScreen(props: {
   };
 
   return (
-    <div className="screen-body field">
-      <Identity input={input} />
+    <div className="screen-body field pf-screen">
+      <span ref={top} hidden />
+      <Identity input={input} city={props.homeLocation.city} stepsSummary={props.stepsSummary} />
 
       <div className="fd-tabs" role="tablist" aria-label="Profile sections">
         {SECTIONS.map(([id, label]) => (
@@ -140,9 +163,9 @@ export function ProfileScreen(props: {
 
       {section === 'settings' && <>
         {notice && (
-          <div className={`finance-notice ${notice.success ? 'success' : 'error'}`} role="status">
+          <div className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`} role="status">
             <span>{notice.text}</span>
-            <button type="button" onClick={props.clearGoogleNotice} aria-label="Dismiss message">×</button>
+            <button type="button" onClick={props.clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
           </div>
         )}
         <Group title="App integrations" note="The apps Orbis reads from. Everything is read-only, and you can disconnect at any time.">
@@ -151,16 +174,18 @@ export function ProfileScreen(props: {
         <Group title="Notifications">
           <NotificationSettings settings={props.notificationSettings} />
         </Group>
-        <Group title="Location">
-          <HomeCityEditor location={props.homeLocation} />
-        </Group>
+        {props.homeLocation.state !== 'setup' && (
+          <Group title="Location">
+            <HomeCityEditor location={props.homeLocation} />
+          </Group>
+        )}
         <Group title="Data services" note="Services Orbis uses for weather, rates, prices and AI.">
           <Integrations items={dataServices} heading={false} />
         </Group>
         <Group title="Account">
-          <div className="fd-source">
+          <div className="fd-source pf-account">
             <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
-            <SignOutButton />
+            <SignOutButton variant="text" />
           </div>
         </Group>
       </>}

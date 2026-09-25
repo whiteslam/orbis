@@ -4,7 +4,8 @@
 import type { GoalsSummary } from '@/lib/goals/types';
 import type { StepsSummary } from '@/lib/health/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
-import { count, percent, shortDate, whole } from '@/lib/focus/types';
+// Relative, so the unit tests can load this module under plain Node.
+import { count, percent, shortDate, whole } from './types.ts';
 
 export type HealthFocusInput = {
   steps: StepsSummary;

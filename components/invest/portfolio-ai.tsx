@@ -1,103 +1,158 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { AlertTriangle, Lightbulb, ListChecks, LoaderCircle, Sparkles, Trash2 } from 'lucide-react';
+import { LoaderCircle, Sparkles, Trash2 } from 'lucide-react';
 import { deleteSavedAiResultAction } from '@/app/ai/result-actions';
 import { generatePortfolioAdviceAction } from '@/app/invest/ai-actions';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
-import type { PortfolioAdvice } from '@/lib/invest/types';
+import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
-const KIND = {
-  risk: { label: 'Risk', icon: AlertTriangle },
-  opportunity: { label: 'Opportunity', icon: Lightbulb },
-  action: { label: 'Next step', icon: ListChecks },
-} as const;
+const KIND_LABEL = { risk: 'Risk', opportunity: 'Opportunity', action: 'Next step' } as const;
 
 function savedWhen(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 }
 
-export function PortfolioAi({ goalCount, saved }: { goalCount: number; saved: SavedPortfolioAdvice | null }) {
+// The summary's first sentence becomes the headline; the rest reads under it.
+function splitSummary(summary: string) {
+  const match = summary.match(/^(.+?[.!?])\s+([\s\S]+)$/);
+  return match ? { headline: match[1], body: match[2] } : { headline: summary, body: null };
+}
+
+function context(saved: SavedPortfolioAdvice) {
+  const { positionCount, usedGoals } = saved.context as { positionCount?: unknown; usedGoals?: unknown };
+  return { positionCount: typeof positionCount === 'number' ? positionCount : null, usedGoals: usedGoals === true };
+}
+
+/** The Invest screen's entry to suggestions: what is saved, or an offer to ask. */
+export function PortfolioAiRow({ advice, onOpen }: { advice: SavedPortfolioAdvice | null; onOpen: () => void }) {
+  return (
+    <section className="fd-quiet">
+      <h2>Suggestions</h2>
+      <div className="fd-line">
+        <span>{advice ? `Saved ${savedWhen(advice.createdAt)}. ${splitSummary(advice.result.summary).headline}` : 'Orbis can read the shape of your mix against your goals.'}</span>
+        <button className="fd-link" type="button" onClick={onOpen}>{advice ? 'Read' : 'Ask'}</button>
+      </div>
+    </section>
+  );
+}
+
+/** The suggestions view: the consent step, or the saved advice as numbered steps. */
+export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCount: number; advice: SavedPortfolioAdvice | null; setAdvice: (advice: SavedPortfolioAdvice | null) => void; onBack: () => void }) {
+  const [asking, setAsking] = useState(!advice);
   const [consent, setConsent] = useState(false);
   const [includeGoals, setIncludeGoals] = useState(goalCount > 0);
-  // Suggestions generated earlier are shown again instead of being regenerated.
-  const [advice, setAdvice] = useState<PortfolioAdvice | null>(saved?.result ?? null);
-  const [savedAt, setSavedAt] = useState<string | null>(saved?.createdAt ?? null);
-  const [savedId, setSavedId] = useState<string | null>(saved?.id ?? null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const sendGoals = includeGoals && goalCount > 0;
 
   function request() {
     if (!consent) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await safeAction(generatePortfolioAdviceAction)({ consented: true, includeGoals: includeGoals && goalCount > 0 });
-      if (result.success) {
-        setAdvice(result.data);
-        setSavedAt(result.saved?.createdAt ?? new Date().toISOString());
-        setSavedId(result.saved?.id ?? null);
-      } else setMessage(result.message);
+      const result = await safeAction(generatePortfolioAdviceAction)({ consented: true, includeGoals: sendGoals });
+      if (!result.success) {
+        setMessage(result.message);
+        return;
+      }
+      setAdvice({
+        id: result.saved?.id ?? '',
+        title: null,
+        context: { usedGoals: sendGoals },
+        result: result.data,
+        createdAt: result.saved?.createdAt ?? new Date().toISOString(),
+      });
+      setAsking(false);
+      setConsent(false);
     });
   }
 
-  function discard() {
+  function remove() {
+    if (!advice) return;
     setMessage(null);
     startTransition(async () => {
-      if (savedId) {
-        const result = await safeAction(deleteSavedAiResultAction)(savedId);
+      if (advice.id) {
+        const result = await safeAction(deleteSavedAiResultAction)(advice.id);
         if (!result.success) {
           setMessage(result.message);
           return;
         }
       }
       setAdvice(null);
-      setSavedAt(null);
-      setSavedId(null);
-      setConsent(false);
+      setAsking(true);
     });
   }
 
-  const shared = ['your holdings and allocation', includeGoals && goalCount > 0 ? 'your goals' : null].filter(Boolean).join(' and ');
+  if (asking || !advice) {
+    return (
+      <>
+        <FieldSubHead crumb="Invest · suggestions" title="Ask about your mix" lead="Orbis sends a summary of your holdings for analysis and saves the suggestions so you can read them again. Your holdings themselves are not stored." onBack={advice ? () => setAsking(false) : onBack} backLabel={advice ? 'Back to saved suggestions' : 'Back to Invest'} />
+
+        <section className="fd-quiet">
+          <h2>What will be sent</h2>
+          <div className="fd-line"><span>Holdings summary</span><b className="fd-yes">Included</b></div>
+          {goalCount > 0 && (
+            <label className="fd-line fd-toggle">
+              <span>Your {goalCount} {goalCount === 1 ? 'goal' : 'goals'}</span>
+              <input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} />
+            </label>
+          )}
+          <div className="fd-line"><span>Personal profile</span><b className="empty">Not sent</b></div>
+          <div className="fd-line"><span>Account numbers or keys</span><b className="empty">Never sent</b></div>
+        </section>
+
+        <label className="fd-consent">
+          <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} />
+          <span>I understand {sendGoals ? 'a summary of my holdings and my goals' : 'a summary of my holdings'} will be sent to OpenRouter for analysis.</span>
+        </label>
+
+        <div className="fd-act">
+          <button type="button" onClick={request} disabled={!consent || isPending}>
+            {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Analysing…</> : <><Sparkles size={14} aria-hidden="true" /> Get suggestions</>}
+          </button>
+        </div>
+        {message && <p className="fd-msg bad" role="status">{message}</p>}
+        <p className="fd-note">Educational suggestions, not investment advice. Orbis never places trades.</p>
+      </>
+    );
+  }
+
+  const { headline, body } = splitSummary(advice.result.summary);
+  const { positionCount, usedGoals } = context(advice);
+  const meta = [positionCount !== null ? `${positionCount} ${positionCount === 1 ? 'holding' : 'holdings'}` : null, usedGoals ? 'goals used' : null, `saved ${savedWhen(advice.createdAt)}`].filter(Boolean).join(' · ');
 
   return (
-    <section className="invest-ai" aria-labelledby="invest-ai-title">
-      <div className="invest-ai-head">
-        <div className="invest-ai-icon"><Sparkles size={18} aria-hidden="true" /></div>
-        <div><small>ORBIS AI</small><h3 id="invest-ai-title">Portfolio suggestions</h3></div>
-      </div>
+    <>
+      <FieldSubHead crumb="Invest · suggestions" onBack={onBack} backLabel="Back to Invest" />
+      <section className="fd-focus fd-advice" aria-live="polite">
+        <p className="fd-kicker">What Orbis sees</p>
+        <h1>{headline}</h1>
+        {body && <p>{body}</p>}
+        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{meta}</p>
+      </section>
 
-      {!advice ? (
-        <div className="workbook-consent">
-          {goalCount > 0 && <label><input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my {goalCount} {goalCount === 1 ? 'goal' : 'goals'} to tailor the suggestions.</label>}
-          <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {shared} will be sent to OpenRouter for analysis. The suggestions are saved to your account so you can read them again; your holdings are not stored.</label>
-          <button className="finance-button primary" type="button" onClick={request} disabled={!consent || isPending}>
-            {isPending ? <><LoaderCircle className="workbook-spinner" size={15} /> Analysing…</> : <><Sparkles size={15} /> Get suggestions</>}
-          </button>
-        </div>
-      ) : (
-        <div className="invest-ai-result" aria-live="polite">
-          {savedAt && <p className="ai-saved-note">Saved {savedWhen(savedAt)}</p>}
-          <p className="invest-ai-summary">{advice.summary}</p>
-          {advice.suggestions.map((item, index) => {
-            const kind = KIND[item.kind];
-            const Icon = kind.icon;
-            return (
-              <article className={`invest-ai-item ${item.kind}`} key={`${item.title}-${index}`}>
-                <em><Icon size={12} aria-hidden="true" />{kind.label}</em>
-                <strong>{item.title}</strong>
-                <p>{item.detail}</p>
-              </article>
-            );
-          })}
-          {advice.caveats.map((caveat, index) => <p className="workbook-caveat" key={`${caveat}-${index}`}>{caveat}</p>)}
-          <button className="finance-button secondary" type="button" onClick={discard} disabled={isPending}>
-            <Trash2 size={14} /> Delete and ask again
-          </button>
-        </div>
-      )}
-      {message && <p className="finance-notice error" role="status">{message}</p>}
-      <p className="groww-muted">Educational suggestions, not investment advice. Orbis never places trades.</p>
-    </section>
+      <FieldLabel>{advice.result.suggestions.length} {advice.result.suggestions.length === 1 ? 'step' : 'steps'}</FieldLabel>
+      {advice.result.suggestions.map((item, index) => (
+        <FieldStep key={`${item.title}-${index}`} n={index + 1} title={item.title} foot={KIND_LABEL[item.kind]}>{item.detail}</FieldStep>
+      ))}
+
+      <p className="fd-note">This is not financial advice. Prices move constantly, and Orbis never places trades.</p>
+      {advice.result.caveats.map((caveat, index) => <p className="fd-note tight" key={`${caveat}-${index}`}>{caveat}</p>)}
+
+      <section className="fd-quiet">
+        <h2>What was sent</h2>
+        <div className="fd-line"><span>Holdings summary</span><b className="fd-yes">Included</b></div>
+        <div className="fd-line"><span>Your goals</span>{usedGoals ? <b className="fd-yes">Included</b> : <b className="empty">Not sent</b>}</div>
+        <div className="fd-line"><span>Personal profile</span><b className="empty">Not sent</b></div>
+        <div className="fd-line"><span>Account numbers or keys</span><b className="empty">Never sent</b></div>
+      </section>
+
+      <div className="fd-act">
+        <button type="button" onClick={() => setAsking(true)} disabled={isPending}>Ask again</button>
+        <button className="fd-link alert" type="button" onClick={remove} disabled={isPending}><Trash2 size={13} aria-hidden="true" /> {isPending ? 'Deleting…' : 'Delete this advice'}</button>
+      </div>
+      {message && <p className="fd-msg bad" role="status">{message}</p>}
+    </>
   );
 }

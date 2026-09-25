@@ -3,7 +3,8 @@
 
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
-import { count, istParts, money, percent } from '@/lib/focus/types';
+// Relative, so the unit tests can load this module under plain Node.
+import { count, istParts, money, percent } from './types.ts';
 
 function monthTotals(summary: FinanceSummary, now: Date) {
   const month = summary.month;

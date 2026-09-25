@@ -4,7 +4,8 @@
 
 import type { PortfolioAnalysis } from '@/lib/invest/analysis';
 import type { Focus, QuietRow } from '@/lib/focus/types';
-import { count, money, percent, shortDate } from '@/lib/focus/types';
+// Relative, so the unit tests can load this module under plain Node.
+import { count, money, percent, shortDate } from './types.ts';
 
 export type InvestFocusInput = {
   analysis: PortfolioAnalysis;

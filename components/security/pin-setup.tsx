@@ -52,7 +52,7 @@ export function PinSetup({ reset }: { reset: boolean }) {
   return (
     <AuthShell centered>
       <div className="lock-heading">
-        <div className="lock-icon"><KeyRound size={20} aria-hidden="true" /></div>
+        <div className="lock-icon"><KeyRound size={22} strokeWidth={1.8} aria-hidden="true" /></div>
         <h1>{reset ? 'Set a new Orbis PIN' : 'Set your Orbis PIN'}</h1>
         <p>
           {reset ? 'Your old PIN was switched off after too many wrong tries. ' : ''}
@@ -64,12 +64,12 @@ export function PinSetup({ reset }: { reset: boolean }) {
         {step === 'choose' ? (
           <>
             <label htmlFor="pin-new">Choose a PIN</label>
-            <PinInput key="new" id="pin-new" value={first} onChange={setFirst} onComplete={chosen} autoFocus describedBy={message ? 'pin-feedback' : undefined} />
+            <PinInput key="new" id="pin-new" value={first} onChange={setFirst} onComplete={chosen} autoFocus describedBy={message ? 'pin-feedback' : undefined} keypad />
           </>
         ) : (
           <>
             <label htmlFor="pin-confirm">Enter it again</label>
-            <PinInput key="confirm" id="pin-confirm" value={second} onChange={setSecond} onComplete={confirmed} disabled={isPending} autoFocus describedBy={message ? 'pin-feedback' : undefined} />
+            <PinInput key="confirm" id="pin-confirm" value={second} onChange={setSecond} onComplete={confirmed} disabled={isPending} autoFocus describedBy={message ? 'pin-feedback' : undefined} keypad />
             {isPending && <p className="lock-pin-status" role="status">Saving…</p>}
           </>
         )}
@@ -77,9 +77,11 @@ export function PinSetup({ reset }: { reset: boolean }) {
 
       {message && <p id="pin-feedback" className="auth-feedback error" role="alert">{message}</p>}
 
-      <div className="lock-signout">
-        <span>Not you?</span>
-        <SignOutButton />
+      <div className="auth-foot">
+        <div className="lock-signout">
+          <span>Not you?</span>
+          <SignOutButton variant="text" />
+        </div>
       </div>
     </AuthShell>
   );

@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeftRight, LoaderCircle } from 'lucide-react';
+import { FieldLabel } from '@/components/field/field';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED'] as const;
 
 type Rates = { date: string; rates: Record<string, number | null>; stale: boolean };
 
-export function CurrencyCard() {
+// Reference rates to INR. `note` adds to the source line (e.g. "works without any account").
+export function CurrencyCard({ note }: { note?: string }) {
   const [data, setData] = useState<Rates | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,17 +25,16 @@ export function CurrencyCard() {
     return () => { cancelled = true; };
   }, []);
 
+  const source = data
+    ? `${data.stale ? 'Last saved · ' : ''}ECB, ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${data.date}T00:00:00Z`))}${note ? ` · ${note}` : ''}`
+    : null;
+
   return (
-    <section className="currency-card" aria-labelledby="currency-title">
-      <div className="currency-head">
-        <ArrowLeftRight size={16} aria-hidden="true" />
-        <strong id="currency-title">Rates to INR</strong>
-        {data && <small>{data.stale ? 'Last saved · ' : ''}ECB, {new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${data.date}T00:00:00Z`))}</small>}
-      </div>
-      {!data && !error && <p className="currency-muted"><LoaderCircle className="workbook-spinner" size={13} /> Loading rates…</p>}
-      {error && <p className="currency-muted">{error}</p>}
+    <section className="fd-rates" aria-label="Rates to INR">
+      <FieldLabel>Rates to INR</FieldLabel>
+      <p className="fd-rates-src">{error ?? source ?? 'Loading rates…'}</p>
       {data && (
-        <div className="currency-grid">
+        <div className="fd-rates-grid">
           {CURRENCIES.map((code) => {
             const perInr = data.rates[code];
             return (

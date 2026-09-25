@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Download, FileSpreadsheet, FileText, LoaderCircle, Pin, Trash2, Upload } from 'lucide-react';
 import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
 import type { HealthDocument } from '@/lib/health-docs/types';
+import { FieldHero, FieldLabel } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
-function size(bytes: number) {
+export function documentSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function added(value: string) {
+export function documentAdded(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(value));
 }
 
+/** The body of the Documents view: how many there are, the upload box, and each saved file. */
 export function HealthLibrary({ documents, state }: { documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }) {
   const inputId = useId();
   const router = useRouter();
@@ -67,49 +69,63 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
     });
   }
 
-  if (state === 'setup') return <p className="finance-notice error">Apply the health documents migration in Supabase to save documents.</p>;
-  if (state === 'unavailable') return <p className="finance-notice error">Your documents could not be loaded. Refresh and try again.</p>;
+  if (state === 'setup') return <p className="fd-msg bad">Apply the health documents migration in Supabase to save documents.</p>;
+  if (state === 'unavailable') return <p className="fd-msg bad">Your documents could not be loaded. Refresh and try again.</p>;
+
+  const pinned = documents.filter((document) => document.alwaysInclude).length;
 
   return (
-    <section className="health-library">
-      <label className={`health-drop ${busy === 'upload' ? 'busy' : ''}`} htmlFor={inputId}>
-        {busy === 'upload' ? <LoaderCircle className="workbook-spinner" size={16} /> : <Upload size={16} />}
+    <>
+      {documents.length > 0 && (
+        <FieldHero
+          value={String(documents.length)}
+          label={documents.length === 1 ? 'file Orbis can read' : 'files Orbis can read'}
+          delta={pinned ? { text: `${pinned} pinned`, tone: 'flat' } : null}
+        />
+      )}
+
+      <label className={`hl-drop ${busy === 'upload' ? 'busy' : ''}`} htmlFor={inputId}>
+        {busy === 'upload' ? <LoaderCircle className="workbook-spinner" size={18} aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
         <strong>{busy === 'upload' ? 'Reading and indexing…' : 'Add a document'}</strong>
-        <span>PDF or .xlsx</span>
+        <span>PDF or .xlsx · up to 100 MB</span>
       </label>
       <input id={inputId} type="file" className="sr-only" accept=".xlsx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={isPending} onChange={(event) => {
         const file = event.currentTarget.files?.[0];
         event.currentTarget.value = '';
         if (file) upload(file);
       }} />
-      {message && <p className={`finance-notice ${message.success ? 'success' : 'error'}`} role="status">{message.text}</p>}
+      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
 
       {documents.length > 0 ? (
-        <ul className="health-docs">
-          {documents.map((document) => (
-            <li key={document.id}>
-              <span className={`health-doc-icon ${document.kind}`}>{document.kind === 'pdf' ? <FileText size={16} /> : <FileSpreadsheet size={16} />}</span>
-              <div>
-                <strong>{document.fileName}</strong>
-                <small>{document.alwaysInclude ? 'Read in every plan' : `${added(document.createdAt)} · ${size(document.sizeBytes)}`}</small>
-              </div>
-              <button
-                type="button"
-                className={`health-doc-pin ${document.alwaysInclude ? 'on' : ''}`}
-                onClick={() => toggleAlways(document)}
-                disabled={isPending}
-                aria-pressed={document.alwaysInclude}
-                title={document.alwaysInclude ? 'Read in every plan' : 'Read this in every plan'}
-              >
-                <Pin size={13} />
-              </button>
-              {document.hasOriginal && <button type="button" className="workbook-icon-button" onClick={() => download(document.id)} disabled={isPending} aria-label={`Download ${document.fileName}`}>{busy === document.id ? <LoaderCircle className="workbook-spinner" size={14} /> : <Download size={14} />}</button>}
-              <button type="button" className="workbook-icon-button" onClick={() => remove(document)} disabled={isPending} aria-label={`Delete ${document.fileName}`}><Trash2 size={14} /></button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <FieldLabel>Saved</FieldLabel>
+          <ul className="hl-docs">
+            {documents.map((document) => (
+              <li key={document.id}>
+                <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
+                <div>
+                  <strong>{document.fileName}</strong>
+                  {document.alwaysInclude ? <small className="on">Read in every plan</small> : <small>{documentAdded(document.createdAt)} · {documentSize(document.sizeBytes)}</small>}
+                </div>
+                <button
+                  type="button"
+                  className="fd-round hl-pin"
+                  onClick={() => toggleAlways(document)}
+                  disabled={isPending}
+                  aria-pressed={document.alwaysInclude}
+                  aria-label={`Read ${document.fileName} in every plan`}
+                  title={document.alwaysInclude ? 'Read in every plan' : 'Read this in every plan'}
+                >
+                  <Pin size={14} aria-hidden="true" fill={document.alwaysInclude ? 'currentColor' : 'none'} />
+                </button>
+                {document.hasOriginal && <button type="button" className="fd-round" onClick={() => download(document.id)} disabled={isPending} aria-label={`Download ${document.fileName}`}>{busy === document.id ? <LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}</button>}
+                <button type="button" className="fd-round hl-danger" onClick={() => remove(document)} disabled={isPending} aria-label={`Delete ${document.fileName}`}><Trash2 size={14} aria-hidden="true" /></button>
+              </li>
+            ))}
+          </ul>
+          <p className="fd-note">Pinned documents are read into every plan. The rest are searched when they look relevant, and deleting one removes its search index — saved plans stay.</p>
+        </>
       ) : <p className="fd-note">Saved documents stay private to your account. Orbis searches them when building a plan — pin one and it is read every time.</p>}
-      {documents.length > 0 && <p className="fd-note">Pinned documents are read into every plan; the rest are searched when relevant.</p>}
-    </section>
+    </>
   );
 }

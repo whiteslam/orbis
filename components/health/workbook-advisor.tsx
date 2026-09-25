@@ -1,25 +1,30 @@
 'use client';
 
-import { useId, useState, useTransition } from 'react';
-import { FileSpreadsheet, LoaderCircle, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { useId, useState, useTransition, type ChangeEvent } from 'react';
+import { FileSpreadsheet, FileText, LoaderCircle, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { deleteSavedAiResultAction } from '@/app/ai/result-actions';
 import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { SavedWorkbookAdvice } from '@/lib/ai/saved';
 import type { WorkbookAdvice, WorkbookObservation, WorkbookPreview } from '@/lib/workbook/types';
+import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
+
+/** What went into a request made in this session. Saved advice does not record it, so it is null then. */
+export type AdviceSent = { goals: boolean; steps: boolean; notes: boolean; profile: boolean; persona: boolean };
 
 // What is on screen: either advice just generated, or advice restored from an earlier session.
 // The cited observations travel with it, because the workbook itself is never stored.
-type ShownAdvice = {
+export type ShownAdvice = {
   advice: WorkbookAdvice;
   observations: WorkbookObservation[];
   title: string | null;
   savedAt: string | null;
   savedId: string | null;
+  sent: AdviceSent | null;
 };
 
-function fromSaved(saved: SavedWorkbookAdvice | null): ShownAdvice | null {
+export function adviceFromSaved(saved: SavedWorkbookAdvice | null): ShownAdvice | null {
   if (!saved) return null;
   return {
     advice: saved.result,
@@ -27,24 +32,40 @@ function fromSaved(saved: SavedWorkbookAdvice | null): ShownAdvice | null {
     title: saved.title,
     savedAt: saved.createdAt,
     savedId: saved.id,
+    sent: null,
   };
 }
 
-function savedWhen(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+export function savedWhen(iso: string) {
+  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 }
 
 /** Splits the model's summary into a headline sentence and whatever follows it. */
-function splitSummary(summary: string) {
+export function splitSummary(summary: string) {
   const match = summary.match(/^([\s\S]+?[.!?])\s+([\s\S]*)$/);
   if (!match || match[1].length > 120) return { headline: summary, rest: '' };
   return { headline: match[1], rest: match[2].trim() };
 }
 
-export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false, saved = null }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean; saved?: SavedWorkbookAdvice | null }) {
+function fileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const isPdfName = (name: string | null) => Boolean(name?.toLowerCase().endsWith('.pdf'));
+
+// The first observations are enough to check the file was read correctly; the rest open on request.
+const FIRST_OBSERVATIONS = 6;
+
+/**
+ * "Ask about a file": choose a file, check what Orbis read, pick what else to
+ * send, then consent. Advice lives in the Health screen's state, so it survives
+ * leaving this view; a new answer replaces it and opens the advice view.
+ */
+export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false, onAdvice, onBack }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean; onAdvice: (advice: ShownAdvice) => void; onBack: () => void }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
-  const [result, setResult] = useState<ShownAdvice | null>(() => fromSaved(saved));
+  const [bytes, setBytes] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
@@ -52,6 +73,8 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
   const [includePersonalProfile, setIncludePersonalProfile] = useState(false);
   const [includeGoals, setIncludeGoals] = useState(goalCount > 0);
   const [includeSteps, setIncludeSteps] = useState(hasStepData);
+  const [allSheets, setAllSheets] = useState(false);
+  const [allObservations, setAllObservations] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function resetChoices() {
@@ -61,183 +84,258 @@ export function WorkbookAdvisor({ goalCount = 0, hasStepData = false, savedConte
     setIncludePersonalProfile(false);
     setIncludeGoals(goalCount > 0);
     setIncludeSteps(hasStepData);
+    setAllSheets(false);
+    setAllObservations(false);
   }
 
-  function parseFile(formData: FormData) {
+  function parseFile(file: File) {
     setMessage(null);
     setPreview(null);
     resetChoices();
+    const formData = new FormData();
+    formData.set('workbook', file);
     startTransition(async () => {
       const result = await safeAction(parseWorkbookAction)(formData);
       if (!result.success) {
         setMessage(result.message);
         return;
       }
+      setBytes(file.size);
       setPreview(result.data);
     });
   }
+
+  const isPdf = isPdfName(preview?.fileName ?? null);
+  const documentText = preview ? `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}` : '';
+  const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets, documentText));
+  const sent: AdviceSent = {
+    goals: includeGoals && goalCount > 0,
+    steps: includeSteps && hasStepData,
+    notes: includeSavedContext && savedContextCount > 0,
+    profile: includePersonalProfile && hasSavedPersonalProfile,
+    persona: includeFitnessPersona && personaRelevant,
+  };
 
   function requestAdvice() {
     if (!preview || !consent) return;
     setMessage(null);
     startTransition(async () => {
-      const response = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: includeGoals && goalCount > 0, includeSteps: includeSteps && hasStepData, consented: consent });
+      const response = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: sent.goals, includeSteps: sent.steps, consented: consent });
       if (!response.success) {
         setMessage(response.message);
         return;
       }
-      setResult({
+      onAdvice({
         advice: response.data,
         observations: preview.observations,
         title: preview.fileName,
         savedAt: response.saved?.createdAt ?? new Date().toISOString(),
         savedId: response.saved?.id ?? null,
+        sent,
       });
     });
   }
 
   function clearWorkbook() {
     setPreview(null);
+    setBytes(null);
     setMessage(null);
     resetChoices();
   }
 
-  function deleteAdvice() {
+  if (!preview) {
+    return (
+      <>
+        <FieldSubHead crumb="Health · ask about a file" title="Ask about a file" lead="Upload a health, finance or activity Excel or PDF file. Orbis shows you what it read before anything is sent for advice." onBack={onBack} backLabel="Back to Health" />
+        <label className={`hl-drop ${isPending ? 'busy' : ''}`} htmlFor={fileInputId}>
+          {isPending ? <LoaderCircle className="workbook-spinner" size={18} aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
+          <strong>{isPending ? 'Reading the file…' : 'Choose an Excel or PDF file'}</strong>
+          <span>.xlsx or .pdf · up to 100 MB</span>
+        </label>
+        <input id={fileInputId} className="sr-only" name="workbook" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" disabled={isPending} onChange={(event) => {
+          const selected = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (selected) parseFile(selected);
+        }} />
+        {message && <p className="fd-msg bad" role="status">{message}</p>}
+        <p className="fd-note">The file is read for this request and isn’t saved to Orbis. Suggestions are informational and aren’t a medical diagnosis.</p>
+      </>
+    );
+  }
+
+  const rows = preview.sheets.reduce((sum, sheet) => sum + sheet.rowCount, 0);
+  const sheets = allSheets ? preview.sheets : preview.sheets.slice(0, 1);
+  const hiddenSheets = preview.sheets.length - 1;
+  const observations = allObservations ? preview.observations : preview.observations.slice(0, FIRST_OBSERVATIONS);
+  const hiddenObservations = preview.observations.length - FIRST_OBSERVATIONS;
+  const disclosureItems = [
+    isPdf ? 'a bounded PDF preview and up to 24 extracted text snippets' : 'a bounded Excel summary',
+    sent.notes ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
+    sent.profile ? 'my personal profile (name, role and More about me text)' : null,
+    sent.persona ? 'my saved fitness persona' : null,
+    sent.goals ? 'my goals and progress' : null,
+    sent.steps ? 'my daily step summary' : null,
+  ].filter((item): item is string => Boolean(item));
+  const disclosure = disclosureItems.length > 1 ? `${disclosureItems.slice(0, -1).join(', ')} and ${disclosureItems[disclosureItems.length - 1]}` : disclosureItems[0];
+  const toggle = (setter: (value: boolean) => void) => (event: ChangeEvent<HTMLInputElement>) => { setter(event.currentTarget.checked); setConsent(false); };
+
+  return (
+    <>
+      <FieldSubHead crumb="Health · ask about a file" title="Here is what I read" lead="Check it before anything is sent. The original file isn’t sent for advice or saved — only the summary below." onBack={onBack} backLabel="Back to Health" />
+
+      <div className="hl-file">
+        <span className="hl-file-tile" aria-hidden="true">{isPdf ? <FileText size={18} strokeWidth={1.8} /> : <FileSpreadsheet size={18} strokeWidth={1.8} />}</span>
+        <div>
+          <strong>{preview.fileName}</strong>
+          <small>{rows.toLocaleString('en-IN')} {isPdf ? 'text lines' : 'data rows'} · {preview.sheets.length} {preview.sheets.length === 1 ? 'sheet' : 'sheets'}{bytes !== null ? ` · ${fileSize(bytes)}` : ''}</small>
+        </div>
+        <button className="fd-round" type="button" onClick={clearWorkbook} disabled={isPending} aria-label="Remove this file"><X size={15} strokeWidth={2.2} aria-hidden="true" /></button>
+      </div>
+
+      {sheets.map((sheet, index) => (
+        <section className="hl-sheet" key={`${sheet.name}-${index}`}>
+          <FieldLabel>{preview.sheets.length > 1 ? `Sheet ${index + 1} of ${preview.sheets.length} · ` : ''}{sheet.name}</FieldLabel>
+          <p className="hl-sheet-meta">{sheet.rowCount.toLocaleString('en-IN')} rows · {sheet.columnCount} columns{sheet.columns.length ? ` · ${sheet.columns.join(' · ')}` : ''}</p>
+          {sheet.previewRows.length > 0 && (
+            <div className="hl-table-wrap">
+              <table className="hl-table">
+                <thead><tr><th scope="col">Row</th>{sheet.columns.slice(0, 10).map((column, columnIndex) => <th scope="col" key={`${column}-${columnIndex}`}>{column}</th>)}</tr></thead>
+                <tbody>{sheet.previewRows.map((row) => <tr key={row.rowNumber}><th scope="row">{row.rowNumber}</th>{row.values.map((value, valueIndex) => <td key={`${row.rowNumber}-${valueIndex}`}>{value || '—'}</td>)}</tr>)}</tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
+      {hiddenSheets > 0 && (
+        <button className="fd-link hl-more" type="button" onClick={() => setAllSheets((value) => !value)} aria-expanded={allSheets}>
+          {allSheets ? 'Show only the first sheet' : hiddenSheets === 1 ? 'Sheet 2' : hiddenSheets === 2 ? 'Sheets 2 and 3' : `Sheets 2 to ${preview.sheets.length}`}
+        </button>
+      )}
+
+      {preview.observations.length > 0 && (
+        <section className="hl-calc">
+          <FieldLabel>{isPdf ? 'What Orbis found in the document' : 'What Orbis calculated'}</FieldLabel>
+          {observations.map((observation) => isPdf
+            ? <p className="hl-calc-row text" key={observation.id}>{observation.value}</p>
+            : <div className="hl-calc-row" key={observation.id}><span>{observation.sheet} · {observation.column}</span><b>{observation.value}</b></div>)}
+          {hiddenObservations > 0 && (
+            <button className="fd-link hl-more" type="button" onClick={() => setAllObservations((value) => !value)} aria-expanded={allObservations}>
+              {allObservations ? 'Show fewer' : `${hiddenObservations} more`}
+            </button>
+          )}
+        </section>
+      )}
+
+      {preview.observations.length === 0 ? (
+        <p className="fd-msg" role="status">Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. You can still review this preview or choose another file.</p>
+      ) : (
+        <>
+          {(goalCount > 0 || hasStepData || savedContextCount > 0 || hasSavedPersonalProfile || personaRelevant) && (
+            <section className="hl-opts">
+              <FieldLabel>Add to the request</FieldLabel>
+              <p className="hl-opts-note">Only what is ticked is sent with the file summary.</p>
+              {goalCount > 0 && <label className="hl-opt"><input type="checkbox" checked={includeGoals} onChange={toggle(setIncludeGoals)} disabled={isPending} /><span>My <b>{goalCount} {goalCount === 1 ? 'goal' : 'goals'}</b> — title, progress and target date, to tailor advice and a plan</span></label>}
+              {hasStepData && <label className="hl-opt"><input type="checkbox" checked={includeSteps} onChange={toggle(setIncludeSteps)} disabled={isPending} /><span>My <b>Apple Health steps</b> — daily averages, trend and the last 14 days</span></label>}
+              {savedContextCount > 0 && <label className="hl-opt"><input type="checkbox" checked={includeSavedContext} onChange={toggle(setIncludeSavedContext)} disabled={isPending} /><span>Up to <b>{Math.min(savedContextCount, 5)} relevant saved {Math.min(savedContextCount, 5) === 1 ? 'note' : 'notes'}</b> from Profile (up to 3,000 characters)</span></label>}
+              {hasSavedPersonalProfile && <label className="hl-opt"><input type="checkbox" checked={includePersonalProfile} onChange={toggle(setIncludePersonalProfile)} disabled={isPending} /><span>My <b>personal profile</b> and “More about me” details</span></label>}
+              {personaRelevant && <label className="hl-opt"><input type="checkbox" checked={includeFitnessPersona} onChange={toggle(setIncludeFitnessPersona)} disabled={isPending} /><span>My saved <b>fitness persona</b> — this file has fitness fields</span></label>}
+            </section>
+          )}
+
+          <label className="fd-consent hl-consent">
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} />
+            <span>I understand {disclosure} will be sent to OpenRouter for advice. The original file is not sent, and the advice is saved to my account so I can read it again.</span>
+          </label>
+
+          <div className="fd-act">
+            <button type="button" onClick={requestAdvice} disabled={!consent || isPending}>
+              {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Analysing…</> : <><Sparkles size={14} aria-hidden="true" /> Get advice</>}
+            </button>
+          </div>
+          <p className="fd-note tight">{consent ? '' : 'Tick the box above to enable this. '}Suggestions are informational and aren’t a medical diagnosis.</p>
+        </>
+      )}
+
+      {message && <p className="fd-msg bad" role="status">{message}</p>}
+    </>
+  );
+}
+
+/** The advice itself: a headline, numbered steps with the observations they rest on, and what was sent. */
+export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: { advice: ShownAdvice; onDeleted: () => void; onPlan: () => void; onBack: () => void }) {
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function remove() {
     setMessage(null);
     startTransition(async () => {
-      if (result?.savedId) {
-        const response = await safeAction(deleteSavedAiResultAction)(result.savedId);
+      if (advice.savedId) {
+        const response = await safeAction(deleteSavedAiResultAction)(advice.savedId);
         if (!response.success) {
           setMessage(response.message);
           return;
         }
       }
-      setResult(null);
-      setConsent(false);
+      onDeleted();
     });
   }
 
-  const observations = new Map(result?.observations.map((observation) => [observation.id, observation]) ?? []);
-  const summary = splitSummary(result?.advice.summary ?? '');
-  const isPdf = preview?.fileName.toLowerCase().endsWith('.pdf') ?? false;
-  const documentText = preview ? `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}` : '';
-  const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets, documentText));
-  // Advice generated for the workbook on screen; saved advice for another file keeps its own label.
-  const adviceIsForPreview = Boolean(preview && result && result.title === preview.fileName);
-  const disclosureItems = [
-    isPdf ? 'a bounded PDF preview and up to 24 extracted text snippets' : 'a bounded Excel summary',
-    includeSavedContext ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
-    includePersonalProfile ? 'your personal profile (name, role, and More about me text)' : null,
-    includeFitnessPersona ? 'your saved fitness persona' : null,
-    includeGoals && goalCount > 0 ? 'your goals and progress' : null,
-    includeSteps && hasStepData ? 'your daily step summary' : null,
-  ].filter((item): item is string => Boolean(item));
+  const observations = new Map(advice.observations.map((observation) => [observation.id, observation]));
+  const summary = splitSummary(advice.advice.summary);
+  const steps = advice.advice.advice;
+  const pdf = isPdfName(advice.title);
+  const sent = advice.sent;
+  const row = (label: string, included: boolean) => (
+    <div className="fd-line" key={label}><span>{label}</span>{included ? <b className="fd-yes">Included</b> : <b className="empty">Not sent</b>}</div>
+  );
 
   return (
-    <section className="workbook-advisor" aria-labelledby="workbook-title">
-      <div className="workbook-heading">
-        <div className="workbook-icon"><FileSpreadsheet size={19} /></div>
-        <div><h3 id="workbook-title">Ask Orbis about your data</h3><p>Upload a health, finance, or activity Excel or PDF file for a clear preview and data-based suggestions.</p></div>
+    <>
+      <FieldSubHead crumb="Health · advice" onBack={onBack} backLabel="Back to Health" />
+      <section className="fd-focus fd-advice" aria-live="polite">
+        <p className="fd-kicker">What Orbis sees</p>
+        <h1>{summary.headline}</h1>
+        {summary.rest && <p>{summary.rest}</p>}
+        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</p>
+      </section>
+
+      <FieldLabel>{steps.length === 1 ? '1 step' : `${steps.length} steps`}</FieldLabel>
+      {steps.map((item, index) => {
+        const evidence = item.evidenceIds.map((id) => observations.get(id)).filter((observation): observation is WorkbookObservation => Boolean(observation));
+        return (
+          <FieldStep
+            key={`${item.title}-${index}`}
+            n={index + 1}
+            title={item.title}
+            foot={evidence.length ? evidence.map((observation) => <span className="hl-ev" key={observation.id}>{pdf ? observation.value : `${observation.sheet} · ${observation.column}: ${observation.value}`}</span>) : undefined}
+          >
+            {item.action}
+          </FieldStep>
+        );
+      })}
+
+      <p className="fd-note">This reads your file, not your body. Suggestions are informational and aren’t a medical diagnosis.</p>
+      {advice.advice.caveats.map((caveat, index) => <p className="fd-note tight" key={`${caveat}-${index}`}>{caveat}</p>)}
+
+      <div className="fd-act">
+        <button type="button" onClick={onPlan} disabled={isPending}>Build a plan</button>
+        <button className="fd-link alert" type="button" onClick={remove} disabled={isPending}><Trash2 size={13} aria-hidden="true" /> {isPending ? 'Deleting…' : 'Delete'}</button>
       </div>
+      {message && <p className="fd-msg bad" role="status">{message}</p>}
 
-      {!preview ? (
-        <div className="workbook-upload-form">
-          <label className="workbook-dropzone" htmlFor={fileInputId}>
-            <Upload size={19} />
-            <strong>Choose an Excel or PDF file</strong>
-            <span>.xlsx or .pdf · up to 100 MB</span>
-          </label>
-          <input id={fileInputId} name="workbook" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" required disabled={isPending} onChange={(event) => {
-            const selected = event.currentTarget.files?.[0];
-            if (!selected) return;
-            const formData = new FormData();
-            formData.set('workbook', selected);
-            parseFile(formData);
-          }} />
-          <p className="workbook-privacy">The workbook is read for this request and isn’t saved to Orbis.</p>
-        </div>
-      ) : (
-        <div className="workbook-preview">
-          <div className="workbook-file-row">
-            <div><strong>{preview.fileName}</strong><small>{preview.sheets.reduce((sum, sheet) => sum + sheet.rowCount, 0)} data rows · {preview.sheets.length} {preview.sheets.length === 1 ? 'sheet' : 'sheets'}</small></div>
-            <button className="workbook-icon-button" type="button" onClick={clearWorkbook} disabled={isPending} aria-label="Remove workbook"><X size={17} /></button>
-          </div>
-
-          {preview.sheets.map((sheet, index) => (
-            <div className="workbook-sheet" key={`${sheet.name}-${index}`}>
-              <div className="workbook-sheet-title"><strong>{sheet.name}</strong><span>{sheet.rowCount} rows · {sheet.columnCount} columns</span></div>
-              <p className="workbook-columns"><span>Columns: </span>{sheet.columns.join(' · ')}</p>
-              {sheet.previewRows.length > 0 && (
-                <div className="workbook-table-wrap">
-                  <table className="workbook-table">
-                    <thead><tr><th scope="col">Row</th>{sheet.columns.slice(0, 10).map((column, columnIndex) => <th scope="col" key={`${column}-${columnIndex}`}>{column}</th>)}</tr></thead>
-                    <tbody>{sheet.previewRows.map((row) => <tr key={row.rowNumber}><th scope="row">{row.rowNumber}</th>{row.values.map((value, valueIndex) => <td key={`${row.rowNumber}-${valueIndex}`}>{value || '—'}</td>)}</tr>)}</tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {preview.observations.length > 0 && (
-            <div className="workbook-observations">
-              <strong>{isPdf ? 'What Orbis found in the document' : 'What Orbis calculated'}</strong>
-              {preview.observations.map((observation) => <p key={observation.id}><span>{observation.sheet} · {observation.column}</span>{observation.value}</p>)}
-            </div>
-          )}
-
-          {!adviceIsForPreview && preview.observations.length === 0 && (
-            <p className="workbook-no-observations" role="status">Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. You can still review this preview or choose another file.</p>
-          )}
-
-          {!adviceIsForPreview && preview.observations.length > 0 && (
-            <div className="workbook-consent">
-              {goalCount > 0 && <label><input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my {goalCount} {goalCount === 1 ? 'goal' : 'goals'} (title, progress, target date) to tailor advice and a plan.</label>}
-              {hasStepData && <label><input type="checkbox" checked={includeSteps} onChange={(event) => { setIncludeSteps(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Use my Apple Health step summary (daily averages, trend and the last 14 days).</label>}
-              {savedContextCount > 0 && <label><input type="checkbox" checked={includeSavedContext} onChange={(event) => { setIncludeSavedContext(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include up to {Math.min(savedContextCount, 5)} relevant saved notes from Personal (up to 3,000 characters).</label>}
-              {hasSavedPersonalProfile && <label><input type="checkbox" checked={includePersonalProfile} onChange={(event) => { setIncludePersonalProfile(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my personal profile and “More about me” details for this request.</label>}
-              {personaRelevant && <label><input type="checkbox" checked={includeFitnessPersona} onChange={(event) => { setIncludeFitnessPersona(event.currentTarget.checked); setConsent(false); }} disabled={isPending} /> Include my saved fitness persona for this health or fitness workbook.</label>}
-              <label><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} /> I understand {disclosureItems.join(' and ')} will be sent to OpenRouter for advice. The original file is not sent, and the advice is saved to your account so you can read it again.</label>
-              <button className="finance-button primary" type="button" onClick={requestAdvice} disabled={!consent || isPending}>
-                {isPending ? <><LoaderCircle className="workbook-spinner" size={15} /> Analyzing…</> : <><Sparkles size={15} /> Get advice</>}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {result && (
-        <section className="workbook-advice" aria-live="polite">
-          <div className="fd-focus">
-            <p className="fd-kicker">What Orbis sees</p>
-            <h3>{summary.headline}</h3>
-            {summary.rest && <p>{summary.rest}</p>}
-            <small className="fd-src">{result.title ?? 'Saved advice'}{result.savedAt ? ` · saved ${savedWhen(result.savedAt)}` : ''}</small>
-          </div>
-
-          <p className="fd-label">{result.advice.advice.length === 1 ? 'One step' : `${result.advice.advice.length} steps`}</p>
-          {result.advice.advice.map((item, index) => (
-            <article className="fd-step" key={`${item.title}-${index}`}>
-              <i aria-hidden="true">{index + 1}</i>
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.action}</p>
-                {item.evidenceIds.map((id) => {
-                  const observation = observations.get(id);
-                  return observation ? <small className="fd-src" key={id}>{observation.sheet} · {observation.column}: {observation.value}</small> : null;
-                })}
-              </div>
-            </article>
-          ))}
-
-          {result.advice.caveats.map((caveat, index) => <p className="fd-note" key={`${caveat}-${index}`}>{caveat}</p>)}
-          <button className="finance-button secondary" type="button" onClick={deleteAdvice} disabled={isPending}>
-            <Trash2 size={14} /> Delete this advice
-          </button>
-        </section>
-      )}
-
-      {message && <p className="finance-notice error workbook-message" role="status">{message}</p>}
-      {isPending && !preview && <p className="workbook-progress" role="status"><LoaderCircle className="workbook-spinner" size={15} /> Reading workbook…</p>}
-    </section>
+      <section className="fd-quiet">
+        <h2>What was sent</h2>
+        <div className="fd-line"><span>{pdf ? 'PDF preview and text snippets, bounded' : 'Excel summary, bounded'}</span><b className="fd-yes">Included</b></div>
+        {sent && [
+          row('Your goals', sent.goals),
+          row('Step summary', sent.steps),
+          row('Saved notes', sent.notes),
+          row('Personal profile', sent.profile),
+          row('Fitness persona', sent.persona),
+        ]}
+        <div className="fd-line"><span>The file itself</span><b className="empty">Never sent</b></div>
+      </section>
+      {!sent && <p className="fd-note tight">Which profile details went with this request isn’t stored with saved advice.</p>}
+    </>
   );
 }

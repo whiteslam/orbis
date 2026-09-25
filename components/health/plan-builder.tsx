@@ -2,18 +2,35 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, LoaderCircle, Sparkles, Trash2 } from 'lucide-react';
+import { Check, ChevronLeft, LoaderCircle, Sparkles, Trash2 } from 'lucide-react';
 import { deleteHealthPlanAction, generateHealthPlanAction, startHealthPlanAction } from '@/app/health/library-actions';
 import { PlanView } from '@/components/health/plan-view';
 import type { HealthPlan, HealthPlanRecord, PlanQuestion } from '@/lib/health-docs/types';
+import { FieldSubHead, useScrollTop } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
 const MIN_ANSWERS = 10;
+// A long interview opens on its first few questions; the rest are one tap away.
+const FIRST_QUESTIONS = 5;
 
 type Stage =
   | { kind: 'idle' }
   | { kind: 'questions'; questions: PlanQuestion[] }
   | { kind: 'plan'; plan: HealthPlan };
+
+/**
+ * Where a plan stands, counted from the day it was written. Plans have no
+ * separate start date, so creation is the only honest anchor.
+ */
+export function planWeek(record: HealthPlanRecord) {
+  const total = Math.max(1, record.plan.durationWeeks);
+  const elapsed = Math.floor((Date.now() - new Date(record.createdAt).getTime()) / (7 * 86_400_000)) + 1;
+  return { week: Math.min(Math.max(elapsed, 1), total), total, done: elapsed > total };
+}
+
+function planDate(value: string) {
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
+}
 
 function QuestionField({ question, value, onChange, disabled }: { question: PlanQuestion; value: string; onChange: (value: string) => void; disabled: boolean }) {
   if (question.kind === 'single' || question.kind === 'multi') {
@@ -23,29 +40,40 @@ function QuestionField({ question, value, onChange, disabled }: { question: Plan
       onChange((selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]).join(' | '));
     };
     return (
-      <div className="plan-options" role={question.kind === 'single' ? 'radiogroup' : 'group'} aria-label={question.question}>
+      <div className="hl-q-options" role="group" aria-label={question.question}>
         {question.options.map((option) => (
-          <button key={option} type="button" aria-pressed={selected.includes(option)} className={selected.includes(option) ? 'active' : ''} onClick={() => toggle(option)} disabled={disabled}>{option}</button>
+          <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => toggle(option)} disabled={disabled}>{option}</button>
         ))}
       </div>
     );
   }
   return (
-    <div className="plan-free">
+    <div className="hl-q-free">
       <input type={question.kind === 'number' ? 'number' : 'text'} inputMode={question.kind === 'number' ? 'decimal' : undefined} value={value} maxLength={500} onChange={(event) => onChange(event.currentTarget.value)} placeholder={question.kind === 'number' ? 'Enter a number' : 'Type your answer'} disabled={disabled} aria-label={question.question} />
       {question.unit && <span>{question.unit}</span>}
     </div>
   );
 }
 
-export function PlanBuilder({ plans, state = 'ready' }: { plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable' }) {
+function BackLink({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return <button type="button" className="hl-back" onClick={onClick} disabled={disabled}><ChevronLeft size={14} strokeWidth={2.2} aria-hidden="true" /> All plans</button>;
+}
+
+/**
+ * Plans, as a set of views inside Health: the list of saved plans (with the
+ * way to start a new one), the interview, and a plan itself. `initialPlanId`
+ * opens one plan directly from the Health tab.
+ */
+export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBack }: { plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable'; initialPlanId?: string | null; onBack: () => void }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [openPlanId, setOpenPlanId] = useState<string | null>(null);
+  const [openPlanId, setOpenPlanId] = useState<string | null>(initialPlanId);
+  const [showAll, setShowAll] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState<'questions' | 'plan' | null>(null);
   const [isPending, startTransition] = useTransition();
+  const top = useScrollTop(`${stage.kind}-${openPlanId ?? ''}`);
 
   function start() {
     setMessage(null);
@@ -55,6 +83,7 @@ export function PlanBuilder({ plans, state = 'ready' }: { plans: HealthPlanRecor
       setWorking(null);
       if (!result.success) return setMessage(result.message);
       setAnswers({});
+      setShowAll(false);
       setStage({ kind: 'questions', questions: result.data });
     });
   }
@@ -81,81 +110,105 @@ export function PlanBuilder({ plans, state = 'ready' }: { plans: HealthPlanRecor
     });
   }
 
+  function allPlans() {
+    setMessage(null);
+    setOpenPlanId(null);
+    setStage({ kind: 'idle' });
+  }
+
   const openPlan = plans.find((plan) => plan.id === openPlanId);
 
-  // Without the plans table nothing can be saved, so don't spend AI requests.
-  if (state === 'setup') return <p className="finance-notice error">Apply the health documents migration in Supabase to build and save plans.</p>;
-
   if (stage.kind === 'questions') {
+    const total = stage.questions.length;
     const answered = stage.questions.filter((question) => answers[question.id]?.trim()).length;
-    const ready = answered >= Math.min(MIN_ANSWERS, stage.questions.length);
+    const needed = Math.min(MIN_ANSWERS, total);
+    const ready = answered >= needed;
+    const collapsed = !showAll && total > FIRST_QUESTIONS + 1;
+    const visible = collapsed ? stage.questions.slice(0, FIRST_QUESTIONS) : stage.questions;
     return (
-      <section className="plan-builder">
-        <button type="button" className="plan-back" onClick={() => setStage({ kind: 'idle' })} disabled={isPending}><ChevronLeft size={14} /> Back</button>
-        <div className="plan-progress" aria-label={`${answered} of ${stage.questions.length} answered`}><i style={{ width: `${(answered / stage.questions.length) * 100}%` }} /></div>
-        <p className="plan-note">{answered}/{stage.questions.length} answered · answer at least {Math.min(MIN_ANSWERS, stage.questions.length)} to build your plan.</p>
-        <ol className="plan-questions">
-          {stage.questions.map((question) => (
-            <li key={question.id} className={answers[question.id]?.trim() ? 'done' : ''}>
-              <strong>{question.question}</strong>
-              {question.why && <small>{question.why}</small>}
-              <QuestionField question={question} value={answers[question.id] ?? ''} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} disabled={isPending} />
-            </li>
-          ))}
+      <>
+        <span ref={top} hidden />
+        <BackLink onClick={allPlans} disabled={isPending} />
+        <header className="fd-sub-head hl-plan-head">
+          <h1>A few questions first</h1>
+          <p className="fd-lead">Orbis has already read your documents, steps and goals. These fill the gaps it cannot infer.</p>
+        </header>
+        <div className="hl-bar big" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answered}><i style={{ width: `${(answered / total) * 100}%` }} /></div>
+        <p className="hl-bar-note"><b>{answered} of {total}</b> answered · at least {needed} to build your plan</p>
+
+        <ol className="hl-questions">
+          {visible.map((question, index) => {
+            const done = Boolean(answers[question.id]?.trim());
+            return (
+              <li key={question.id} className={done ? 'done' : ''}>
+                <i aria-hidden="true">{done ? <Check size={12} strokeWidth={3} /> : index + 1}</i>
+                <div>
+                  <strong>{question.question}</strong>
+                  {question.why && <small>{question.why}</small>}
+                  <QuestionField question={question} value={answers[question.id] ?? ''} onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} disabled={isPending} />
+                </div>
+              </li>
+            );
+          })}
         </ol>
-        {message && <p className="finance-notice error" role="status">{message}</p>}
-        <button className="finance-button primary plan-generate" type="button" onClick={() => generate(stage.questions)} disabled={!ready || isPending}>
-          {working === 'plan' ? <><LoaderCircle className="workbook-spinner" size={15} /> Writing your plan… (up to a minute)</> : <><Sparkles size={15} /> Generate my plan</>}
-        </button>
-      </section>
+        {collapsed && <button className="fd-link hl-more" type="button" onClick={() => setShowAll(true)}>{total - FIRST_QUESTIONS} more questions</button>}
+
+        {message && <p className="fd-msg bad" role="status">{message}</p>}
+        <div className="fd-act hl-generate">
+          <button type="button" onClick={() => generate(stage.questions)} disabled={!ready || isPending}>
+            {working === 'plan' ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Writing your plan…</> : <><Sparkles size={14} aria-hidden="true" /> Generate my plan</>}
+          </button>
+        </div>
+        <p className="fd-note tight">Writing a plan takes up to a minute. It reads your pinned documents and the passages that match, your steps, goals and profile, and these answers.</p>
+      </>
     );
   }
 
-  if (stage.kind === 'plan') {
+  if (stage.kind === 'plan' || openPlan) {
     return (
-      <section className="plan-builder">
-        <button type="button" className="plan-back" onClick={() => setStage({ kind: 'idle' })}><ChevronLeft size={14} /> All plans</button>
-        <PlanView plan={stage.plan} />
-      </section>
-    );
-  }
-
-  if (openPlan) {
-    return (
-      <section className="plan-builder">
-        <button type="button" className="plan-back" onClick={() => setOpenPlanId(null)}><ChevronLeft size={14} /> All plans</button>
-        <PlanView plan={openPlan.plan} />
-      </section>
+      <>
+        <span ref={top} hidden />
+        <BackLink onClick={allPlans} />
+        <PlanView plan={stage.kind === 'plan' ? stage.plan : openPlan!.plan} />
+      </>
     );
   }
 
   return (
-    <section className="plan-builder">
-      <div className="plan-start">
-        <div className="plan-start-icon"><Sparkles size={20} aria-hidden="true" /></div>
-        <div>
-          <strong>Build my health plan</strong>
-          <p>Orbis reads your saved documents, steps, goals and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan.</p>
+    <>
+      <span ref={top} hidden />
+      <FieldSubHead crumb="Health · plans" title="Plans" lead="Orbis reads your saved documents, steps, goals and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan." onBack={onBack} backLabel="Back to Health" />
+
+      {state === 'setup' ? (
+        <p className="fd-msg bad">Apply the health documents migration in Supabase to build and save plans.</p>
+      ) : (
+        <div className="fd-act">
+          <button type="button" onClick={start} disabled={isPending}>
+            {working === 'questions' ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Reading your data…</> : <><Sparkles size={14} aria-hidden="true" /> Build a new plan</>}
+          </button>
         </div>
-      </div>
-      <button className="finance-button primary plan-generate" type="button" onClick={start} disabled={isPending}>
-        {working === 'questions' ? <><LoaderCircle className="workbook-spinner" size={15} /> Reading your data…</> : <><Sparkles size={15} /> Start</>}
-      </button>
-      {message && <p className="finance-notice error" role="status">{message}</p>}
+      )}
+      {message && <p className="fd-msg bad" role="status">{message}</p>}
 
       {plans.length > 0 && (
-        <ul className="plan-saved">
-          {plans.map((plan) => (
-            <li key={plan.id}>
-              <button type="button" onClick={() => setOpenPlanId(plan.id)}>
-                <strong>{plan.title}</strong>
-                <small>{plan.plan.durationWeeks} weeks · {new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(plan.createdAt))}</small>
-              </button>
-              <button type="button" className="workbook-icon-button" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} /></button>
-            </li>
-          ))}
-        </ul>
+        <section className="fd-quiet">
+          <h2>Saved</h2>
+          {plans.map((plan) => {
+            const { week, total, done } = planWeek(plan);
+            return (
+              <div className="hl-plan-row" key={plan.id}>
+                <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
+                  <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+                  <span className="hl-bar" aria-hidden="true"><i style={{ width: `${done ? 100 : (week / total) * 100}%` }} /></span>
+                  <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
+                </button>
+                <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
+              </div>
+            );
+          })}
+        </section>
       )}
-    </section>
+      <p className="fd-note">Plans are general guidance, not medical advice.</p>
+    </>
   );
 }

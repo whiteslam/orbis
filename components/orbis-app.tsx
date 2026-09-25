@@ -4,23 +4,26 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
+  Check,
   // CheckCircle2, // Habits tab is hidden for now.
   HeartPulse,
   Home,
   Landmark,
   Mail,
+  PenLine,
   Sparkles,
   TrendingUp,
   UserRound,
   WalletCards,
+  X,
 } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
 import { disconnectGmailAction, syncFinanceAction } from '@/app/finance/actions';
-import { WorkbookAdvisor } from '@/components/health/workbook-advisor';
-import { HealthLibrary } from '@/components/health/health-library';
-import { PlanBuilder } from '@/components/health/plan-builder';
+import { WorkbookAdviceView, WorkbookAsk, adviceFromSaved, savedWhen, splitSummary, type ShownAdvice } from '@/components/health/workbook-advisor';
+import { HealthLibrary, documentAdded } from '@/components/health/health-library';
+import { PlanBuilder, planWeek } from '@/components/health/plan-builder';
 import type { LibraryState } from '@/lib/health-docs/repository';
 import { GmailReviewQueue } from '@/components/finance/gmail-review-queue';
 import { ManualTransactionForm } from '@/components/finance/manual-transaction-form';
@@ -31,7 +34,7 @@ import type { FinanceSummary } from '@/lib/finance/types';
 import type { BriefWeather } from '@/lib/home/brief';
 import { composeFocus, composeQuietRows } from '@/lib/focus/home';
 import type { FocusTarget } from '@/lib/focus/types';
-import { FieldHead, FieldHero, FieldLabel, FocusSlides, FocusSurface, QuietList } from '@/components/field/field';
+import { FieldHead, FieldHero, FieldLabel, FieldSubHead, FocusSlides, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { WeatherCard } from '@/components/home/weather-card';
 import type { GoalsSummary } from '@/lib/goals/types';
 import { GoalsHabits } from '@/components/goals/goals-habits';
@@ -73,9 +76,6 @@ function HomeScreen({ financeSummary, goalsSummary, stepsSummary, documentCount,
   const brief = composeFocus({ ...input, weather, name: preferredName, savedAdviceAt });
   const quiet = composeQuietRows(input);
   const heading = quiet.every((row) => row.empty) ? 'Quiet today' : 'Everything else';
-  // Scenes switch to their night variant from the weather service, or the clock if it has not answered.
-  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
-  const night = weather?.isDay === undefined ? hour < 6 || hour >= 19 : !weather.isDay;
 
   return (
     <div className="screen-body field">
@@ -91,7 +91,7 @@ function HomeScreen({ financeSummary, goalsSummary, stepsSummary, documentCount,
 
       <PasskeyPrompt />
 
-      <FocusSlides slides={brief} onAction={openTab} night={night} />
+      <FocusSlides slides={brief} onAction={openTab} />
 
       <WeatherCard onWeather={setWeather} openPersonal={() => openTab('personal')} />
 
@@ -108,18 +108,29 @@ function financeDate(value: string, withTime = false) {
   return new Intl.DateTimeFormat('en-IN', options).format(new Date(value));
 }
 
+type FinanceView = 'main' | 'review' | 'add';
+
 function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSummary; notice: string | null; clearNotice: () => void }) {
   const router = useRouter();
+  const [view, setView] = useState<FinanceView>('main');
   const [isPending, startTransition] = useTransition();
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
+  const top = useScrollTop(view);
 
   // Atlas opens on the month's figure. The pace beside it is a rate, not a
   // comparison — nothing here stores last month's total, so claiming a
   // direction would be inventing one.
   const month = summary.month;
-  const monthReady = Boolean(month && summary.databaseReady && !summary.loadError);
+  const ready = summary.databaseReady && !summary.loadError;
+  const monthReady = Boolean(month && ready);
   const monthName = month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
   const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
+  const waiting = Boolean(summary.connection && ready && summary.pendingCandidateCount > 0);
+  // Nothing saved and nothing waiting: the screen is a doorway, not a dashboard.
+  const firstRun = ready && !summary.transactions.length && !waiting && !(month && (month.spent > 0 || month.received > 0));
+
+  // The review queue empties as alerts are confirmed; leave it once nothing is waiting.
+  useEffect(() => { if (view === 'review' && !waiting) setView('main'); }, [view, waiting]);
 
   function sync() {
     setActionMessage(null);
@@ -140,8 +151,87 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     });
   }
 
+  function saved(message: string) {
+    setActionMessage({ text: message, success: true });
+    setView('main');
+    router.refresh();
+  }
+
+  if (view === 'review') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <GmailReviewQueue candidates={summary.reviewCandidates} unparsedCount={summary.unparsedCandidateCount} pendingCount={summary.pendingCandidateCount} onBack={() => setView('main')} />
+    </div>
+  );
+
+  if (view === 'add') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <ManualTransactionForm onClose={() => setView('main')} onSaved={saved} />
+    </div>
+  );
+
+  const notices = (
+    <>
+      {notice && (
+        <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
+          <span>{notice === 'connected' ? 'Gmail connected.' : notice === 'cancelled' ? 'Gmail connection was cancelled.' : notice === 'setup-error' ? 'Gmail setup is incomplete. Check the Google OAuth credentials and add the local callback URL in Google Cloud.' : 'Gmail could not be connected. Check the setup and try again.'}</span>
+          <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
+        </div>
+      )}
+      {actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>}
+    </>
+  );
+
+  if (firstRun) return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <FieldHead title="Expense" />
+      {notices}
+      <section className="fd-focus">
+        <h2>Nothing saved this month.</h2>
+        <p>{summary.connection ? 'Gmail is connected. Sync to pull in new bank alerts, or add one by hand.' : 'Two ways in. Connect Gmail and bank alerts arrive on their own, or add one by hand and skip the setup entirely.'}</p>
+      </section>
+
+      <div className="fd-option">
+        <span className="fd-tile" aria-hidden="true"><Mail size={18} strokeWidth={1.8} /></span>
+        <div>
+          <strong>{summary.connection ? 'Gmail alerts' : 'Connect Gmail'}</strong>
+          <p>{summary.connection
+            ? `${summary.connection.email} · ${summary.connection.status === 'connected' ? 'connected, read-only' : 'reconnect required'}`
+            : 'Read-only, bank and card alerts only, never the message body. Two minutes to set up, one tap to undo.'}</p>
+          <div className="fd-act">
+            {!summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
+            {summary.connection?.status === 'reconnect_required' && <a className="fd-button" href="/auth/gmail/start">Reconnect Gmail</a>}
+            {summary.connection?.status === 'connected' && <button type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>}
+          </div>
+        </div>
+      </div>
+
+      <div className="fd-option">
+        <span className="fd-tile" aria-hidden="true"><PenLine size={18} strokeWidth={1.8} /></span>
+        <div>
+          <strong>Add manually</strong>
+          <p>Cash spends, UPI payments, or anything Gmail would never see. Amount, category, done.</p>
+          <div className="fd-act"><button className="ghost" type="button" onClick={() => setView('add')}>Add one now</button></div>
+        </div>
+      </div>
+
+      {!summary.connection && <>
+        <FieldLabel>What Orbis will read</FieldLabel>
+        <div className="fd-check yes"><Check size={15} strokeWidth={2.2} aria-hidden="true" /><span>Bank and card alert emails</span></div>
+        <div className="fd-check no"><X size={15} strokeWidth={2.2} aria-hidden="true" /><span>Message bodies, attachments, contacts</span></div>
+        <div className="fd-check no"><X size={15} strokeWidth={2.2} aria-hidden="true" /><span>Sending, editing or deleting anything</span></div>
+      </>}
+
+      <CurrencyCard note="works without any account" />
+      <p className="fd-note">Orbis only uses what you connect or upload. Nothing here is inferred about you.</p>
+    </div>
+  );
+
   return (
     <div className="screen-body field">
+      <span ref={top} hidden />
       <FieldHead title="Expense" />
       {monthReady && month && month.spent > 0 && (
         <FieldHero
@@ -150,39 +240,34 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
           delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
         />
       )}
-      {/* The composed statement and the "This month" rows are gone; the month
-          is read off the spending card below instead of being narrated above
-          it. The controls that lived inside that statement are not — connect,
-          reconnect and sync are the only entry points on this screen, so they
-          stay under the title as a plain row. */}
+      {/* Connect, reconnect, sync and manual entry are the only entry points on
+          this screen, so they stay under the title as a plain row. */}
       <div className="fd-act">
-        {summary.databaseReady && !summary.loadError && !summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
+        {ready && !summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
         {summary.connection?.status === 'reconnect_required' && <a className="fd-button" href="/auth/gmail/start">Reconnect Gmail</a>}
         {summary.connection?.status === 'connected' && (
-          <button className="fd-button" type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>
+          <button type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>
         )}
+        {ready && <button className="ghost" type="button" onClick={() => setView('add')}>Add manually</button>}
       </div>
 
-      {notice && (
-        <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
-          <span>{notice === 'connected' ? 'Gmail connected.' : notice === 'cancelled' ? 'Gmail connection was cancelled.' : notice === 'setup-error' ? 'Gmail setup is incomplete. Check the Google OAuth credentials and add the local callback URL in Google Cloud.' : 'Gmail could not be connected. Check the setup and try again.'}</span>
-          <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
-        </div>
-      )}
-      {actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>}
+      {notices}
 
-      {summary.month && summary.databaseReady && !summary.loadError && (
+      {waiting && (
+        <section className="fd-quiet">
+          <h2>Waiting on you</h2>
+          <button className="fd-line" type="button" onClick={() => setView('review')}>
+            <span>Gmail alerts to review</span>
+            <b>{summary.pendingCandidateCount} · Review</b>
+          </button>
+        </section>
+      )}
+
+      {summary.month && ready && (
         <SpendingSummary month={summary.month} />
       )}
 
-      {summary.connection && summary.databaseReady && !summary.loadError && summary.pendingCandidateCount > 0 && (
-        <>
-          <FieldLabel>Waiting on you</FieldLabel>
-          <GmailReviewQueue candidates={summary.reviewCandidates} unparsedCount={summary.unparsedCandidateCount} />
-        </>
-      )}
-
-      <FieldLabel>Latest transactions</FieldLabel>
+      <FieldLabel>Latest</FieldLabel>
       {summary.transactions.length ? (
         <TransactionList transactions={summary.transactions} />
       ) : (
@@ -191,13 +276,9 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
             ? 'Saved transactions need the finance migration applied in Supabase.'
             : summary.loadError
               ? 'Transactions could not be loaded. Refreshing the app tries again.'
-              : 'Nothing saved yet. Add one below, or connect Gmail — alerts only count as spending once you confirm them.'}
+              : 'Nothing saved yet. Alerts only count as spending once you confirm them.'}
         </p>
       )}
-
-      <FieldLabel>Add and connect</FieldLabel>
-      <ManualTransactionForm disabled={!summary.databaseReady || summary.loadError} />
-      <CurrencyCard />
 
       <section className="fd-source" aria-labelledby="gmail-title">
         <div>
@@ -215,10 +296,12 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
             <p>Orbis can read bank and card alerts, but never sends, edits or deletes email.</p>
           )}
         </div>
-        {summary.databaseReady && !summary.loadError && summary.connection?.status === 'connected' && (
-          <button className="fd-link" type="button" disabled={isPending} onClick={disconnect}>Disconnect</button>
+        {ready && summary.connection?.status === 'connected' && (
+          <button className="fd-link alert" type="button" disabled={isPending} onClick={disconnect}>Disconnect</button>
         )}
       </section>
+
+      <CurrencyCard />
     </div>
   );
 }
@@ -239,10 +322,61 @@ function stepGoal(goalsSummary: GoalsSummary) {
   return goal ? Math.round(goal.target) : 10_000;
 }
 
+type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' | 'goals' } | { name: 'plans'; planId: string | null };
+
+// Main shows the first few documents; the Documents view has the rest.
+const HEALTH_DOCS_ON_MAIN = 3;
+
 function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+  const [view, setView] = useState<HealthView>({ name: 'main' });
+  // Advice lives here rather than in the Ask view, so a fresh answer survives
+  // going back to the tab — the server copy only arrives on the next load.
+  const [advice, setAdvice] = useState<ShownAdvice | null>(() => adviceFromSaved(savedWorkbookAdvice));
+  const top = useScrollTop(view.name === 'plans' ? `plans-${view.planId ?? ''}` : view.name);
+  const main = () => setView({ name: 'main' });
   const trend = stepTrend(stepsSummary);
+  const { documents, plans } = healthLibrary;
+
+  if (view.name === 'ask') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <WorkbookAsk goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} onAdvice={(next) => { setAdvice(next); setView({ name: 'advice' }); }} onBack={main} />
+    </div>
+  );
+
+  if (view.name === 'advice' && advice) return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <WorkbookAdviceView advice={advice} onDeleted={() => { setAdvice(null); main(); }} onPlan={() => setView({ name: 'plans', planId: null })} onBack={main} />
+    </div>
+  );
+
+  if (view.name === 'plans') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <PlanBuilder plans={plans} state={healthLibrary.state} initialPlanId={view.planId} onBack={main} />
+    </div>
+  );
+
+  if (view.name === 'docs') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <FieldSubHead crumb="Health · documents" title="Documents" onBack={main} backLabel="Back to Health" />
+      <HealthLibrary documents={documents} state={healthLibrary.state} />
+    </div>
+  );
+
+  if (view.name === 'goals') return (
+    <div className="screen-body field">
+      <span ref={top} hidden />
+      <FieldSubHead crumb="Health · goals" title="Goals" lead="Orbis shapes its advice and every plan around these whenever you ask about your data." onBack={main} backLabel="Back to Health" />
+      <GoalsHabits kind="goals" data={goalsSummary} />
+    </div>
+  );
+
   return (
     <div className="screen-body field">
+      <span ref={top} hidden />
       <FieldHead title="Health" />
       {stepsSummary.average7 !== null && (
         <FieldHero
@@ -256,19 +390,71 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
           card that shows it, so both are gone rather than restated here. */}
       <StepsCard summary={stepsSummary} stepGoal={stepGoal(goalsSummary)} />
 
-      <FieldLabel>Ask about a file</FieldLabel>
-      <WorkbookAdvisor goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} saved={savedWorkbookAdvice} />
+      {/* Plans and goals each have a finish line, so every row carries its bar;
+          a row opens its own view, and the last row of each section is the way in. */}
+      <section className="fd-quiet">
+        <h2>Plans</h2>
+        {plans.map((plan) => {
+          const { week, total, done } = planWeek(plan);
+          return (
+            <button className="hl-row" type="button" key={plan.id} onClick={() => setView({ name: 'plans', planId: plan.id })}>
+              <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+              <span className="hl-bar" aria-hidden="true"><i style={{ width: `${done ? 100 : (week / total) * 100}%` }} /></span>
+            </button>
+          );
+        })}
+        <button className="fd-line" type="button" onClick={() => setView({ name: 'plans', planId: null })}>
+          <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
+          <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
+        </button>
+      </section>
+
+      <section className="fd-quiet">
+        <h2>Goals</h2>
+        {goalsSummary.goals.map((goal) => {
+          const progress = Math.max(0, Math.min(100, Math.round((goal.current / goal.target) * 100)));
+          return (
+            <button className="hl-row" type="button" key={goal.id} onClick={() => setView({ name: 'goals' })}>
+              <span className="hl-row-top"><strong>{goal.title}</strong><small>{progress}%</small></span>
+              <span className="hl-bar" aria-hidden="true"><i style={{ width: `${progress}%` }} /></span>
+            </button>
+          );
+        })}
+        <button className="fd-line" type="button" onClick={() => setView({ name: 'goals' })}>
+          <span>{goalsSummary.goals.length ? 'Update progress or add a goal' : 'Advice and plans are shaped around your goals'}</span>
+          <b className="fd-yes">{goalsSummary.goals.length ? 'Open' : 'Add'}</b>
+        </button>
+      </section>
+
+      <section className="fd-quiet">
+        <h2>Documents</h2>
+        {documents.slice(0, HEALTH_DOCS_ON_MAIN).map((document) => (
+          <button className="fd-line" type="button" key={document.id} onClick={() => setView({ name: 'docs' })}>
+            <span className="fd-two">{document.fileName}<small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small></span>
+            <b className="fd-yes">Open</b>
+          </button>
+        ))}
+        <button className="fd-line" type="button" onClick={() => setView({ name: 'docs' })}>
+          <span>{documents.length > HEALTH_DOCS_ON_MAIN ? `All ${documents.length} documents` : documents.length ? 'Add or manage documents' : 'Files Orbis reads when it builds a plan'}</span>
+          <b className="fd-yes">{documents.length ? 'Manage' : 'Add'}</b>
+        </button>
+      </section>
+
+      {advice && (
+        <section className="fd-quiet">
+          <h2>Advice</h2>
+          <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
+            <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
+            <b className="fd-yes">Read</b>
+          </button>
+        </section>
+      )}
+
+      <div className="hl-ask">
+        <span>Ask about a file. Orbis reads only what you pick, and shows it first.</span>
+        <button type="button" onClick={() => setView({ name: 'ask' })}>Ask</button>
+      </div>
       <p className="fd-note">Suggestions are informational and aren’t a medical diagnosis.</p>
-
-      <FieldLabel>Plans</FieldLabel>
-      <PlanBuilder plans={healthLibrary.plans} state={healthLibrary.state} />
-
-      <FieldLabel>Documents</FieldLabel>
-      <HealthLibrary documents={healthLibrary.documents} state={healthLibrary.state} />
-
-      <FieldLabel>Goals</FieldLabel>
-      <p className="fd-note">Orbis shapes its advice and plans around these whenever you ask about your data.</p>
-      <GoalsHabits kind="goals" data={goalsSummary} />
     </div>
   );
 }
@@ -277,7 +463,6 @@ function GenericScreen({ tab, goalsSummary, savedPortfolioAdvice }: { tab: Exclu
   if (tab !== 'investment') return null;
   return (
     <div className="screen-body field">
-      <FieldHead title="Invest" />
       <InvestDashboard goalCount={goalsSummary.goals.length} savedAdvice={savedPortfolioAdvice} />
     </div>
   );

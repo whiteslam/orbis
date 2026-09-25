@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin } from 'lucide-react';
 import { clearHomeCityAction, saveHomeCityAction } from '@/app/personal/actions';
 import type { HomeLocation } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
@@ -43,40 +42,37 @@ export function HomeCityEditor({ location }: { location: HomeLocation }) {
   if (location.state === 'setup') return null;
 
   return (
-    <form className="personal-form stack-card home-city" onSubmit={(event) => { event.preventDefault(); run(() => safeAction(saveHomeCityAction)(city)); }}>
-      <strong><MapPin size={15} /> Home city</strong>
-      <p className="home-city-note">{location.city ? `Weather uses ${location.city} when your browser location isn’t shared.` : 'Used for weather when your browser location isn’t shared.'}</p>
-      <div className="home-city-row">
-        <input value={city} onChange={(event) => setCity(event.currentTarget.value)} maxLength={80} placeholder={location.city ?? 'e.g. Pune'} aria-label="Home city" disabled={isPending} />
-        <button className="finance-button primary" type="submit" disabled={isPending || city.trim().length < 2}>{isPending ? 'Saving…' : location.city ? 'Change' : 'Save'}</button>
-        {location.city && <button className="finance-button secondary" type="button" disabled={isPending} onClick={() => run(safeAction(clearHomeCityAction))}>Remove</button>}
+    <form className="fd-form" onSubmit={(event) => { event.preventDefault(); run(() => safeAction(saveHomeCityAction)(city)); }}>
+      <label className="fd-field wide pf-city" htmlFor="home-city">Home city</label>
+      <div className="pf-city-row">
+        <input id="home-city" value={city} onChange={(event) => setCity(event.currentTarget.value)} maxLength={80} placeholder={location.city ?? 'e.g. Pune'} disabled={isPending} />
+        <button className="pf-pill" type="submit" disabled={isPending || city.trim().length < 2}>{isPending ? 'Saving…' : location.city ? 'Change' : 'Save'}</button>
       </div>
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
+      <p className="fd-note tight">{location.city ? `Weather uses ${location.city} when your browser location isn’t shared.` : 'Used for weather when your browser location isn’t shared.'}</p>
+      {location.city && <div className="fd-act pf-act"><button className="fd-link alert" type="button" disabled={isPending} onClick={() => run(safeAction(clearHomeCityAction))}>Remove {location.city}</button></div>}
+      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
     </form>
   );
 }
 
 export function Integrations({ items, heading = true }: { items: Integration[]; heading?: boolean }) {
   return (
-    <section className="integrations" aria-labelledby="integrations-title">
-      {heading && <div className="integrations-head"><small>ORBIS SYSTEM</small><h3 id="integrations-title">Integrations</h3></div>}
-      <ul>
-        {items.map((item) => (
-          <li key={item.id} className={item.state}>
-            <i aria-hidden="true" />
-            <div>
-              <strong>{item.label}</strong>
-              <small>{item.purpose}</small>
-            </div>
-            <div className="integration-status">
-              <span>{STATE_LABEL[item.state]}</span>
-              {item.detail && <small>{item.detail}</small>}
-              {item.lastSyncAt && <small>Last synced {syncTime(item.lastSyncAt)}</small>}
-              {item.usage && <small>{item.usage.used}/{item.usage.limit} calls today</small>}
-            </div>
-          </li>
-        ))}
-      </ul>
+    <section className="pf-services" aria-labelledby={heading ? 'integrations-title' : undefined} aria-label={heading ? undefined : 'Data services'}>
+      {heading && <h2 className="fd-label" id="integrations-title">Integrations</h2>}
+      {items.map((item) => (
+        <div key={item.id} className="fd-line pf-service">
+          <span className="fd-two">
+            {item.label}
+            <small>{item.purpose}</small>
+          </span>
+          <span className="pf-service-state">
+            <b className={item.state === 'connected' || item.state === 'idle' ? 'fd-yes' : item.state === 'not_configured' ? 'empty' : 'pf-warn'}>{STATE_LABEL[item.state]}</b>
+            {item.detail && <small>{item.detail}</small>}
+            {item.lastSyncAt && <small>Last synced {syncTime(item.lastSyncAt)}</small>}
+            {item.usage && <small>{item.usage.used}/{item.usage.limit} calls today</small>}
+          </span>
+        </div>
+      ))}
     </section>
   );
 }

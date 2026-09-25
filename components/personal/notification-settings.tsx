@@ -86,50 +86,53 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
     });
   }
 
-  if (settings.state === 'setup') return <p className="finance-notice error">Apply the profile/journal/notifications migration in Supabase to manage notifications.</p>;
-  if (settings.state === 'unavailable') return <p className="finance-notice error">Notification settings could not be loaded. Refresh and try again.</p>;
+  if (settings.state === 'setup') return <p className="fd-msg bad">Apply the profile/journal/notifications migration in Supabase to manage notifications.</p>;
+  if (settings.state === 'unavailable') return <p className="fd-msg bad">Notification settings could not be loaded. Refresh and try again.</p>;
+
+  const otherDevices = settings.deviceEndpoints.filter((item) => item !== endpoint).length;
 
   return (
-    <div className="notify-settings">
-      <label className="notify-master">
+    <div className="pf-notify">
+      <label className="pf-master">
         <span><strong>Daily notifications</strong><small>Four short check-ins a day, written from your own data.</small></span>
         <input type="checkbox" role="switch" checked={prefs.enabled} onChange={(event) => setPrefs({ ...prefs, enabled: event.currentTarget.checked })} disabled={isPending} />
       </label>
 
-      <div className={`notify-slots ${prefs.enabled ? '' : 'muted'}`}>
+      <div className={prefs.enabled ? 'pf-slots' : 'pf-slots muted'}>
         {NOTIFICATION_SLOTS.map((slot) => {
           const value = prefs.slots[slot.id];
+          const off = !prefs.enabled || !value.enabled;
           return (
-            <div className="notify-slot" key={slot.id}>
+            <div className={off ? 'pf-slot off' : 'pf-slot'} key={slot.id}>
               <input type="checkbox" aria-label={`${slot.label} notification`} checked={value.enabled} onChange={(event) => setPrefs({ ...prefs, slots: { ...prefs.slots, [slot.id]: { ...value, enabled: event.currentTarget.checked } } })} disabled={isPending || !prefs.enabled} />
               <span><strong>{slot.label}</strong><small>{slot.hint}</small></span>
-              <input type="time" aria-label={`${slot.label} time`} value={value.time} onChange={(event) => setPrefs({ ...prefs, slots: { ...prefs.slots, [slot.id]: { ...value, time: event.currentTarget.value } } })} disabled={isPending || !prefs.enabled || !value.enabled} />
+              <input type="time" aria-label={`${slot.label} time`} value={value.time} onChange={(event) => setPrefs({ ...prefs, slots: { ...prefs.slots, [slot.id]: { ...value, time: event.currentTarget.value } } })} disabled={isPending || off} />
             </div>
           );
         })}
       </div>
-      <p className="groww-muted">Times are in {prefs.timezone.replace('_', ' ')}.</p>
-      {dirty && <button className="finance-button primary" type="button" onClick={() => run(() => safeAction(saveNotificationPreferencesAction)(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button>}
+      <p className="fd-note tight">Times are in {prefs.timezone.replace('_', ' ')}.</p>
+      {dirty && <div className="fd-act"><button type="button" onClick={() => run(() => safeAction(saveNotificationPreferencesAction)(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button></div>}
 
-      <div className="notify-device">
-        <Smartphone size={16} aria-hidden="true" />
-        <div>
+      <div className="pf-device">
+        <Smartphone size={17} strokeWidth={1.8} aria-hidden="true" />
+        <span>
           <strong>This device</strong>
           <small>
             {device === 'checking' && 'Checking…'}
-            {device === 'on' && 'Notifications will arrive here.'}
+            {device === 'on' && `Notifications will arrive here.${otherDevices ? ` On for ${otherDevices} other device${otherDevices === 1 ? '' : 's'}.` : ''}`}
             {device === 'off' && `Not enabled on this device.${settings.deviceEndpoints.length ? ` On for ${settings.deviceEndpoints.length} other device${settings.deviceEndpoints.length === 1 ? '' : 's'}.` : ''}`}
             {device === 'blocked' && 'Blocked in your browser settings. Allow notifications for Orbis, then come back.'}
             {device === 'unsupported' && 'This browser doesn’t support push notifications.'}
             {device === 'ios-install' && 'On iPhone, tap Share → Add to Home Screen, open Orbis from there, then enable notifications.'}
           </small>
-        </div>
-        {device === 'off' && settings.pushConfigured && <button className="finance-button primary" type="button" onClick={enableDevice} disabled={isPending}>{isPending ? <LoaderCircle className="workbook-spinner" size={13} /> : <Bell size={13} />} Enable</button>}
-        {device === 'on' && <button className="finance-button secondary" type="button" onClick={disableDevice} disabled={isPending}><BellOff size={13} /> Turn off</button>}
+        </span>
+        {device === 'off' && settings.pushConfigured && <button className="pf-pill primary" type="button" onClick={enableDevice} disabled={isPending}>{isPending ? <LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />} Enable</button>}
+        {device === 'on' && <button className="pf-pill" type="button" onClick={disableDevice} disabled={isPending}><BellOff size={13} aria-hidden="true" /> Turn off</button>}
       </div>
-      {device === 'on' && <button className="finance-button secondary notify-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)())} disabled={isPending}><Send size={13} /> Send test notification</button>}
-      {!settings.pushConfigured && <p className="groww-muted">Push keys aren’t set on the server yet (NEXT_PUBLIC_VAPID_PUBLIC_KEY).</p>}
-      {message && <p className={`finance-notice ${message.success ? 'success' : 'error'}`} role="status">{message.text}</p>}
+      {device === 'on' && <button className="fd-link pf-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)())} disabled={isPending}><Send size={13} aria-hidden="true" /> Send a test notification</button>}
+      {!settings.pushConfigured && <p className="fd-note tight">Push keys aren’t set on the server yet (NEXT_PUBLIC_VAPID_PUBLIC_KEY).</p>}
+      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
     </div>
   );
 }

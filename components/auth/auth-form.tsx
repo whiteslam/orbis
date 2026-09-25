@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ScanFace } from 'lucide-react';
+import { UserKey } from 'lucide-react';
 import { signIn, signUp, type AuthActionState } from '@/app/auth/actions';
 import { confirmUnlockAction } from '@/app/security/actions';
 import { createClient } from '@/lib/supabase/client';
@@ -86,7 +86,7 @@ export function AuthForm({ initialMessage }: { initialMessage?: string }) {
         <p>{isSignup ? 'Start building a clearer picture of your life.' : 'Sign in to continue to Orbis.'}</p>
       </div>
 
-      <div className="auth-mode" aria-label="Account access">
+      <div className="auth-mode" role="group" aria-label="Account access">
         <button type="button" onClick={() => switchMode('signin')} className={!isSignup ? 'active' : ''} aria-pressed={!isSignup}>Sign in</button>
         <button type="button" onClick={() => switchMode('signup')} className={isSignup ? 'active' : ''} aria-pressed={isSignup}>Create account</button>
       </div>
@@ -114,7 +114,7 @@ export function AuthForm({ initialMessage }: { initialMessage?: string }) {
       {!isSignup && canUsePasskey && <>
         <div className="auth-divider"><span>or</span></div>
         <button className="auth-passkey" type="button" onClick={signInWithPasskey} disabled={isPending}>
-          <ScanFace size={17} aria-hidden="true" /> Sign in with passkey
+          <UserKey size={17} strokeWidth={1.8} aria-hidden="true" /> Continue with a passkey
         </button>
       </>}
 

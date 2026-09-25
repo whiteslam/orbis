@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Plus, Target } from 'lucide-react';
 import { checkInHabitAction, createGoalAction, createHabitAction, updateGoalProgressAction } from '@/app/goals/actions';
-import type { GoalsSummary } from '@/lib/goals/types';
+import type { GoalSummary, GoalsSummary } from '@/lib/goals/types';
+import { FieldLabel } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
 function todayInAppTimezone() {
@@ -32,39 +33,14 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
     });
   }
 
+  if (!data.databaseReady && kind === 'goals') return <p className="fd-msg bad">Goals are not set up. Apply the Goals and Habits migration in Supabase, then refresh.</p>;
   if (!data.databaseReady) return <div className="empty-state"><Target size={22} /><strong>Goals and habits are not set up</strong><p>Apply the Goals and Habits migration in Supabase, then refresh.</p></div>;
 
   return (
     <>
-      <Notice value={notice} />
+      {kind === 'habits' && <Notice value={notice} />}
       {kind === 'goals' ? (
-        <>
-          <form className="personal-form stack-card" onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            const fields = new FormData(form);
-            run(() => safeAction(createGoalAction)({ title: String(fields.get('title') ?? ''), target: String(fields.get('target') ?? ''), current: String(fields.get('current') ?? '0'), unit: String(fields.get('unit') ?? ''), dueDate: String(fields.get('dueDate') ?? '') }));
-            form.reset();
-          }}>
-            <strong><Plus size={15} /> Add a goal</strong>
-            <label>What do you want to achieve?<input name="title" maxLength={100} required placeholder="Lose 5 kg, run a 10K…" /></label>
-            <div className="form-row"><label>Target<input name="target" type="number" min="0.01" step="0.01" required placeholder="100000" /></label><label>Current progress<input name="current" type="number" min="0" step="0.01" defaultValue="0" /></label></div>
-            <div className="form-row"><label>Unit<input name="unit" maxLength={24} placeholder="kg, km, workouts…" /></label><label>Target date<input name="dueDate" type="date" /></label></div>
-            <button className="finance-button primary" type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save goal'}</button>
-          </form>
-          {data.goals.length ? <div className="stack-card personal-list">{data.goals.map((goal) => {
-            const progress = Math.min(100, Math.round((goal.current / goal.target) * 100));
-            return <article className="goal-item" key={goal.id}>
-              <div className="goal-item-head"><strong>{goal.title}</strong><span>{progress}%</span></div>
-              <small>{goal.current.toLocaleString()} / {goal.target.toLocaleString()}{goal.unit ? ` ${goal.unit}` : ''}{goal.dueDate ? ` · by ${goal.dueDate}` : ''}</small>
-              <div className="progress"><i style={{ width: `${progress}%` }} /></div>
-              <form className="progress-form" onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('current'); run(() => safeAction(updateGoalProgressAction)(goal.id, String(value ?? ''))); }}>
-                <label>Update progress<input name="current" type="number" min="0" max={goal.target} step="0.01" defaultValue={goal.current} /></label>
-                <button className="finance-button secondary" type="submit" disabled={isPending}>Update</button>
-              </form>
-            </article>;
-          })}</div> : <div className="empty-state"><Target size={22} /><strong>No goals yet</strong><p>Add a goal above to keep your progress in one place.</p></div>}
-        </>
+        <GoalsBody data={data} isPending={isPending} run={run} notice={notice} />
       ) : (
         <>
           <form className="personal-form stack-card habit-add" onSubmit={(event) => {
@@ -85,5 +61,63 @@ export function GoalsHabits({ kind, data }: { kind: 'goals' | 'habits'; data: Go
         </>
       )}
     </>
+  );
+}
+
+type Run = (action: () => Promise<{ success: boolean; message: string }>) => void;
+
+function dueLabel(date: string) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+const amount = (value: number) => value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+/** Goals in the Atlas layout: each active goal with its bar and update field, then the form to add one. */
+function GoalsBody({ data, isPending, run, notice }: { data: GoalsSummary; isPending: boolean; run: Run; notice: { text: string; success: boolean } | null }) {
+  return (
+    <>
+      <FieldLabel>Active</FieldLabel>
+      {data.goals.length ? data.goals.map((goal) => <GoalRow key={goal.id} goal={goal} isPending={isPending} run={run} />) : <p className="fd-empty">No goals yet. Add one below to keep your progress in one place.</p>}
+
+      <form className="fd-form hl-goal-add" onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const fields = new FormData(form);
+        run(() => safeAction(createGoalAction)({ title: String(fields.get('title') ?? ''), target: String(fields.get('target') ?? ''), current: String(fields.get('current') ?? '0'), unit: String(fields.get('unit') ?? ''), dueDate: String(fields.get('dueDate') ?? '') }));
+        form.reset();
+      }}>
+        <FieldLabel>Add a goal</FieldLabel>
+        <label className="fd-field wide">What do you want to achieve?<input name="title" maxLength={100} required placeholder="Lose 5 kg, run a 10K…" /></label>
+        <div className="fd-grid">
+          <label className="fd-field">Target<input name="target" type="number" min="0.01" step="0.01" required placeholder="100" /></label>
+          <label className="fd-field">Current progress<input name="current" type="number" min="0" step="0.01" defaultValue="0" /></label>
+          <label className="fd-field">Unit<input name="unit" maxLength={24} placeholder="kg, km, workouts…" /></label>
+          <label className="fd-field">Target date<input name="dueDate" type="date" /></label>
+        </div>
+        <div className="fd-act"><button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save goal'}</button></div>
+      </form>
+      {notice && <p className={`fd-msg ${notice.success ? 'ok' : 'bad'}`} role="status">{notice.text}</p>}
+    </>
+  );
+}
+
+function GoalRow({ goal, isPending, run }: { goal: GoalSummary; isPending: boolean; run: Run }) {
+  const progress = Math.min(100, Math.round((goal.current / goal.target) * 100));
+  const inputId = `goal-${goal.id}`;
+  return (
+    <article className="hl-goal">
+      <div className="hl-goal-head"><strong>{goal.title}</strong><b>{progress}%</b></div>
+      <small>{amount(goal.current)} of {amount(goal.target)}{goal.unit ? ` ${goal.unit}` : ''} · {goal.dueDate ? `by ${dueLabel(goal.dueDate)}` : 'no date set'}</small>
+      <span className="hl-bar big" aria-hidden="true"><i style={{ width: `${progress}%` }} /></span>
+      <form className="hl-goal-update" onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get('current'); run(() => safeAction(updateGoalProgressAction)(goal.id, String(value ?? ''))); }}>
+        <label className="fd-field" htmlFor={inputId}>Update progress</label>
+        <div>
+          <input id={inputId} name="current" type="number" min="0" max={goal.target} step="0.01" defaultValue={goal.current} />
+          <div className="fd-act"><button className="ghost" type="submit" disabled={isPending}>Update</button></div>
+        </div>
+      </form>
+    </article>
   );
 }

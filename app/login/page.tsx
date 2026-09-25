@@ -16,7 +16,7 @@ export default async function LoginPage({
   const linkError = params.error === 'link-expired';
 
   return (
-    <AuthShell>
+    <AuthShell footer={<p className="auth-note">Orbis holds only what you connect or upload. It reads nothing until you ask, and it never sends, edits or deletes anything in the accounts you link.</p>}>
       {linkError && <p className="auth-feedback error" role="alert">That link has expired or was already used. Request a fresh password recovery email.</p>}
       <AuthForm initialMessage={initialMessage} />
     </AuthShell>
