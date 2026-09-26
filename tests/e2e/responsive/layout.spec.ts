@@ -5,7 +5,7 @@ const VIEWPORTS = [
   { width: 393, height: 852 }, { width: 412, height: 915 }, { width: 430, height: 932 }, { width: 844, height: 390 },
   { width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 },
 ];
-const TABS: Tab[] = ['Home', 'Finance', 'Health', 'Invest', 'Profile'];
+const TABS: Tab[] = ['Home', 'Expense', 'Health', 'Invest', 'Profile'];
 
 type Finding = { viewport: string; tab: string; kind: string; detail: string };
 

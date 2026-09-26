@@ -1,4 +1,4 @@
-/* Atlas: Health views (Ask, Advice, Plan questions, Plan, Documents, Goals). Loaded after globals.css.
+/* Atlas: Health views (Ask, Advice, Plan questions, Plan, Documents). Loaded after globals.css.
    Same ground and rules as the other Field views: labels, hairlines and pills.
    The only filled shapes are inputs, the day picker, the figures in a plan,
    the consent box and the Ask strip on the tab. Colours come from --fd-* only. */
@@ -13,7 +13,7 @@
 .fd-round.hl-danger { color: var(--fd-alert); }
 .fd-round:disabled { opacity: .5; cursor: default; }
 
-/* A labelled row whose value is a bar: plans and goals on the tab. */
+/* A labelled row whose value is a bar: plans on the tab. */
 .hl-row { display: block; width: 100%; padding: 12px 2px; border: 0; border-bottom: 1px solid var(--fd-rule); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .hl-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .hl-row-top strong { min-width: 0; color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
@@ -163,19 +163,3 @@
 .hl-doc-tile.xlsx { color: var(--fd-accent); }
 .fd-round.hl-pin[aria-pressed="true"] { background: var(--fd-wash); color: var(--fd-accent); }
 
-/* ─── Goals ─────────────────────────────────────────────────────────────── */
-.hl-goal { padding: 16px 0 18px; border-bottom: 1px solid var(--fd-rule); }
-.fd-label + .hl-goal { padding-top: 12px; }
-.hl-goal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.hl-goal-head strong { min-width: 0; color: var(--fd-ink); font-size: 14.5px; font-weight: 650; }
-.hl-goal-head b { flex: none; color: var(--fd-ink); font-size: 19px; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.hl-goal > small { display: block; margin-top: 4px; color: var(--fd-faint); font-size: 11.5px; }
-.hl-goal .hl-bar { margin-top: 12px; }
-.hl-goal-update { margin-top: 16px; }
-.hl-goal-update > div { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
-.hl-goal-update input { flex: 1; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; font-weight: 500; outline: none; }
-.hl-goal-update input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
-.hl-goal-update .fd-act { margin-top: 0; }
-.hl-goal-update .fd-act button { min-height: 44px; padding: 0 18px; }
-.hl-goal-add > .fd-label { margin-top: 28px; }
-.hl-goal-add > .fd-field.wide { margin-top: 14px; }

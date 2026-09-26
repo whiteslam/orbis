@@ -7,7 +7,7 @@ import { CalendarDays, HeartPulse, Mail, Unplug } from 'lucide-react';
 import { disconnectGmailAction } from '@/app/finance/actions';
 import { disconnectBrokerAction } from '@/app/invest/actions';
 import { BrokerConnectForm } from '@/components/invest/broker-card';
-import { brokerMeta } from '@/lib/invest/brokers';
+import { BROKERS, type BrokerId } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
 import { safeAction } from '@/lib/client/safe-action';
@@ -35,10 +35,10 @@ function AppHead({ tile, name, detail, status }: { tile: React.ReactNode; name: 
 export function AppIntegrations({ connections, stepsSummary, openHealth }: { connections: AppConnections; stepsSummary: StepsSummary; openHealth: () => void }) {
   const router = useRouter();
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
-  const [showGrowwForm, setShowGrowwForm] = useState(false);
+  // Which broker's key form is open, if any. One at a time.
+  const [openForm, setOpenForm] = useState<BrokerId | null>(null);
   const [isPending, startTransition] = useTransition();
-  const { google, groww } = connections;
-  const growwMeta = brokerMeta('groww');
+  const { google } = connections;
 
   function run(confirmText: string, action: () => Promise<{ success: boolean; message: string }>) {
     if (!window.confirm(confirmText)) return;
@@ -52,7 +52,6 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
 
   const googleNeedsReconnect = google?.status === 'reconnect_required';
   const lastImport = stepsSummary.lastImport;
-  const growwFormOpen = (!groww || groww.status !== 'connected') && (showGrowwForm || Boolean(groww));
 
   return (
     <div className="pf-apps">
@@ -76,23 +75,51 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
         </div>
       </article>
 
-      <article className="pf-app">
-        <AppHead
-          tile={<Image src="/brands/groww.png" alt="" width={20} height={20} />}
-          name="Groww"
-          detail={`Stocks and ETFs, read-only${groww?.lastSyncAt ? ` · synced ${when(groww.lastSyncAt)}` : ''}`}
-          status={groww ? <Status state={groww.status === 'connected' ? 'on' : 'warn'}>{groww.status === 'connected' ? 'Connected' : 'Reconnect'}</Status> : <Status state="off">Not connected</Status>}
-        />
-        {growwFormOpen && <BrokerConnectForm meta={growwMeta} reconnect={Boolean(groww)} setupMessage={connections.growwSetupMessage ?? undefined} onConnected={() => { setShowGrowwForm(false); router.refresh(); }} />}
-        {!groww || groww.source === 'account' ? (
-          <div className="fd-act pf-act">
-            {!groww && !showGrowwForm && <button type="button" onClick={() => setShowGrowwForm(true)}>Connect Groww</button>}
-            {!groww && showGrowwForm && <button className="fd-link" type="button" onClick={() => setShowGrowwForm(false)}>Cancel</button>}
-            {groww?.source === 'account' && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run('Disconnect Groww? Orbis will delete the saved key and secret.', () => safeAction(disconnectBrokerAction)('groww'))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
-          </div>
-        ) : null}
-        {groww?.source === 'server' && <p className="fd-note tight">Using the server’s Groww keys.</p>}
-      </article>
+      {/* Every broker in the registry, so adding one is a registry entry and not
+          another block here. A redirect broker (Kite) has no form to open: it
+          links out to its own login, and does so again each day. */}
+      {BROKERS.map((meta) => {
+        const linked = connections.brokers[meta.id] ?? null;
+        const setup = connections.brokerSetupMessages[meta.id];
+        const expired = linked?.status === 'reconnect_required';
+        const formOpen = openForm === meta.id;
+        return (
+          <article className="pf-app" key={meta.id}>
+            <AppHead
+              tile={<Image src={meta.logo} alt="" width={20} height={20} />}
+              name={meta.name}
+              detail={`${meta.covers.charAt(0).toLocaleUpperCase()}${meta.covers.slice(1)}, read-only${linked?.lastSyncAt ? ` · synced ${when(linked.lastSyncAt)}` : ''}`}
+              status={linked
+                ? <Status state={expired ? 'warn' : 'on'}>{expired ? 'Reconnect' : 'Connected'}</Status>
+                : <Status state="off">Not connected</Status>}
+            />
+            {expired && meta.connect === 'redirect' && <p className="fd-note tight">{meta.sessionNote}</p>}
+            {formOpen && meta.connect === 'keys' && (
+              <BrokerConnectForm meta={meta} reconnect={Boolean(linked)} setupMessage={setup} onConnected={() => { setOpenForm(null); router.refresh(); }} />
+            )}
+            {setup && !formOpen && <p className="fd-note tight">{setup}</p>}
+            {(!linked || linked.source === 'account') && (
+              <div className="fd-act pf-act">
+                {meta.connect === 'redirect'
+                  ? (!setup && <a className="fd-button" href={meta.connectPath ?? '/'}>{expired ? `Reconnect ${meta.name}` : linked ? `Refresh ${meta.name}` : `Connect ${meta.name}`}</a>)
+                  : (<>
+                    {!linked && !formOpen && <button type="button" onClick={() => setOpenForm(meta.id)}>Connect {meta.name}</button>}
+                    {!linked && formOpen && <button className="fd-link" type="button" onClick={() => setOpenForm(null)}>Cancel</button>}
+                  </>)}
+                {linked?.source === 'account' && (
+                  <button
+                    className="fd-link alert"
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => run(`Disconnect ${meta.name}? Orbis will delete what it saved.`, () => safeAction(disconnectBrokerAction)(meta.id))}
+                  ><Unplug size={13} aria-hidden="true" /> Disconnect</button>
+                )}
+              </div>
+            )}
+            {linked?.source === 'server' && <p className="fd-note tight">Using the server’s {meta.name} keys.</p>}
+          </article>
+        );
+      })}
 
       <article className="pf-app">
         <AppHead

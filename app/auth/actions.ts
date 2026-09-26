@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, unlockWithFreshAuth } from '@/lib/security/app-lock';
+import { ACCESS_DENIED_MESSAGE, accessAllowed, accessRestricted } from '@/lib/security/access';
 
 export type AuthActionState = {
   error: string | null;
@@ -30,6 +31,10 @@ function siteUrl() {
 }
 
 export async function signUp(formData: FormData): Promise<AuthActionState> {
+  // While the installation is restricted there is no such thing as a new
+  // account: the list is the list, and adding yourself to it is not a
+  // self-service action.
+  if (accessRestricted()) return { error: ACCESS_DENIED_MESSAGE, message: null };
   const email = readEmail(formData);
   const password = String(formData.get('password') ?? '');
   const confirmPassword = String(formData.get('confirmPassword') ?? '');
@@ -67,6 +72,9 @@ export async function signIn(formData: FormData): Promise<AuthActionState> {
   const password = String(formData.get('password') ?? '');
 
   if (!email || !password) return { error: 'Enter your email and password.', message: null };
+  // Checked before the password is, so an unlisted address cannot use sign-in
+  // to find out whether an account exists.
+  if (!accessAllowed(email)) return { error: ACCESS_DENIED_MESSAGE, message: null };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -97,6 +105,11 @@ export async function signOut(): Promise<void> {
 export async function requestPasswordReset(formData: FormData): Promise<AuthActionState> {
   const email = readEmail(formData);
   if (!email) return { error: 'Enter a valid email address.', message: null };
+  // A recovery mail to an unlisted address would be a way around the door.
+  // It answers the same as a successful request, so nothing is revealed.
+  if (!accessAllowed(email)) {
+    return { ...emptyState, message: 'If that address has an account, a recovery link is on its way.' };
+  }
 
   const baseUrl = siteUrl();
   if (!baseUrl) return { error: 'We could not send a recovery email right now. Please try again shortly.', message: null };

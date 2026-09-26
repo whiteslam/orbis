@@ -10,7 +10,7 @@ import { inr, signedInr } from '@/components/invest/format';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
-const SOURCE_LABEL: Record<PriceSource, string> = { groww: 'LTP', amfi: 'NAV', alpha_vantage: 'BSE', coingecko: 'Price' };
+const SOURCE_LABEL: Record<PriceSource, string> = { groww: 'LTP', zerodha: 'LTP', amfi: 'NAV', alpha_vantage: 'BSE', coingecko: 'Price' };
 
 function shortDate(value: string) {
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
@@ -48,6 +48,20 @@ export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, 
 
   if (setupMessage) return <p className="finance-notice error">{setupMessage}</p>;
 
+  // A redirect broker has nothing to type: the session comes back from its own
+  // login. Kite ends that session overnight, so this button is the daily path
+  // rather than a one-time setup step.
+  if (meta.connect === 'redirect') {
+    return (
+      <div className="groww-connect">
+        <p className="groww-connect-intro">{reconnect ? `${meta.name} ended the session, as it does every night. Log in again to see today’s holdings.` : `Log in at ${meta.name} once to let Orbis read your holdings.`}</p>
+        <a className="finance-button primary" href={meta.connectPath ?? '/'}><KeyRound size={14} /> {reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}</a>
+        {meta.sessionNote && <p className="groww-muted">{meta.sessionNote}</p>}
+        <p className="groww-privacy"><ShieldCheck size={12} aria-hidden="true" /> Read-only. Orbis only reads holdings and can’t place orders.</p>
+      </div>
+    );
+  }
+
   return (
     <form className="fd-form broker-connect" onSubmit={submit}>
       {steps && <>
@@ -68,6 +82,20 @@ export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, 
 }
 
 function BrokerSteps({ meta }: { meta: BrokerMeta }) {
+  // A redirect broker has no keys to copy: the whole setup is one login at the
+  // broker, which is also what happens again each day.
+  if (meta.connect === 'redirect') {
+    return (
+      <>
+        <FieldStep n={1} title={`Log in at ${meta.name}`}>
+          The button below opens {meta.name}. Sign in there and it sends you straight back.
+        </FieldStep>
+        <FieldStep n={2} title="That is all">
+          Orbis keeps the session, encrypted, and reads holdings with it. It cannot place an order.
+        </FieldStep>
+      </>
+    );
+  }
   return (
     <>
       <FieldStep n={1} title={`Generate a key at ${meta.name}`}>
@@ -88,11 +116,17 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
       <FieldSubHead
         crumb="Invest · accounts"
         title={reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}
-        lead={reconnect ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.` : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings — it cannot place an order.`}
+        lead={meta.connect === 'redirect'
+          ? (reconnect
+            ? `${meta.name} ends every session overnight. One login and today’s holdings are back.`
+            : `Log in at ${meta.name} and Orbis reads your ${meta.covers}. It reads holdings, it cannot place an order.`)
+          : (reconnect
+            ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.`
+            : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings, it cannot place an order.`)}
         onBack={onBack}
         backLabel="Back to Invest"
       />
-      <FieldLabel>Two steps</FieldLabel>
+      <FieldLabel>{meta.connect === 'redirect' ? 'One step' : 'Two steps'}</FieldLabel>
       <BrokerSteps meta={meta} />
       <BrokerConnectForm meta={meta} reconnect={reconnect} setupMessage={setupMessage} onConnected={onConnected} steps={false} />
 
@@ -100,8 +134,9 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
         <h2>What syncs</h2>
         <div className="fd-line"><span>Holdings</span><b>{covers}</b></div>
         <div className="fd-line"><span>Prices</span><b>{meta.pricesShort}</b></div>
-        <div className="fd-line"><span>Refresh</span><b>When you open Invest</b></div>
+        <div className="fd-line"><span>Refresh</span><b>{meta.connect === 'redirect' ? 'Daily, after you log in again' : 'When you open Invest'}</b></div>
       </section>
+      {meta.sessionNote && <p className="fd-note">{meta.sessionNote}</p>}
       {meta.gapNote && <p className="fd-note">{meta.gapNote}</p>}
 
       {others.length > 0 && (
@@ -144,10 +179,17 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
 
   // Not connected: one quiet row. The form lives on its own Connect view.
   if (portfolio?.state === 'not_connected' && !notice) {
+    // A session that ran out overnight is not the same as never having linked
+    // the account, and saying "not connected" would read as though something
+    // had been lost. Zerodha ends every session by design.
+    const expired = portfolio.connection?.status === 'reconnect_required';
     return (
       <div className="fd-line">
-        <span className="fd-two">{meta.name}<small>{portfolio.setupRequired ? 'not set up on this server' : 'not connected'}</small></span>
-        <button className="fd-link" type="button" onClick={() => onConnect(false)}>Connect</button>
+        <span className="fd-two">
+          {meta.name}
+          <small>{portfolio.setupRequired ? 'not set up on this server' : expired ? 'session ended overnight' : 'not connected'}</small>
+        </span>
+        <button className="fd-link" type="button" onClick={() => onConnect(expired)}>{expired ? 'Reconnect' : 'Connect'}</button>
       </div>
     );
   }

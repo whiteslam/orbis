@@ -1,7 +1,8 @@
 import 'server-only';
 
-import { openRouterModel } from '@/lib/ai/openrouter';
 import { growwConfigured, growwOwnerEmail } from '@/lib/invest/groww';
+import { envZerodhaCredentials } from '@/lib/invest/zerodha';
+import type { BrokerId } from '@/lib/invest/brokers';
 import { CALENDAR_SCOPE, GMAIL_SCOPE } from '@/lib/gmail/oauth';
 import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { ProviderId } from '@/lib/providers/core';
@@ -40,20 +41,34 @@ function providerState(row: StatusRow | undefined): Pick<Integration, 'state' | 
   return { state: 'connected', detail: null, lastSyncAt: row.last_success_at };
 }
 
+/** One linked broker, as Settings shows it. */
+export type BrokerConnectionStatus = {
+  id: BrokerId;
+  status: 'connected' | 'reconnect_required';
+  lastSyncAt: string | null;
+  source: 'account' | 'server';
+};
+
 export type AppConnections = {
   google: { email: string; status: string; gmail: boolean; calendar: boolean; lastSyncAt: string | null } | null;
-  groww: { status: string; lastSyncAt: string | null; source: 'account' | 'server' } | null;
-  growwSetupMessage: string | null;
+  /**
+   * Keyed by broker, so Settings lists whatever the registry holds rather than
+   * the one broker this file used to name. Adding a provider should not mean
+   * editing this type.
+   */
+  brokers: Partial<Record<BrokerId, BrokerConnectionStatus>>;
+  brokerSetupMessages: Partial<Record<BrokerId, string>>;
 };
 
 // Account-level connections the user links themselves (Settings → App integrations).
 export async function getAppConnections(userId: string, email: string | null): Promise<AppConnections> {
-  const result: AppConnections = { google: null, groww: null, growwSetupMessage: null };
+  const result: AppConnections = { google: null, brokers: {}, brokerSetupMessages: {} };
   try {
     const admin = createAdminClient();
-    const [google, groww] = await Promise.all([
+    const [google, groww, zerodha] = await Promise.all([
       admin.from('gmail_connections').select('*').eq('user_id', userId).maybeSingle(),
       admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
+      admin.from('zerodha_connections').select('status,last_sync_at,expires_at').eq('user_id', userId).maybeSingle(),
     ]);
     if (google.data) {
       const scopes: string[] = Array.isArray(google.data.granted_scopes) ? google.data.granted_scopes : [];
@@ -66,13 +81,31 @@ export async function getAppConnections(userId: string, email: string | null): P
         lastSyncAt: google.data.last_sync_at,
       };
     }
-    if (groww.data) result.groww = { status: groww.data.status, lastSyncAt: groww.data.last_sync_at, source: 'account' };
-    else if (groww.error && ['PGRST205', 'PGRST204', '42P01'].includes(groww.error.code ?? '')) result.growwSetupMessage = 'Apply the Groww connections migration in Supabase to connect Groww.';
+    const missingTable = (error: { code?: string } | null) => Boolean(error && ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? ''));
+
+    if (groww.data) result.brokers.groww = { id: 'groww', status: groww.data.status, lastSyncAt: groww.data.last_sync_at, source: 'account' };
+    else if (missingTable(groww.error)) result.brokerSetupMessages.groww = 'Apply the Groww connections migration in Supabase to connect Groww.';
+
+    // A Zerodha session that has run out reads as needing a reconnect, not as
+    // absent: Kite ends every session overnight, by design.
+    if (zerodha.data) {
+      const expired = zerodha.data.status === 'reconnect_required' || new Date(zerodha.data.expires_at).getTime() <= Date.now();
+      result.brokers.zerodha = { id: 'zerodha', status: expired ? 'reconnect_required' : 'connected', lastSyncAt: zerodha.data.last_sync_at, source: 'account' };
+    } else if (missingTable(zerodha.error)) {
+      result.brokerSetupMessages.zerodha = 'Apply the Zerodha connections migration in Supabase to connect Zerodha.';
+    }
   } catch {
     // Show everything as not connected.
   }
-  if (!result.groww && growwConfigured() && growwOwnerEmail() && email === growwOwnerEmail()) result.groww = { status: 'connected', lastSyncAt: null, source: 'server' };
-  if (!result.growwSetupMessage && !credentialEncryptionReady()) result.growwSetupMessage = 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).';
+  if (!result.brokers.groww && growwConfigured() && growwOwnerEmail() && email === growwOwnerEmail()) {
+    result.brokers.groww = { id: 'groww', status: 'connected', lastSyncAt: null, source: 'server' };
+  }
+  if (!envZerodhaCredentials()) result.brokerSetupMessages.zerodha = 'Zerodha is not configured on this server. Set ZERODHA_API_KEY and ZERODHA_API_SECRET.';
+  if (!credentialEncryptionReady()) {
+    const message = 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).';
+    result.brokerSetupMessages.groww ??= message;
+    result.brokerSetupMessages.zerodha ??= message;
+  }
   return result;
 }
 
@@ -89,6 +122,7 @@ export async function getIntegrationStatus(userId: string, email: string | null)
       admin.from('api_daily_usage').select('provider,calls').eq('usage_date', today),
       admin.from('gmail_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
       admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
+      admin.from('zerodha_connections').select('status,last_sync_at,expires_at').eq('user_id', userId).maybeSingle(),
     ]);
     statusRows = (status.data ?? []) as StatusRow[];
     usageRows = (usage.data ?? []) as typeof usageRows;
@@ -130,13 +164,18 @@ export async function getIntegrationStatus(userId: string, email: string | null)
     integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, usage, ...providerState(statusRows.find((row) => row.provider === provider.id)) });
   }
 
-  const aiReady = Boolean(process.env.OPENROUTER_API_KEY?.trim());
+  // Anything built from your own data (the brief, plan, workbook advice,
+  // portfolio suggestions) only goes to a provider the registry marks as one
+  // that will not train on it. Today that is Groq. Without its key those
+  // features stand down rather than sending the data somewhere that would keep it.
+  const privateAi = Boolean(process.env.GROQ_API_KEY?.trim());
+  const anyAi = privateAi || Boolean(process.env.OPENROUTER_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim() || process.env.MISTRAL_API_KEY?.trim());
   integrations.push({
     id: 'ai',
     label: 'AI',
-    purpose: `OpenRouter · ${openRouterModel()}`,
-    state: aiReady ? 'connected' : 'not_configured',
-    detail: aiReady ? null : 'Add OPENROUTER_API_KEY',
+    purpose: privateAi ? 'Routed to providers that don’t train on your data' : 'No provider that can hold your data',
+    state: privateAi ? 'connected' : anyAi ? 'degraded' : 'not_configured',
+    detail: privateAi ? null : anyAi ? 'Add GROQ_API_KEY: the others may train on what they receive' : 'Add GROQ_API_KEY',
     lastSyncAt: null,
     usage: null,
   });

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChevronLeft, CloudRain, FileText, Footprints, Link2, Mail, Snowflake, Sparkles, Sun, Target, TriangleAlert, WalletCards, X, type LucideIcon } from 'lucide-react';
-import type { ArtScene, Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
+import { ArrowDown, ArrowUp, ChevronLeft, CloudSun, Footprints, HeartPulse, Mail, Orbit, TrendingUp, X, type LucideIcon } from 'lucide-react';
+import type { Focus, FocusTarget, QuietRow, SourceId } from '@/lib/focus/types';
+import type { HomeNote } from '@/lib/home/note';
 
 /** Screen title with today's date above it, or a caller-supplied line instead. */
 export function FieldHead({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -135,111 +136,50 @@ export function FieldLabel({ children }: { children: ReactNode }) {
 }
 
 /**
- * Each scene's tint and icon. The tint says what a card is about before a word
- * is read: green for body and goals, amber for money, red for what needs you,
- * blue for weather, neutral for setup.
+ * The mark printed beside a card's source line, so where a number came from is
+ * readable at a glance and not only in the wording.
+ *
+ * These are plain glyphs standing for the kind of service. Orbis ships one real
+ * brand file (Groww) and does not reproduce anyone else's logo here.
  */
-type Tone = 'green' | 'amber' | 'red' | 'blue' | 'plain';
-const TOPIC: Record<ArtScene, { tone: Tone; icon: LucideIcon }> = {
-  rain: { tone: 'blue', icon: CloudRain },
-  sun: { tone: 'amber', icon: Sun },
-  cold: { tone: 'blue', icon: Snowflake },
-  alerts: { tone: 'red', icon: Mail },
-  money: { tone: 'amber', icon: WalletCards },
-  'steps-up': { tone: 'green', icon: Footprints },
-  'steps-down': { tone: 'green', icon: Footprints },
-  goal: { tone: 'green', icon: Target },
-  link: { tone: 'plain', icon: Link2 },
-  document: { tone: 'plain', icon: FileText },
-  saved: { tone: 'blue', icon: Sparkles },
-  broken: { tone: 'red', icon: TriangleAlert },
-  calm: { tone: 'green', icon: Sun },
+const SOURCE_MARK: Record<SourceId, { icon: LucideIcon; label: string }> = {
+  'open-meteo': { icon: CloudSun, label: 'Open-Meteo' },
+  gmail: { icon: Mail, label: 'Gmail' },
+  'apple-health': { icon: HeartPulse, label: 'Apple Health' },
+  groww: { icon: TrendingUp, label: 'Groww' },
+  orbis: { icon: Orbit, label: 'Orbis' },
 };
 
 /**
- * The Home brief: a row of tinted cards, swiped sideways.
+ * The Home brief, as a short note in Orbis's own voice.
  *
- * Each card is tinted by what it is about and carries an icon, the claim, the
- * sentence behind it, one action and its source. The next card peeks in from
- * the right, so the swipe explains itself; the dots underneath both report
- * position and jump to a card.
+ * This replaced a swipeable deck of tinted cards — icon, headline, chip row of
+ * measurements, button, source footer, four of them abreast. Every true thing
+ * had to be cut to fit that box, and a reading of your morning came out looking
+ * like a dashboard. Sentences carry the same facts and read as written.
  *
- * It replaced an illustrated dark deck whose scenes drew the same rising line
- * for any "steps up" slide — decoration that read as data — under a heavy scrim.
+ * It sits on the ground with no fill, no border and no shadow, like every other
+ * statement in this layout.
  */
-export function FocusSlides({ slides, onAction }: { slides: Focus[]; onAction: (target: FocusTarget) => void }) {
-  const track = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-  const key = slides.map((slide) => slide.id).join('|');
-
-  // A finished task drops out of the brief. When that happens the row must
-  // not keep showing a gap where it was, so it returns to the first card.
-  useEffect(() => {
-    setActive(0);
-    track.current?.scrollTo({ left: 0 });
-  }, [key]);
-
-  // Cards are narrower than the track, so position is measured against a card.
-  function cardWidth() {
-    const node = track.current;
-    const first = node?.firstElementChild as HTMLElement | null;
-    return first ? first.offsetWidth + 10 : Math.max(node?.clientWidth ?? 1, 1);
-  }
-
-  // The scroll position is the source of truth, so swiping and the dots agree.
-  function onScroll() {
-    const node = track.current;
-    if (!node) return;
-    const index = Math.round(node.scrollLeft / cardWidth());
-    setActive(Math.max(0, Math.min(index, slides.length - 1)));
-  }
-
-  function go(index: number) {
-    track.current?.scrollTo({ left: index * cardWidth(), behavior: 'smooth' });
-    setActive(index);
-  }
-
-  const many = slides.length > 1;
-
+export function FocusNote({ note }: { note: HomeNote }) {
   return (
-    <div className="fd-brief">
-      <div className={many ? 'fd-track many' : 'fd-track'} ref={track} onScroll={onScroll}>
-        {slides.map((slide, index) => {
-          const topic = TOPIC[slide.art ?? 'calm'];
-          const Icon = topic.icon;
-          return (
-            <section className={`fd-card tone-${topic.tone}`} key={slide.id} aria-labelledby={`brief-${slide.id}`} aria-roledescription="card" inert={many && index !== active ? true : undefined}>
-              <i className="fd-card-icon" aria-hidden="true"><Icon size={19} strokeWidth={1.8} /></i>
-              {/* Wording can depend on the time of day, which may differ between server and browser render. */}
-              <h2 id={`brief-${slide.id}`} suppressHydrationWarning>{slide.headline}</h2>
-              <p suppressHydrationWarning>{slide.body}</p>
-              {(slide.action || slide.source) && (
-                <div className="fd-card-foot">
-                  {slide.action && <button type="button" onClick={() => onAction(slide.action!.target)}>{slide.action.label}</button>}
-                  {slide.source && <p className="fd-card-src" suppressHydrationWarning>{slide.source}</p>}
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </div>
-
-      {many && (
-        <div className="fd-dots" role="tablist" aria-label="Brief">
-          {slides.map((slide, index) => (
-            <button
-              key={slide.id}
-              type="button"
-              role="tab"
-              aria-selected={index === active}
-              aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
-              onClick={() => go(index)}
-            >
-              <span aria-hidden="true" />
-            </button>
-          ))}
-        </div>
+    <section className="fd-note-brief" aria-label="Your brief">
+      {/* The greeting and the day both depend on the hour, which can differ
+          between the server render and the browser's. */}
+      <p className="fd-note-greet" suppressHydrationWarning>
+        {note.greeting}
+        <time className="fd-note-time" suppressHydrationWarning>{note.time}</time>
+      </p>
+      <p className="fd-note-line" suppressHydrationWarning>{note.caption}</p>
+      {note.sources.length > 0 && (
+        <p className="fd-note-from">
+          {note.sources.map((id) => {
+            const mark = SOURCE_MARK[id];
+            const MarkIcon = mark.icon;
+            return <span key={id}><MarkIcon size={11} strokeWidth={2} aria-hidden="true" />{mark.label}</span>;
+          })}
+        </p>
       )}
-    </div>
+    </section>
   );
 }

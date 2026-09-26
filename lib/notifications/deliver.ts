@@ -28,7 +28,7 @@ export async function deliverSlot(admin: Admin, input: { userId: string; slot: S
 
   try {
     const context = await buildNotificationContext(admin, input.userId, input.messageSlot, input.now, input.timeZone);
-    const message = await composeNotification(admin, input.userId, context);
+    const message = await composeNotification(input.userId, context);
     if ('skip' in message) {
       await admin.from('notification_log').update({ status: 'skipped' }).eq('id', claim.id);
       return { status: 'skipped' };

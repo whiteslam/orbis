@@ -11,7 +11,7 @@ import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
 /** What went into a request made in this session. Saved advice does not record it, so it is null then. */
-export type AdviceSent = { goals: boolean; steps: boolean; notes: boolean; profile: boolean; persona: boolean };
+export type AdviceSent = { steps: boolean; notes: boolean; profile: boolean; persona: boolean };
 
 // What is on screen: either advice just generated, or advice restored from an earlier session.
 // The cited observations travel with it, because the workbook itself is never stored.
@@ -62,7 +62,7 @@ const FIRST_OBSERVATIONS = 6;
  * send, then consent. Advice lives in the Health screen's state, so it survives
  * leaving this view; a new answer replaces it and opens the advice view.
  */
-export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false, onAdvice, onBack }: { goalCount?: number; hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean; onAdvice: (advice: ShownAdvice) => void; onBack: () => void }) {
+export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSavedFitnessPersona = false, hasSavedPersonalProfile = false, onAdvice, onBack }: { hasStepData?: boolean; savedContextCount?: number; hasSavedFitnessPersona?: boolean; hasSavedPersonalProfile?: boolean; onAdvice: (advice: ShownAdvice) => void; onBack: () => void }) {
   const fileInputId = useId();
   const [preview, setPreview] = useState<WorkbookPreview | null>(null);
   const [bytes, setBytes] = useState<number | null>(null);
@@ -71,7 +71,6 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
   const [includeSavedContext, setIncludeSavedContext] = useState(false);
   const [includeFitnessPersona, setIncludeFitnessPersona] = useState(false);
   const [includePersonalProfile, setIncludePersonalProfile] = useState(false);
-  const [includeGoals, setIncludeGoals] = useState(goalCount > 0);
   const [includeSteps, setIncludeSteps] = useState(hasStepData);
   const [allSheets, setAllSheets] = useState(false);
   const [allObservations, setAllObservations] = useState(false);
@@ -82,7 +81,6 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
     setIncludeSavedContext(false);
     setIncludeFitnessPersona(false);
     setIncludePersonalProfile(false);
-    setIncludeGoals(goalCount > 0);
     setIncludeSteps(hasStepData);
     setAllSheets(false);
     setAllObservations(false);
@@ -109,7 +107,6 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
   const documentText = preview ? `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}` : '';
   const personaRelevant = Boolean(preview && hasSavedFitnessPersona && workbookHasFitnessFields(preview.sheets, documentText));
   const sent: AdviceSent = {
-    goals: includeGoals && goalCount > 0,
     steps: includeSteps && hasStepData,
     notes: includeSavedContext && savedContextCount > 0,
     profile: includePersonalProfile && hasSavedPersonalProfile,
@@ -120,7 +117,7 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
     if (!preview || !consent) return;
     setMessage(null);
     startTransition(async () => {
-      const response = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeGoals: sent.goals, includeSteps: sent.steps, consented: consent });
+      const response = await safeAction(generateWorkbookAdviceAction)({ preview, includeSavedContext, includeFitnessPersona, includePersonalProfile, includeSteps: sent.steps, consented: consent });
       if (!response.success) {
         setMessage(response.message);
         return;
@@ -173,7 +170,6 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
     sent.notes ? 'up to 5 relevant saved notes (up to 3,000 characters)' : null,
     sent.profile ? 'my personal profile (name, role and More about me text)' : null,
     sent.persona ? 'my saved fitness persona' : null,
-    sent.goals ? 'my goals and progress' : null,
     sent.steps ? 'my daily step summary' : null,
   ].filter((item): item is string => Boolean(item));
   const disclosure = disclosureItems.length > 1 ? `${disclosureItems.slice(0, -1).join(', ')} and ${disclosureItems[disclosureItems.length - 1]}` : disclosureItems[0];
@@ -230,11 +226,10 @@ export function WorkbookAsk({ goalCount = 0, hasStepData = false, savedContextCo
         <p className="fd-msg" role="status">Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. You can still review this preview or choose another file.</p>
       ) : (
         <>
-          {(goalCount > 0 || hasStepData || savedContextCount > 0 || hasSavedPersonalProfile || personaRelevant) && (
+          {(hasStepData || savedContextCount > 0 || hasSavedPersonalProfile || personaRelevant) && (
             <section className="hl-opts">
               <FieldLabel>Add to the request</FieldLabel>
               <p className="hl-opts-note">Only what is ticked is sent with the file summary.</p>
-              {goalCount > 0 && <label className="hl-opt"><input type="checkbox" checked={includeGoals} onChange={toggle(setIncludeGoals)} disabled={isPending} /><span>My <b>{goalCount} {goalCount === 1 ? 'goal' : 'goals'}</b> — title, progress and target date, to tailor advice and a plan</span></label>}
               {hasStepData && <label className="hl-opt"><input type="checkbox" checked={includeSteps} onChange={toggle(setIncludeSteps)} disabled={isPending} /><span>My <b>Apple Health steps</b> — daily averages, trend and the last 14 days</span></label>}
               {savedContextCount > 0 && <label className="hl-opt"><input type="checkbox" checked={includeSavedContext} onChange={toggle(setIncludeSavedContext)} disabled={isPending} /><span>Up to <b>{Math.min(savedContextCount, 5)} relevant saved {Math.min(savedContextCount, 5) === 1 ? 'note' : 'notes'}</b> from Profile (up to 3,000 characters)</span></label>}
               {hasSavedPersonalProfile && <label className="hl-opt"><input type="checkbox" checked={includePersonalProfile} onChange={toggle(setIncludePersonalProfile)} disabled={isPending} /><span>My <b>personal profile</b> and “More about me” details</span></label>}
@@ -327,7 +322,6 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: { advi
         <h2>What was sent</h2>
         <div className="fd-line"><span>{pdf ? 'PDF preview and text snippets, bounded' : 'Excel summary, bounded'}</span><b className="fd-yes">Included</b></div>
         {sent && [
-          row('Your goals', sent.goals),
           row('Step summary', sent.steps),
           row('Saved notes', sent.notes),
           row('Personal profile', sent.profile),

@@ -29,7 +29,19 @@ test.describe('GET route handlers', () => {
     expect([200, 503]).toContain(live.status());
     const body = await live.json();
     if (live.status() === 200) {
-      expect(body).toEqual(expect.objectContaining({ temperature: expect.any(Number), rainProbability: expect.any(Number), condition: expect.any(String) }));
+      // rainProbability was a single number: the wettest hour left in the day,
+      // printed as though it were the chance right now. It is now an outlook
+      // whose peak always carries the hour it refers to.
+      expect(body).toEqual(expect.objectContaining({
+        temperature: expect.any(Number),
+        feelsLike: expect.any(Number),
+        condition: expect.any(String),
+        rainingNow: expect.any(Boolean),
+        rain: expect.objectContaining({ soon: expect.any(Number) }),
+      }));
+      if (body.rain.peak !== null) {
+        expect(body.rain.peak).toEqual({ probability: expect.any(Number), hour: expect.any(String) });
+      }
       expect(Object.keys(body)).not.toContain('hourly');
     } else {
       expect(body.error).not.toMatch(/api\.open-meteo|stack|Error:/);

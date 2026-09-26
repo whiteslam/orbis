@@ -25,7 +25,7 @@ type InvestView = { name: 'main' } | { name: 'connect'; broker: BrokerId; reconn
  * the analysis sections drop out. Connecting and suggestions each open their
  * own view rather than unfolding a form in the middle of the screen.
  */
-export function InvestDashboard({ goalCount, savedAdvice }: { goalCount: number; savedAdvice: SavedPortfolioAdvice | null }) {
+export function InvestDashboard({ savedAdvice }: { savedAdvice: SavedPortfolioAdvice | null }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [view, setView] = useState<InvestView>({ name: 'main' });
@@ -69,7 +69,7 @@ export function InvestDashboard({ goalCount, savedAdvice }: { goalCount: number;
     return (
       <>
         <span ref={top} hidden />
-        <PortfolioAi goalCount={goalCount} advice={advice} setAdvice={setAdvice} onBack={() => setView({ name: 'main' })} />
+        <PortfolioAi advice={advice} setAdvice={setAdvice} onBack={() => setView({ name: 'main' })} />
       </>
     );
   }

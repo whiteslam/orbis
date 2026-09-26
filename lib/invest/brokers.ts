@@ -5,7 +5,7 @@
 // lib/invest/<id>.ts, and a loader registered in lib/invest/live.ts. The Invest
 // screen renders whatever this list contains, so no component, style or copy is
 // written against one broker.
-export type BrokerId = 'groww';
+export type BrokerId = 'groww' | 'zerodha';
 
 export type BrokerMeta = {
   id: BrokerId;
@@ -24,6 +24,18 @@ export type BrokerMeta = {
   pricesShort: string;
   /** What this connection cannot bring in, so a gap is never a mystery. */
   gapNote?: string;
+  /**
+   * How the account is linked.
+   *
+   * 'keys' takes an API key and secret straight from the user. 'redirect' sends
+   * them to the broker to log in and comes back with a session, which is the
+   * only way Kite Connect works and which expires daily.
+   */
+  connect: 'keys' | 'redirect';
+  /** For 'redirect' brokers: where the connect button points. */
+  connectPath?: string;
+  /** Said plainly on the card, because a daily reconnect is not a fault. */
+  sessionNote?: string;
 };
 
 export const BROKERS: BrokerMeta[] = [
@@ -38,6 +50,7 @@ export const BROKERS: BrokerMeta[] = [
     priceNote: 'Prices: NAV from AMFI for ETFs (published daily), BSE quotes from Alpha Vantage for shares.',
     pricesShort: 'AMFI NAV · BSE quotes',
     gapNote: 'Mutual funds aren’t available through the Groww Trade API.',
+    connect: 'keys',
   },
 ];
 

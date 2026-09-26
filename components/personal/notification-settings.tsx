@@ -95,7 +95,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
     <div className="pf-notify">
       <label className="pf-master">
         <span><strong>Daily notifications</strong><small>Four short check-ins a day, written from your own data.</small></span>
-        <input type="checkbox" role="switch" checked={prefs.enabled} onChange={(event) => setPrefs({ ...prefs, enabled: event.currentTarget.checked })} disabled={isPending} />
+        <input type="checkbox" role="switch" aria-label="Daily notifications" checked={prefs.enabled} onChange={(event) => setPrefs({ ...prefs, enabled: event.currentTarget.checked })} disabled={isPending} />
       </label>
 
       <div className={prefs.enabled ? 'pf-slots' : 'pf-slots muted'}>

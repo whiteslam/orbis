@@ -4,13 +4,21 @@ import { clearAppUnlock, extendAppUnlock, grantAppUnlock, isAppUnlocked, unlockW
 import { isPinFormat, PIN_LENGTH, pinProblem } from '@/lib/security/pin';
 import { checkPin, savePin } from '@/lib/security/pin-store';
 import { createClient } from '@/lib/supabase/server';
+import { accessAllowed } from '@/lib/security/access';
 
 export type UnlockResult = { success: boolean; message: string | null; pinLocked?: boolean };
 
 async function currentClaims() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
-  return { supabase, claims: error ? null : data?.claims ?? null };
+  const claims = error ? null : data?.claims ?? null;
+  // Every unlock path runs through here, so an address that is no longer on the
+  // list cannot unlock a session it still holds. The app itself signs them out
+  // on the next load; this stops them getting that far.
+  if (claims && !accessAllowed(typeof claims.email === 'string' ? claims.email : null)) {
+    return { supabase, claims: null };
+  }
+  return { supabase, claims };
 }
 
 // Heartbeat from the active app: keeps an existing unlock alive. Reports false once it has expired.

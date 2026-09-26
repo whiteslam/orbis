@@ -9,7 +9,7 @@ test('offline save keeps the draft and shows an error; retry works once online',
   await openApp(page);
   await openTab(page, 'Profile');
   await page.getByRole('tab', { name: 'Journal' }).click();
-  const editor = page.locator('.journal-today');
+  const editor = page.locator('.pf-editor');
   if (await page.getByRole('button', { name: 'Edit today’s entry' }).isVisible()) await page.getByRole('button', { name: 'Edit today’s entry' }).click();
   await editor.getByRole('radio', { name: /Okay/ }).click();
   await editor.getByRole('textbox').fill(text);
@@ -22,6 +22,6 @@ test('offline save keeps the draft and shows an error; retry works once online',
 
   await context.setOffline(false);
   await editor.getByRole('button', { name: /Save entry|Update entry/ }).click();
-  await expect(page.locator('.journal-today').getByText(text)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.pf-editor').getByText(text)).toBeVisible({ timeout: 15_000 });
   expect(pageErrors).toEqual([]);
 });

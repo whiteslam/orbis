@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   Bell,
   Check,
-  // CheckCircle2, // Habits tab is hidden for now.
   HeartPulse,
   Home,
   Landmark,
@@ -25,20 +24,28 @@ import { WorkbookAdviceView, WorkbookAsk, adviceFromSaved, savedWhen, splitSumma
 import { HealthLibrary, documentAdded } from '@/components/health/health-library';
 import { PlanBuilder, planWeek } from '@/components/health/plan-builder';
 import type { LibraryState } from '@/lib/health-docs/repository';
+import type { HealthPlanRecord } from '@/lib/health-docs/types';
 import { GmailReviewQueue } from '@/components/finance/gmail-review-queue';
 import { ManualTransactionForm } from '@/components/finance/manual-transaction-form';
 import { CurrencyCard } from '@/components/finance/currency-card';
 import { TransactionList } from '@/components/finance/transaction-list';
 import { SpendingSummary, money } from '@/components/finance/spending-summary';
 import type { FinanceSummary } from '@/lib/finance/types';
-import type { BriefWeather } from '@/lib/home/brief';
-import { composeFocus, composeQuietRows } from '@/lib/focus/home';
-import type { FocusTarget } from '@/lib/focus/types';
-import { FieldHead, FieldHero, FieldLabel, FieldSubHead, FocusSlides, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
+import type { BriefWeather } from '@/lib/home/weather';
+import { loadHomeBriefAction } from '@/app/home/brief-actions';
+import { loadBriefPortfolioAction } from '@/app/invest/actions';
+import type { BriefPortfolio } from '@/lib/home/portfolio';
+import type { AiPreferences } from '@/lib/ai/preferences';
+import { composeQuietRows } from '@/lib/focus/home';
+import { composeNote, type HomeNote } from '@/lib/home/note';
+import { trainingForToday } from '@/lib/home/training';
+import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
+import type { RoutinesSummary } from '@/lib/routines/types';
+import { RoutineCheck } from '@/components/home/routine-check';
+import type { Focus, FocusTarget } from '@/lib/focus/types';
+import { FieldHead, FieldHero, FieldLabel, FieldSubHead, FocusNote, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { WeatherCard } from '@/components/home/weather-card';
-import type { GoalsSummary } from '@/lib/goals/types';
-import { GoalsHabits } from '@/components/goals/goals-habits';
-import type { ContextNote } from '@/lib/goals/memory';
+import type { ContextNote } from '@/lib/memory/notes';
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
 import { ProfileScreen, type ProfileSection } from '@/components/personal/profile-screen';
@@ -51,7 +58,7 @@ import type { StepsSummary } from '@/lib/health/types';
 import { safeAction } from '@/lib/client/safe-action';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 
-type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment'; // | 'habits' — hidden for now.
+type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment';
 
 const TAB_TO_HASH: Record<Tab, string> = { home: 'home', finance: 'finance', health: 'health', investment: 'invest', personal: 'profile' };
 const HASH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_HASH).map(([tab, hash]) => [hash, tab as Tab])) as Record<string, Tab>;
@@ -62,18 +69,60 @@ const nav = [
   ['health', 'Health', HeartPulse],
   ['investment', 'Invest', TrendingUp],
   ['personal', 'Profile', UserRound],
-  // ['habits', 'Habits', CheckCircle2], // Hidden for now.
 ] as const;
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-function HomeScreen({ financeSummary, goalsSummary, stepsSummary, documentCount, savedAdviceAt, preferredName, openTab, openSettings }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; stepsSummary: StepsSummary; documentCount: number; savedAdviceAt: string | null; preferredName: string | null; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
+function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, savedAdviceAt, preferredName, aiBriefEnabled, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
+  const router = useRouter();
   const [weather, setWeather] = useState<BriefWeather | null>(null);
+  const [written, setWritten] = useState<string | null>(null);
+  const [portfolio, setPortfolio] = useState<BriefPortfolio | null>(null);
   const firstName = preferredName?.trim().split(/\s+/)[0] || null;
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
 
-  const input = { finance: financeSummary, goals: goalsSummary, steps: stepsSummary, documentCount };
-  const brief = composeFocus({ ...input, weather, name: preferredName, savedAdviceAt });
+  const input = { finance: financeSummary, steps: stepsSummary, documentCount, portfolio };
+
+  // The daily investing line. Holdings come from the broker, so Home asks for
+  // them the way it asks for the weather, and simply has no card until they land.
+  useEffect(() => {
+    let live = true;
+    void safeAction(loadBriefPortfolioAction, () => null)()
+      .then((result) => { if (live) setPortfolio(result); });
+    return () => { live = false; };
+  }, []);
+  // Orbis's own wording renders straight away and is what stays if the model is
+  // off, unreachable or slow; a written brief only ever replaces its paragraphs
+  // once they land, so Home never waits on the network to say something true.
+  // The schedule is read on every render rather than memoised: a routine that
+  // becomes due while Home is open should start showing without a reload.
+  const due = routinesToday(routines, new Date());
+  const current = currentRoutine(due);
+  const composed = composeNote({
+    finance: financeSummary,
+    portfolio,
+    weather,
+    training: trainingForToday(plan?.plan ?? null),
+    routine: current,
+    missed: missedRoutines(due),
+    name: preferredName,
+  });
+  const brief: HomeNote = written ? { ...composed, id: 'written', caption: written } : composed;
+
+  // Re-asked whenever the data behind the brief changes. The action itself
+  // returns the saved brief unless the numbers moved, so this is one request
+  // per real change rather than one per visit.
+  const dataKey = JSON.stringify([financeSummary.pendingCandidateCount, financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
+  useEffect(() => {
+    if (!aiBriefEnabled) {
+      setWritten(null);
+      return;
+    }
+    let live = true;
+    void safeAction(loadHomeBriefAction, () => ({ state: 'off' as const }))({ weather })
+      .then((result) => { if (live && result.state === 'ok') setWritten(result.caption); });
+    return () => { live = false; };
+  }, [aiBriefEnabled, dataKey, weather]);
   const quiet = composeQuietRows(input);
   const heading = quiet.every((row) => row.empty) ? 'Quiet today' : 'Everything else';
 
@@ -91,7 +140,10 @@ function HomeScreen({ financeSummary, goalsSummary, stepsSummary, documentCount,
 
       <PasskeyPrompt />
 
-      <FocusSlides slides={brief} onAction={openTab} />
+      <FocusNote note={brief} />
+
+      {/* The brief says what is due; this records what happened to it. */}
+      {current && <RoutineCheck current={current} onAnswered={() => router.refresh()} />}
 
       <WeatherCard onWeather={setWeather} openPersonal={() => openTab('personal')} />
 
@@ -316,18 +368,15 @@ function stepTrend(steps: StepsSummary) {
   return Math.round(((steps.average30 - steps.previous30) / steps.previous30) * 100);
 }
 
-// A step goal in the user's own goals wins over the default.
-function stepGoal(goalsSummary: GoalsSummary) {
-  const goal = goalsSummary.goals.find((item) => /step/i.test(item.unit ?? '') && item.target >= 1_000 && item.target <= 50_000);
-  return goal ? Math.round(goal.target) : 10_000;
-}
+// The daily step target the rings are drawn against.
+const STEP_TARGET = 10_000;
 
-type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' | 'goals' } | { name: 'plans'; planId: string | null };
+type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' } | { name: 'plans'; planId: string | null };
 
 // Main shows the first few documents; the Documents view has the rest.
 const HEALTH_DOCS_ON_MAIN = 3;
 
-function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { goalsSummary: GoalsSummary; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
   const [view, setView] = useState<HealthView>({ name: 'main' });
   // Advice lives here rather than in the Ask view, so a fresh answer survives
   // going back to the tab — the server copy only arrives on the next load.
@@ -340,7 +389,7 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
   if (view.name === 'ask') return (
     <div className="screen-body field">
       <span ref={top} hidden />
-      <WorkbookAsk goalCount={goalsSummary.goals.length} hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} onAdvice={(next) => { setAdvice(next); setView({ name: 'advice' }); }} onBack={main} />
+      <WorkbookAsk hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} onAdvice={(next) => { setAdvice(next); setView({ name: 'advice' }); }} onBack={main} />
     </div>
   );
 
@@ -366,14 +415,6 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
     </div>
   );
 
-  if (view.name === 'goals') return (
-    <div className="screen-body field">
-      <span ref={top} hidden />
-      <FieldSubHead crumb="Health · goals" title="Goals" lead="Orbis shapes its advice and every plan around these whenever you ask about your data." onBack={main} backLabel="Back to Health" />
-      <GoalsHabits kind="goals" data={goalsSummary} />
-    </div>
-  );
-
   return (
     <div className="screen-body field">
       <span ref={top} hidden />
@@ -388,9 +429,9 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
       {/* Health opens on the rings themselves. The composed statement and the
           "Your numbers" rows said the same thing in words directly above the
           card that shows it, so both are gone rather than restated here. */}
-      <StepsCard summary={stepsSummary} stepGoal={stepGoal(goalsSummary)} />
+      <StepsCard summary={stepsSummary} stepGoal={STEP_TARGET} />
 
-      {/* Plans and goals each have a finish line, so every row carries its bar;
+      {/* Every plan has a finish line, so each row carries its bar;
           a row opens its own view, and the last row of each section is the way in. */}
       <section className="fd-quiet">
         <h2>Plans</h2>
@@ -406,23 +447,6 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
         <button className="fd-line" type="button" onClick={() => setView({ name: 'plans', planId: null })}>
           <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
           <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
-        </button>
-      </section>
-
-      <section className="fd-quiet">
-        <h2>Goals</h2>
-        {goalsSummary.goals.map((goal) => {
-          const progress = Math.max(0, Math.min(100, Math.round((goal.current / goal.target) * 100)));
-          return (
-            <button className="hl-row" type="button" key={goal.id} onClick={() => setView({ name: 'goals' })}>
-              <span className="hl-row-top"><strong>{goal.title}</strong><small>{progress}%</small></span>
-              <span className="hl-bar" aria-hidden="true"><i style={{ width: `${progress}%` }} /></span>
-            </button>
-          );
-        })}
-        <button className="fd-line" type="button" onClick={() => setView({ name: 'goals' })}>
-          <span>{goalsSummary.goals.length ? 'Update progress or add a goal' : 'Advice and plans are shaped around your goals'}</span>
-          <b className="fd-yes">{goalsSummary.goals.length ? 'Open' : 'Add'}</b>
         </button>
       </section>
 
@@ -459,16 +483,16 @@ function HealthScreen({ goalsSummary, stepsSummary, healthLibrary, savedContextC
   );
 }
 
-function GenericScreen({ tab, goalsSummary, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; goalsSummary: GoalsSummary; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+function GenericScreen({ tab, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
   if (tab !== 'investment') return null;
   return (
     <div className="screen-body field">
-      <InvestDashboard goalCount={goalsSummary.goals.length} savedAdvice={savedPortfolioAdvice} />
+      <InvestDashboard savedAdvice={savedPortfolioAdvice} />
     </div>
   );
 }
 
-export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice }: { financeSummary: FinanceSummary; goalsSummary: GoalsSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
@@ -516,17 +540,19 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
     if (tab === 'home') return (
       <HomeScreen
         financeSummary={financeSummary}
-        goalsSummary={goalsSummary}
         stepsSummary={stepsSummary}
         documentCount={healthLibrary.documents.length}
+        plan={healthLibrary.plans[0] ?? null}
+        routines={routines}
         savedAdviceAt={savedWorkbookAdvice?.createdAt ?? null}
         preferredName={personalProfile.profile?.preferredName ?? null}
+        aiBriefEnabled={aiPreferences.homeBriefEnabled}
         openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
         openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
       />
     );
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
-    if (tab === 'health') return <HealthScreen goalsSummary={goalsSummary} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
+    if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'personal') {
       return (
         <ProfileScreen
@@ -540,6 +566,8 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
           contextNotes={contextNotes}
           journal={journal}
           notificationSettings={notificationSettings}
+          aiPreferences={aiPreferences}
+          routines={routines}
           appConnections={appConnections}
           homeLocation={homeLocation}
           integrations={integrations}
@@ -547,8 +575,8 @@ export default function OrbisApp({ financeSummary, goalsSummary, contextNotes, f
         />
       );
     }
-    return <GenericScreen tab={tab} goalsSummary={goalsSummary} savedPortfolioAdvice={savedPortfolioAdvice} />;
-  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, goalsSummary, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab]);
+    return <GenericScreen tab={tab} savedPortfolioAdvice={savedPortfolioAdvice} />;
+  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines]);
 
   return (
     <main className="stage">

@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { OpenRouterError, openRouterModel } from '@/lib/ai/openrouter';
 import { EmbeddingError } from '@/lib/health-docs/embeddings';
 import { buildPlanContext, generateHealthPlan, generatePlanQuestions, MIN_QUESTIONS } from '@/lib/health-docs/planner';
 import { deleteHealthDocument, signedDownloadUrl, storeHealthDocument } from '@/lib/health-docs/repository';
@@ -34,21 +33,6 @@ async function consumeAiRequest(userId: string) {
   }
 }
 
-async function logAi(userId: string, feature: 'health_plan_questions' | 'health_plan', outcome: 'succeeded' | 'failed', providerStatus: number | null, startedAt: number, bytes: number) {
-  try {
-    await createAdminClient().from('ai_generation_events').insert({
-      user_id: userId,
-      feature,
-      model: openRouterModel().slice(0, 120),
-      outcome,
-      provider_status: providerStatus,
-      duration_ms: Math.min(Date.now() - startedAt, 120_000),
-      response_bytes: Math.min(bytes, 131_072),
-    });
-  } catch {
-    // Logging must not change the result.
-  }
-}
 
 /** Marks a document as one the plan builder reads every time. */
 export async function setHealthDocumentAlwaysAction(input: unknown): Promise<Result<null>> {
@@ -134,13 +118,12 @@ export async function startHealthPlanAction(): Promise<Result<PlanQuestion[]>> {
 
   const startedAt = Date.now();
   try {
-    const context = await buildPlanContext(auth.userId, 'health fitness goals measurements weight heart rate blood sleep activity steps diet conditions');
-    const result = await generatePlanQuestions(context);
-    await logAi(auth.userId, 'health_plan_questions', 'succeeded', result.status, startedAt, result.bytes);
+    const context = await buildPlanContext(auth.userId, 'health fitness measurements weight heart rate blood sleep activity steps diet conditions');
+    const result = await generatePlanQuestions(auth.userId, context);
+    if (!result.questions.length) return { success: false, message: 'No AI provider that can hold your documents is available right now. Try again shortly.' };
     return { success: true, data: result.questions };
-  } catch (error) {
-    await logAi(auth.userId, 'health_plan_questions', 'failed', error instanceof OpenRouterError ? error.status : null, startedAt, 0);
-    return { success: false, message: error instanceof OpenRouterError ? error.message : 'Orbis couldn’t prepare your questions. Try again shortly.' };
+  } catch {
+    return { success: false, message: 'Orbis couldn’t prepare your questions. Try again shortly.' };
   }
 }
 
@@ -161,19 +144,16 @@ export async function generateHealthPlanAction(input: { answers: PlanAnswer[] })
   const startedAt = Date.now();
   try {
     const context = await buildPlanContext(auth.userId, answers.map((answer) => `${answer.question} ${answer.answer}`).join(' ').slice(0, 2000));
-    const result = await generateHealthPlan(context, answers);
+    const result = await generateHealthPlan(auth.userId, context, answers);
     if (!result.plan) {
-      await logAi(auth.userId, 'health_plan', 'failed', result.status, startedAt, result.bytes);
       return { success: false, message: 'The AI returned an incomplete plan. Try generating again.' };
     }
     const { data, error } = await createAdminClient().from('health_plans').insert({ user_id: auth.userId, title: result.plan.title, answers, plan: result.plan }).select('id').single();
-    await logAi(auth.userId, 'health_plan', 'succeeded', result.status, startedAt, result.bytes);
     if (error || !data) return { success: false, message: 'Your plan was created but couldn’t be saved. Apply the health documents migration and try again.' };
     revalidatePath('/');
     return { success: true, data: { id: data.id, plan: result.plan } };
-  } catch (error) {
-    await logAi(auth.userId, 'health_plan', 'failed', error instanceof OpenRouterError ? error.status : null, startedAt, 0);
-    return { success: false, message: error instanceof OpenRouterError ? error.message : 'Orbis couldn’t generate your plan. Try again shortly.' };
+  } catch {
+    return { success: false, message: 'Orbis couldn’t generate your plan. Try again shortly.' };
   }
 }
 

@@ -21,8 +21,8 @@ function splitSummary(summary: string) {
 }
 
 function context(saved: SavedPortfolioAdvice) {
-  const { positionCount, usedGoals } = saved.context as { positionCount?: unknown; usedGoals?: unknown };
-  return { positionCount: typeof positionCount === 'number' ? positionCount : null, usedGoals: usedGoals === true };
+  const { positionCount } = saved.context as { positionCount?: unknown };
+  return { positionCount: typeof positionCount === 'number' ? positionCount : null };
 }
 
 /** The Invest screen's entry to suggestions: what is saved, or an offer to ask. */
@@ -31,7 +31,7 @@ export function PortfolioAiRow({ advice, onOpen }: { advice: SavedPortfolioAdvic
     <section className="fd-quiet">
       <h2>Suggestions</h2>
       <div className="fd-line">
-        <span>{advice ? `Saved ${savedWhen(advice.createdAt)}. ${splitSummary(advice.result.summary).headline}` : 'Orbis can read the shape of your mix against your goals.'}</span>
+        <span>{advice ? `Saved ${savedWhen(advice.createdAt)}. ${splitSummary(advice.result.summary).headline}` : 'Orbis can read the shape of your mix and say where it is concentrated.'}</span>
         <button className="fd-link" type="button" onClick={onOpen}>{advice ? 'Read' : 'Ask'}</button>
       </div>
     </section>
@@ -39,19 +39,17 @@ export function PortfolioAiRow({ advice, onOpen }: { advice: SavedPortfolioAdvic
 }
 
 /** The suggestions view: the consent step, or the saved advice as numbered steps. */
-export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCount: number; advice: SavedPortfolioAdvice | null; setAdvice: (advice: SavedPortfolioAdvice | null) => void; onBack: () => void }) {
+export function PortfolioAi({ advice, setAdvice, onBack }: { advice: SavedPortfolioAdvice | null; setAdvice: (advice: SavedPortfolioAdvice | null) => void; onBack: () => void }) {
   const [asking, setAsking] = useState(!advice);
   const [consent, setConsent] = useState(false);
-  const [includeGoals, setIncludeGoals] = useState(goalCount > 0);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const sendGoals = includeGoals && goalCount > 0;
 
   function request() {
     if (!consent) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await safeAction(generatePortfolioAdviceAction)({ consented: true, includeGoals: sendGoals });
+      const result = await safeAction(generatePortfolioAdviceAction)({ consented: true });
       if (!result.success) {
         setMessage(result.message);
         return;
@@ -59,7 +57,7 @@ export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCoun
       setAdvice({
         id: result.saved?.id ?? '',
         title: null,
-        context: { usedGoals: sendGoals },
+        context: {},
         result: result.data,
         createdAt: result.saved?.createdAt ?? new Date().toISOString(),
       });
@@ -92,19 +90,13 @@ export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCoun
         <section className="fd-quiet">
           <h2>What will be sent</h2>
           <div className="fd-line"><span>Holdings summary</span><b className="fd-yes">Included</b></div>
-          {goalCount > 0 && (
-            <label className="fd-line fd-toggle">
-              <span>Your {goalCount} {goalCount === 1 ? 'goal' : 'goals'}</span>
-              <input type="checkbox" checked={includeGoals} onChange={(event) => { setIncludeGoals(event.currentTarget.checked); setConsent(false); }} disabled={isPending} />
-            </label>
-          )}
           <div className="fd-line"><span>Personal profile</span><b className="empty">Not sent</b></div>
           <div className="fd-line"><span>Account numbers or keys</span><b className="empty">Never sent</b></div>
         </section>
 
         <label className="fd-consent">
           <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} />
-          <span>I understand {sendGoals ? 'a summary of my holdings and my goals' : 'a summary of my holdings'} will be sent to OpenRouter for analysis.</span>
+          <span>I understand a summary of my holdings will be sent to OpenRouter for analysis.</span>
         </label>
 
         <div className="fd-act">
@@ -119,8 +111,8 @@ export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCoun
   }
 
   const { headline, body } = splitSummary(advice.result.summary);
-  const { positionCount, usedGoals } = context(advice);
-  const meta = [positionCount !== null ? `${positionCount} ${positionCount === 1 ? 'holding' : 'holdings'}` : null, usedGoals ? 'goals used' : null, `saved ${savedWhen(advice.createdAt)}`].filter(Boolean).join(' · ');
+  const { positionCount } = context(advice);
+  const meta = [positionCount !== null ? `${positionCount} ${positionCount === 1 ? 'holding' : 'holdings'}` : null, `saved ${savedWhen(advice.createdAt)}`].filter(Boolean).join(' · ');
 
   return (
     <>
@@ -143,7 +135,6 @@ export function PortfolioAi({ goalCount, advice, setAdvice, onBack }: { goalCoun
       <section className="fd-quiet">
         <h2>What was sent</h2>
         <div className="fd-line"><span>Holdings summary</span><b className="fd-yes">Included</b></div>
-        <div className="fd-line"><span>Your goals</span>{usedGoals ? <b className="fd-yes">Included</b> : <b className="empty">Not sent</b>}</div>
         <div className="fd-line"><span>Personal profile</span><b className="empty">Not sent</b></div>
         <div className="fd-line"><span>Account numbers or keys</span><b className="empty">Never sent</b></div>
       </section>

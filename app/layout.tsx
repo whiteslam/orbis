@@ -6,7 +6,7 @@ import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 
 export const metadata: Metadata = {
   title: 'Orbis — Personal Intelligence',
-  description: 'Finance, health, goals, habits and personal intelligence in one place.',
+  description: 'Finance, health and personal intelligence in one place.',
   applicationName: 'Orbis',
   appleWebApp: { capable: true, title: 'Orbis', statusBarStyle: 'default' },
 };

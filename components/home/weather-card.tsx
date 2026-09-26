@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Cloud, LoaderCircle, MapPin } from 'lucide-react';
-import type { BriefWeather } from '@/lib/home/brief';
+import type { BriefWeather } from '@/lib/home/weather';
 
-type WeatherResponse = BriefWeather & { feelsLike: number; humidity: number; windSpeed: number; isDay: boolean; place: string | null; stale: boolean };
+type WeatherResponse = BriefWeather & { place: string | null; stale: boolean };
 
 type State =
   | { status: 'loading' }
@@ -86,18 +86,30 @@ export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: 
   }
 
   const { weather, place } = state;
-  const rain = weather.rainProbability >= 50
-    ? `${weather.rainProbability}% chance of rain`
-    : weather.rainProbability > 0
-      ? `${weather.rainProbability}% chance of rain, so probably dry`
-      : 'No rain expected';
+  // A forecast always names the hour it is about. A bare "100% chance of rain"
+  // next to a dry window is what made this line untrustworthy.
+  const peak = weather.rain.peak;
+  const rain = weather.rainingNow
+    ? peak && peak.probability >= 40 ? `raining, ${peak.probability}% again by ${peak.hour}` : 'raining now'
+    : peak && peak.probability >= 50
+      ? `${peak.probability}% rain around ${peak.hour}`
+      : peak && peak.probability > 0
+        ? `mostly dry, ${peak.probability}% at most`
+        : 'no rain in the next 12 hours';
   return (
-    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
+    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}, ${rain}`}>
       <b>{weather.temperature}°</b>
-      <p>
-        {weather.condition}, feels like {weather.feelsLike}°<br />
-        {rain} · {place}
-      </p>
+      <div>
+        {/* Two short lines with room between them, rather than one dense run of
+            middots: the condition and what to expect, then where and how it feels. */}
+        <p>{weather.condition}, {rain}</p>
+        <p className="fd-weather-meta">
+          <span>Feels {weather.feelsLike}°</span>
+          <span>{weather.humidity}% humidity</span>
+          <span>{weather.windSpeed} km/h</span>
+          <span>{place}</span>
+        </p>
+      </div>
     </section>
   );
 }

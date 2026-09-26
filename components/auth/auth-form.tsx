@@ -12,7 +12,12 @@ import { safeAction } from '@/lib/client/safe-action';
 
 const initialState: AuthActionState = { error: null, message: null };
 
-export function AuthForm({ initialMessage }: { initialMessage?: string }) {
+/**
+ * `signupOpen` is false while the installation is restricted to an allowlist.
+ * The tab is hidden rather than disabled: offering a control that the server
+ * will always refuse is worse than not offering it.
+ */
+export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage?: string; signupOpen?: boolean }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [state, setState] = useState<AuthActionState>({ ...initialState, message: initialMessage ?? null });
   const [isPending, startTransition] = useTransition();
@@ -86,10 +91,12 @@ export function AuthForm({ initialMessage }: { initialMessage?: string }) {
         <p>{isSignup ? 'Start building a clearer picture of your life.' : 'Sign in to continue to Orbis.'}</p>
       </div>
 
-      <div className="auth-mode" role="group" aria-label="Account access">
-        <button type="button" onClick={() => switchMode('signin')} className={!isSignup ? 'active' : ''} aria-pressed={!isSignup}>Sign in</button>
-        <button type="button" onClick={() => switchMode('signup')} className={isSignup ? 'active' : ''} aria-pressed={isSignup}>Create account</button>
-      </div>
+      {signupOpen && (
+        <div className="auth-mode" role="group" aria-label="Account access">
+          <button type="button" onClick={() => switchMode('signin')} className={!isSignup ? 'active' : ''} aria-pressed={!isSignup}>Sign in</button>
+          <button type="button" onClick={() => switchMode('signup')} className={isSignup ? 'active' : ''} aria-pressed={isSignup}>Create account</button>
+        </div>
+      )}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="auth-email">Email</label>

@@ -6,11 +6,12 @@
 
 export type FocusTarget = 'finance' | 'health' | 'invest' | 'personal';
 
-/** Which illustrated scene a brief slide carries. */
-export type ArtScene =
-  | 'rain' | 'sun' | 'cold'
-  | 'alerts' | 'money' | 'steps-up' | 'steps-down'
-  | 'goal' | 'link' | 'document' | 'saved' | 'broken' | 'calm';
+/**
+ * The services a brief card can cite. Each one gets a small mark beside its
+ * source line, so where a number came from is readable at a glance rather than
+ * only in the wording.
+ */
+export type SourceId = 'open-meteo' | 'gmail' | 'apple-health' | 'groww' | 'orbis';
 
 export type Focus = {
   /** Stable id for the rule that matched — useful for tests and analytics. */
@@ -20,8 +21,6 @@ export type Focus = {
   body: string;
   /** In-app navigation. A tab's own screen passes its own control instead. */
   action: { label: string; target: FocusTarget } | null;
-  /** The scene drawn behind the copy on Home. Other screens ignore it. */
-  art?: ArtScene;
   /**
    * Where the claim came from, in the user's terms — "Gmail · 3 alerts · 2 min
    * ago". The Atlas brief prints it under the copy, so a statement about the

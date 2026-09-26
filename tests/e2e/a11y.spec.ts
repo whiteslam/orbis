@@ -15,7 +15,7 @@ test('no serious or critical accessibility violations', async ({ page, browser, 
   await anonymous.close();
 
   await openApp(page);
-  for (const tab of ['Home', 'Finance', 'Health', 'Invest', 'Profile'] as Tab[]) {
+  for (const tab of ['Home', 'Expense', 'Health', 'Invest', 'Profile'] as Tab[]) {
     await openTab(page, tab);
     await page.waitForTimeout(800);
     findings.push(...summarize(tab, (await new AxeBuilder({ page }).analyze()).violations as Violation[]));

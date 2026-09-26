@@ -1,7 +1,18 @@
 import 'server-only';
 
-// Text embeddings through OpenRouter (same key as chat). 1536 dimensions to
-// match the health_document_chunks.embedding column.
+// Text embeddings through OpenRouter. 1536 dimensions, to match the
+// health_document_chunks.embedding column.
+//
+// KNOWN GAP: this is the last path that sends personal data straight to a
+// provider instead of through lib/ai/router.ts, and what it sends is document
+// text itself, chunk by chunk. It cannot be routed yet because ai_models only
+// describes chat models (context_window, supports_json) and nothing in the
+// registry marks a model as an embedding model or records its dimensions.
+//
+// Closing it means extending the registry with a kind and a dimensions column,
+// seeding an embedding model on a provider whose may_train is false, and giving
+// the router an embeddings path. Until then this respects the same rule the
+// router enforces by refusing to run unless the key is explicitly opted in.
 export const EMBEDDING_DIMENSIONS = 1536;
 const BATCH_SIZE = 64;
 
@@ -11,7 +22,12 @@ export class EmbeddingError extends Error {}
 
 export async function embedTexts(texts: string[]): Promise<number[][]> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) throw new EmbeddingError('AI search is not configured. Add OPENROUTER_API_KEY to the server environment.');
+  // Opt-in by name: indexing a document sends its text to a provider the
+  // registry marks as one that may train on it, so it must be a deliberate act
+  // rather than a side effect of having a chat key configured.
+  if (!apiKey || process.env.ORBIS_ALLOW_EXTERNAL_EMBEDDINGS?.trim() !== 'true') {
+    throw new EmbeddingError('Document search is off. It would send your document text to a provider that may train on it, so set ORBIS_ALLOW_EXTERNAL_EMBEDDINGS=true to allow that.');
+  }
 
   const vectors: number[][] = [];
   for (let start = 0; start < texts.length; start += BATCH_SIZE) {

@@ -24,6 +24,14 @@ export default defineConfig({
     url: 'http://localhost:3100/login',
     reuseExistingServer: false,
     timeout: 300_000,
+    env: {
+      // The suite creates throwaway orbis-qa-*@example.com users and signs them
+      // in through the real form. A private build would refuse every one of
+      // them and the run would die in global setup, so the test server is
+      // explicitly open regardless of what .env.local says. The allowlist
+      // itself is covered by lib/security/access.test.ts.
+      ORBIS_ALLOWED_EMAILS: '',
+    },
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },

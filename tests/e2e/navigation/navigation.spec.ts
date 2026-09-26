@@ -1,7 +1,7 @@
 import { expect, openApp, openTab, test, type Tab } from '../support/fixtures';
 
 const TABS: Array<[Tab, RegExp]> = [
-  ['Finance', /#finance$/],
+  ['Expense', /#finance$/],
   ['Health', /#health$/],
   ['Invest', /#invest$/],
   ['Profile', /#profile$/],
@@ -32,6 +32,8 @@ test('mobile keyboard: a focused field near the bottom stays visible above the n
   const page = await context.newPage();
   await openApp(page);
   await openTab(page, 'Profile');
+  // Profile now lands on Journal, so the name field needs its section opening first.
+  await page.getByRole('tab', { name: 'Profile' }).click();
   const field = page.getByLabel('Name to use');
   await field.focus();
   await page.waitForTimeout(700);

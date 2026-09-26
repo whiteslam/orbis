@@ -24,9 +24,9 @@ export type ProfileInput = {
   connections: AppConnections;
 };
 
-/** Gmail, Calendar and Groww are the three links you make yourself. */
-export function connectedCount({ google, groww }: AppConnections) {
-  return [google?.gmail, google?.calendar, Boolean(groww)].filter(Boolean).length;
+/** Gmail, Calendar and every linked broker: the connections you make yourself. */
+export function connectedCount({ google, brokers }: AppConnections) {
+  return [google?.gmail, google?.calendar].filter(Boolean).length + Object.keys(brokers).length;
 }
 
 export function words(text: string) {

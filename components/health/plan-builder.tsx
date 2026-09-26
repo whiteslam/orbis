@@ -131,7 +131,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
         <BackLink onClick={allPlans} disabled={isPending} />
         <header className="fd-sub-head hl-plan-head">
           <h1>A few questions first</h1>
-          <p className="fd-lead">Orbis has already read your documents, steps and goals. These fill the gaps it cannot infer.</p>
+          <p className="fd-lead">Orbis has already read your documents and steps. These fill the gaps it cannot infer.</p>
         </header>
         <div className="hl-bar big" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answered}><i style={{ width: `${(answered / total) * 100}%` }} /></div>
         <p className="hl-bar-note"><b>{answered} of {total}</b> answered · at least {needed} to build your plan</p>
@@ -159,7 +159,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
             {working === 'plan' ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Writing your plan…</> : <><Sparkles size={14} aria-hidden="true" /> Generate my plan</>}
           </button>
         </div>
-        <p className="fd-note tight">Writing a plan takes up to a minute. It reads your pinned documents and the passages that match, your steps, goals and profile, and these answers.</p>
+        <p className="fd-note tight">Writing a plan takes up to a minute. It reads your pinned documents and the passages that match, your steps and profile, and these answers.</p>
       </>
     );
   }
@@ -177,7 +177,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
   return (
     <>
       <span ref={top} hidden />
-      <FieldSubHead crumb="Health · plans" title="Plans" lead="Orbis reads your saved documents, steps, goals and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan." onBack={onBack} backLabel="Back to Health" />
+      <FieldSubHead crumb="Health · plans" title="Plans" lead="Orbis reads your saved documents, steps and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan." onBack={onBack} backLabel="Back to Health" />
 
       {state === 'setup' ? (
         <p className="fd-msg bad">Apply the health documents migration in Supabase to build and save plans.</p>

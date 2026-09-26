@@ -71,7 +71,11 @@
   --fd-surface: #ffffff;
   --fd-ink: #1b2320;
   --fd-soft: #4f5b57; /* 7.4:1 on --fd-surface */
-  --fd-faint: #6f7d77; /* 4.6:1 — AA for small text */
+  /* 4.8:1 against the darkest stop of --fd-field, which is the worst case:
+     most faint text sits on the ground, not on --fd-surface. The previous
+     #6f7d77 was annotated 4.6:1 but measured 4.31:1 on white and 3.25:1 on
+     that stop, so small text in it failed AA everywhere it was used. */
+  --fd-faint: #556259;
   --fd-rule: rgba(27,35,32,.10);
   /* A second, heavier rule: the underline of a field you are typing into. */
   --fd-hairline: rgba(27,35,32,0.22);
@@ -351,50 +355,6 @@ button { font: inherit; }
 .fd-act { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
 .fd-act:empty { display: none; }
 
-/* Brief: a row of tinted cards, swiped sideways.
-   Each card is tinted by what it is about (--tone-a/b, --tone-ink below) and
-   carries an icon, the claim, the sentence behind it, one action and its
-   source. The track bleeds into both gutters so the next card peeks in — that
-   sliver is the swipe affordance — and the dots below are the pager. */
-.fd-brief { margin-top: 2px; }
-.fd-track { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 18px; scroll-padding-inline: 16px; }
-.fd-track::-webkit-scrollbar { display: none; }
-.fd-card { flex: 0 0 100%; box-sizing: border-box; min-width: 0; min-height: 236px; display: flex; flex-direction: column; padding: 18px; border-radius: 24px; background: linear-gradient(170deg, var(--tone-a), var(--tone-b)); color: var(--fd-ink); scroll-snap-align: start; }
-.fd-track.many .fd-card { flex-basis: calc(100% - 68px); }
-.fd-card-icon { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--tone-tile); color: var(--tone-ink); font-style: normal; }
-.fd-card h2 { margin: 16px 0 0; font-size: 21px; font-weight: 650; letter-spacing: -.025em; line-height: 1.25; color: var(--fd-ink); text-wrap: balance; }
-.fd-card > p { margin: 8px 0 0; color: var(--fd-soft); font-size: 13px; line-height: 1.55; }
-.fd-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; margin-top: auto; padding-top: 14px; }
-.fd-card-foot button { min-height: 36px; padding: 0 15px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
-.fd-card-foot button:active { opacity: .85; }
-.fd-card-src { margin: 0; color: var(--fd-soft); font-size: 11px; line-height: 1.45; text-align: right; }
-
-.fd-card.tone-green { --tone-a: #dcebe4; --tone-b: #c8ddd4; --tone-ink: #45685c; --tone-tile: rgba(255,255,255,.7); }
-.fd-card.tone-amber { --tone-a: #f7ead5; --tone-b: #efdcbc; --tone-ink: #8a5200; --tone-tile: rgba(255,255,255,.7); }
-.fd-card.tone-red { --tone-a: #f6e3df; --tone-b: #eed0ca; --tone-ink: #a63a2e; --tone-tile: rgba(255,255,255,.7); }
-.fd-card.tone-blue { --tone-a: #dfe9f4; --tone-b: #cbdbec; --tone-ink: #2a64a8; --tone-tile: rgba(255,255,255,.7); }
-.fd-card.tone-plain { --tone-a: #ffffff; --tone-b: #eef2f0; --tone-ink: #45685c; --tone-tile: rgba(27,35,32,.06); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .fd-card.tone-green { --tone-a: #1f322c; --tone-b: #172620; --tone-ink: #85b3a3; --tone-tile: rgba(255,255,255,.07); }
-  :root:not([data-theme="light"]) .fd-card.tone-amber { --tone-a: #332a1b; --tone-b: #272015; --tone-ink: #e0a54a; --tone-tile: rgba(255,255,255,.07); }
-  :root:not([data-theme="light"]) .fd-card.tone-red { --tone-a: #37231f; --tone-b: #2b1b18; --tone-ink: #e79489; --tone-tile: rgba(255,255,255,.07); }
-  :root:not([data-theme="light"]) .fd-card.tone-blue { --tone-a: #1e2a38; --tone-b: #17202c; --tone-ink: #82b2ea; --tone-tile: rgba(255,255,255,.07); }
-  :root:not([data-theme="light"]) .fd-card.tone-plain { --tone-a: #1d2623; --tone-b: #171f1c; --tone-ink: #85b3a3; --tone-tile: rgba(255,255,255,.07); }
-}
-:root[data-theme="dark"] .fd-card.tone-green { --tone-a: #1f322c; --tone-b: #172620; --tone-ink: #85b3a3; --tone-tile: rgba(255,255,255,.07); }
-:root[data-theme="dark"] .fd-card.tone-amber { --tone-a: #332a1b; --tone-b: #272015; --tone-ink: #e0a54a; --tone-tile: rgba(255,255,255,.07); }
-:root[data-theme="dark"] .fd-card.tone-red { --tone-a: #37231f; --tone-b: #2b1b18; --tone-ink: #e79489; --tone-tile: rgba(255,255,255,.07); }
-:root[data-theme="dark"] .fd-card.tone-blue { --tone-a: #1e2a38; --tone-b: #17202c; --tone-ink: #82b2ea; --tone-tile: rgba(255,255,255,.07); }
-:root[data-theme="dark"] .fd-card.tone-plain { --tone-a: #1d2623; --tone-b: #171f1c; --tone-ink: #85b3a3; --tone-tile: rgba(255,255,255,.07); }
-
-/* The pager: each dot is a 24px tap target around a 6px mark. */
-.fd-dots { display: flex; justify-content: center; gap: 2px; margin-top: -6px; }
-.fd-dots button { width: 24px; height: 24px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
-.fd-dots button > span { display: block; width: 6px; height: 6px; border-radius: var(--r-pill); background: var(--fd-hairline); transition: width .18s ease, background .18s ease; }
-.fd-dots button[aria-selected="true"] > span { width: 18px; background: var(--fd-ink); }
-.fd-dots button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: -2px; border-radius: var(--r-pill); }
-@media (prefers-reduced-motion: reduce) { .fd-dots button > span { transition: none; } }
-
 /* ─── Atlas hero: the one number a screen is about ────────────────────────
    Display-size, tabular, on the ground with no container. The delta beside it
    is the only place a screen states a direction, so it carries the accent for
@@ -407,9 +367,63 @@ button { font: inherit; }
 .fd-delta.up, .fd-delta.flat { background: var(--fd-wash); color: var(--fd-accent); }
 .fd-delta.down { background: var(--fd-alert-wash); color: var(--fd-alert); }
 
-.fd-weather { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
-.fd-weather b { font-size: 26px; font-weight: 650; letter-spacing: -.03em; color: var(--fd-ink); }
-.fd-weather p { margin: 0; color: var(--fd-soft); font-size: 12px; line-height: 1.5; }
+/* The brief: a short note on the ground, no fill, no border, no shadow — the
+   same treatment every other statement in this layout gets. It replaced a
+   swipeable deck of tinted cards, whose icon/headline/chip/button/footer frame
+   made a reading of your morning look like a dashboard. */
+.fd-note-brief { margin-top: 6px; }
+.fd-note-greet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0; color: var(--fd-ink); font-size: 23px; font-weight: 650; letter-spacing: -.025em; line-height: 1.25; }
+/* The note is written for a moment, so it says which one. */
+.fd-note-time { color: var(--fd-faint); font-size: 13px; font-weight: 550; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.fd-note-line { margin: 13px 0 0; color: var(--fd-soft); font-size: 15px; line-height: 1.65; text-wrap: pretty; }
+.fd-note-line:first-of-type { margin-top: 12px; }
+/* Where the numbers came from, once, under the note instead of on every tile. */
+.fd-note-from { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 16px 0 0; color: var(--fd-faint); font-size: 11.5px; }
+.fd-note-from span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.fd-note-from svg { flex: none; opacity: .75; }
+
+/* The brief's other half: what is due, and the taps that record what happened.
+   It sits under the note as a hairline block, not a card — the Field language
+   has one lifted object per screen and the brief is not it. */
+.rt-check { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--fd-rule); }
+.rt-check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; color: var(--fd-ink); font-size: 14px; font-weight: 650; }
+.rt-check-head b { color: var(--fd-faint); font-size: 12.5px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.rt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rt-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.rt-actions button:first-child { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.rt-actions button:active { opacity: .85; }
+.rt-actions button:disabled { opacity: .55; cursor: wait; }
+.rt-other { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.rt-other input { flex: 1 1 200px; min-width: 0; box-sizing: border-box; min-height: 40px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 13.5px; outline: none; }
+.rt-other input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+/* Once answered the block stops asking and just states what was recorded. */
+.rt-check.settled { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.rt-check.settled .rt-check-head { color: var(--fd-soft); font-weight: 550; }
+.rt-check.settled .rt-check-head b { color: var(--fd-ink); font-weight: 650; }
+.rt-check-tick { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--fd-accent); color: var(--fd-btn-ink); }
+.rt-check .fd-link { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Routine settings: the list of times your day already has. */
+.rt-settings { margin-top: 14px; }
+.rt-list { margin-bottom: 14px; }
+.rt-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--fd-rule); }
+.rt-row:last-child { border-bottom: 0; }
+.rt-row-open { flex: 1; min-width: 0; padding: 13px 2px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.rt-form { display: grid; gap: 13px; margin-top: 4px; }
+.rt-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rt-form .fd-label { margin-top: 2px; }
+.rt-days { display: flex; flex-wrap: wrap; gap: 7px; }
+.rt-days button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.rt-days button.on { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+
+.fd-weather { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+.fd-weather b { flex: none; font-size: 28px; font-weight: 650; letter-spacing: -.03em; color: var(--fd-ink); }
+.fd-weather > div { min-width: 0; }
+.fd-weather p { margin: 0; color: var(--fd-ink); font-size: 13px; line-height: 1.5; }
+/* The readings sit under the line they belong to, spaced rather than strung
+   together with middots, so the row has somewhere to breathe. */
+.fd-weather-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px !important; color: var(--fd-faint) !important; font-size: 11.5px !important; }
+.fd-weather-meta span { white-space: nowrap; }
 .fd-weather-quiet { display: flex; align-items: center; gap: 7px; width: 100%; margin: 22px 0 0; padding: 0; border: 0; background: none; color: var(--fd-faint); font: inherit; font-size: 12px; text-align: left; }
 .fd-weather-quiet svg { flex: 0 0 auto; color: var(--fd-accent); }
 .fd-weather-button { cursor: pointer; }
@@ -555,7 +569,6 @@ button { font: inherit; }
 .field .integrations,
 .field .groww-card,
 .field .rings-card,
-.field .goal-card,
 .field .personal-form,
 .field .gmail-review-card,
 .field .manual-entry,
@@ -659,7 +672,6 @@ button { font: inherit; }
 .field .groww-muted,
 .field .home-city-note,
 .field .gmail-review-message,
-.field .health-goals-hint { color: var(--fd-faint); font-size: 11.5px; line-height: 1.5; }
 .field .gmail-review-message.success { color: var(--fd-accent); }
 
 /* One button shape across the screen: a pill, filled or quiet. */
@@ -1014,15 +1026,6 @@ button { font: inherit; }
 .plan-row small { color: var(--muted); }
 .plan-icon { width: 38px; height: 38px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--sys-surface-2); }
 .feature-icon { margin: 0 auto 12px; width: 56px; height: 56px; border-radius: var(--r-xl); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
-.habit-list, .goal-card { margin-top: 14px; }
-.habit { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.habit:last-child { border-bottom: 0; }
-.habit button { width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid var(--sys-separator); background: var(--sys-surface); }
-.habit button.done { background: var(--accent); color: white; border-color: var(--accent); }
-.habit strong, .goal-card strong { font-size: 12px; }
-.habit p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
-.goal-card { padding: 10px 0; }
-.goal-card span { display: block; color: var(--muted); font-size: 10px; margin: 5px 0 8px; }
 .personal-form { display: grid; gap: 11px; padding: 15px; margin-top: 14px; }
 .personal-form > strong { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .personal-form label, .progress-form label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
@@ -1030,24 +1033,7 @@ button { font: inherit; }
 .personal-form textarea { width: 100%; min-height: 90px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; resize: vertical; }
 .personal-form .finance-button { justify-self: start; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.personal-list { padding: 4px 15px; margin-top: 14px; }
-.goal-item { padding: 13px 0; border-bottom: 1px solid var(--line); }
-.goal-item:last-child { border-bottom: 0; }
-.goal-item-head { display: flex; justify-content: space-between; gap: 10px; }
-.goal-item-head strong { font-size: 12px; }
-.goal-item-head span, .goal-item > small { color: var(--muted); font-size: 10px; }
-.goal-item > small { display: block; margin-top: 4px; }
-.goal-item .progress { height: 6px; background: var(--sys-surface-2); border-radius: var(--r-xs); overflow: hidden; margin: 9px 0; }
-.goal-item .progress i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
-.progress-form { display: flex; align-items: end; gap: 8px; }
-.progress-form label { flex: 1; }
-.progress-form input { min-height: 32px; }
-.habit-add { margin-bottom: 14px; }
-.habit-list { padding: 0 14px; }
-.habit-list .habit { padding: 12px 0; }
-.memory-info { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--card); }
-.memory-info strong { font-size: 12px; }
-.memory-info p, .memory-note p { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.memory-note p { color: var(--muted); font-size: 11px; line-height: 1.5; }
 .memory-list { display: grid; gap: 10px; margin-top: 14px; }
 .memory-note { padding: 14px; margin: 0; }
 .memory-note p { margin: 0 0 10px; white-space: pre-wrap; color: var(--ink); }
@@ -1198,7 +1184,6 @@ button { font: inherit; }
 @media (max-width: 480px) {
   .auth-card { padding-top: 24px; }
 }
-.health-goals-hint { margin: -4px 1px 10px; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .groww-card { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); box-shadow: var(--e2); }
 .groww-head { display: flex; align-items: center; gap: 10px; }
 .groww-head > div:nth-child(2) { flex: 1; min-width: 0; }

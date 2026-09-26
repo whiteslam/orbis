@@ -4,7 +4,6 @@ import { composeFinanceFocus, composeFinanceRows } from './finance.ts';
 import { composeHealthFocus, composeHealthRows } from './health.ts';
 import { composeInvestFocus, composeInvestRows } from './invest.ts';
 import type { FinanceSummary } from '../finance/types.ts';
-import type { GoalsSummary } from '../goals/types.ts';
 import type { StepsSummary } from '../health/types.ts';
 import type { PortfolioAnalysis } from '../invest/analysis.ts';
 
@@ -40,12 +39,11 @@ const steps = (overrides: Partial<StepsSummary> = {}): StepsSummary => ({
   ...overrides,
 });
 
-const goals = (overrides: Partial<GoalsSummary> = {}): GoalsSummary => ({ databaseReady: true, goals: [], habits: [], ...overrides });
 
 const analysis = (overrides: Partial<PortfolioAnalysis> = {}): PortfolioAnalysis => ({
   positions: [], total: 0, invested: 0, allLive: false, livePnl: null, liveInvested: 0,
   byClass: [], largest: null, effectiveHoldings: 0,
-  concentration: 'good', diversification: 'good', mix: 'good',
+  concentration: 'good', diversification: 'good', mix: 'good', dayChange: null,
   ...overrides,
 });
 
@@ -85,33 +83,18 @@ test('finance rows report a daily average only when there is a month to divide',
 
 test('health reads the step trend before asking for another upload', () => {
   const focus = composeHealthFocus({
-    steps: steps({ average30: 6_400, previous30: 8_000, latest: { date: '2026-09-23', steps: 5_100 } }),
-    goals: goals(), documentCount: 0, planCount: 0, libraryState: 'ready',
+    steps: steps({ average30: 6_400, previous30: 8_000, latest: { date: '2026-09-23', steps: 5_100 } }), documentCount: 0, planCount: 0, libraryState: 'ready',
   });
   assert.equal(focus.id, 'steps-falling');
   assert.match(focus.headline, /down 20%/);
 });
 
-test('health asks for a document, then a plan, then reports on goals', () => {
-  const base = { steps: steps(), goals: goals(), libraryState: 'ready' as const };
-  assert.equal(composeHealthFocus({ ...base, documentCount: 0, planCount: 0 }).id, 'upload-document');
-  assert.equal(composeHealthFocus({ ...base, documentCount: 2, planCount: 0 }).id, 'no-plan');
-
-  const withGoal = composeHealthFocus({
-    ...base,
-    goals: goals({ goals: [{ id: '1', title: 'Run 100 km', current: 40, target: 100, unit: 'km', dueDate: '2026-12-01' }] }),
-    documentCount: 2, planCount: 1,
-  });
-  assert.equal(withGoal.id, 'goal-progress');
-  assert.match(withGoal.headline, /is at 40%/);
-});
-
 test('health rows distinguish missing step data from a zero day', () => {
-  const rows = composeHealthRows({ steps: steps(), goals: goals(), documentCount: 0, planCount: 0 });
+  const rows = composeHealthRows({ steps: steps(), documentCount: 0, planCount: 0 });
   assert.equal(rows.find((row) => row.label === 'Steps today')?.value, 'Not imported');
   assert.equal(rows.find((row) => row.label === '30 days vs before')?.empty, true);
 
-  const filled = composeHealthRows({ steps: steps({ latest: { date: '2026-09-24', steps: 0 }, average30: 9_000, previous30: 8_000 }), goals: goals(), documentCount: 1, planCount: 1 });
+  const filled = composeHealthRows({ steps: steps({ latest: { date: '2026-09-24', steps: 0 }, average30: 9_000, previous30: 8_000 }), documentCount: 1, planCount: 1 });
   assert.equal(filled.find((row) => row.label === 'Steps today')?.value, '0');
   assert.equal(filled.find((row) => row.label === '30 days vs before')?.value, '+13%');
 });
@@ -141,7 +124,7 @@ test('invest names the account that failed rather than blaming the portfolio', (
 test('invest warns about concentration before reporting the gain', () => {
   const focus = composeInvestFocus({
     analysis: analysis({
-      positions: [{ key: 'a', name: 'HDFC Bank', broker: 'groww', assetClass: 'Stocks', value: 300_000, invested: 250_000, live: true }],
+      positions: [{ key: 'a', name: 'HDFC Bank', broker: 'groww', assetClass: 'Stocks', value: 300_000, invested: 250_000, live: true, dayChangePercent: null }],
       total: 500_000, invested: 400_000, livePnl: 50_000, liveInvested: 250_000, effectiveHoldings: 1.8,
       largest: { name: 'HDFC Bank', share: 0.6 },
     }),
@@ -155,7 +138,7 @@ test('invest warns about concentration before reporting the gain', () => {
 test('invest says plainly when the total is only what the holdings cost', () => {
   const focus = composeInvestFocus({
     analysis: analysis({
-      positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 100_000, invested: 100_000, live: false }],
+      positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 100_000, invested: 100_000, live: false, dayChangePercent: null }],
       total: 100_000, invested: 100_000, byClass: [{ assetClass: 'Gold & silver', value: 100_000, share: 1 }], largest: { name: 'GOLDBEES', share: 1 },
     }),
     loaded: true, failures: [], connected: true,
@@ -165,7 +148,7 @@ test('invest says plainly when the total is only what the holdings cost', () => 
 
   const spread = composeInvestFocus({
     analysis: analysis({
-      positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 60_000, invested: 60_000, live: false }],
+      positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 60_000, invested: 60_000, live: false, dayChangePercent: null }],
       total: 200_000, invested: 200_000, byClass: [{ assetClass: 'Gold & silver', value: 60_000, share: 0.3 }], largest: { name: 'GOLDBEES', share: 0.3 },
     }),
     loaded: true, failures: [], connected: true,

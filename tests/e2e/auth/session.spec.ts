@@ -3,7 +3,7 @@ import { expect, openApp, test } from '../support/fixtures';
 
 test('home loads for a signed-in user without console errors', async ({ page, consoleErrors }) => {
   await openApp(page);
-  await expect(page.getByRole('navigation').getByRole('button', { name: 'Finance', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation').getByRole('button', { name: 'Expense', exact: true })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
 

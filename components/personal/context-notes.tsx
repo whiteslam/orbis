@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addContextNoteAction, deleteContextNoteAction } from '@/app/personal/actions';
-import type { ContextNote } from '@/lib/goals/memory';
+import type { ContextNote } from '@/lib/memory/notes';
 import { safeAction } from '@/lib/client/safe-action';
 
 /** Notes shown before "N more notes". */

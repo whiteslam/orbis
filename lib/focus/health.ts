@@ -1,7 +1,6 @@
 // What the Health tab leads with. Health data is sparse by nature, so the order
 // favours a real reading of the numbers over another prompt to upload something.
 
-import type { GoalsSummary } from '@/lib/goals/types';
 import type { StepsSummary } from '@/lib/health/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
 // Relative, so the unit tests can load this module under plain Node.
@@ -9,7 +8,6 @@ import { count, percent, shortDate, whole } from './types.ts';
 
 export type HealthFocusInput = {
   steps: StepsSummary;
-  goals: GoalsSummary;
   documentCount: number;
   planCount: number;
   libraryState: 'ready' | 'setup' | 'unavailable';
@@ -22,12 +20,12 @@ function stepTrend(steps: StepsSummary) {
   return Math.round(((steps.average30 - steps.previous30) / steps.previous30) * 100);
 }
 
-export function composeHealthFocus({ steps, goals, documentCount, planCount, libraryState, savedAdviceAt }: HealthFocusInput): Focus {
+export function composeHealthFocus({ steps, documentCount, planCount, libraryState, savedAdviceAt }: HealthFocusInput): Focus {
   if (libraryState === 'setup') {
     return {
       id: 'health-setup',
       headline: 'Health documents are waiting on a database migration.',
-      body: 'Apply the health documents and plans migration in Supabase to save files, build plans and keep advice. Step data and goals work without it.',
+      body: 'Apply the health documents and plans migration in Supabase to save files, build plans and keep advice. Step data still works without it.',
       action: null,
     };
   }
@@ -35,7 +33,7 @@ export function composeHealthFocus({ steps, goals, documentCount, planCount, lib
     return {
       id: 'health-unavailable',
       headline: 'Your health library could not be loaded.',
-      body: 'Saved documents and plans are temporarily out of reach. Steps and goals below are unaffected, and refreshing the app tries again.',
+      body: 'Saved documents and plans are temporarily out of reach. Steps below are unaffected, and refreshing the app tries again.',
       action: null,
     };
   }
@@ -68,18 +66,6 @@ export function composeHealthFocus({ steps, goals, documentCount, planCount, lib
     };
   }
 
-  const openGoals = goals.goals.filter((goal) => goal.target > 0 && goal.current < goal.target);
-  if (openGoals.length > 0) {
-    const goal = openGoals.slice().sort((left, right) => (left.dueDate ?? '9999').localeCompare(right.dueDate ?? '9999'))[0];
-    const progress = percent(goal.current / goal.target);
-    return {
-      id: 'goal-progress',
-      headline: `“${goal.title}” is at ${progress}.`,
-      body: `${goal.target - goal.current}${goal.unit ? ` ${goal.unit}` : ''} to go${goal.dueDate ? `, with ${shortDate(goal.dueDate)} as the date you set` : ''}. Orbis shapes every plan and answer on this screen around it while it is open.`,
-      action: null,
-    };
-  }
-
   return {
     id: 'health-settled',
     headline: `${count(documentCount, 'document')} and ${count(planCount, 'plan')} saved.`,
@@ -90,7 +76,7 @@ export function composeHealthFocus({ steps, goals, documentCount, planCount, lib
   };
 }
 
-export function composeHealthRows({ steps, goals, documentCount, planCount }: Pick<HealthFocusInput, 'steps' | 'goals' | 'documentCount' | 'planCount'>): QuietRow[] {
+export function composeHealthRows({ steps, documentCount, planCount }: Pick<HealthFocusInput, 'steps' | 'documentCount' | 'planCount'>): QuietRow[] {
   const trend = stepTrend(steps);
   return [
     { label: 'Steps today', value: steps.latest ? whole(steps.latest.steps) : 'Not imported', empty: !steps.latest, target: null },
@@ -99,6 +85,5 @@ export function composeHealthRows({ steps, goals, documentCount, planCount }: Pi
     { label: 'Best day', value: steps.best ? `${whole(steps.best.steps)} · ${shortDate(steps.best.date)}` : 'No data', empty: !steps.best, target: null },
     { label: 'Documents', value: documentCount ? count(documentCount, 'file') : 'None yet', empty: documentCount === 0, target: null },
     { label: 'Plans', value: planCount ? String(planCount) : 'None yet', empty: planCount === 0, target: null },
-    { label: 'Goals', value: goals.goals.length ? String(goals.goals.length) : 'None yet', empty: goals.goals.length === 0, target: null },
   ];
 }

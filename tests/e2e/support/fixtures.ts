@@ -1,18 +1,36 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { readUsers, TEST_PIN, type TestUser } from './env';
 
-export type Tab = 'Home' | 'Finance' | 'Health' | 'Invest' | 'Profile';
+export type Tab = 'Home' | 'Expense' | 'Health' | 'Invest' | 'Profile';
 
-// Opens Orbis as a signed-in user, entering the device PIN if the app lock is showing.
+/**
+ * Opens Orbis as a signed-in user, clearing the app lock if it is showing.
+ *
+ * The lock expires after APP_LOCK_IDLE_MS, which is five minutes, and a full
+ * run takes longer than that. Every test past the five minute mark therefore
+ * meets a lock screen, and which one depends on whether the device PIN is
+ * active: this handles both, because only handling the PIN meant the back half
+ * of the suite failed on a screen it could not read.
+ */
 export async function openApp(page: Page, path = '/') {
   await page.goto(path);
   const nav = page.getByRole('navigation');
   const pin = page.getByLabel('Enter your PIN');
-  await expect(nav.or(pin)).toBeVisible({ timeout: 30_000 });
+  const password = page.getByLabel('Password', { exact: true });
+  await expect(nav.or(pin).or(password)).toBeVisible({ timeout: 30_000 });
+
   if (await pin.isVisible()) {
     await pin.fill(TEST_PIN);
-    await expect(nav).toBeVisible({ timeout: 30_000 });
+  } else if (await password.isVisible()) {
+    // The screen names who is signed in, which is how we know whose password to use.
+    const signedInAs = await page.getByText(/@example\.com/).first().innerText();
+    const users = readUsers();
+    const user = [users.a, users.b].find((candidate) => signedInAs.includes(candidate.email));
+    if (!user) throw new Error(`Locked as an unknown user: ${signedInAs}`);
+    await password.fill(user.password);
+    await page.getByRole('button', { name: 'Unlock' }).click();
   }
+  await expect(nav).toBeVisible({ timeout: 30_000 });
 }
 
 export async function openTab(page: Page, tab: Tab) {

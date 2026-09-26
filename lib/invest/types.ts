@@ -12,6 +12,8 @@ export type BrokerHolding = {
   quantity: number;
   averagePrice: number;
   lastPrice: number | null;
+  /** Today's move on this holding, where the price source reports one. */
+  dayChangePercent: number | null;
   priceSource: PriceSource | null;
   priceAsOf: string | null;
   priceStale: boolean;

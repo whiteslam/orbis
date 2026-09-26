@@ -10,9 +10,14 @@ import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
 import { HomeCityEditor, Integrations } from '@/components/personal/integrations';
 import { Journal } from '@/components/personal/journal';
 import { NotificationSettings } from '@/components/personal/notification-settings';
+import { HomeBriefSetting } from '@/components/personal/home-brief-setting';
+import { RoutineSettings } from '@/components/personal/routine-settings';
+import type { RoutinesSummary } from '@/lib/routines/types';
+import type { AiPreferences } from '@/lib/ai/preferences';
 import { ProfileEditor } from '@/components/personal/profile-editor';
 import { composeProfileRows, composeProfileSummary, initialOf, type ProfileInput } from '@/lib/focus/profile';
-import type { ContextNote } from '@/lib/goals/memory';
+import { BROKERS } from '@/lib/invest/brokers';
+import type { ContextNote } from '@/lib/memory/notes';
 import type { StepsSummary } from '@/lib/health/types';
 import type { JournalSummary } from '@/lib/journal/types';
 import type { NotificationSettings as NotificationSettingsData } from '@/lib/notifications/preferences';
@@ -64,7 +69,10 @@ function identityChips(connections: AppConnections, stepsSummary: StepsSummary, 
   const googleOk = Boolean(google) && google?.status !== 'reconnect_required';
   if (googleOk && google?.gmail) chips.push({ key: 'gmail', label: 'Gmail on', on: true });
   if (googleOk && google?.calendar) chips.push({ key: 'calendar', label: 'Calendar on', on: true });
-  if (connections.groww?.status === 'connected') chips.push({ key: 'groww', label: 'Groww on', on: true });
+  // One chip per linked broker, from the registry rather than a named one.
+  for (const broker of BROKERS) {
+    if (connections.brokers[broker.id]?.status === 'connected') chips.push({ key: broker.id, label: `${broker.name} on`, on: true });
+  }
   if (stepsSummary.lastImport) chips.push({ key: 'health', label: 'Apple Health on', on: true });
   if (noteCount) chips.push({ key: 'notes', label: `${noteCount} note${noteCount === 1 ? '' : 's'}`, on: false });
   return chips;
@@ -108,6 +116,8 @@ export function ProfileScreen(props: {
   contextNotes: { ready: boolean; notes: ContextNote[] };
   journal: JournalSummary;
   notificationSettings: NotificationSettingsData;
+  aiPreferences: AiPreferences;
+  routines: RoutinesSummary;
   appConnections: AppConnections;
   homeLocation: HomeLocation;
   integrations: Integration[];
@@ -173,6 +183,12 @@ export function ProfileScreen(props: {
         </Group>
         <Group title="Notifications">
           <NotificationSettings settings={props.notificationSettings} />
+        </Group>
+        <Group title="Your day" note="The times your day already has. The brief leads with whatever is due, and records what you say happened to it.">
+          <RoutineSettings summary={props.routines} />
+        </Group>
+        <Group title="AI brief" note="Home opens with a short brief. Orbis writes it from your own data without sending anything; letting a model write it instead means that data leaves your device.">
+          <HomeBriefSetting preferences={props.aiPreferences} />
         </Group>
         {props.homeLocation.state !== 'setup' && (
           <Group title="Location">

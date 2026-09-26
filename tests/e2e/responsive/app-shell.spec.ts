@@ -15,11 +15,16 @@ for (const viewport of PHONES) {
     await openApp(page);
     // Regression: tab switches and focusing a field used to scroll the hidden
     // .stage wrapper, leaving the whole app (and bottom nav) shifted up ~100px.
-    for (const tab of ['Finance', 'Health', 'Invest', 'Profile', 'Home'] as const) await openTab(page, tab);
-    await openTab(page, 'Invest');
-    await page.getByLabel(/Monthly SIP/).focus();
+    for (const tab of ['Expense', 'Health', 'Invest', 'Profile', 'Home'] as const) await openTab(page, tab);
+    // Any field will do: the regression was that focusing one scrolled the
+    // hidden .stage wrapper. This used the growth projector's SIP input, which
+    // no longer exists, so it uses the manual expense amount instead.
+    await openTab(page, 'Expense');
+    await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
+    const field = page.getByLabel('Amount');
+    await field.focus();
     await page.waitForTimeout(600);
-    await page.getByLabel(/Monthly SIP/).blur();
+    await field.blur();
     const metrics = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();
       return {
@@ -32,7 +37,11 @@ for (const viewport of PHONES) {
     });
     console.log(JSON.stringify({ viewport, ...metrics }));
     expect(metrics.phone).toBeCloseTo(metrics.innerHeight, 0);
-    expect(metrics.navBottom).toBeCloseTo(metrics.innerHeight, 0);
+    // The nav is a floating pill inset from the edge, so it is never flush with
+    // it. What this guards against is the app being scrolled up wholesale, which
+    // moved it by about 100px, so the check is that the gap stays small.
+    expect(metrics.innerHeight! - metrics.navBottom!).toBeGreaterThanOrEqual(0);
+    expect(metrics.innerHeight! - metrics.navBottom!).toBeLessThan(24);
     expect(metrics.stageScrollTop).toBe(0);
     await context.close();
   });
@@ -47,6 +56,8 @@ test('landscape phone uses the full-screen app, not the desktop phone frame', as
     navBottom: document.querySelector('.bottom-nav')!.getBoundingClientRect().bottom,
   }));
   expect(phoneWidth).toBeCloseTo(844, 0);
-  expect(navBottom).toBeCloseTo(390, 0);
+  // Same floating pill as in portrait: near the bottom edge, not flush with it.
+  expect(390 - navBottom).toBeGreaterThanOrEqual(0);
+  expect(390 - navBottom).toBeLessThan(24);
   await context.close();
 });

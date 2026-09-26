@@ -108,7 +108,9 @@ export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promis
   const growwPrices = holdings.length ? await loadPrices(holdings.map((holding) => holding.symbol), token) : null;
   const priced: BrokerHolding[] = holdings.map((holding) => {
     const lastPrice = growwPrices?.get(holding.symbol) ?? null;
-    return { ...holding, lastPrice, priceSource: lastPrice === null ? null : 'groww', priceAsOf: lastPrice === null ? null : new Date().toISOString(), priceStale: false };
+    // Groww's LTP feed carries no previous close, so today's move stays unknown
+    // until a market provider fills the price below.
+    return { ...holding, lastPrice, dayChangePercent: null, priceSource: lastPrice === null ? null : 'groww', priceAsOf: lastPrice === null ? null : new Date().toISOString(), priceStale: false };
   });
 
   // Fallbacks when Groww has no live price: AMFI NAV for fund/ETF units (ISIN INF…),
@@ -125,6 +127,7 @@ export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promis
       const price = holding.isin?.startsWith('INF') ? navs.get(holding.isin.toUpperCase()) : quotes.get(`${holding.symbol}.BSE`.toUpperCase());
       if (!price) continue;
       holding.lastPrice = price.price;
+      holding.dayChangePercent = price.changePercent;
       holding.priceSource = price.source === 'amfi' ? 'amfi' : 'alpha_vantage';
       holding.priceAsOf = price.asOf;
       holding.priceStale = price.stale;

@@ -16,6 +16,8 @@ export type Position = {
   value: number;
   invested: number;
   live: boolean;
+  /** Today's move, where the price source reports one. */
+  dayChangePercent: number | null;
 };
 
 export type Status = 'good' | 'warning' | 'critical';
@@ -33,6 +35,14 @@ export type PortfolioAnalysis = {
   concentration: Status;
   diversification: Status;
   mix: Status;
+  /**
+   * Today's move, over the positions whose price source reports one.
+   *
+   * `coverage` is the share of the portfolio those positions represent, so a
+   * figure drawn from a quarter of the holdings is never shown as the whole
+   * portfolio's day. Null when nothing reports a day change at all.
+   */
+  dayChange: { value: number; percent: number; coverage: number } | null;
 };
 
 // Fixed order, so each asset class keeps its colour wherever it appears.
@@ -58,6 +68,7 @@ function toPosition(broker: BrokerId, holding: BrokerHolding): Position {
     value: holding.lastPrice === null ? cost : holding.quantity * holding.lastPrice,
     invested: cost,
     live: holding.lastPrice !== null,
+    dayChangePercent: holding.lastPrice === null ? null : holding.dayChangePercent,
   };
 }
 
@@ -84,6 +95,17 @@ export function analysePortfolio(portfolios: BrokerPortfolio[]): PortfolioAnalys
   const pnlPositions = positions.filter((position) => position.live);
   const liveInvested = pnlPositions.reduce((sum, position) => sum + position.invested, 0);
 
+  // Only AMFI NAV and exchange quotes carry a previous close; Groww's own LTP
+  // does not. So the day is measured over the positions that report one, and
+  // carries how much of the portfolio that actually was.
+  const moved = positions.filter((position) => position.dayChangePercent !== null);
+  const movedValue = moved.reduce((sum, position) => sum + position.value, 0);
+  const dayValue = moved.reduce((sum, position) => {
+    const percent = position.dayChangePercent ?? 0;
+    // value already includes today's move, so the opening value is value / (1 + pct).
+    return sum + (position.value - position.value / (1 + percent / 100));
+  }, 0);
+
   return {
     positions,
     total,
@@ -97,5 +119,8 @@ export function analysePortfolio(portfolios: BrokerPortfolio[]): PortfolioAnalys
     concentration: !largest || largest.share <= 0.25 ? 'good' : largest.share <= 0.4 ? 'warning' : 'critical',
     diversification: effectiveHoldings >= 8 ? 'good' : effectiveHoldings >= 4 ? 'warning' : 'critical',
     mix: byClass.length >= 3 ? 'good' : byClass.length === 2 ? 'warning' : 'critical',
+    dayChange: moved.length && movedValue > 0
+      ? { value: dayValue, percent: (dayValue / (movedValue - dayValue)) * 100, coverage: total > 0 ? movedValue / total : 0 }
+      : null,
   };
 }
