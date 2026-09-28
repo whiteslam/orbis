@@ -48,3 +48,16 @@ export function isStagedPath(userId: string, path: unknown): path is string {
   if (typeof path !== 'string' || !path.startsWith(`${userId}/`)) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(xlsx|pdf)$/.test(path.slice(userId.length + 1));
 }
+
+/**
+ * The `{ path, name }` an action receives after a browser upload, or null when
+ * the path isn't one this user's signing could have produced. Actions check this
+ * before charging a rate-limit credit or claiming the path, so a forged path
+ * costs nothing and touches nothing.
+ */
+export function stagedInput(userId: string, input: unknown): { path: string; name: string } | null {
+  if (!input || typeof input !== 'object') return null;
+  const { path, name } = input as { path?: unknown; name?: unknown };
+  if (!isStagedPath(userId, path)) return null;
+  return { path, name: typeof name === 'string' ? name : '' };
+}

@@ -11,7 +11,8 @@ import { stepContext } from '@/lib/health/steps-stats';
 import { parseWorkbook } from '@/lib/workbook/parse';
 import { userMessage } from '@/lib/errors';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
-import { createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
+import { ALREADY_CLAIMED_MESSAGE, claimStaged, createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
+import { stagedInput } from '@/lib/storage/upload-rules';
 import type { ParsedWorkbookPreview, WorkbookActionResult, WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
 const MAX_PREVIEW_BYTES = 24 * 1024;
@@ -146,24 +147,32 @@ export async function signWorkbookUploadAction(file: { name: string; type: strin
 
 /**
  * Step two: reads the uploaded file from Storage (never from the browser), builds
- * the signed preview, and deletes the file whatever happens — it is never kept.
+ * the signed preview, and deletes the file — it is never kept. The path is claimed
+ * once, atomically, so one upload is parsed at most once.
  */
 export async function parseWorkbookAction(input: { path: string; name: string }): Promise<WorkbookActionResult<WorkbookPreview>> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before uploading a workbook.' };
-  const path = input && typeof input === 'object' ? input.path : undefined;
-  const name = input && typeof input === 'object' ? input.name : undefined;
+  // A forged or malformed path is refused before it can cost a credit.
+  const staged = stagedInput(userId, input);
+  if (!staged) return { success: false, message: 'That upload could not be found. Choose the file again.' };
+  try {
+    if (!(await claimStaged(userId, staged.path))) return { success: false, message: ALREADY_CLAIMED_MESSAGE };
+  } catch (error) {
+    return { success: false, message: userMessage(error, 'Uploads aren’t available right now. Try again in a little while.') };
+  }
 
+  // Only the caller that won the claim reaches here, so only it deletes the staged file.
   try {
     const refused = await rateLimitRefusal(userId, 'parse');
     if (refused) return { success: false, message: refused };
-    const file = await downloadOwned(userId, 'workbook', path, name);
+    const file = await downloadOwned(userId, 'workbook', staged.path, staged.name);
     const parsed = await parseWorkbook(file);
     return { success: true, data: withSignature(userId, parsed) };
   } catch (error) {
     return { success: false, message: userMessage(error, 'This workbook could not be read.') };
   } finally {
-    await removeStaged(userId, 'workbook', path);
+    await removeStaged(userId, 'workbook', staged.path);
   }
 }
 

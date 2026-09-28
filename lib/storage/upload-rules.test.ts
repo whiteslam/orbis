@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { MAX_UPLOAD_BYTES, isStagedPath, uploadProblem } from './upload-rules';
+import { MAX_UPLOAD_BYTES, isStagedPath, stagedInput, uploadProblem } from './upload-rules';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const user = '11111111-2222-3333-4444-555555555555';
@@ -27,4 +27,13 @@ test('only a server-shaped path under this user counts as staged', () => {
   assert.equal(isStagedPath(user, `${user}/../x/${object}.pdf`), false);
   assert.equal(isStagedPath(user, `${user}/${object}.exe`), false);
   assert.equal(isStagedPath(user, 42), false);
+});
+
+test('an action input is accepted only for a staged path of this user', () => {
+  assert.deepEqual(stagedInput(user, { path: `${user}/${object}.xlsx`, name: 'Book.xlsx' }), { path: `${user}/${object}.xlsx`, name: 'Book.xlsx' });
+  assert.deepEqual(stagedInput(user, { path: `${user}/${object}.pdf` }), { path: `${user}/${object}.pdf`, name: '' });
+  assert.equal(stagedInput(user, { path: `99999999-2222-3333-4444-555555555555/${object}.pdf`, name: 'x.pdf' }), null);
+  assert.equal(stagedInput(user, { path: `${user}/other.pdf`, name: 'x.pdf' }), null);
+  assert.equal(stagedInput(user, null), null);
+  assert.equal(stagedInput(user, `${user}/${object}.pdf`), null);
 });

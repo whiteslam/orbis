@@ -8,7 +8,8 @@ import { deleteHealthDocument, signedDownloadUrl, storeHealthDocument } from '@/
 import type { HealthPlan, PlanAnswer, PlanQuestion } from '@/lib/health-docs/types';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
-import { createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
+import { ALREADY_CLAIMED_MESSAGE, claimStaged, createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
+import { stagedInput } from '@/lib/storage/upload-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { parseDocument } from '@/lib/workbook/parse';
@@ -88,14 +89,29 @@ export async function signHealthDocumentUploadAction(file: { name: string; type:
   }
 }
 
-/** Step two: reads the file the browser uploaded, indexes it, and removes the staged copy. */
+/**
+ * Step two: reads the file the browser uploaded, indexes it, and removes the staged
+ * copy. The path is claimed once, atomically, before anything is charged or read,
+ * so concurrent or repeated calls for one upload index it at most once.
+ */
 export async function uploadHealthDocumentAction(input: { path: string; name: string }): Promise<Result<{ id: string; chunkCount: number }>> {
   const auth = await authenticatedUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };
-  const path = input && typeof input === 'object' ? input.path : undefined;
-  const name = input && typeof input === 'object' ? input.name : undefined;
-
+  // A forged or malformed path is refused before it can cost a credit.
+  const staged = stagedInput(auth.userId, input);
+  if (!staged) return { success: false, message: 'That upload could not be found. Choose the file again.' };
   try {
+    if (!(await claimStaged(auth.userId, staged.path))) return { success: false, message: ALREADY_CLAIMED_MESSAGE };
+  } catch (error) {
+    return { success: false, message: userMessage(error, 'Uploads aren’t available right now. Try again in a little while.') };
+  }
+
+  // Only the caller that won the claim reaches here, so only it deletes the staged file.
+  const { path, name } = staged;
+  try {
+    // Indexing (parse plus embeddings) is the costly step, so it is charged here too.
+    const refused = await rateLimitRefusal(auth.userId, 'parse');
+    if (refused) return { success: false, message: refused };
     // Checked again here: a token signed earlier must not carry anyone past the cap.
     const count = await documentCount(auth.userId);
     if (count === null) return { success: false, message: 'Uploads aren’t available right now. Try again in a little while.' };
