@@ -1,4 +1,4 @@
-import { getAuthenticatedUserId } from '@/lib/gmail/oauth';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { friendlyProviderMessage } from '@/lib/providers/core';
 import { getRates, isSupportedCurrency } from '@/lib/providers/currency';
 

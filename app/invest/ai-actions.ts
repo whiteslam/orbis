@@ -8,7 +8,7 @@ import { brokerMeta } from '@/lib/invest/brokers';
 import { loadLivePortfolio } from '@/lib/invest/live';
 import type { PortfolioAdvice } from '@/lib/invest/types';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { claimsEmail, signedInSession } from '@/lib/auth/session';
 import { APP_LOCK_MESSAGE, isAppUnlocked } from '@/lib/security/app-lock';
 
 const DAILY_AI_LIMIT = 5;
@@ -43,17 +43,17 @@ function parsePortfolioAdvice(text: string): PortfolioAdvice | null {
 }
 
 export async function generatePortfolioAdviceAction(value: unknown): Promise<AdviceResult> {
-  const supabase = await createClient();
-  const { data: claims, error: claimsError } = await supabase.auth.getClaims();
-  const userId = claims?.claims?.sub;
-  if (claimsError || typeof userId !== 'string') return { success: false, message: 'Sign in again to request suggestions.' };
-  if (!(await isAppUnlocked(claims?.claims))) return { success: false, message: APP_LOCK_MESSAGE };
+  // Signed out and locked get different messages, so the lock is checked here.
+  const session = await signedInSession();
+  if (!session) return { success: false, message: 'Sign in again to request suggestions.' };
+  if (!(await isAppUnlocked(session.claims))) return { success: false, message: APP_LOCK_MESSAGE };
+  const { userId } = session;
   if (!value || typeof value !== 'object' || (value as { consented?: unknown }).consented !== true) {
     return { success: false, message: 'Confirm what you want to share before requesting suggestions.' };
   }
 
   // Rebuild the portfolio on the server; never trust holdings sent by the page.
-  const email = typeof claims?.claims?.email === 'string' ? claims.claims.email.toLowerCase() : null;
+  const email = claimsEmail(session.claims);
   const live = await loadLivePortfolio(userId, email);
   const failed = live.brokers.find((broker) => broker.state === 'error');
   if (failed) return { success: false, message: failed.message ?? `${brokerMeta(failed.broker).name} could not be reached. Try again shortly.` };
@@ -85,7 +85,10 @@ export async function generatePortfolioAdviceAction(value: unknown): Promise<Adv
   try {
     admin = createAdminClient();
     const { data: allowed, error } = await admin.rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_AI_LIMIT });
-    if (error) return { success: false, message: 'AI usage limits are not set up yet. Apply the workbook usage migration in Supabase.' };
+    if (error) {
+      console.error('consume_workbook_ai_request failed', error);
+      return { success: false, message: 'Suggestions aren’t available right now. Try again later.' };
+    }
     if (!allowed) return { success: false, message: `You have reached today’s limit of ${DAILY_AI_LIMIT} AI requests. Try again tomorrow.` };
   } catch {
     return { success: false, message: 'AI usage limits are not available right now. Try again later.' };

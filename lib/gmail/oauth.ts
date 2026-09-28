@@ -2,8 +2,6 @@ import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { signState, verifyState } from '@/lib/security/oauth-state';
-import { createClient } from '@/lib/supabase/server';
-import { isAppUnlocked } from '@/lib/security/app-lock';
 import { encryptRefreshToken } from '@/lib/gmail/crypto';
 import { getGmailConfig } from '@/lib/gmail/config';
 
@@ -24,20 +22,8 @@ export class GoogleOAuthError extends Error {
   }
 }
 
-export async function getAuthenticatedUserId() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-
-  if (error || typeof userId !== 'string') {
-    return null;
-  }
-
-  // A locked Orbis behaves as signed out for data access until the user unlocks.
-  if (!(await isAppUnlocked(data?.claims))) return null;
-
-  return userId;
-}
+// Moved to lib/auth/session.ts; re-exported so existing imports keep working.
+export { getAuthenticatedUserId } from '@/lib/auth/session';
 
 // State signing lives in lib/security/oauth-state.ts, shared with Zerodha.
 export function createSignedGmailState(userId: string) {

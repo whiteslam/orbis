@@ -7,6 +7,8 @@ import { CALENDAR_SCOPE, GMAIL_SCOPE } from '@/lib/gmail/oauth';
 import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { ProviderId } from '@/lib/providers/core';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isMissingTable } from '@/lib/supabase/errors';
+import { CONNECTION_UNAVAILABLE } from '@/lib/errors';
 
 export type IntegrationState = 'connected' | 'idle' | 'not_configured' | 'attention' | 'degraded';
 
@@ -27,14 +29,13 @@ const PROVIDERS: Array<{ id: ProviderId; label: string; purpose: string; key?: s
   { id: 'frankfurter', label: 'Currency', purpose: 'Frankfurter · ECB exchange rates' },
   { id: 'alpha_vantage', label: 'Stock prices', purpose: 'Alpha Vantage · BSE and global quotes', key: 'ALPHA_VANTAGE_API_KEY', limit: 20 },
   { id: 'amfi', label: 'Fund & ETF prices', purpose: 'AMFI · daily NAVs' },
-  { id: 'coingecko', label: 'Crypto prices', purpose: 'CoinGecko · INR prices', key: 'COINGECKO_API_KEY', limit: 300 },
 ];
 
 function providerState(row: StatusRow | undefined): Pick<Integration, 'state' | 'detail' | 'lastSyncAt'> {
   if (!row) return { state: 'idle', detail: 'Ready, not used yet', lastSyncAt: null };
   const failing = row.last_error_at && (!row.last_success_at || row.last_error_at > row.last_success_at);
   if (failing) {
-    if (row.last_error_kind === 'auth') return { state: 'attention', detail: 'API key was rejected', lastSyncAt: row.last_success_at };
+    if (row.last_error_kind === 'auth') return { state: 'attention', detail: 'Not available right now', lastSyncAt: row.last_success_at };
     if (row.last_error_kind === 'rate_limited') return { state: 'degraded', detail: 'Daily limit reached, using saved data', lastSyncAt: row.last_success_at };
     return { state: 'degraded', detail: 'Temporarily unavailable, using saved data', lastSyncAt: row.last_success_at };
   }
@@ -81,18 +82,21 @@ export async function getAppConnections(userId: string, email: string | null): P
         lastSyncAt: google.data.last_sync_at,
       };
     }
-    const missingTable = (error: { code?: string } | null) => Boolean(error && ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? ''));
 
     if (groww.data) result.brokers.groww = { id: 'groww', status: groww.data.status, lastSyncAt: groww.data.last_sync_at, source: 'account' };
-    else if (missingTable(groww.error)) result.brokerSetupMessages.groww = 'Apply the Groww connections migration in Supabase to connect Groww.';
+    else if (isMissingTable(groww.error)) {
+      console.error('groww_connections is missing', groww.error);
+      result.brokerSetupMessages.groww = CONNECTION_UNAVAILABLE;
+    }
 
     // A Zerodha session that has run out reads as needing a reconnect, not as
     // absent: Kite ends every session overnight, by design.
     if (zerodha.data) {
       const expired = zerodha.data.status === 'reconnect_required' || new Date(zerodha.data.expires_at).getTime() <= Date.now();
       result.brokers.zerodha = { id: 'zerodha', status: expired ? 'reconnect_required' : 'connected', lastSyncAt: zerodha.data.last_sync_at, source: 'account' };
-    } else if (missingTable(zerodha.error)) {
-      result.brokerSetupMessages.zerodha = 'Apply the Zerodha connections migration in Supabase to connect Zerodha.';
+    } else if (isMissingTable(zerodha.error)) {
+      console.error('zerodha_connections is missing', zerodha.error);
+      result.brokerSetupMessages.zerodha = CONNECTION_UNAVAILABLE;
     }
   } catch {
     // Show everything as not connected.
@@ -100,11 +104,14 @@ export async function getAppConnections(userId: string, email: string | null): P
   if (!result.brokers.groww && growwConfigured() && growwOwnerEmail() && email === growwOwnerEmail()) {
     result.brokers.groww = { id: 'groww', status: 'connected', lastSyncAt: null, source: 'server' };
   }
-  if (!envZerodhaCredentials()) result.brokerSetupMessages.zerodha = 'Zerodha is not configured on this server. Set ZERODHA_API_KEY and ZERODHA_API_SECRET.';
+  if (!envZerodhaCredentials()) {
+    console.error('Zerodha is not configured: ZERODHA_API_KEY and ZERODHA_API_SECRET are unset.');
+    result.brokerSetupMessages.zerodha = CONNECTION_UNAVAILABLE;
+  }
   if (!credentialEncryptionReady()) {
-    const message = 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).';
-    result.brokerSetupMessages.groww ??= message;
-    result.brokerSetupMessages.zerodha ??= message;
+    console.error('Secure storage is not configured: set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).');
+    result.brokerSetupMessages.groww ??= CONNECTION_UNAVAILABLE;
+    result.brokerSetupMessages.zerodha ??= CONNECTION_UNAVAILABLE;
   }
   return result;
 }
@@ -157,7 +164,7 @@ export async function getIntegrationStatus(userId: string, email: string | null)
     const used = usageRows.find((row) => row.provider === provider.id)?.calls ?? 0;
     const usage = provider.limit ? { used, limit: provider.limit } : null;
     if (provider.key && !process.env[provider.key]?.trim()) {
-      integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, state: 'not_configured', detail: `Add ${provider.key}`, lastSyncAt: null, usage: null });
+      integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, state: 'not_configured', detail: 'Not available right now', lastSyncAt: null, usage: null });
       continue;
     }
     integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, usage, ...providerState(statusRows.find((row) => row.provider === provider.id)) });
@@ -174,7 +181,7 @@ export async function getIntegrationStatus(userId: string, email: string | null)
     label: 'AI',
     purpose: privateAi ? 'Routed to providers that don’t train on your data' : 'No provider that can hold your data',
     state: privateAi ? 'connected' : anyAi ? 'degraded' : 'not_configured',
-    detail: privateAi ? null : anyAi ? 'Add GROQ_API_KEY: the others may train on what they receive' : 'Add GROQ_API_KEY',
+    detail: privateAi ? null : 'Personal features stay off until a private provider is available',
     lastSyncAt: null,
     usage: null,
   });

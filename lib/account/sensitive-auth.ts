@@ -1,14 +1,14 @@
 import 'server-only';
 
 import { sensitiveAuthCheck, type SensitiveRefusal } from '@/lib/account/deletion-plan';
+import { signedInSession, type SignedInSession } from '@/lib/auth/session';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { passwordMatches } from '@/lib/security/verify-password';
-import { createClient } from '@/lib/supabase/server';
 
 const MAX_PASSWORD_LENGTH = 200;
 
 export type SensitiveRequester =
-  | { ok: true; supabase: Awaited<ReturnType<typeof createClient>>; userId: string; email: string; claims: Record<string, unknown> }
+  | { ok: true; supabase: SignedInSession['supabase']; userId: string; email: string; claims: SignedInSession['claims'] }
   | { ok: false; reason: SensitiveRefusal };
 
 /**
@@ -18,10 +18,11 @@ export type SensitiveRequester =
  * password, so a locked device can't be used to test passwords.
  */
 export async function sensitiveRequester(password: unknown): Promise<SensitiveRequester> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-  if (error || !claims || typeof claims.sub !== 'string') return { ok: false, reason: 'signed-out' };
+  // Signed in comes from the shared gate; the lock is checked below, so a
+  // locked device gets its own refusal rather than "signed out".
+  const session = await signedInSession();
+  if (!session) return { ok: false, reason: 'signed-out' };
+  const { supabase, claims } = session;
 
   const email = typeof claims.email === 'string' ? claims.email : '';
   const nowSec = Math.floor(Date.now() / 1000);
@@ -35,5 +36,5 @@ export async function sensitiveRequester(password: unknown): Promise<SensitiveRe
     check = sensitiveAuthCheck({ amr: claims.amr, nowSec, unlocked, passwordVerified: true });
   }
   if (!check.ok) return { ok: false, reason: check.needs };
-  return { ok: true, supabase, userId: claims.sub, email, claims };
+  return { ok: true, supabase, userId: session.userId, email, claims };
 }

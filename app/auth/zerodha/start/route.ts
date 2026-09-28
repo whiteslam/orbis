@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { isAppUnlocked } from '@/lib/security/app-lock';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { OAUTH_STATE_MAX_AGE_SEC, signState } from '@/lib/security/oauth-state';
 import { envZerodhaCredentials, zerodhaLoginUrl, zerodhaStateCookieName } from '@/lib/invest/zerodha';
 
@@ -15,10 +14,8 @@ import { envZerodhaCredentials, zerodhaLoginUrl, zerodhaStateCookieName } from '
  * in a cookie; the callback refuses any return that doesn't carry both.
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 

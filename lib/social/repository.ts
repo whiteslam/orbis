@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { editUnreadies, readyProblem } from '@/lib/social/month';
 import type { NewPost, PostPatch, SocialFormat, SocialPlatform, SocialPost, SocialRevision, SocialStatus } from '@/lib/social/types';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 export const SOCIAL_BUCKET = 'social-media';
 const COLUMNS = 'id,period,title,headline,caption,hashtags,format,platforms,planned_for,status,media_path,media_type,published_at,published_platform,published_link,source,position,updated_at';
@@ -11,8 +12,13 @@ const SIGNED_URL_SECONDS = 60 * 60;
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type HistoryAction = 'created' | 'edited' | 'ai_draft' | 'ready' | 'unready' | 'published' | 'unpublished' | 'moved' | 'deleted';
 
-export const isMissingTable = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
-const SETUP_MESSAGE = 'Apply the social planner migration in Supabase, then try again.';
+const SETUP_MESSAGE = 'Social posts aren’t available right now. Try again later.';
+
+/** The user-facing error for a failed query; the detail goes to the server log. */
+function queryFailed(error: { code?: string }, message: string) {
+  console.error(message, error);
+  return new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : message);
+}
 
 /** An error whose message is safe to show as-is. */
 export class SocialError extends Error {}
@@ -115,7 +121,7 @@ export async function listMonth(userId: string, period: string): Promise<SocialM
 
 async function readPost(supabase: Supabase, userId: string, id: string) {
   const { data, error } = await supabase.from('social_posts').select(COLUMNS).eq('id', id).eq('user_id', userId).maybeSingle();
-  if (error) throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be loaded.');
+  if (error) throw queryFailed(error, 'That post could not be loaded.');
   return data ? toPost(data) : null;
 }
 
@@ -159,7 +165,7 @@ export async function insertPost(userId: string, input: NewPost, action: 'create
       const existing = await readPost(supabase, userId, input.id);
       if (existing) return (await withMedia(supabase, [existing]))[0];
     }
-    throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be saved.');
+    throw queryFailed(error, 'That post could not be saved.');
   }
   const post = toPost(data);
   await record(supabase, userId, post, action, null, post);
@@ -217,7 +223,7 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
   if (error) {
     // A check failed: either the day is outside the month, or the post changed in another tab so this edit would leave a ready post incomplete.
     if (error.code === '23514') throw new SocialError(error.message.includes('social_posts_date_in_period') ? 'Pick a day inside the post’s month.' : 'This post changed somewhere else. Refresh and try again.');
-    throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be saved.');
+    throw queryFailed(error, 'That post could not be saved.');
   }
   if (!data) throw new SocialError('This post changed somewhere else. Refresh and try again.');
   const after = toPost(data);
@@ -272,7 +278,7 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
       const now = await readPost(supabase, userId, id);
       throw new SocialError((now && readyProblem(now)) || 'This post is not complete yet. Refresh and try again.');
     }
-    throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be updated.');
+    throw queryFailed(error, 'That post could not be updated.');
   }
   if (!data) {
     // Someone (another tab, a second tap) got there first. If it already has the status asked for, that is success.
@@ -304,7 +310,7 @@ export async function listHistory(userId: string, id: string, limit = 30): Promi
     .eq('post_id', id)
     .order('created_at', { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 100));
-  if (error) throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'History could not be loaded.');
+  if (error) throw queryFailed(error, 'History could not be loaded.');
   return (data ?? []).map((row) => ({
     id: String(row.id),
     action: String(row.action),
@@ -328,7 +334,10 @@ export async function signedMediaUrl(path: string) {
 export async function createMediaUpload(path: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.storage.from(SOCIAL_BUCKET).createSignedUploadUrl(path);
-  if (error || !data) throw new SocialError('The upload could not be started. Check the social migration is applied.');
+  if (error || !data) {
+    console.error('Creating a social media upload URL failed', error);
+    throw new SocialError('The upload could not be started. Try again in a moment.');
+  }
   return { path: data.path, token: data.token };
 }
 

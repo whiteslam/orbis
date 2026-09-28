@@ -1,8 +1,7 @@
 'use server';
 
+import { claimsEmail, requireUser } from '@/lib/auth/session';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { isAppUnlocked } from '@/lib/security/app-lock';
 import { brokerMeta, isBrokerId, type BrokerId } from '@/lib/invest/brokers';
 import { loadLivePortfolio } from '@/lib/invest/live';
 import { getAccessToken, GrowwAuthError, GrowwError } from '@/lib/invest/groww';
@@ -12,21 +11,10 @@ import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { LivePortfolioData } from '@/lib/invest/types';
 import { UserFacingError, userMessage } from '@/lib/errors';
 
-async function authenticatedClient() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
-  return { supabase, userId };
-}
-
 export async function loadInvestLiveAction(): Promise<LivePortfolioData | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
-  const email = typeof data?.claims?.email === 'string' ? data.claims.email.toLowerCase() : null;
-  return loadLivePortfolio(userId, email);
+  const user = await requireUser();
+  if (!user) return null;
+  return loadLivePortfolio(user.userId, claimsEmail(user.claims));
 }
 
 /**
@@ -61,7 +49,7 @@ async function forget(broker: BrokerId, userId: string) {
 
 // Checks the key and secret with the broker before saving them encrypted for this user.
 export async function connectBrokerAction(input: { broker: string; apiKey: string; apiSecret: string }) {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to connect this account.' };
   if (!input || typeof input !== 'object' || !isBrokerId(input.broker) || typeof input.apiKey !== 'string' || typeof input.apiSecret !== 'string') return { success: false, message: 'Enter your API key and secret.' };
   const meta = brokerMeta(input.broker);
@@ -87,7 +75,7 @@ export async function connectBrokerAction(input: { broker: string; apiKey: strin
 }
 
 export async function disconnectBrokerAction(broker: string) {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to disconnect this account.' };
   if (!isBrokerId(broker)) return { success: false, message: 'That account is not connected.' };
   const meta = brokerMeta(broker);

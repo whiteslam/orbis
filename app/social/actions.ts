@@ -1,9 +1,9 @@
 'use server';
 
+import { requireUser } from '@/lib/auth/session';
+import { isUuid } from '@/lib/validate/id';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { isAppUnlocked } from '@/lib/security/app-lock';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import {
   SocialError,
@@ -27,16 +27,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
-async function authed() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
-  return userId;
-}
-
-const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
 type Result = { success: boolean; message: string; post?: SocialPost; posts?: SocialPost[] };
 
 const SIGN_IN = { success: false, message: 'Sign in again to do this.' } as const;
@@ -48,7 +38,7 @@ function failure(error: unknown, fallback: string): Result {
 }
 
 export async function loadSocialMonthAction(period: string) {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return { ...SIGN_IN, posts: [], databaseReady: true, loadError: true };
   if (typeof period !== 'string' || !PERIOD_PATTERN.test(period)) return { success: false, message: 'That month is invalid.', posts: [], databaseReady: true, loadError: true };
   const month = await listMonth(userId, period);
@@ -72,10 +62,10 @@ export async function savePostAction(input: {
   platforms: string[];
   plannedFor: string | null;
 }): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (input?.id !== undefined && !validId(input.id)) return INVALID;
-  if (input?.clientId !== undefined && !validId(input.clientId)) return INVALID;
+  if (input?.id !== undefined && !isUuid(input.id)) return INVALID;
+  if (input?.clientId !== undefined && !isUuid(input.clientId)) return INVALID;
   const clean = cleanPostInput(input);
   if (!clean.ok) return { success: false, message: clean.message };
 
@@ -92,9 +82,9 @@ export async function savePostAction(input: {
 
 /** Idea, draft or ready. Published has its own action, and only it can undo itself. */
 export async function setPostStatusAction(id: string, status: 'idea' | 'draft' | 'ready'): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   if (!['idea', 'draft', 'ready'].includes(status)) return { success: false, message: 'Choose idea, draft or ready.' };
   try {
     const current = await getPost(userId, id);
@@ -110,9 +100,9 @@ export async function setPostStatusAction(id: string, status: 'idea' | 'draft' |
 
 /** Records where and when a ready post went out, or (with null) takes that back. */
 export async function markPublishedAction(id: string, publish: { platform: string; link?: string | null } | null): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   try {
     if (publish === null) {
       const current = await getPost(userId, id);
@@ -141,9 +131,9 @@ const extensionOf = (path: string) => path.slice(path.lastIndexOf('.') + 1);
 const mediaTypeOf = (extension: string): 'image' | 'video' => (['mp4', 'mov', 'webm'].includes(extension) ? 'video' : 'image');
 
 export async function duplicatePostAction(id: string): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   try {
     const original = await getPost(userId, id);
     if (!original) return { success: false, message: 'That post no longer exists.' };
@@ -175,9 +165,9 @@ export async function duplicatePostAction(id: string): Promise<Result> {
 
 /** Moves a post to another month. Its day cannot come along, so it lands in that month's "No date yet". */
 export async function movePostAction(id: string, period: string): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   if (typeof period !== 'string' || !PERIOD_PATTERN.test(period)) return { success: false, message: 'That month is invalid.' };
   try {
     const current = await getPost(userId, id);
@@ -192,9 +182,9 @@ export async function movePostAction(id: string, period: string): Promise<Result
 }
 
 export async function deletePostAction(id: string): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   try {
     await deletePost(userId, id);
     revalidatePath('/');
@@ -209,9 +199,9 @@ export async function deletePostAction(id: string): Promise<Result> {
  * this post's, so the browser can only ever upload where it is allowed to.
  */
 export async function signMediaUploadAction(postId: string, file: { name: string; type: string; size: number }): Promise<{ success: boolean; message: string; path?: string; token?: string }> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(postId)) return INVALID;
+  if (!isUuid(postId)) return INVALID;
   const extension = typeof file?.type === 'string' ? EXTENSION[file.type] : undefined;
   if (!extension) return { success: false, message: 'Use a JPG, PNG, WebP or GIF picture, or an MP4, MOV or WebM video.' };
   if (typeof file.size !== 'number' || file.size <= 0 || file.size > MAX_MEDIA_BYTES) return { success: false, message: 'Files can be up to 50 MB.' };
@@ -230,12 +220,12 @@ export async function signMediaUploadAction(postId: string, file: { name: string
 
 /** Points the post at a file the browser just uploaded, after checking it is really this post's. */
 export async function attachMediaAction(postId: string, path: string, type: 'image' | 'video'): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(postId) || typeof path !== 'string') return INVALID;
+  if (!isUuid(postId) || typeof path !== 'string') return INVALID;
   const prefix = `${userId}/${postId}/`;
   const name = path.slice(prefix.length);
-  if (!path.startsWith(prefix) || !/^[0-9a-f-]{36}\.(jpg|png|webp|gif|mp4|mov|webm)$/i.test(name)) return { success: false, message: 'That file is not part of this post.' };
+  if (!path.startsWith(prefix) || !/^[^.]+\.(jpg|png|webp|gif|mp4|mov|webm)$/i.test(name) || !isUuid(name.slice(0, name.indexOf('.')))) return { success: false, message: 'That file is not part of this post.' };
   const mediaType = mediaTypeOf(extensionOf(name).toLowerCase());
   if (type !== mediaType) return { success: false, message: 'That file is not part of this post.' };
   try {
@@ -257,9 +247,9 @@ export async function attachMediaAction(postId: string, path: string, type: 'ima
 }
 
 export async function removeMediaAction(postId: string): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(postId)) return INVALID;
+  if (!isUuid(postId)) return INVALID;
   try {
     const before = await getPost(userId, postId);
     if (!before) return { success: false, message: 'That post no longer exists.' };
@@ -294,7 +284,7 @@ export async function draftMonthWithAiAction(input: {
   tone: string;
   useProfile: boolean;
 }): Promise<Result> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
   if (!input || typeof input !== 'object') return { success: false, message: 'Say what the month is about.' };
   if (typeof input.period !== 'string' || !PERIOD_PATTERN.test(input.period)) return { success: false, message: 'That month is invalid.' };
@@ -322,7 +312,10 @@ export async function draftMonthWithAiAction(input: {
       p_daily_limit: DAILY_DRAFT_LIMIT,
       p_gap_seconds: DRAFT_GAP_SECONDS,
     });
-    if (error) return { success: false, message: 'AI drafts are not set up yet. Apply the social planner migration in Supabase.' };
+    if (error) {
+      console.error('consume_social_ai_request failed', error);
+      return { success: false, message: 'AI drafts aren’t available right now. Try again later.' };
+    }
     if (verdict === 'busy') return { success: false, message: 'Already drafting. Give it a moment.' };
     if (verdict !== 'ok') return { success: false, message: `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.` };
   } catch {
@@ -359,9 +352,9 @@ export async function draftMonthWithAiAction(input: {
 }
 
 export async function loadPostHistoryAction(id: string): Promise<{ success: boolean; message: string; history?: SocialRevision[] }> {
-  const userId = await authed();
+  const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
-  if (!validId(id)) return INVALID;
+  if (!isUuid(id)) return INVALID;
   try {
     return { success: true, message: '', history: await listHistory(userId, id) };
   } catch (error) {

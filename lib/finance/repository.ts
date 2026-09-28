@@ -3,6 +3,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { FinanceSummary } from '@/lib/finance/types';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 const emptySummary: FinanceSummary = {
   databaseReady: true,
@@ -15,10 +16,6 @@ const emptySummary: FinanceSummary = {
   monthlyExpenses: [],
   month: null,
 };
-
-function isMissingTable(error: { code?: string }) {
-  return error.code === 'PGRST205' || error.code === 'PGRST204' || error.code === '42P01';
-}
 
 const transactionColumns = 'id, amount, currency, direction, merchant, category, occurred_at, source';
 

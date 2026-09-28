@@ -82,6 +82,6 @@ export async function setPinAction(pin: string, confirmPin: string): Promise<Unl
   const problem = pinProblem(pin);
   if (problem) return { success: false, message: problem };
   if (pin !== confirmPin) return { success: false, message: 'The two PINs do not match.' };
-  if (!(await savePin(claims.sub, pin))) return { success: false, message: 'Your PIN could not be saved. Check that the app PIN migration is applied.' };
+  if (!(await savePin(claims.sub, pin))) return { success: false, message: 'Your PIN could not be saved. Try again in a moment.' };
   return { success: true, message: null };
 }

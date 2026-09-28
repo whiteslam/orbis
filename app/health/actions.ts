@@ -1,7 +1,7 @@
 'use server';
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { getAuthenticatedUserId } from '@/lib/gmail/oauth';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { saveAiResult } from '@/lib/ai/results';
 import { routeJson } from '@/lib/ai/router';
 import type { AiResultStamp } from '@/lib/ai/saved';
@@ -17,11 +17,9 @@ import type { ParsedWorkbookPreview, WorkbookActionResult, WorkbookAdvice, Workb
 
 const MAX_PREVIEW_BYTES = 24 * 1024;
 const MAX_AI_INPUT_BYTES = 40 * 1024;
-const MAX_PROVIDER_RESPONSE_BYTES = 128 * 1024;
 const MAX_MODEL_OUTPUT_TOKENS = 1_200;
 const MAX_ADVICE = 5;
 const DAILY_ADVICE_LIMIT = 5;
-const adviceModel = () => process.env.OPENROUTER_MODEL?.trim() || 'openai/gpt-4o-mini';
 
 function signedPreview(userId: string, preview: ParsedWorkbookPreview) {
   const key = process.env.SUPABASE_SECRET_KEY;
@@ -110,28 +108,6 @@ function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
   return { ...previewData, verificationToken: token };
 }
 
-async function readProviderJson(response: Response): Promise<unknown> {
-  if (!response.body) throw new Error('The AI provider returned an empty response.');
-  const reader = response.body.getReader();
-  const chunks: Buffer[] = [];
-  let totalBytes = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
-        await reader.cancel().catch(() => undefined);
-        throw new Error('The AI provider response is too large.');
-      }
-      chunks.push(Buffer.from(value));
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
-}
-
 /** Step one: a one-time token so the browser can put the file straight into Storage. */
 export async function signWorkbookUploadAction(file: { name: string; type: string; size: number }): Promise<WorkbookActionResult<{ path: string; token: string; contentType: string }>> {
   const userId = await getAuthenticatedUserId();
@@ -175,10 +151,6 @@ export async function parseWorkbookAction(input: { path: string; name: string })
     await removeStaged(userId, 'workbook', staged.path);
   }
 }
-
-type OpenRouterResponse = {
-  choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
-};
 
 function parseAdvice(text: string, preview: WorkbookPreview): WorkbookAdvice | null {
   let parsed: unknown;
@@ -226,9 +198,6 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
   const documentText = `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}`;
   if (value.includeFitnessPersona && !workbookHasFitnessFields(preview.sheets, documentText)) return { success: false, message: 'A fitness persona can only be included with a health or fitness document.' };
 
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) return { success: false, message: 'Workbook preview is ready, but AI advice is not configured yet. Add OPENROUTER_API_KEY to the server environment.' };
-
   const { verificationToken: _verificationToken, ...workbookData } = preview;
   const savedContextNotes: string[] = [];
   let fitnessPersona: string | null = null;
@@ -244,7 +213,10 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(20);
-      if (error) return { success: false, message: 'Saved context is not available. Apply the Orbis Memory migration or turn off context sharing.' };
+      if (error) {
+        console.error('Reading saved context for workbook advice failed', error);
+        return { success: false, message: 'Your saved context isn’t available right now. Turn off context sharing or try again later.' };
+      }
       const rankedNotes = (data ?? [])
         .map(({ note }, index) => ({ note: note.trim(), index, score: contextRelevance(note, preview) }))
         .sort((left, right) => right.score - left.score || left.index - right.index)
@@ -263,7 +235,8 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
         .select('persona')
         .eq('user_id', userId)
         .maybeSingle();
-      if (error || !data?.persona) return { success: false, message: 'Your saved fitness persona is not available. Save it in Personal and apply the Fitness Persona migration first.' };
+      if (error) console.error('Reading the fitness persona for workbook advice failed', error);
+      if (error || !data?.persona) return { success: false, message: 'Your saved fitness persona isn’t available. Save it in Personal first, or turn off persona sharing.' };
       fitnessPersona = data.persona.trim().slice(0, 3_000);
     }
     if (value.includePersonalProfile) {
@@ -272,7 +245,8 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
         .select('preferred_name,role,about_me')
         .eq('user_id', userId)
         .maybeSingle();
-      if (error || !data) return { success: false, message: 'Your personal profile is not available. Save it in Personal and apply the Personal Profile migration first.' };
+      if (error) console.error('Reading the personal profile for workbook advice failed', error);
+      if (error || !data) return { success: false, message: 'Your personal profile isn’t available. Save it in Personal first, or turn off profile sharing.' };
       personalProfile = {
         ...(data.preferred_name ? { preferredName: data.preferred_name.slice(0, 80) } : {}),
         ...(data.role ? { role: data.role.slice(0, 120) } : {}),
@@ -301,7 +275,10 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
       p_user_id: userId,
       p_daily_limit: DAILY_ADVICE_LIMIT,
     });
-    if (error) return { success: false, message: 'AI advice usage limits are not set up yet. Apply the workbook usage migration in Supabase.' };
+    if (error) {
+      console.error('consume_workbook_ai_request failed', error);
+      return { success: false, message: 'AI advice isn’t available right now. Try again later.' };
+    }
     if (!allowed) return { success: false, message: `You have reached the limit of ${DAILY_ADVICE_LIMIT} workbook advice requests today. Try again tomorrow.` };
   } catch {
     return { success: false, message: 'AI advice usage limits are not available right now. Try again later.' };

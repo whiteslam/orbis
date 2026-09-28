@@ -5,13 +5,13 @@ import { embedTexts, toVectorLiteral } from '@/lib/health-docs/embeddings';
 import type { HealthDocument, HealthPlanRecord } from '@/lib/health-docs/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 export const HEALTH_BUCKET = 'health-documents';
 export const MAX_STORED_ORIGINAL_BYTES = 50 * 1024 * 1024;
 const MAX_CHUNKS = 400;
 const CHUNK_CHARS = 1_200;
 
-const isMissing = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
 
 // Groups lines into ~1,200-character chunks, repeating the last line of each
 // chunk at the start of the next so facts that span a boundary stay findable.
@@ -45,7 +45,7 @@ export async function getHealthLibrary(userId: string): Promise<LibraryState> {
     supabase.from('health_plans').select('id,title,plan,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
   ]);
   const error = documents.error ?? plans.error;
-  if (error) return { state: isMissing(error.code) ? 'setup' : 'unavailable', documents: [], plans: [] };
+  if (error) return { state: isMissingTable(error) ? 'setup' : 'unavailable', documents: [], plans: [] };
   return {
     state: 'ready',
     documents: (documents.data ?? []).map((row) => ({
@@ -77,7 +77,7 @@ export async function storeHealthDocument(userId: string, input: { file: File; f
     preview: input.preview,
     chunk_count: chunks.length,
   }).select('id').single();
-  if (error || !document) throw isMissing(error?.code) ? new Error('health_documents is missing: apply the health documents migration.') : new UserFacingError('The document could not be saved.');
+  if (error || !document) throw isMissingTable(error) ? new Error('health_documents is missing: apply the health documents migration.') : new UserFacingError('The document could not be saved.');
 
   try {
     const rows = chunks.map((content, index) => ({ document_id: document.id, user_id: userId, chunk_index: index, content, embedding: toVectorLiteral(vectors[index]) }));
@@ -112,6 +112,22 @@ export async function deleteHealthDocument(userId: string, documentId: string) {
   if (data.storage_path) await admin.storage.from(HEALTH_BUCKET).remove([data.storage_path]);
   const { error: deleteError } = await admin.from('health_documents').delete().eq('id', documentId).eq('user_id', userId);
   if (deleteError) throw new UserFacingError('The document could not be deleted.');
+}
+
+/**
+ * Marks a document as one the plan builder reads every time, or not. Written
+ * with the service client (people can't update this table directly), strictly
+ * scoped to the owner. Fails when no row of theirs matched.
+ */
+export async function setAlwaysInclude(userId: string, documentId: string, always: boolean) {
+  const { data, error } = await createAdminClient()
+    .from('health_documents')
+    .update({ always_include: always })
+    .eq('id', documentId)
+    .eq('user_id', userId)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new UserFacingError('That document could not be found.');
 }
 
 export async function signedDownloadUrl(userId: string, documentId: string) {

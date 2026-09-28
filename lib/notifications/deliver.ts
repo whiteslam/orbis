@@ -23,7 +23,8 @@ export async function deliverSlot(admin: Admin, input: { userId: string; slot: S
     .single();
   if (claimError) {
     if (claimError.code === '23505') return { status: 'duplicate' };
-    return { status: 'failed', reason: ['PGRST205', '42P01'].includes(claimError.code ?? '') ? 'The notification log migration (019) is not applied.' : 'The notification could not be recorded.' };
+    console.error('Recording a notification failed', claimError);
+    return { status: 'failed', reason: 'The notification could not be recorded. Try again later.' };
   }
 
   try {

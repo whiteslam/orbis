@@ -20,11 +20,11 @@ export function HomeBriefSetting({ preferences }: { preferences: AiPreferences }
 
   const blocked = preferences.state !== 'ready' || !preferences.configured;
   const reason = preferences.state === 'setup'
-    ? 'Apply the home brief migration in Supabase to turn this on.'
+    ? 'This setting isn’t available right now.'
     : preferences.state === 'unavailable'
       ? 'This setting could not be loaded. Try again shortly.'
       : !preferences.configured
-        ? 'No AI provider is configured on this server, so the brief stays in Orbis’s own wording.'
+        ? 'AI writing isn’t available right now, so the brief stays in Orbis’s own wording.'
         : null;
 
   function toggle(next: boolean) {

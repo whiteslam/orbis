@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { buildGoogleAuthorizationUrl, createSignedGmailState, getAuthenticatedUserId, gmailStateCookieName, googleReturnCookieName } from '@/lib/gmail/oauth';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
+import { buildGoogleAuthorizationUrl, createSignedGmailState, gmailStateCookieName, googleReturnCookieName } from '@/lib/gmail/oauth';
 import { getSiteUrl } from '@/lib/site-url';
 
 export async function GET(request: NextRequest) {
@@ -22,7 +23,8 @@ export async function GET(request: NextRequest) {
       response.cookies.set(googleReturnCookieName, 'settings', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/auth/gmail', maxAge: 10 * 60 });
     }
     return response;
-  } catch {
+  } catch (error) {
+    console.error('Starting the Gmail connection failed', error);
     return NextResponse.redirect(new URL('/?tab=finance&gmail=setup-error', getSiteUrl()));
   }
 }

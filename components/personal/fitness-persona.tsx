@@ -44,7 +44,7 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
 
   const blocked = pending || state !== 'ready';
   const notice = state === 'setup'
-    ? 'Coaching style can’t be saved yet. Apply the pending Supabase migration (202609240008_fitness_persona.sql), then refresh.'
+    ? 'Coaching style can’t be saved right now. Try again later.'
     : state === 'unavailable' ? 'Your saved coaching style could not be loaded. Refresh and try again.' : null;
 
   function open(seed: string) {

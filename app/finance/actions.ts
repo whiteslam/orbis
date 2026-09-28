@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { disconnectGmail, parsePendingFinanceCandidates, syncGmail } from '@/lib/finance/sync';
-import { getAuthenticatedUserId, GoogleOAuthError } from '@/lib/gmail/oauth';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
+import { isUuid } from '@/lib/validate/id';
+import { GoogleOAuthError } from '@/lib/gmail/oauth';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -75,9 +77,10 @@ export async function parseFinanceCandidatesAction(): Promise<FinanceActionState
     };
   } catch (error) {
     revalidatePath('/');
+    if (!(error instanceof GoogleOAuthError)) console.error('Reading Gmail alerts failed', error);
     return {
       success: false,
-      message: error instanceof GoogleOAuthError ? error.message : 'Gmail alerts could not be read. Apply the transaction review migration and try again.',
+      message: error instanceof GoogleOAuthError ? error.message : 'Gmail alerts could not be read. Try again in a moment.',
     };
   }
 }
@@ -95,7 +98,7 @@ export async function confirmFinanceCandidateAction(input: CandidateConfirmation
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before saving a transaction.' };
 
-  if (!input || typeof input !== 'object' || typeof input.candidateId !== 'string' || typeof input.amount !== 'string' || typeof input.currency !== 'string' || typeof input.direction !== 'string' || typeof input.merchant !== 'string' || typeof input.occurredAt !== 'string' || !/^[0-9a-f-]{36}$/i.test(input.candidateId)) {
+  if (!input || typeof input !== 'object' || typeof input.candidateId !== 'string' || typeof input.amount !== 'string' || typeof input.currency !== 'string' || typeof input.direction !== 'string' || typeof input.merchant !== 'string' || typeof input.occurredAt !== 'string' || !isUuid(input.candidateId)) {
     return { success: false, message: 'This alert is invalid. Refresh Finance and try again.' };
   }
   const amount = Number(input.amount);
@@ -141,7 +144,10 @@ export async function confirmFinanceCandidateAction(input: CandidateConfirmation
       source: 'gmail',
       source_message_id: candidate.gmail_message_id,
     });
-    if (insertError && insertError.code !== '23505') return { success: false, message: 'The transaction could not be saved. Apply the transaction review migration and try again.' };
+    if (insertError && insertError.code !== '23505') {
+      console.error('Saving a reviewed transaction failed', insertError);
+      return { success: false, message: 'The transaction could not be saved. Try again in a moment.' };
+    }
 
     const { error: updateError } = await admin
       .from('gmail_sync_messages')
@@ -162,7 +168,7 @@ export async function confirmFinanceCandidateAction(input: CandidateConfirmation
 export async function ignoreFinanceCandidateAction(candidateId: string): Promise<FinanceActionState> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before updating Gmail alerts.' };
-  if (typeof candidateId !== 'string' || !/^[0-9a-f-]{36}$/i.test(candidateId)) return { success: false, message: 'This alert is invalid.' };
+  if (!isUuid(candidateId)) return { success: false, message: 'This alert is invalid.' };
 
   try {
     const admin = createAdminClient();
@@ -250,12 +256,16 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
     if (error?.code === 'PGRST204' || error?.code === '42703') {
       // The manual-transactions migration is not applied yet; keep the core record.
       const { error: fallbackError } = await supabase.from('transactions').insert(base);
-      if (fallbackError) return { success: false, message: 'The transaction could not be saved. Apply the finance migrations and try again.' };
+      if (fallbackError) {
+        console.error('Saving a manual transaction failed', fallbackError);
+        return { success: false, message: 'The transaction could not be saved. Try again in a moment.' };
+      }
+      console.error('transactions has no payment_method/note columns; saved without them', error);
       revalidatePath('/');
       return {
         success: true,
         message: paymentMethod || note
-          ? 'Transaction saved without payment method and note. Apply the manual-transactions migration to keep those details.'
+          ? 'Transaction saved, but the payment method and note couldn’t be kept this time.'
           : 'Transaction saved.',
       };
     }
@@ -271,7 +281,7 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
 export async function deleteManualTransactionAction(transactionId: string): Promise<FinanceActionState> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before deleting a transaction.' };
-  if (typeof transactionId !== 'string' || !/^[0-9a-f-]{36}$/i.test(transactionId)) return { success: false, message: 'This transaction is invalid.' };
+  if (!isUuid(transactionId)) return { success: false, message: 'This transaction is invalid.' };
 
   try {
     const supabase = await createClient();

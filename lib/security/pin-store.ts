@@ -25,6 +25,7 @@ export async function savePin(userId: string, pin: string) {
     { user_id: userId, pin_hash: hashPin(pin), failed_attempts: 0, updated_at: new Date().toISOString() },
     { onConflict: 'user_id' },
   );
+  if (error) console.error('Saving the app PIN failed', error);
   return !error;
 }
 

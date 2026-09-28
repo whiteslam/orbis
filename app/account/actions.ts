@@ -4,10 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { deleteAccount } from '@/lib/account/delete';
 import { deletionConfirmed, refusalMessage } from '@/lib/account/deletion-plan';
 import { sensitiveRequester } from '@/lib/account/sensitive-auth';
+import { signedInSession } from '@/lib/auth/session';
 import { userMessage } from '@/lib/errors';
 import { clearAppUnlock, isAppUnlocked } from '@/lib/security/app-lock';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
 
 export type AccountActionState = { success: boolean; message: string; needsPassword?: boolean };
 
@@ -45,11 +45,10 @@ export async function deleteAccountAction(input: { password?: string; confirm: s
  * this explicit action, scoped to the signed-in user.
  */
 export async function purgeSocialHistoryAction(): Promise<AccountActionState> {
-  const supabase = await createClient();
-  const { data, error: claimsError } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (claimsError || typeof userId !== 'string') return { success: false, message: 'Sign in again to clear your post history.' };
-  if (!(await isAppUnlocked(data?.claims))) return { success: false, message: 'Unlock Orbis on this device first.' };
+  const session = await signedInSession();
+  if (!session) return { success: false, message: 'Sign in again to clear your post history.' };
+  if (!(await isAppUnlocked(session.claims))) return { success: false, message: 'Unlock Orbis on this device first.' };
+  const { userId } = session;
 
   try {
     const { error } = await createAdminClient().from('social_post_revisions').delete().eq('user_id', userId);

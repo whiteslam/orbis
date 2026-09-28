@@ -195,7 +195,7 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
         <div className="fd-top-actions">
           <ThemeToggle />
           <button className="icon-btn" type="button" aria-label="Notification settings" title="Notification settings" onClick={openSettings}><Bell size={18} /></button>
-          <button className="avatar" type="button" aria-label="Open your profile" title="Profile" onClick={() => openTab('personal')}>{firstName?.charAt(0).toLocaleUpperCase() || 'G'}</button>
+          <button className="avatar" type="button" aria-label="Open your profile" title="Profile" onClick={() => openTab('personal')}>{firstName?.charAt(0).toLocaleUpperCase() || <UserRound size={16} aria-hidden="true" />}</button>
         </div>
       </header>
 
@@ -287,7 +287,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     <>
       {notice && (
         <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
-          <span>{notice === 'connected' ? 'Gmail connected.' : notice === 'cancelled' ? 'Gmail connection was cancelled.' : notice === 'setup-error' ? 'Gmail setup is incomplete. Check the Google OAuth credentials and add the local callback URL in Google Cloud.' : 'Gmail could not be connected. Check the setup and try again.'}</span>
+          <span>{notice === 'connected' ? 'Gmail connected.' : notice === 'cancelled' ? 'Gmail connection was cancelled.' : notice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : 'Gmail could not be connected. Try again.'}</span>
           <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
         </div>
       )}
@@ -385,7 +385,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
       ) : (
         <p className="fd-empty">
           {!summary.databaseReady
-            ? 'Saved transactions need the finance migration applied in Supabase.'
+            ? 'Saved transactions aren’t available right now.'
             : summary.loadError
               ? 'Transactions could not be loaded. Refreshing the app tries again.'
               : 'Nothing saved yet. Alerts only count as spending once you confirm them.'}
@@ -396,7 +396,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
         <div>
           <strong id="gmail-title">Gmail alerts</strong>
           {!summary.databaseReady ? (
-            <p>Apply all finance, Gmail, workbook-usage and transaction-review migrations in Supabase before connecting Gmail.</p>
+            <p>Connecting Gmail isn’t available right now. Try again later.</p>
           ) : summary.loadError ? (
             <p>Finance data could not be loaded. Refresh the app and try again.</p>
           ) : summary.connection ? (

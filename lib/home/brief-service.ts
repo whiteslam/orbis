@@ -103,7 +103,10 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   try {
     admin = createAdminClient();
     const { data: allowed, error } = await admin.rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_BRIEF_LIMIT });
-    if (error) return { state: 'error', message: 'AI usage limits are not set up yet. Apply the workbook usage migration in Supabase.' };
+    if (error) {
+      console.error('consume_workbook_ai_request failed for the brief', error);
+      return { state: 'error', message: 'The brief can’t be written right now.' };
+    }
     if (!allowed) return { state: 'error', message: 'Today’s AI requests are used up. The brief will write itself again tomorrow.' };
   } catch {
     return { state: 'error', message: 'AI usage limits are not available right now.' };

@@ -24,8 +24,8 @@ export function composeHealthFocus({ steps, documentCount, planCount, librarySta
   if (libraryState === 'setup') {
     return {
       id: 'health-setup',
-      headline: 'Health documents are waiting on a database migration.',
-      body: 'Apply the health documents and plans migration in Supabase to save files, build plans and keep advice. Step data still works without it.',
+      headline: 'Health documents aren’t available right now.',
+      body: 'Saving files, building plans and keeping advice will be back soon. Step data still works.',
       action: null,
     };
   }

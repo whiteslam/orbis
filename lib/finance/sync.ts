@@ -73,9 +73,10 @@ async function refreshAccessToken(userId: string, connection: GmailConnection) {
   let refreshToken: string;
   try {
     refreshToken = decryptRefreshToken(connection.refresh_token_encrypted);
-  } catch {
+  } catch (error) {
+    console.error('Decrypting the Gmail refresh token failed', error);
     await updateConnection(userId, connection.id, { status: 'reconnect_required' });
-    throw new GoogleOAuthError('Gmail credentials could not be unlocked. Check the encryption key, then reconnect Gmail.', true);
+    throw new GoogleOAuthError('Gmail needs to be reconnected.', true);
   }
 
   try {

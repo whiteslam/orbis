@@ -1,26 +1,12 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockKeyhole } from 'lucide-react';
 import { lockAppAction, touchAppLockAction } from '@/app/security/actions';
 
 const HEARTBEAT_MS = 60_000;
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const;
-
-const LockContext = createContext<() => void>(() => undefined);
-
-// Lets any screen lock Orbis immediately (e.g. the top-bar lock button).
-export const useLockApp = () => useContext(LockContext);
-
-export function LockButton() {
-  const lock = useLockApp();
-  return (
-    <button className="icon-btn" type="button" onClick={lock} aria-label="Lock Orbis" title="Lock Orbis">
-      <LockKeyhole size={18} />
-    </button>
-  );
-}
 
 // Hides the app after idleMs without activity, or when it returns from the background after that long.
 // The server enforces the same window through the unlock cookie; this keeps the screen in step with it.
@@ -70,14 +56,10 @@ export function AppLockGuard({ idleMs, children }: { idleMs: number; children: R
     };
   }, [idleMs, lock]);
 
-  return (
-    <LockContext.Provider value={lock}>
-      {locked ? (
-        <main className="auth-stage lock-cover" aria-live="polite">
-          <div className="lock-icon"><LockKeyhole size={20} aria-hidden="true" /></div>
-          <p>Locking Orbis…</p>
-        </main>
-      ) : children}
-    </LockContext.Provider>
-  );
+  return locked ? (
+    <main className="auth-stage lock-cover" aria-live="polite">
+      <div className="lock-icon"><LockKeyhole size={20} aria-hidden="true" /></div>
+      <p>Locking Orbis…</p>
+    </main>
+  ) : children;
 }

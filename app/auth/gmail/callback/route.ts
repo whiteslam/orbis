@@ -2,12 +2,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   exchangeGoogleCode,
   getGoogleAccount,
-  getAuthenticatedUserId,
   gmailStateCookieName,
   googleReturnCookieName,
   saveGmailConnection,
   verifySignedGmailState,
 } from '@/lib/gmail/oauth';
+import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { getSiteUrl } from '@/lib/site-url';
 
 function resultRedirect(returnTab: string, status: string) {

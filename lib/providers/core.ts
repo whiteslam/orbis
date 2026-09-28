@@ -9,7 +9,7 @@ export type ProviderErrorKind = 'rate_limited' | 'auth' | 'unavailable' | 'inval
 
 const MESSAGES: Record<ProviderErrorKind, string> = {
   rate_limited: 'is busy right now. Showing the last saved data where possible.',
-  auth: 'could not verify the API key. Check it in the server environment.',
+  auth: 'isn’t available right now.',
   unavailable: 'is temporarily unavailable.',
   invalid_request: 'could not find that item.',
   timeout: 'took too long to respond.',

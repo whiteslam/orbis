@@ -2,8 +2,9 @@ import 'server-only';
 
 import { CredentialCryptoError, decryptCredential, encryptCredential } from '@/lib/crypto/credentials';
 import type { GrowwCredentials } from '@/lib/invest/groww';
-import { UserFacingError } from '@/lib/errors';
+import { CONNECTION_UNAVAILABLE, UserFacingError } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 export type StoredGrowwConnection = {
   credentials: GrowwCredentials;
@@ -16,7 +17,6 @@ export type GrowwConnectionLookup =
   | { kind: 'none' }
   | { kind: 'setup'; message: string };
 
-const isMissingTable = (code?: string) => code === 'PGRST205' || code === 'PGRST204' || code === '42P01';
 
 export async function getGrowwConnection(userId: string): Promise<GrowwConnectionLookup> {
   const admin = createAdminClient();
@@ -26,8 +26,9 @@ export async function getGrowwConnection(userId: string): Promise<GrowwConnectio
     .eq('user_id', userId)
     .maybeSingle();
   if (error) {
+    console.error('Reading groww_connections failed', error);
     return isMissingTable(error.code)
-      ? { kind: 'setup', message: 'Apply the Groww connections migration in Supabase to connect Groww.' }
+      ? { kind: 'setup', message: CONNECTION_UNAVAILABLE }
       : { kind: 'setup', message: 'Your Groww connection could not be loaded. Try again shortly.' };
   }
   if (!data) return { kind: 'none' };
@@ -41,7 +42,8 @@ export async function getGrowwConnection(userId: string): Promise<GrowwConnectio
       },
     };
   } catch (error) {
-    return { kind: 'setup', message: error instanceof CredentialCryptoError ? error.message : 'Your Groww connection could not be unlocked.' };
+    console.error('Decrypting the Groww connection failed', error);
+    return { kind: 'setup', message: error instanceof CredentialCryptoError ? CONNECTION_UNAVAILABLE : 'Your Groww connection could not be unlocked.' };
   }
 }
 

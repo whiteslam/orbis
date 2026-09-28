@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { stepStats } from '@/lib/health/steps-stats';
 import type { StepsSummary } from '@/lib/health/types';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 const emptySummary = { days: [], latest: null, average7: null, average30: null, previous30: null, best: null, lastImport: null };
 
@@ -14,7 +15,7 @@ export async function getStepsSummary(userId: string): Promise<StepsSummary> {
   ]);
   const error = steps.error ?? batch.error;
   if (error) {
-    const missing = ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '');
+    const missing = isMissingTable(error);
     return { databaseReady: !missing, loadError: !missing, ...emptySummary };
   }
 

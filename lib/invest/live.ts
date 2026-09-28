@@ -7,6 +7,7 @@ import { getGrowwConnection, recordGrowwSync, type GrowwConnectionLookup } from 
 import { envZerodhaCredentials, fetchZerodhaPortfolio, ZerodhaAuthError, ZerodhaError } from '@/lib/invest/zerodha';
 import { getZerodhaConnection, markZerodhaReconnect } from '@/lib/invest/zerodha-connection';
 import type { BrokerPortfolio, LivePortfolioData } from '@/lib/invest/types';
+import { CONNECTION_UNAVAILABLE } from '@/lib/errors';
 
 /** Loads one account's holdings. Register a provider's loader here and it appears on the screen. */
 type BrokerLoader = (userId: string, email: string | null) => Promise<BrokerPortfolio>;
@@ -57,7 +58,7 @@ async function loadGroww(userId: string, email: string | null): Promise<BrokerPo
     ...empty('groww'),
     state: 'not_connected',
     setupRequired: lookup.kind === 'setup' || !encryptionReady,
-    message: lookup.kind === 'setup' ? lookup.message : encryptionReady ? undefined : 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY).',
+    message: lookup.kind === 'setup' ? lookup.message : encryptionReady ? undefined : CONNECTION_UNAVAILABLE,
   };
 }
 
@@ -71,7 +72,8 @@ async function loadGroww(userId: string, email: string | null): Promise<BrokerPo
 async function loadZerodha(userId: string): Promise<BrokerPortfolio> {
   const credentials = envZerodhaCredentials();
   if (!credentials) {
-    return { ...empty('zerodha'), state: 'not_connected', setupRequired: true, message: 'Zerodha is not configured on this server. Set ZERODHA_API_KEY and ZERODHA_API_SECRET.' };
+    console.error('Zerodha is not configured: ZERODHA_API_KEY and ZERODHA_API_SECRET are unset.');
+    return { ...empty('zerodha'), state: 'not_connected', setupRequired: true, message: CONNECTION_UNAVAILABLE };
   }
 
   const lookup = await getZerodhaConnection(userId).catch(() => ({ kind: 'setup', message: 'Zerodha connections are not available right now.' } as const));

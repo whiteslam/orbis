@@ -1567,3 +1567,16 @@ button { font: inherit; }
 .plan-sleep-track i { position: absolute; top: 0; bottom: 0; background: var(--fd-accent); opacity: .9; }
 .plan-sleep-scale { display: flex; justify-content: space-between; margin-top: 3px; color: var(--muted); font-size: 9px; }
 .plan-sources { margin: 0; color: var(--fd-faint); font-size: 11px; line-height: 1.55; }
+
+/* ─── Field: boundaries ───────────────────────────────────────────────
+   The loading and error screens stand on their own, outside the app shell,
+   so they take the whole viewport rather than the shell's height. */
+.screen-body.fd-boundary { height: auto; min-height: 100vh; min-height: 100dvh; }
+.fd-skeleton { display: grid; gap: 14px; margin-top: 22px; }
+.fd-skeleton span { display: block; height: 14px; width: 72%; border-radius: var(--r-pill); background: var(--fd-rule); animation: fd-pulse 1.4s ease-in-out infinite; }
+.fd-skeleton span.wide { height: 30px; width: 58%; }
+.fd-skeleton span.short { width: 40%; }
+@keyframes fd-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  .fd-skeleton span { animation: none; }
+}

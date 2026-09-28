@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { CredentialCryptoError, decryptCredential, encryptCredential } from '@/lib/crypto/credentials';
-import { UserFacingError } from '@/lib/errors';
+import { CONNECTION_UNAVAILABLE, UserFacingError } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 export type StoredZerodhaSession = {
   accessToken: string;
@@ -19,7 +20,6 @@ export type ZerodhaConnectionLookup =
   | { kind: 'none' }
   | { kind: 'setup'; message: string };
 
-const isMissingTable = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
 
 export async function getZerodhaConnection(userId: string): Promise<ZerodhaConnectionLookup> {
   const admin = createAdminClient();
@@ -29,10 +29,11 @@ export async function getZerodhaConnection(userId: string): Promise<ZerodhaConne
     .eq('user_id', userId)
     .maybeSingle();
   if (error) {
+    console.error('Reading zerodha_connections failed', error);
     return {
       kind: 'setup',
       message: isMissingTable(error.code)
-        ? 'Apply the Zerodha connections migration in Supabase to connect Zerodha.'
+        ? CONNECTION_UNAVAILABLE
         : 'Your Zerodha connection could not be loaded. Try again shortly.',
     };
   }
@@ -57,7 +58,8 @@ export async function getZerodhaConnection(userId: string): Promise<ZerodhaConne
       },
     };
   } catch (error) {
-    return { kind: 'setup', message: error instanceof CredentialCryptoError ? error.message : 'Your Zerodha session could not be unlocked.' };
+    console.error('Decrypting the Zerodha session failed', error);
+    return { kind: 'setup', message: error instanceof CredentialCryptoError ? CONNECTION_UNAVAILABLE : 'Your Zerodha session could not be unlocked.' };
   }
 }
 

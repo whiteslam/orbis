@@ -1,17 +1,17 @@
 'use server';
 
+import { requireUser } from '@/lib/auth/session';
+import { isUuid } from '@/lib/validate/id';
 import { revalidatePath } from 'next/cache';
 import { userMessage } from '@/lib/errors';
 import { EmbeddingError } from '@/lib/health-docs/embeddings';
 import { buildPlanContext, generateHealthPlan, generatePlanQuestions, MIN_QUESTIONS } from '@/lib/health-docs/planner';
-import { deleteHealthDocument, signedDownloadUrl, storeHealthDocument } from '@/lib/health-docs/repository';
+import { deleteHealthDocument, setAlwaysInclude, signedDownloadUrl, storeHealthDocument } from '@/lib/health-docs/repository';
 import type { HealthPlan, PlanAnswer, PlanQuestion } from '@/lib/health-docs/types';
-import { isAppUnlocked } from '@/lib/security/app-lock';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { ALREADY_CLAIMED_MESSAGE, claimStaged, createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
 import { stagedInput } from '@/lib/storage/upload-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
 import { parseDocument } from '@/lib/workbook/parse';
 
 type Result<T> = { success: true; data: T; message?: string } | { success: false; message: string };
@@ -19,20 +19,14 @@ type Result<T> = { success: true; data: T; message?: string } | { success: false
 const DAILY_AI_LIMIT = 10;
 const MAX_DOCUMENTS = 50;
 const DOCUMENT_CAP_MESSAGE = `You can keep up to ${MAX_DOCUMENTS} documents. Delete one you no longer need to add another.`;
-const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id);
-
-async function authenticatedUser() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
-  return { supabase, userId };
-}
 
 async function consumeAiRequest(userId: string) {
   try {
     const { data, error } = await createAdminClient().rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_AI_LIMIT });
-    if (error) return 'AI usage limits are not set up yet. Apply the workbook usage migration in Supabase.';
+    if (error) {
+      console.error('consume_workbook_ai_request failed', error);
+      return 'AI requests aren’t available right now. Try again later.';
+    }
     return data ? null : `You’ve reached today’s limit of ${DAILY_AI_LIMIT} AI requests. Try again tomorrow.`;
   } catch {
     return 'AI usage limits are not available right now. Try again later.';
@@ -42,19 +36,16 @@ async function consumeAiRequest(userId: string) {
 
 /** Marks a document as one the plan builder reads every time. */
 export async function setHealthDocumentAlwaysAction(input: unknown): Promise<Result<null>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to change this.' };
   if (!input || typeof input !== 'object') return { success: false, message: 'That document could not be found.' };
   const { id, always } = input as { id?: unknown; always?: unknown };
-  if (!validId(id) || typeof always !== 'boolean') return { success: false, message: 'That document could not be found.' };
+  if (!isUuid(id) || typeof always !== 'boolean') return { success: false, message: 'That document could not be found.' };
 
-  const { error } = await auth.supabase
-    .from('health_documents')
-    .update({ always_include: always })
-    .eq('id', id)
-    .eq('user_id', auth.userId);
-  if (error) {
-    return { success: false, message: error.code === '42703' ? 'Apply the master document migration in Supabase first.' : 'That change could not be saved. Try again.' };
+  try {
+    await setAlwaysInclude(auth.userId, id, always);
+  } catch (error) {
+    return { success: false, message: userMessage(error, 'That change could not be saved. Try again.') };
   }
   revalidatePath('/');
   return { success: true, data: null, message: always ? 'Orbis will read this in every plan.' : 'Removed from every plan.' };
@@ -75,7 +66,7 @@ async function documentCount(userId: string) {
  * hands the browser a one-time token to put the file straight into Storage.
  */
 export async function signHealthDocumentUploadAction(file: { name: string; type: string; size: number }): Promise<Result<{ path: string; token: string; contentType: string }>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };
   const count = await documentCount(auth.userId);
   if (count === null) return { success: false, message: 'Uploads aren’t available right now. Try again in a little while.' };
@@ -95,7 +86,7 @@ export async function signHealthDocumentUploadAction(file: { name: string; type:
  * so concurrent or repeated calls for one upload index it at most once.
  */
 export async function uploadHealthDocumentAction(input: { path: string; name: string }): Promise<Result<{ id: string; chunkCount: number }>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };
   // A forged or malformed path is refused before it can cost a credit.
   const staged = stagedInput(auth.userId, input);
@@ -148,9 +139,9 @@ export async function uploadHealthDocumentAction(input: { path: string; name: st
 }
 
 export async function deleteHealthDocumentAction(id: string): Promise<Result<null>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to manage documents.' };
-  if (!validId(id)) return { success: false, message: 'This document is invalid.' };
+  if (!isUuid(id)) return { success: false, message: 'This document is invalid.' };
   try {
     await deleteHealthDocument(auth.userId, id);
   } catch (error) {
@@ -161,9 +152,9 @@ export async function deleteHealthDocumentAction(id: string): Promise<Result<nul
 }
 
 export async function downloadHealthDocumentAction(id: string): Promise<Result<string>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to download.' };
-  if (!validId(id)) return { success: false, message: 'This document is invalid.' };
+  if (!isUuid(id)) return { success: false, message: 'This document is invalid.' };
   try {
     return { success: true, data: await signedDownloadUrl(auth.userId, id) };
   } catch (error) {
@@ -172,11 +163,14 @@ export async function downloadHealthDocumentAction(id: string): Promise<Result<s
 }
 
 export async function startHealthPlanAction(): Promise<Result<PlanQuestion[]>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to build a plan.' };
   // Plans can't be saved without the migration; check before spending AI requests.
   const { error: tableError } = await auth.supabase.from('health_plans').select('id', { head: true, count: 'exact' }).limit(1);
-  if (tableError) return { success: false, message: 'Apply the health documents migration in Supabase to build and save plans.' };
+  if (tableError) {
+    console.error('health_plans could not be read', tableError);
+    return { success: false, message: 'Plans can’t be built right now. Try again later.' };
+  }
   const limited = await consumeAiRequest(auth.userId);
   if (limited) return { success: false, message: limited };
 
@@ -192,7 +186,7 @@ export async function startHealthPlanAction(): Promise<Result<PlanQuestion[]>> {
 }
 
 export async function generateHealthPlanAction(input: { answers: PlanAnswer[] }): Promise<Result<{ id: string; plan: HealthPlan }>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to build a plan.' };
   if (!input || !Array.isArray(input.answers)) return { success: false, message: 'Answer the questions first.' };
   const answers: PlanAnswer[] = input.answers.slice(0, 20).flatMap((item) => {
@@ -213,7 +207,10 @@ export async function generateHealthPlanAction(input: { answers: PlanAnswer[] })
       return { success: false, message: 'The AI returned an incomplete plan. Try generating again.' };
     }
     const { data, error } = await createAdminClient().from('health_plans').insert({ user_id: auth.userId, title: result.plan.title, answers, plan: result.plan }).select('id').single();
-    if (error || !data) return { success: false, message: 'Your plan was created but couldn’t be saved. Apply the health documents migration and try again.' };
+    if (error || !data) {
+      console.error('Saving a health plan failed', error);
+      return { success: false, message: 'Your plan was created but couldn’t be saved. Try again in a moment.' };
+    }
     revalidatePath('/');
     return { success: true, data: { id: data.id, plan: result.plan } };
   } catch {
@@ -222,9 +219,9 @@ export async function generateHealthPlanAction(input: { answers: PlanAnswer[] })
 }
 
 export async function deleteHealthPlanAction(id: string): Promise<Result<null>> {
-  const auth = await authenticatedUser();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to manage plans.' };
-  if (!validId(id)) return { success: false, message: 'This plan is invalid.' };
+  if (!isUuid(id)) return { success: false, message: 'This plan is invalid.' };
   const { error } = await auth.supabase.from('health_plans').delete().eq('id', id).eq('user_id', auth.userId);
   if (error) return { success: false, message: 'The plan could not be deleted.' };
   revalidatePath('/');

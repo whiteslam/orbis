@@ -20,8 +20,8 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
   if (!summary.databaseReady) {
     return {
       id: 'finance-setup',
-      headline: 'Finance is waiting on a database migration.',
-      body: 'Apply the finance, Gmail, workbook-usage and transaction-review migrations in Supabase and this screen starts working. Nothing you enter elsewhere in Orbis is affected.',
+      headline: 'Finance isn’t available right now.',
+      body: 'Nothing you enter elsewhere in Orbis is affected. Try again later.',
       action: null,
     };
   }

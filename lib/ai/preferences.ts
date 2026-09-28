@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 /**
  * What the user has agreed to send to the model provider on their behalf.
@@ -15,7 +16,6 @@ export type AiPreferences = {
   configured: boolean;
 };
 
-const isMissingTable = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
 
 export async function getAiPreferences(userId: string): Promise<AiPreferences> {
   const configured = Boolean(process.env.OPENROUTER_API_KEY?.trim());
@@ -26,7 +26,10 @@ export async function getAiPreferences(userId: string): Promise<AiPreferences> {
       .select('home_brief_enabled')
       .eq('user_id', userId)
       .maybeSingle();
-    if (error) return { state: isMissingTable(error.code) ? 'setup' : 'unavailable', homeBriefEnabled: false, configured };
+    if (error) {
+      console.error('Reading AI preferences failed', error);
+      return { state: isMissingTable(error.code) ? 'setup' : 'unavailable', homeBriefEnabled: false, configured };
+    }
     return { state: 'ready', homeBriefEnabled: data?.home_brief_enabled === true, configured };
   } catch {
     return { state: 'unavailable', homeBriefEnabled: false, configured };
@@ -40,7 +43,8 @@ export async function setHomeBriefEnabled(userId: string, enabled: boolean): Pro
       .from('ai_preferences')
       .upsert({ user_id: userId, home_brief_enabled: enabled, updated_at: new Date().toISOString() });
     if (error) {
-      return { ok: false, message: isMissingTable(error.code) ? 'Apply the home brief migration in Supabase, then try again.' : 'That setting could not be saved. Try again shortly.' };
+      console.error('Saving AI preferences failed', error);
+      return { ok: false, message: isMissingTable(error.code) ? 'This setting isn’t available right now.' : 'That setting could not be saved. Try again shortly.' };
     }
     return { ok: true };
   } catch {

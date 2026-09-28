@@ -73,7 +73,7 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
     });
   }
 
-  if (state === 'setup') return <p className="fd-msg bad">Apply the health documents migration in Supabase to save documents.</p>;
+  if (state === 'setup') return <p className="fd-msg bad">Saving documents isn’t available right now. Try again later.</p>;
   if (state === 'unavailable') return <p className="fd-msg bad">Your documents could not be loaded. Refresh and try again.</p>;
 
   const pinned = documents.filter((document) => document.alwaysInclude).length;

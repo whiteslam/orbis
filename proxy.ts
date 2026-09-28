@@ -21,7 +21,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
       // Prefetches from next/link don't render HTML, so they need neither a nonce nor a policy.
       missing: [
         { type: 'header', key: 'next-router-prefetch' },

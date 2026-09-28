@@ -56,7 +56,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
 
   function enableDevice() {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!publicKey) return setMessage({ text: 'Push isn’t configured on the server yet (VAPID keys).', success: false });
+    if (!publicKey) return setMessage({ text: 'Push notifications aren’t available right now.', success: false });
     run(async () => {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
@@ -88,7 +88,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
     });
   }
 
-  if (settings.state === 'setup') return <p className="fd-msg bad">Apply the profile/journal/notifications migration in Supabase to manage notifications.</p>;
+  if (settings.state === 'setup') return <p className="fd-msg bad">Notifications aren’t available right now. Try again later.</p>;
   if (settings.state === 'unavailable') return <p className="fd-msg bad">Notification settings could not be loaded. Refresh and try again.</p>;
 
   const otherDevices = settings.deviceEndpoints.filter((item) => item !== endpoint).length;
@@ -133,7 +133,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         {device === 'on' && <button className="pf-pill" type="button" onClick={disableDevice} disabled={isPending}><BellOff size={13} aria-hidden="true" /> Turn off</button>}
       </div>
       {device === 'on' && <button className="fd-link pf-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)(), true)} disabled={isPending}><Send size={13} aria-hidden="true" /> Send a test notification</button>}
-      {!settings.pushConfigured && <p className="fd-note tight">Push keys aren’t set on the server yet (NEXT_PUBLIC_VAPID_PUBLIC_KEY).</p>}
+      {!settings.pushConfigured && <p className="fd-note tight">Push notifications aren’t available right now.</p>}
       {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
     </div>
   );

@@ -167,7 +167,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
       <FieldSubHead crumb="Health · plans" title="Plans" lead="Orbis reads your saved documents, steps and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan." onBack={onBack} backLabel="Back to Health" />
 
       {state === 'setup' ? (
-        <p className="fd-msg bad">Apply the health documents migration in Supabase to build and save plans.</p>
+        <p className="fd-msg bad">Plans can’t be built right now. Try again later.</p>
       ) : (
         <div className="fd-act">
           <button type="button" onClick={start} disabled={isPending}>

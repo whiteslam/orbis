@@ -35,7 +35,7 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
 
   const blocked = pending || state !== 'ready';
   const notice = state === 'setup'
-    ? 'Profile storage isn’t set up yet. Apply the pending Supabase migration (202609240009_personal_profile.sql), then refresh.'
+    ? 'Your profile can’t be saved right now. Try again later.'
     : state === 'unavailable' ? 'Your profile could not be loaded. Refresh and try again.' : null;
 
   if (profile && !editing) {

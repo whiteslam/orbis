@@ -131,7 +131,7 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
         <button type="button" className="fd-round" aria-label="Next month" disabled={isLoading} onClick={() => load(shiftMonth(period, 1))}><ChevronRight size={16} strokeWidth={2.2} aria-hidden="true" /></button>
       </div>
 
-      {!month.databaseReady && <p className="so-problem">Apply the social planner migration in Supabase to start planning posts.</p>}
+      {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
       {month.databaseReady && month.loadError && !isLoading && (
         <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
       )}

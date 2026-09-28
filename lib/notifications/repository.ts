@@ -2,6 +2,7 @@ import 'server-only';
 
 import { DEFAULT_PREFERENCES, NOTIFICATION_SLOTS, type NotificationPreferences, type NotificationSettings } from '@/lib/notifications/preferences';
 import { createClient } from '@/lib/supabase/server';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 type PreferenceRow = Record<string, unknown>;
 
@@ -27,7 +28,7 @@ export async function getNotificationSettings(userId: string): Promise<Notificat
   ]);
   const error = preferences.error ?? devices.error;
   if (error) {
-    const missing = ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '');
+    const missing = isMissingTable(error);
     return { state: missing ? 'setup' : 'unavailable', preferences: DEFAULT_PREFERENCES, deviceEndpoints: [], pushConfigured };
   }
   return {

@@ -14,3 +14,6 @@ export function userMessage(error: unknown, fallback: string): string {
   console.error(error);
   return fallback;
 }
+
+/** What a person sees when a connection or its setup is missing on the server. */
+export const CONNECTION_UNAVAILABLE = 'This connection isn’t available right now.';

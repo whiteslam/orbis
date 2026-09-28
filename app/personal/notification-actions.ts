@@ -1,29 +1,20 @@
 'use server';
 
+import { requireUser } from '@/lib/auth/session';
 import { revalidatePath } from 'next/cache';
 import { NOTIFICATION_SLOTS, type NotificationPreferences } from '@/lib/notifications/preferences';
-import { isAppUnlocked } from '@/lib/security/app-lock';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
 import { localClock } from '@/lib/notifications/schedule';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 const MAX_DEVICES = 10;
 
-async function authenticatedClient() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return null;
-  return { supabase, userId };
-}
-
-const setupMessage = 'Apply the profile/journal/notifications migration in Supabase first.';
-const isMissing = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
+const setupMessage = 'Notifications aren’t available right now. Try again later.';
 
 export async function saveNotificationPreferencesAction(input: NotificationPreferences) {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to update notifications.' };
   if (!input || typeof input !== 'object' || typeof input.enabled !== 'boolean' || !input.slots || typeof input.timezone !== 'string') return { success: false, message: 'These settings are invalid.' };
 
@@ -45,13 +36,13 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
   }
 
   const { error } = await auth.supabase.from('notification_preferences').upsert(row, { onConflict: 'user_id' });
-  if (error) return { success: false, message: isMissing(error.code) ? setupMessage : 'Settings could not be saved. Try again.' };
+  if (error) return { success: false, message: isMissingTable(error) ? setupMessage : 'Settings could not be saved. Try again.' };
   revalidatePath('/');
   return { success: true, message: input.enabled ? 'Notification settings saved.' : 'Notifications are off.' };
 }
 
 export async function subscribePushAction(input: { endpoint: string; p256dh: string; auth: string; userAgent: string }) {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to enable notifications.' };
   if (!input || typeof input.endpoint !== 'string' || typeof input.p256dh !== 'string' || typeof input.auth !== 'string') return { success: false, message: 'This device could not be registered.' };
 
@@ -72,7 +63,7 @@ export async function subscribePushAction(input: { endpoint: string; p256dh: str
   }
 
   const { data: existing, error: countError } = await admin.from('push_subscriptions').select('endpoint').eq('user_id', auth.userId);
-  if (countError) return { success: false, message: isMissing(countError.code) ? setupMessage : 'This device could not be registered.' };
+  if (countError) return { success: false, message: isMissingTable(countError) ? setupMessage : 'This device could not be registered.' };
   const known = (existing ?? []).some((row) => row.endpoint === input.endpoint);
   if (!known && (existing ?? []).length >= MAX_DEVICES) return { success: false, message: `You can enable notifications on up to ${MAX_DEVICES} devices. Turn one off first.` };
 
@@ -94,7 +85,7 @@ const TEST_LIMIT_PER_DAY = 5;
 
 // Sends a real notification now, written for the part of the day it is, so the user can check their phone.
 export async function sendTestNotificationAction() {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to send a test.' };
 
   const admin = createAdminClient();
@@ -118,7 +109,7 @@ export async function sendTestNotificationAction() {
 }
 
 export async function unsubscribePushAction(endpoint: string) {
-  const auth = await authenticatedClient();
+  const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to update notifications.' };
   if (typeof endpoint !== 'string' || endpoint.length > 1000) return { success: false, message: 'This device is invalid.' };
   const { error } = await auth.supabase.from('push_subscriptions').delete().eq('user_id', auth.userId).eq('endpoint', endpoint);
