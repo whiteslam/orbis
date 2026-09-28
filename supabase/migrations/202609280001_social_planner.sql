@@ -39,6 +39,16 @@ create table if not exists public.social_posts (
     check (status <> 'published' or published_at is not null)
 );
 
+-- Ready and published posts are complete: the rule readyProblem() states, held
+-- here too, so a stale check in another tab or a direct API write cannot mark an
+-- unfinished post ready. Added separately so re-running this file adds it to a
+-- table created by an earlier copy.
+alter table public.social_posts drop constraint if exists social_posts_ready_is_complete;
+alter table public.social_posts add constraint social_posts_ready_is_complete check (
+  status not in ('ready', 'published')
+  or (btrim(title) <> '' and caption ~ '\S' and planned_for is not null and (format = 'post' or media_path is not null))
+);
+
 create index if not exists social_posts_user_period_idx
   on public.social_posts (user_id, period, planned_for nulls last, position);
 

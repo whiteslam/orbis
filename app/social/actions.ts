@@ -20,7 +20,7 @@ import {
 } from '@/lib/social/repository';
 import { PERIOD_PATTERN } from '@/lib/social/month';
 import { cleanPlatforms, cleanPostInput, cleanPublish, isFormat } from '@/lib/social/validate';
-import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, parseAiDraft, type DraftTone } from '@/lib/social/ai-draft';
+import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, draftMaxTokens, parseAiDraft, type DraftTone } from '@/lib/social/ai-draft';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPersonalProfile } from '@/lib/personal/repository';
@@ -333,7 +333,7 @@ export async function draftMonthWithAiAction(input: {
     sensitivity: useProfile ? 'personal' : 'general',
     system: prompt.system,
     user: prompt.user,
-    maxTokens: 3000,
+    maxTokens: draftMaxTokens(input.count),
     temperature: 0.7,
     timeoutMs: 30_000,
   });

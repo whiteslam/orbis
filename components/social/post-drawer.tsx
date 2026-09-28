@@ -202,15 +202,22 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
     else setProblem(result.message);
   });
 
+  // Every action below saves pending edits first (or refuses), because accept() resets the form to the server's copy.
   const setDraftStatus = (status: 'idea' | 'draft') => run(status, async () => {
-    if (!saved) return;
-    const result = await safeAction(setPostStatusAction)(saved.id, status);
+    const current = await persist();
+    if (!current) return;
+    const result = await safeAction(setPostStatusAction)(current.id, status);
     if (result.success && result.post) accept(result.post, result.message);
     else setMessage({ text: result.message, error: true });
   });
 
   const publish = () => run('publish', async () => {
     if (!saved || !publishing) return;
+    if (dirty) {
+      // Saving an edit to a ready post sends it back to draft, so publishing the unsaved words is not possible.
+      setMessage({ text: 'You have unsaved changes. Save them and mark the post ready again, or undo them, before recording it as published.', error: true });
+      return;
+    }
     const result = await safeAction(markPublishedAction)(saved.id, { platform: publishing.platform, link: publishing.link || null });
     if (result.success && result.post) {
       setPublishing(null);
@@ -236,7 +243,9 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
 
   const move = () => run('move', async () => {
     if (!saved || !moveTo) return;
-    const result = await safeAction(movePostAction)(saved.id, `${moveTo}-01`);
+    const current = await persist();
+    if (!current) return;
+    const result = await safeAction(movePostAction)(current.id, `${moveTo}-01`);
     if (result.success && result.post) {
       accept(result.post, `${result.message} It is now in ${monthName(result.post.period)}.`);
       setMoveTo('');
@@ -273,8 +282,9 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   });
 
   const removeMedia = () => run('media-remove', async () => {
-    if (!saved) return;
-    const result = await safeAction(removeMediaAction)(saved.id);
+    const current = await persist();
+    if (!current) return;
+    const result = await safeAction(removeMediaAction)(current.id);
     if (result.success && result.post) accept(result.post, result.message);
     else setMessage({ text: result.message, error: true });
   });

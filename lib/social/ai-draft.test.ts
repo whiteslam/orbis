@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDraftPrompt, parseAiDraft } from './ai-draft.ts';
+import { buildDraftPrompt, draftMaxTokens, parseAiDraft } from './ai-draft.ts';
 
 const options = { period: '2026-09-01', count: 3, formats: ['post', 'reel'] as const };
 const json = (posts: unknown[]) => JSON.stringify({ posts });
@@ -51,6 +51,13 @@ test('parseAiDraft replaces a format that was not asked for with the first one t
 test('parseAiDraft titles an untitled post from its caption', () => {
   const [post] = parseAiDraft(json([item({ title: '', caption: 'First line here\nsecond' })]), { ...options, formats: [...options.formats] });
   assert.equal(post.title, 'First line here');
+});
+
+test('draftMaxTokens grows with the number of posts so a full month is not cut off', () => {
+  assert.ok(draftMaxTokens(1) >= 1000);
+  assert.ok(draftMaxTokens(15) >= 15 * 400);
+  assert.ok(draftMaxTokens(15) > draftMaxTokens(5));
+  assert.ok(draftMaxTokens(15) <= 8000);
 });
 
 test('buildDraftPrompt states the count, the month length and the strictest limit', () => {

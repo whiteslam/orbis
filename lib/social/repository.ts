@@ -215,7 +215,8 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
     .select(COLUMNS)
     .maybeSingle();
   if (error) {
-    if (error.code === '23514') throw new SocialError('Pick a day inside the post’s month.');
+    // A check failed: either the day is outside the month, or the post changed in another tab so this edit would leave a ready post incomplete.
+    if (error.code === '23514') throw new SocialError(error.message.includes('social_posts_date_in_period') ? 'Pick a day inside the post’s month.' : 'This post changed somewhere else. Refresh and try again.');
     throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be saved.');
   }
   if (!data) throw new SocialError('This post changed somewhere else. Refresh and try again.');
@@ -265,7 +266,14 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
     .eq('status', before.status)
     .select(COLUMNS)
     .maybeSingle();
-  if (error) throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be updated.');
+  if (error) {
+    // The database holds the ready rule too. If it refused, the post changed after it was checked: say what is missing now.
+    if (error.code === '23514') {
+      const now = await readPost(supabase, userId, id);
+      throw new SocialError((now && readyProblem(now)) || 'This post is not complete yet. Refresh and try again.');
+    }
+    throw new SocialError(isMissingTable(error.code) ? SETUP_MESSAGE : 'That post could not be updated.');
+  }
   if (!data) {
     // Someone (another tab, a second tap) got there first. If it already has the status asked for, that is success.
     const now = await mustRead(supabase, userId, id);

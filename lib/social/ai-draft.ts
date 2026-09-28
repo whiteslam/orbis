@@ -15,6 +15,15 @@ export const DRAFT_TONES: DraftTone[] = ['friendly', 'professional', 'playful', 
 export const MAX_DRAFT_COUNT = 15;
 export const MAX_BRIEF_LENGTH = 1500;
 
+/**
+ * Room for the whole reply. A reply cut off mid-JSON parses to nothing and
+ * still costs one of the day's drafts, so the budget grows with the count:
+ * about 450 tokens a post (caption, reel script, hashtags) plus the wrapper.
+ */
+export function draftMaxTokens(count: number) {
+  return Math.min(8000, 600 + Math.max(1, count) * 450);
+}
+
 /** The strictest caption limit among the chosen platforms, or Instagram's when none are chosen. */
 export function strictestLimit(platforms: SocialPlatform[]) {
   return Math.min(SOCIAL_CAPS.caption, ...(platforms.length ? platforms.map((platform) => CAPTION_LIMIT[platform]) : [CAPTION_LIMIT.instagram]));

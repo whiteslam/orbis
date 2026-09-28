@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
@@ -520,6 +520,8 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [router, tab]);
 
+  // The tab the URL asked for, until it has been applied (see the hash effect below).
+  const pendingTab = useRef<Tab | null>(null);
   useEffect(() => {
     const url = new URL(window.location.href);
     const requestedTab = url.searchParams.get('tab');
@@ -527,11 +529,11 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
     // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority.
     // A tab may carry its own state after a slash (#social/2026-09); only the part before it names the tab.
     const fromHash = HASH_TO_TAB[url.hash.slice(1).split('/')[0]];
-    if (fromHash && !requestedTab) setTab(fromHash);
-    if (requestedTab === 'finance') setTab('finance');
-    if (requestedTab === 'settings') {
-      setProfileSection('settings');
-      setTab('personal');
+    const opening = requestedTab === 'finance' ? 'finance' : requestedTab === 'settings' ? 'personal' : !requestedTab && fromHash ? fromHash : null;
+    if (requestedTab === 'settings') setProfileSection('settings');
+    if (opening && opening !== 'home') {
+      pendingTab.current = opening;
+      setTab(opening);
     }
     if (notice) setGmailNotice(notice);
     if (requestedTab || notice) {
@@ -542,6 +544,12 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
   }, []);
 
   useEffect(() => {
+    // Until the tab read from the URL is applied, this still sees 'home'; writing
+    // now would erase the hash (and a tab's own state after it, like #social/2026-11).
+    if (pendingTab.current) {
+      if (tab !== pendingTab.current) return;
+      pendingTab.current = null;
+    }
     const hash = tab === 'home' ? '' : `#${TAB_TO_HASH[tab]}`;
     // Leave a tab's own state (#social/2026-09) alone while that tab is open.
     if (hash && window.location.hash.startsWith(`${hash}/`)) return;
