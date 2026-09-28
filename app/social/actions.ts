@@ -22,11 +22,14 @@ import {
 import { PERIOD_PATTERN } from '@/lib/social/month';
 import { cleanPlatforms, cleanPostInput, cleanPublish, isFormat } from '@/lib/social/validate';
 import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, draftMaxTokens, parseAiDraft, type DraftTone } from '@/lib/social/ai-draft';
+import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
+import { aiBlocked } from '@/lib/ai/gate';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
+const NO_MODEL_MESSAGE = 'No AI model is available right now. Try again later or write the posts yourself.';
 type Result = { success: boolean; message: string; post?: SocialPost; posts?: SocialPost[] };
 
 const SIGN_IN = { success: false, message: 'Sign in again to do this.' } as const;
@@ -299,6 +302,12 @@ export async function draftMonthWithAiAction(input: {
   const tone = input.tone as DraftTone;
   const useProfile = input.useProfile === true;
 
+  // Before the daily draft credit is spent: nothing is charged for a request
+  // that consent or the registry would stop anyway.
+  const blocked = await aiBlocked(userId, useProfile ? 'personal' : 'general');
+  if (blocked === 'off') return { success: false, message: AI_OFF_MESSAGE };
+  if (blocked) return { success: false, message: NO_MODEL_MESSAGE };
+
   let profile: { preferredName: string; role: string; aboutMe: string } | null = null;
   if (useProfile) {
     const summary = await getPersonalProfile(userId);
@@ -333,7 +342,7 @@ export async function draftMonthWithAiAction(input: {
     temperature: 0.7,
     timeoutMs: 30_000,
   });
-  if (!result) return { success: false, message: 'No AI model is available right now. Try again later or write the posts yourself.' };
+  if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 
   const drafts = parseAiDraft(result.text, { period: input.period, count: input.count, formats });
   if (!drafts.length) return { success: false, message: 'The AI reply could not be used. Try again, or change the brief.' };

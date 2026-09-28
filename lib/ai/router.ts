@@ -1,6 +1,8 @@
 import 'server-only';
 
 import { after } from 'next/server';
+import { aiAllowed } from '@/lib/ai/consent';
+import { getAiConsent } from '@/lib/ai/consent-store';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
@@ -166,6 +168,11 @@ async function penalise(admin: Admin, candidate: Candidate, hard: boolean) {
  * Asks the best available model for JSON, falling through the registry on
  * failure. Returns null when every candidate is exhausted, which is the
  * caller's signal to use its own wording rather than to show an error.
+ *
+ * Consent comes first. Until the person has turned AI on (and so seen what is
+ * sent, and where), nothing reaches any provider, whoever the caller is: an
+ * action, the Home brief, or the notification cron. Callers that need to tell
+ * "off" apart from "no model" ask lib/ai/gate.ts before they get here.
  */
 export async function routeJson(request: RouterRequest): Promise<RouterResult> {
   let admin: Admin;
@@ -174,6 +181,8 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
   } catch {
     return null;
   }
+
+  if (!aiAllowed(await getAiConsent(request.userId))) return null;
 
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const deadline = Date.now() + Math.min(timeoutMs * 1.5, MAX_TOTAL_MS);

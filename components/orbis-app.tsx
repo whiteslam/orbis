@@ -35,6 +35,7 @@ import type { BriefWeather } from '@/lib/home/weather';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { AiPreferences } from '@/lib/ai/preferences';
+import { aiAllowed } from '@/lib/ai/consent';
 import { composeQuietRows } from '@/lib/focus/home';
 import { composeSocialRow } from '@/lib/focus/social';
 import { indiaToday } from '@/lib/social/month';
@@ -628,7 +629,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         socialPosts={socialMonth.posts}
         savedAdviceAt={savedWorkbookAdvice?.createdAt ?? null}
         preferredName={personalProfile.profile?.preferredName ?? null}
-        aiBriefEnabled={aiPreferences.homeBriefEnabled}
+        aiBriefEnabled={aiPreferences.homeBriefEnabled && aiAllowed(aiPreferences)}
         openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
         openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
       />

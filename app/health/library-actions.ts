@@ -1,5 +1,8 @@
 'use server';
 
+import { AI_OFF_MESSAGE, aiAllowed } from '@/lib/ai/consent';
+import { getAiConsent } from '@/lib/ai/consent-store';
+import { aiBlocked } from '@/lib/ai/gate';
 import { requireUser } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
 import { revalidatePath } from 'next/cache';
@@ -20,7 +23,17 @@ const DAILY_AI_LIMIT = 10;
 const MAX_DOCUMENTS = 50;
 const DOCUMENT_CAP_MESSAGE = `You can keep up to ${MAX_DOCUMENTS} documents. Delete one you no longer need to add another.`;
 
+const NO_PROVIDER_MESSAGE = 'No AI provider that can hold your documents is available right now. Try again shortly.';
+
+/**
+ * The gate for a plan request: consent and a model that may read documents
+ * first, then the daily credit, so a request that could never be sent is not
+ * charged. Returns the message to show, or null to go ahead.
+ */
 async function consumeAiRequest(userId: string) {
+  const blocked = await aiBlocked(userId, 'personal');
+  if (blocked === 'off') return AI_OFF_MESSAGE;
+  if (blocked) return NO_PROVIDER_MESSAGE;
   try {
     const { data, error } = await createAdminClient().rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_AI_LIMIT });
     if (error) {
@@ -68,6 +81,8 @@ async function documentCount(userId: string) {
 export async function signHealthDocumentUploadAction(file: { name: string; type: string; size: number }): Promise<Result<{ path: string; token: string; contentType: string }>> {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };
+  // Adding a document indexes its text with an AI model, so it waits for AI to be on.
+  if (!aiAllowed(await getAiConsent(auth.userId))) return { success: false, message: AI_OFF_MESSAGE };
   const count = await documentCount(auth.userId);
   if (count === null) return { success: false, message: 'Uploads aren’t available right now. Try again in a little while.' };
   if (count >= MAX_DOCUMENTS) return { success: false, message: DOCUMENT_CAP_MESSAGE };
@@ -100,6 +115,8 @@ export async function uploadHealthDocumentAction(input: { path: string; name: st
   // Only the caller that won the claim reaches here, so only it deletes the staged file.
   const { path, name } = staged;
   try {
+    // Asked again before the parse credit: AI may have been turned off since step one.
+    if (!aiAllowed(await getAiConsent(auth.userId))) return { success: false, message: AI_OFF_MESSAGE };
     // Indexing (parse plus embeddings) is the costly step, so it is charged here too.
     const refused = await rateLimitRefusal(auth.userId, 'parse');
     if (refused) return { success: false, message: refused };
@@ -178,7 +195,7 @@ export async function startHealthPlanAction(): Promise<Result<PlanQuestion[]>> {
   try {
     const context = await buildPlanContext(auth.userId, 'health fitness measurements weight heart rate blood sleep activity steps diet conditions');
     const result = await generatePlanQuestions(auth.userId, context);
-    if (!result.questions.length) return { success: false, message: 'No AI provider that can hold your documents is available right now. Try again shortly.' };
+    if (!result.questions.length) return { success: false, message: NO_PROVIDER_MESSAGE };
     return { success: true, data: result.questions };
   } catch {
     return { success: false, message: 'Orbis couldn’t prepare your questions. Try again shortly.' };

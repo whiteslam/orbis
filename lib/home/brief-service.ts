@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { aiAllowed } from '@/lib/ai/consent';
 import { getAiPreferences } from '@/lib/ai/preferences';
 import { getLatestAiResult, saveAiResult } from '@/lib/ai/results';
 import type { SavedHomeBrief } from '@/lib/ai/saved';
@@ -62,8 +63,11 @@ function readWeather(value: unknown): WeatherInput {
  */
 export async function loadHomeBrief(userId: string, input: { weather?: unknown }): Promise<BriefResult> {
   const preferences = await getAiPreferences(userId);
-  if (!preferences.homeBriefEnabled) return { state: 'off' };
-  if (!preferences.configured) return { state: 'error', message: 'No AI provider that can hold personal data is configured on this server.' };
+  // With AI switched off, Home simply shows Orbis's own wording: no message,
+  // because turning AI off is a choice, not a fault. Both checks (consent, and
+  // a model that may see personal data) come before the daily credit below.
+  if (!preferences.homeBriefEnabled || !aiAllowed(preferences)) return { state: 'off' };
+  if (!preferences.configured) return { state: 'error', message: 'No AI provider that can hold personal data is available right now.' };
 
   const [finance, library, profile, routines] = await Promise.all([
     getFinanceSummary(userId),
