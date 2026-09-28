@@ -15,7 +15,7 @@ import { safeAction } from '@/lib/client/safe-action';
  * about what you did instead — and any of them can be undone, because a mis-tap
  * should not become history.
  */
-export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; onAnswered: () => void }) {
+export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; onAnswered?: () => void }) {
   const [writingOther, setWritingOther] = useState(false);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; o
       }
       setWritingOther(false);
       setNote('');
-      onAnswered();
+      onAnswered?.();
     });
   }
 

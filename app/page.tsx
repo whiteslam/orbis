@@ -45,8 +45,9 @@ export default async function Page() {
   }
 
   // While locked, load nothing personal: only the lock screen is rendered.
-  const pinStatus = await getPinStatus(userId);
-  if (!(await isAppUnlocked(data.claims))) return <LockScreen email={email} pinStatus={pinStatus} />;
+  // The two checks are independent, so neither waits for the other.
+  const [pinStatus, unlocked] = await Promise.all([getPinStatus(userId), isAppUnlocked(data.claims)]);
+  if (!unlocked) return <LockScreen email={email} pinStatus={pinStatus} />;
   // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
   if (pinStatus === 'none' || pinStatus === 'locked') return <PinSetup reset={pinStatus === 'locked'} />;
 

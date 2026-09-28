@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { after } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
@@ -46,6 +47,26 @@ type Candidate = {
 
 const FAILURE_COOLDOWN_MINUTES = 15;
 const MAX_ATTEMPTS = 4;
+const DEFAULT_TIMEOUT_MS = 15_000;
+// One budget for the whole request, however many models it falls through, so
+// the worst case stays inside the 60 s function limit.
+const MAX_TOTAL_MS = 50_000;
+// Less than this left is not enough for a model to answer; stop and let the
+// caller use its own wording.
+const MIN_ATTEMPT_MS = 1_500;
+
+/**
+ * Bookkeeping runs after the response is sent, so a slow insert never adds to
+ * what the user waits for. Outside a request (a script, a test) there is no
+ * response to wait for, so it simply runs in the background.
+ */
+function later(task: () => Promise<void>) {
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
+}
 
 /**
  * Models the router may use right now, best first.
@@ -89,7 +110,7 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
     .slice(0, MAX_ATTEMPTS);
 }
 
-async function logAttempt(admin: Admin, request: RouterRequest, candidate: Candidate, outcome: string, status: number | null, startedAt: number, bytes = 0) {
+async function logAttempt(admin: Admin, request: RouterRequest, candidate: Candidate, outcome: string, status: number | null, durationMs: number, bytes = 0) {
   try {
     await admin.from('ai_generation_events').insert({
       user_id: request.userId,
@@ -100,7 +121,7 @@ async function logAttempt(admin: Admin, request: RouterRequest, candidate: Candi
       sensitivity: request.sensitivity,
       outcome,
       provider_status: status,
-      duration_ms: Math.min(Date.now() - startedAt, 120_000),
+      duration_ms: Math.min(durationMs, 120_000),
       response_bytes: Math.min(bytes, 131_072),
     });
   } catch {
@@ -133,9 +154,21 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
     return null;
   }
 
+  const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const deadline = Date.now() + Math.min(timeoutMs * 1.5, MAX_TOTAL_MS);
   const available = await candidates(admin, request.sensitivity);
   for (const candidate of available) {
+    const remaining = deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) break;
     const startedAt = Date.now();
+    const record = (outcome: string, status: number | null, bytes = 0, hard = false) => {
+      // Measured now: the bookkeeping itself runs once the response has gone.
+      const durationMs = Date.now() - startedAt;
+      later(async () => {
+        await logAttempt(admin, request, candidate, outcome, status, durationMs, bytes);
+        await penalise(admin, candidate, hard);
+      });
+    };
     try {
       const response = await fetch(`${candidate.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -156,15 +189,15 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
           ...candidate.extra,
         }),
         cache: 'no-store',
-        signal: AbortSignal.timeout(request.timeoutMs ?? 15_000),
+        // Each attempt gets its own timeout, but never more than what is left overall.
+        signal: AbortSignal.timeout(Math.min(timeoutMs, remaining)),
       });
 
       if (!response.ok) {
         const outcome = response.status === 429 ? 'rate_limited'
           : response.status === 401 || response.status === 403 ? 'auth_failed'
             : response.status === 404 ? 'not_found' : 'failed';
-        await logAttempt(admin, request, candidate, outcome, response.status, startedAt);
-        await penalise(admin, candidate, outcome !== 'rate_limited');
+        record(outcome, response.status, 0, outcome !== 'rate_limited');
         continue;
       }
 
@@ -172,17 +205,14 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
       const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string } }> };
       const text = data.choices?.[0]?.message?.content ?? '';
       if (!text.trim()) {
-        await logAttempt(admin, request, candidate, 'invalid_output', response.status, startedAt, raw.length);
-        await penalise(admin, candidate, false);
+        record('invalid_output', response.status, raw.length);
         continue;
       }
-      await logAttempt(admin, request, candidate, 'succeeded', response.status, startedAt, raw.length);
-      await penalise(admin, candidate, false);
+      record('succeeded', response.status, raw.length);
       return { text, providerId: candidate.providerId, modelId: candidate.modelId };
     } catch (error) {
       const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-      await logAttempt(admin, request, candidate, timedOut ? 'timeout' : 'failed', null, startedAt);
-      await penalise(admin, candidate, !timedOut);
+      record(timedOut ? 'timeout' : 'failed', null, 0, !timedOut);
     }
   }
   return null;

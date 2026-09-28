@@ -2,17 +2,10 @@
 
 import { categoryStyle } from '@/components/finance/category-style';
 import { FieldLabel } from '@/components/field/field';
+import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
 
 type Month = NonNullable<FinanceSummary['month']>;
-
-export function money(amount: number, currency: string, compact = false) {
-  try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: compact || amount >= 1000 ? 0 : 2, notation: compact ? 'compact' : 'standard' }).format(amount);
-  } catch {
-    return `${currency} ${amount.toLocaleString('en-IN')}`;
-  }
-}
 
 const SHOWN_CATEGORIES = 5;
 

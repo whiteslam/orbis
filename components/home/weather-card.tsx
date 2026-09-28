@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Cloud, LoaderCircle, MapPin } from 'lucide-react';
 import type { BriefWeather } from '@/lib/home/weather';
+import type { WeatherPhase } from '@/lib/home/brief-gate';
 
 type WeatherResponse = BriefWeather & { place: string | null; stale: boolean };
 
@@ -29,7 +30,7 @@ function currentPosition() {
   });
 }
 
-export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: BriefWeather | null) => void; openPersonal: () => void }) {
+export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (weather: BriefWeather | null) => void; onPhase?: (phase: WeatherPhase) => void; openPersonal: () => void }) {
   const [state, setState] = useState<State>(() => (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS ? lastResult.state : { status: 'loading' }));
 
   useEffect(() => {
@@ -68,6 +69,10 @@ export function WeatherCard({ onWeather, openPersonal }: { onWeather: (weather: 
     })();
     return () => { cancelled = true; };
   }, [onWeather]);
+
+  // Home waits for this before asking for the AI brief, so the brief is written
+  // once, with the weather if there is any, rather than once before and once after.
+  useEffect(() => { onPhase?.(state.status); }, [onPhase, state.status]);
 
   // Weather is a line of text on Home, not a card: one number and the two facts
   // that change what you'd do about it.

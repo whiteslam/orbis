@@ -1,26 +1,16 @@
 'use client';
 
 import { useId, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Download, FileSpreadsheet, FileText, LoaderCircle, Pin, Trash2, Upload } from 'lucide-react';
 import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
 import type { HealthDocument } from '@/lib/health-docs/types';
 import { FieldHero, FieldLabel } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
-
-export function documentSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-export function documentAdded(value: string) {
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(value));
-}
+import { documentAdded, documentSize } from '@/lib/health-docs/format';
 
 /** The body of the Documents view: how many there are, the upload box, and each saved file. */
 export function HealthLibrary({ documents, state }: { documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }) {
   const inputId = useId();
-  const router = useRouter();
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -34,7 +24,6 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
       const result = await safeAction(uploadHealthDocumentAction)(formData);
       setMessage({ text: result.success ? result.message ?? 'Saved.' : result.message, success: result.success });
       setBusy(null);
-      if (result.success) router.refresh();
     });
   }
 
@@ -44,7 +33,6 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
       const result = await safeAction(setHealthDocumentAlwaysAction)({ id: document.id, always: !document.alwaysInclude });
       setBusy(null);
       setMessage({ text: result.success ? result.message ?? 'Saved.' : result.message, success: result.success });
-      if (result.success) router.refresh();
     });
   }
 
@@ -65,7 +53,6 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
       const result = await safeAction(deleteHealthDocumentAction)(document.id);
       setBusy(null);
       setMessage({ text: result.success ? result.message ?? 'Deleted.' : result.message, success: result.success });
-      if (result.success) router.refresh();
     });
   }
 

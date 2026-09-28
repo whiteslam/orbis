@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Check, LoaderCircle, Mail, X } from 'lucide-react';
 import { confirmFinanceCandidateAction, ignoreFinanceCandidateAction, parseFinanceCandidatesAction } from '@/app/finance/actions';
 import type { FinanceCandidateSummary } from '@/lib/finance/types';
@@ -14,7 +13,6 @@ const PARSE_BATCH = 5;
 const day = (iso: string) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
 
 function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary }) {
-  const router = useRouter();
   const [amount, setAmount] = useState(candidate.amount?.toFixed(2) ?? '');
   const [currency, setCurrency] = useState(candidate.currency ?? 'INR');
   const [direction, setDirection] = useState(candidate.direction ?? 'expense');
@@ -35,7 +33,6 @@ function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary
         occurredAt: candidate.receivedAt,
       });
       setMessage(result.message);
-      if (result.success) router.refresh();
     });
   }
 
@@ -44,7 +41,6 @@ function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary
     startTransition(async () => {
       const result = await safeAction(ignoreFinanceCandidateAction)(candidate.id);
       setMessage(result.message);
-      if (result.success) router.refresh();
     });
   }
 
@@ -76,7 +72,6 @@ function CandidateReviewCard({ candidate }: { candidate: FinanceCandidateSummary
 
 /** Gmail alerts that need a person before they count as spending. */
 export function GmailReviewQueue({ candidates, unparsedCount, pendingCount, onBack }: { candidates: FinanceCandidateSummary[]; unparsedCount: number; pendingCount: number; onBack: () => void }) {
-  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -85,7 +80,6 @@ export function GmailReviewQueue({ candidates, unparsedCount, pendingCount, onBa
     startTransition(async () => {
       const result = await safeAction(parseFinanceCandidatesAction)();
       setMessage(result.message);
-      router.refresh();
     });
   }
 

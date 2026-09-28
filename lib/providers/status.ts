@@ -122,7 +122,6 @@ export async function getIntegrationStatus(userId: string, email: string | null)
       admin.from('api_daily_usage').select('provider,calls').eq('usage_date', today),
       admin.from('gmail_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
       admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
-      admin.from('zerodha_connections').select('status,last_sync_at,expires_at').eq('user_id', userId).maybeSingle(),
     ]);
     statusRows = (status.data ?? []) as StatusRow[];
     usageRows = (usage.data ?? []) as typeof usageRows;

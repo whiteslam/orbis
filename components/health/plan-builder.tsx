@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, LoaderCircle, Sparkles, Trash2 } from 'lucide-react';
 import { deleteHealthPlanAction, generateHealthPlanAction, startHealthPlanAction } from '@/app/health/library-actions';
 import { PlanView } from '@/components/health/plan-view';
 import type { HealthPlan, HealthPlanRecord, PlanQuestion } from '@/lib/health-docs/types';
 import { FieldSubHead, useScrollTop } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
+import { planWeek } from '@/lib/health/plan-week';
 
 const MIN_ANSWERS = 10;
 // A long interview opens on its first few questions; the rest are one tap away.
@@ -17,16 +17,6 @@ type Stage =
   | { kind: 'idle' }
   | { kind: 'questions'; questions: PlanQuestion[] }
   | { kind: 'plan'; plan: HealthPlan };
-
-/**
- * Where a plan stands, counted from the day it was written. Plans have no
- * separate start date, so creation is the only honest anchor.
- */
-export function planWeek(record: HealthPlanRecord) {
-  const total = Math.max(1, record.plan.durationWeeks);
-  const elapsed = Math.floor((Date.now() - new Date(record.createdAt).getTime()) / (7 * 86_400_000)) + 1;
-  return { week: Math.min(Math.max(elapsed, 1), total), total, done: elapsed > total };
-}
 
 function planDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
@@ -65,7 +55,6 @@ function BackLink({ onClick, disabled }: { onClick: () => void; disabled?: boole
  * opens one plan directly from the Health tab.
  */
 export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBack }: { plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable'; initialPlanId?: string | null; onBack: () => void }) {
-  const router = useRouter();
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openPlanId, setOpenPlanId] = useState<string | null>(initialPlanId);
@@ -97,7 +86,6 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
       setWorking(null);
       if (!result.success) return setMessage(result.message);
       setStage({ kind: 'plan', plan: result.data.plan });
-      router.refresh();
     });
   }
 
@@ -106,7 +94,6 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
     startTransition(async () => {
       const result = await safeAction(deleteHealthPlanAction)(plan.id);
       if (!result.success) setMessage(result.message);
-      else router.refresh();
     });
   }
 

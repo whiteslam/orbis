@@ -10,8 +10,6 @@ import { deleteGrowwConnection, saveGrowwConnection } from '@/lib/invest/groww-c
 import { deleteZerodhaConnection } from '@/lib/invest/zerodha-connection';
 import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { LivePortfolioData } from '@/lib/invest/types';
-import { analysePortfolio } from '@/lib/invest/analysis';
-import type { BriefPortfolio } from '@/lib/home/portfolio';
 
 async function authenticatedClient() {
   const supabase = await createClient();
@@ -96,34 +94,4 @@ export async function disconnectBrokerAction(broker: string) {
   }
   revalidatePath('/');
   return { success: true, message: `${meta.name} disconnected. Your saved key and secret were deleted from Orbis.` };
-}
-
-/**
- * The portfolio reduced to what the Home brief says about it.
- *
- * Home asks for this on every visit, so it returns the small shape rather than
- * every holding, and reports 'off' instead of zeros when nothing is linked.
- */
-export async function loadBriefPortfolioAction(): Promise<BriefPortfolio> {
-  const off: BriefPortfolio = { state: 'off', total: 0, invested: 0, holdingCount: 0, gain: null, day: null, largest: null };
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (error || typeof userId !== 'string' || !(await isAppUnlocked(data?.claims))) return off;
-  const email = typeof data?.claims?.email === 'string' ? data.claims.email.toLowerCase() : null;
-
-  const live = await loadLivePortfolio(userId, email);
-  if (!live.brokers.some((broker) => broker.state === 'ok')) return off;
-  const analysis = analysePortfolio(live.brokers);
-  if (!analysis.positions.length) return off;
-
-  return {
-    state: 'ok',
-    total: analysis.total,
-    invested: analysis.invested,
-    holdingCount: analysis.positions.length,
-    gain: analysis.livePnl,
-    day: analysis.dayChange,
-    largest: analysis.largest,
-  };
 }

@@ -43,12 +43,14 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
     })().catch(() => setDevice('unsupported'));
   }, [settings.deviceEndpoints]);
 
-  function run(action: () => Promise<{ success: boolean; message: string }>) {
+  // Saving, subscribing and unsubscribing revalidate the page themselves. Only
+  // `refresh` callers, whose action does not, ask for a re-read afterwards.
+  function run(action: () => Promise<{ success: boolean; message: string }>, refresh = false) {
     setMessage(null);
     startTransition(async () => {
       const result = await action();
       setMessage({ text: result.message, success: result.success });
-      if (result.success) router.refresh();
+      if (result.success && refresh) router.refresh();
     });
   }
 
@@ -130,7 +132,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         {device === 'off' && settings.pushConfigured && <button className="pf-pill primary" type="button" onClick={enableDevice} disabled={isPending}>{isPending ? <LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />} Enable</button>}
         {device === 'on' && <button className="pf-pill" type="button" onClick={disableDevice} disabled={isPending}><BellOff size={13} aria-hidden="true" /> Turn off</button>}
       </div>
-      {device === 'on' && <button className="fd-link pf-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)())} disabled={isPending}><Send size={13} aria-hidden="true" /> Send a test notification</button>}
+      {device === 'on' && <button className="fd-link pf-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)(), true)} disabled={isPending}><Send size={13} aria-hidden="true" /> Send a test notification</button>}
       {!settings.pushConfigured && <p className="fd-note tight">Push keys aren’t set on the server yet (NEXT_PUBLIC_VAPID_PUBLIC_KEY).</p>}
       {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
     </div>

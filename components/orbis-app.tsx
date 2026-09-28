@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   Bell,
   Check,
@@ -21,21 +22,18 @@ import { OrbisMark } from '@/components/brand/orbis-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
 import { disconnectGmailAction, syncFinanceAction } from '@/app/finance/actions';
-import { WorkbookAdviceView, WorkbookAsk, adviceFromSaved, savedWhen, splitSummary, type ShownAdvice } from '@/components/health/workbook-advisor';
-import { HealthLibrary, documentAdded } from '@/components/health/health-library';
-import { PlanBuilder, planWeek } from '@/components/health/plan-builder';
+import { adviceFromSaved, savedWhen, splitSummary, type ShownAdvice } from '@/lib/workbook/shown-advice';
+import { documentAdded } from '@/lib/health-docs/format';
+import { planWeek } from '@/lib/health/plan-week';
 import type { LibraryState } from '@/lib/health-docs/repository';
 import type { HealthPlanRecord } from '@/lib/health-docs/types';
-import { GmailReviewQueue } from '@/components/finance/gmail-review-queue';
-import { ManualTransactionForm } from '@/components/finance/manual-transaction-form';
 import { CurrencyCard } from '@/components/finance/currency-card';
 import { TransactionList } from '@/components/finance/transaction-list';
-import { SpendingSummary, money } from '@/components/finance/spending-summary';
+import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { BriefWeather } from '@/lib/home/weather';
-import { loadHomeBriefAction } from '@/app/home/brief-actions';
-import { loadBriefPortfolioAction } from '@/app/invest/actions';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
+import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import { composeQuietRows } from '@/lib/focus/home';
 import { composeSocialRow } from '@/lib/focus/social';
@@ -52,17 +50,55 @@ import { WeatherCard } from '@/components/home/weather-card';
 import type { ContextNote } from '@/lib/memory/notes';
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
-import { ProfileScreen, type ProfileSection } from '@/components/personal/profile-screen';
+import type { ProfileSection } from '@/components/personal/profile-screen';
 import type { JournalSummary } from '@/lib/journal/types';
 import type { NotificationSettings } from '@/lib/notifications/preferences';
 import type { AppConnections } from '@/lib/providers/status';
-import { InvestDashboard } from '@/components/invest/invest-dashboard';
-import { StepsCard } from '@/components/health/steps-card';
 import type { StepsSummary } from '@/lib/health/types';
 import { safeAction } from '@/lib/client/safe-action';
-import { SocialScreen } from '@/components/social/social-screen';
 import type { SocialMonth } from '@/lib/social/repository';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
+
+// Home is what opens, so it is the only screen in the first download. Every
+// other tab, and the heavier views inside Expense and Health, load the first
+// time they are opened.
+function TabLoading() {
+  return <div className="screen-body field"><p className="fd-empty">Loading…</p></div>;
+}
+// For a part of a screen that already sits inside .screen-body: a second one
+// would add its own padding and scroll box for the moment it shows.
+function PartLoading() {
+  return <p className="fd-empty">Loading…</p>;
+}
+
+const InvestDashboard = dynamic(() => import('@/components/invest/invest-dashboard').then((m) => m.InvestDashboard), { loading: PartLoading });
+const SocialScreen = dynamic(() => import('@/components/social/social-screen').then((m) => m.SocialScreen), { loading: TabLoading });
+const ProfileScreen = dynamic(() => import('@/components/personal/profile-screen').then((m) => m.ProfileScreen), { loading: TabLoading });
+const StepsCard = dynamic(() => import('@/components/health/steps-card').then((m) => m.StepsCard), { loading: PartLoading });
+const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').then((m) => m.PlanBuilder), { loading: PartLoading });
+const HealthLibrary = dynamic(() => import('@/components/health/health-library').then((m) => m.HealthLibrary), { loading: PartLoading });
+const WorkbookAsk = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAsk), { loading: PartLoading });
+const WorkbookAdviceView = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAdviceView), { loading: PartLoading });
+const GmailReviewQueue = dynamic(() => import('@/components/finance/gmail-review-queue').then((m) => m.GmailReviewQueue), { loading: PartLoading });
+const ManualTransactionForm = dynamic(() => import('@/components/finance/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
+const SpendingSummary = dynamic(() => import('@/components/finance/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
+
+// Home's background reads are route handlers, not server actions: actions run
+// one at a time, so a slow broker or model would hold up the user's next tap.
+async function fetchJson<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) return fallback;
+    return await response.json() as T;
+  } catch {
+    return fallback;
+  }
+}
+
+// How long Home waits for the portfolio before writing the brief without it.
+const PORTFOLIO_WAIT_MS = 8_000;
+// Coming back to Home re-reads it only after this long away.
+const STALE_AFTER_HIDDEN_MS = 60_000;
 
 type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment' | 'social';
 
@@ -81,10 +117,11 @@ const nav = [
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
 function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, savedAdviceAt, preferredName, aiBriefEnabled, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
-  const router = useRouter();
   const [weather, setWeather] = useState<BriefWeather | null>(null);
+  const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<BriefPortfolio | null>(null);
+  const [portfolioSettled, setPortfolioSettled] = useState(false);
   const firstName = preferredName?.trim().split(/\s+/)[0] || null;
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
 
@@ -92,11 +129,16 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
 
   // The daily investing line. Holdings come from the broker, so Home asks for
   // them the way it asks for the weather, and simply has no card until they land.
+  // The brief waits for this, but never longer than PORTFOLIO_WAIT_MS: a slow
+  // broker should cost the brief its investing line, not the brief itself.
   useEffect(() => {
     let live = true;
-    void safeAction(loadBriefPortfolioAction, () => null)()
-      .then((result) => { if (live) setPortfolio(result); });
-    return () => { live = false; };
+    const settle = () => { if (live) setPortfolioSettled(true); };
+    const timer = setTimeout(settle, PORTFOLIO_WAIT_MS);
+    void fetchJson<BriefPortfolio | null>('/api/home/portfolio', null)
+      .then((result) => { if (live) setPortfolio(result); })
+      .finally(() => { clearTimeout(timer); settle(); });
+    return () => { live = false; clearTimeout(timer); };
   }, []);
   // Orbis's own wording renders straight away and is what stays if the model is
   // off, unreachable or slow; a written brief only ever replaces its paragraphs
@@ -116,22 +158,30 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
   });
   const brief: HomeNote = written ? { ...composed, id: 'written', caption: written } : composed;
 
-  // Re-asked whenever the data behind the brief changes. The action itself
-  // returns the saved brief unless the numbers moved, so this is one request
-  // per real change rather than one per visit.
+  // Asked once the weather and the portfolio have both settled, and then again
+  // only when the data behind the brief changes. The server returns the saved
+  // brief unless the numbers moved, so this is one request per real change
+  // rather than one per visit, or one per piece of data arriving.
   const dataKey = JSON.stringify([financeSummary.pendingCandidateCount, financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
+  const ready = briefReady({ weather: weatherPhase, portfolioSettled });
+  const sentKey = useRef<string | null>(null);
   useEffect(() => {
     if (!aiBriefEnabled) {
+      sentKey.current = null;
       // Turning the setting off clears the cached brief immediately, rather than waiting for a refetch.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWritten(null);
       return;
     }
-    let live = true;
-    void safeAction(loadHomeBriefAction, () => ({ state: 'off' as const }))({ weather })
-      .then((result) => { if (live && result.state === 'ok') setWritten(result.caption); });
-    return () => { live = false; };
-  }, [aiBriefEnabled, dataKey, weather]);
+    if (!ready || sentKey.current === dataKey) return;
+    // No cleanup that drops the answer: the ref already stops a second request
+    // for this key (Strict Mode runs effects twice), so the first one must land.
+    // An answer about data that has changed since is ignored instead.
+    const key = dataKey;
+    sentKey.current = key;
+    void fetchJson<{ state: string; caption?: string }>(`/api/home/brief?weather=${encodeURIComponent(JSON.stringify(weather))}`, { state: 'off' })
+      .then((result) => { if (sentKey.current === key && result.state === 'ok' && typeof result.caption === 'string') setWritten(result.caption); });
+  }, [aiBriefEnabled, dataKey, ready, weather]);
   // The social row only appears for someone using the planner this month.
   const socialRow = composeSocialRow(socialPosts, indiaToday());
   const quiet = socialRow ? [...composeQuietRows(input), socialRow] : composeQuietRows(input);
@@ -154,9 +204,10 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
       <FocusNote note={brief} />
 
       {/* The brief says what is due; this records what happened to it. */}
-      {current && <RoutineCheck current={current} onAnswered={() => router.refresh()} />}
+      {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
+      {current && <RoutineCheck current={current} />}
 
-      <WeatherCard onWeather={setWeather} openPersonal={() => openTab('personal')} />
+      <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
 
       <QuietList heading={heading} rows={quiet} onOpen={openTab} />
 
@@ -174,7 +225,6 @@ function financeDate(value: string, withTime = false) {
 type FinanceView = 'main' | 'review' | 'add';
 
 function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSummary; notice: string | null; clearNotice: () => void }) {
-  const router = useRouter();
   const [view, setView] = useState<FinanceView>('main');
   const [isPending, startTransition] = useTransition();
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -201,7 +251,6 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     startTransition(async () => {
       const result = await safeAction(syncFinanceAction)();
       setActionMessage({ text: result.message, success: result.success });
-      if (result.success) router.refresh();
     });
   }
 
@@ -211,14 +260,13 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     startTransition(async () => {
       const result = await safeAction(disconnectGmailAction)();
       setActionMessage({ text: result.message, success: result.success });
-      if (result.success) router.refresh();
     });
   }
 
+  // addManualTransactionAction has already revalidated '/', so the new row is on its way.
   function saved(message: string) {
     setActionMessage({ text: message, success: true });
     setView('main');
-    router.refresh();
   }
 
   if (view === 'review') return (
@@ -512,15 +560,23 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
   // one. Deep links (Home's "open settings", the Google callback) still say where to go.
   const [profileSection, setProfileSection] = useState<ProfileSection>('journal');
 
-  // The brief is only true for as long as its data is. Re-read from the server
-  // when Home comes back into view — after finishing a task in another tab, or
-  // after the app has been in the background — so a done task never lingers.
+  // The brief is only true for as long as its data is. Opening the app already
+  // rendered it fresh, and every save revalidates the page, so Home re-reads
+  // from the server only after a real absence: the app in the background for a
+  // minute or more, where a task done elsewhere could otherwise linger.
   useEffect(() => {
     if (tab !== 'home') return;
-    router.refresh();
-    const onVisible = () => { if (document.visibilityState === 'visible') router.refresh(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    let hiddenAt: number | null = document.visibilityState === 'hidden' ? Date.now() : null;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
+      }
+      if (hiddenAt !== null && Date.now() - hiddenAt >= STALE_AFTER_HIDDEN_MS) router.refresh();
+      hiddenAt = null;
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [router, tab]);
 
   // The tab the URL asked for, until it has been applied (see the hash effect below).

@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { CalendarDays, HeartPulse, Mail, Unplug } from 'lucide-react';
 import { disconnectGmailAction } from '@/app/finance/actions';
 import { disconnectBrokerAction } from '@/app/invest/actions';
@@ -33,7 +32,6 @@ function AppHead({ tile, name, detail, status }: { tile: React.ReactNode; name: 
 }
 
 export function AppIntegrations({ connections, stepsSummary, openHealth }: { connections: AppConnections; stepsSummary: StepsSummary; openHealth: () => void }) {
-  const router = useRouter();
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   // Which broker's key form is open, if any. One at a time.
   const [openForm, setOpenForm] = useState<BrokerId | null>(null);
@@ -46,7 +44,6 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
     startTransition(async () => {
       const result = await action();
       setMessage({ text: result.message, success: result.success });
-      if (result.success) router.refresh();
     });
   }
 
@@ -95,7 +92,7 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
             />
             {expired && meta.connect === 'redirect' && <p className="fd-note tight">{meta.sessionNote}</p>}
             {formOpen && meta.connect === 'keys' && (
-              <BrokerConnectForm meta={meta} reconnect={Boolean(linked)} setupMessage={setup} onConnected={() => { setOpenForm(null); router.refresh(); }} />
+              <BrokerConnectForm meta={meta} reconnect={Boolean(linked)} setupMessage={setup} onConnected={() => setOpenForm(null)} />
             )}
             {setup && !formOpen && <p className="fd-note tight">{setup}</p>}
             {(!linked || linked.source === 'account') && (

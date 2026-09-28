@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Mail, PenLine, Trash2 } from 'lucide-react';
 import { categoryStyle } from '@/components/finance/category-style';
 import { deleteManualTransactionAction } from '@/app/finance/actions';
@@ -29,7 +28,6 @@ function dayHeading(key: string) {
 }
 
 export function TransactionList({ transactions }: { transactions: FinanceTransactionSummary[] }) {
-  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -42,7 +40,6 @@ export function TransactionList({ transactions }: { transactions: FinanceTransac
       const result = await safeAction(deleteManualTransactionAction)(transaction.id);
       if (!result.success) setMessage(result.message);
       setDeletingId(null);
-      router.refresh();
     });
   }
 
