@@ -13,7 +13,7 @@
 
 **Tech Stack:** Next.js 16.3 (App Router, proxy.ts, server actions, route handlers), React 19, TypeScript strict, Supabase (Postgres/RLS/Storage/Auth, `@supabase/ssr`), vitest 5, Playwright, pnpm 10, GitHub Actions.
 
-**Spec:** `AUDIT_REPORT.md` (repo root, and `F:\Orbis\orbis\AUDIT_REPORT.md` if it isn't in this branch) plus `docs/superpowers/plans/2026-09-28-productization-roadmap.md`. Each task cites the audit finding it fixes.
+**Spec:** `docs/audit/AUDIT_REPORT.md` plus `docs/superpowers/plans/2026-09-28-productization-roadmap.md`. Each task cites the audit finding it fixes.
 
 ## Global Constraints
 
