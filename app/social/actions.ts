@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { isAppUnlocked } from '@/lib/security/app-lock';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import {
   SocialError,
   copyMediaFile,
@@ -218,6 +219,8 @@ export async function signMediaUploadAction(postId: string, file: { name: string
     const post = await getPost(userId, postId);
     if (!post) return { success: false, message: 'Save the post before adding a picture or video.' };
     if (post.status === 'published') return { success: false, message: 'This post is published. Mark it as not published to change it.' };
+    const refused = await rateLimitRefusal(userId, 'uploads');
+    if (refused) return { success: false, message: refused };
     const upload = await createMediaUpload(`${userId}/${postId}/${randomUUID()}.${extension}`);
     return { success: true, message: '', ...upload };
   } catch (error) {

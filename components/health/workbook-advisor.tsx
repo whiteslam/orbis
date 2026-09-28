@@ -3,12 +3,14 @@
 import { useId, useState, useTransition, type ChangeEvent } from 'react';
 import { FileSpreadsheet, FileText, LoaderCircle, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { deleteSavedAiResultAction } from '@/app/ai/result-actions';
-import { generateWorkbookAdviceAction, parseWorkbookAction } from '@/app/health/actions';
+import { generateWorkbookAdviceAction, parseWorkbookAction, signWorkbookUploadAction } from '@/app/health/actions';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import type { WorkbookObservation, WorkbookPreview } from '@/lib/workbook/types';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 import { savedWhen, splitSummary, type AdviceSent, type ShownAdvice } from '@/lib/workbook/shown-advice';
+import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
+import { createClient } from '@/lib/supabase/client';
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -53,10 +55,29 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
     setMessage(null);
     setPreview(null);
     resetChoices();
-    const formData = new FormData();
-    formData.set('workbook', file);
+    const problem = uploadProblem(file);
+    if (problem) {
+      setMessage(problem);
+      return;
+    }
+    // The file goes straight to Storage; the server reads it from there, then deletes it.
     startTransition(async () => {
-      const result = await safeAction(parseWorkbookAction)(formData);
+      const signed = await safeAction(signWorkbookUploadAction)({ name: file.name, type: file.type, size: file.size });
+      if (!signed.success) {
+        setMessage(signed.message);
+        return;
+      }
+      try {
+        const { error } = await createClient().storage.from(UPLOAD_BUCKET).uploadToSignedUrl(signed.data.path, signed.data.token, file, { contentType: signed.data.contentType });
+        if (error) {
+          setMessage('The upload did not finish. Check your connection and try again.');
+          return;
+        }
+      } catch {
+        setMessage('The upload did not finish. Check your connection and try again.');
+        return;
+      }
+      const result = await safeAction(parseWorkbookAction)({ path: signed.data.path, name: file.name });
       if (!result.success) {
         setMessage(result.message);
         return;

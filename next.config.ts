@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     serverActions: {
-      bodySizeLimit: '101mb',
+      // Files larger than this go straight to Storage with a signed upload URL;
+      // Vercel refuses bodies over ~4.5 MB anyway.
+      bodySizeLimit: '4mb',
     },
   },
   // Static security headers. The Content-Security-Policy carries a per-request nonce,

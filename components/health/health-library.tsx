@@ -2,11 +2,13 @@
 
 import { useId, useState, useTransition } from 'react';
 import { Download, FileSpreadsheet, FileText, LoaderCircle, Pin, Trash2, Upload } from 'lucide-react';
-import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
+import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, signHealthDocumentUploadAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
 import type { HealthDocument } from '@/lib/health-docs/types';
 import { FieldHero, FieldLabel } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 import { documentAdded, documentSize } from '@/lib/health-docs/format';
+import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
+import { createClient } from '@/lib/supabase/client';
 
 /** The body of the Documents view: how many there are, the upload box, and each saved file. */
 export function HealthLibrary({ documents, state }: { documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }) {
@@ -15,15 +17,30 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
   const [busy, setBusy] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // The file goes straight to Storage; the server then reads it from there and indexes it.
   function upload(file: File) {
     setMessage(null);
+    const problem = uploadProblem(file);
+    if (problem) {
+      setMessage({ text: problem, success: false });
+      return;
+    }
     setBusy('upload');
-    const formData = new FormData();
-    formData.set('document', file);
     startTransition(async () => {
-      const result = await safeAction(uploadHealthDocumentAction)(formData);
-      setMessage({ text: result.success ? result.message ?? 'Saved.' : result.message, success: result.success });
-      setBusy(null);
+      const finish = (text: string, success: boolean) => {
+        setMessage({ text, success });
+        setBusy(null);
+      };
+      const signed = await safeAction(signHealthDocumentUploadAction)({ name: file.name, type: file.type, size: file.size });
+      if (!signed.success) return finish(signed.message, false);
+      try {
+        const { error } = await createClient().storage.from(UPLOAD_BUCKET).uploadToSignedUrl(signed.data.path, signed.data.token, file, { contentType: signed.data.contentType });
+        if (error) return finish('The upload did not finish. Check your connection and try again.', false);
+      } catch {
+        return finish('The upload did not finish. Check your connection and try again.', false);
+      }
+      const result = await safeAction(uploadHealthDocumentAction)({ path: signed.data.path, name: file.name });
+      finish(result.success ? result.message ?? 'Saved.' : result.message, result.success);
     });
   }
 

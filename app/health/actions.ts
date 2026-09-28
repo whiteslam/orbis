@@ -10,6 +10,8 @@ import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import { stepContext } from '@/lib/health/steps-stats';
 import { parseWorkbook } from '@/lib/workbook/parse';
 import { userMessage } from '@/lib/errors';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
+import { createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
 import type { ParsedWorkbookPreview, WorkbookActionResult, WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
 const MAX_PREVIEW_BYTES = 24 * 1024;
@@ -129,18 +131,39 @@ async function readProviderJson(response: Response): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
 }
 
-export async function parseWorkbookAction(formData: FormData): Promise<WorkbookActionResult<WorkbookPreview>> {
+/** Step one: a one-time token so the browser can put the file straight into Storage. */
+export async function signWorkbookUploadAction(file: { name: string; type: string; size: number }): Promise<WorkbookActionResult<{ path: string; token: string; contentType: string }>> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before uploading a workbook.' };
+  const refused = await rateLimitRefusal(userId, 'uploads');
+  if (refused) return { success: false, message: refused };
+  try {
+    return { success: true, data: await createUploadTarget(userId, 'workbook', file) };
+  } catch (error) {
+    return { success: false, message: userMessage(error, 'The upload could not be started.') };
+  }
+}
 
-  const file = formData.get('workbook');
-  if (!(file instanceof File)) return { success: false, message: 'Choose an Excel workbook or PDF file.' };
+/**
+ * Step two: reads the uploaded file from Storage (never from the browser), builds
+ * the signed preview, and deletes the file whatever happens — it is never kept.
+ */
+export async function parseWorkbookAction(input: { path: string; name: string }): Promise<WorkbookActionResult<WorkbookPreview>> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, message: 'Sign in again before uploading a workbook.' };
+  const path = input && typeof input === 'object' ? input.path : undefined;
+  const name = input && typeof input === 'object' ? input.name : undefined;
 
   try {
+    const refused = await rateLimitRefusal(userId, 'parse');
+    if (refused) return { success: false, message: refused };
+    const file = await downloadOwned(userId, 'workbook', path, name);
     const parsed = await parseWorkbook(file);
     return { success: true, data: withSignature(userId, parsed) };
   } catch (error) {
     return { success: false, message: userMessage(error, 'This workbook could not be read.') };
+  } finally {
+    await removeStaged(userId, 'workbook', path);
   }
 }
 

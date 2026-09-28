@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { disconnectGmail, parsePendingFinanceCandidates, syncGmail } from '@/lib/finance/sync';
 import { getAuthenticatedUserId, GoogleOAuthError } from '@/lib/gmail/oauth';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
@@ -17,6 +18,8 @@ export type FinanceActionState = {
 export async function syncFinanceAction(): Promise<FinanceActionState> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before syncing Gmail.' };
+  const refused = await rateLimitRefusal(userId, 'sync');
+  if (refused) return { success: false, message: refused };
 
   try {
     const result = await syncGmail(userId);

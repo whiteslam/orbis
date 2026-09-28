@@ -7,6 +7,8 @@ import { buildPlanContext, generateHealthPlan, generatePlanQuestions, MIN_QUESTI
 import { deleteHealthDocument, signedDownloadUrl, storeHealthDocument } from '@/lib/health-docs/repository';
 import type { HealthPlan, PlanAnswer, PlanQuestion } from '@/lib/health-docs/types';
 import { isAppUnlocked } from '@/lib/security/app-lock';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
+import { createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { parseDocument } from '@/lib/workbook/parse';
@@ -14,6 +16,8 @@ import { parseDocument } from '@/lib/workbook/parse';
 type Result<T> = { success: true; data: T; message?: string } | { success: false; message: string };
 
 const DAILY_AI_LIMIT = 10;
+const MAX_DOCUMENTS = 50;
+const DOCUMENT_CAP_MESSAGE = `You can keep up to ${MAX_DOCUMENTS} documents. Delete one you no longer need to add another.`;
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id);
 
 async function authenticatedUser() {
@@ -55,33 +59,75 @@ export async function setHealthDocumentAlwaysAction(input: unknown): Promise<Res
   return { success: true, data: null, message: always ? 'Orbis will read this in every plan.' : 'Removed from every plan.' };
 }
 
-export async function uploadHealthDocumentAction(formData: FormData): Promise<Result<{ id: string; chunkCount: number }>> {
+/** How many documents this person has saved, or null when that can't be read. */
+async function documentCount(userId: string) {
+  const { count, error } = await createAdminClient().from('health_documents').select('id', { count: 'exact', head: true }).eq('user_id', userId);
+  if (error) {
+    console.error('Counting health documents failed', error);
+    return null;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Step one of an upload: checks the document cap and the daily upload limit, then
+ * hands the browser a one-time token to put the file straight into Storage.
+ */
+export async function signHealthDocumentUploadAction(file: { name: string; type: string; size: number }): Promise<Result<{ path: string; token: string; contentType: string }>> {
   const auth = await authenticatedUser();
   if (!auth) return { success: false, message: 'Sign in again before uploading.' };
-  const file = formData.get('document');
-  if (!(file instanceof File)) return { success: false, message: 'Choose an Excel workbook or PDF file.' };
-
-  let parsed: Awaited<ReturnType<typeof parseDocument>>;
+  const count = await documentCount(auth.userId);
+  if (count === null) return { success: false, message: 'Uploads aren’t available right now. Try again in a little while.' };
+  if (count >= MAX_DOCUMENTS) return { success: false, message: DOCUMENT_CAP_MESSAGE };
+  const refused = await rateLimitRefusal(auth.userId, 'uploads');
+  if (refused) return { success: false, message: refused };
   try {
-    parsed = await parseDocument(file);
+    return { success: true, data: await createUploadTarget(auth.userId, 'health-document', file) };
   } catch (error) {
-    return { success: false, message: userMessage(error, 'This file could not be read.') };
+    return { success: false, message: userMessage(error, 'The upload could not be started.') };
   }
+}
+
+/** Step two: reads the file the browser uploaded, indexes it, and removes the staged copy. */
+export async function uploadHealthDocumentAction(input: { path: string; name: string }): Promise<Result<{ id: string; chunkCount: number }>> {
+  const auth = await authenticatedUser();
+  if (!auth) return { success: false, message: 'Sign in again before uploading.' };
+  const path = input && typeof input === 'object' ? input.path : undefined;
+  const name = input && typeof input === 'object' ? input.name : undefined;
 
   try {
-    const kind = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'xlsx';
-    const saved = await storeHealthDocument(auth.userId, { file, fileName: parsed.preview.fileName, kind, preview: parsed.preview, textLines: parsed.textLines });
-    revalidatePath('/');
-    return {
-      success: true,
-      data: { id: saved.id, chunkCount: saved.chunkCount },
-      message: saved.storedOriginal
-        ? `Saved ${parsed.preview.fileName} and indexed ${saved.chunkCount} sections for AI search.`
-        : `Indexed ${saved.chunkCount} sections of ${parsed.preview.fileName}. The original was over 50 MB, so only its text was kept.`,
-    };
-  } catch (error) {
-    // EmbeddingError messages are written for the user; anything else is logged.
-    return { success: false, message: error instanceof EmbeddingError ? error.message : userMessage(error, 'The document could not be saved.') };
+    // Checked again here: a token signed earlier must not carry anyone past the cap.
+    const count = await documentCount(auth.userId);
+    if (count === null) return { success: false, message: 'Uploads aren’t available right now. Try again in a little while.' };
+    if (count >= MAX_DOCUMENTS) return { success: false, message: DOCUMENT_CAP_MESSAGE };
+
+    let file: File;
+    let parsed: Awaited<ReturnType<typeof parseDocument>>;
+    try {
+      file = await downloadOwned(auth.userId, 'health-document', path, name);
+      parsed = await parseDocument(file);
+    } catch (error) {
+      return { success: false, message: userMessage(error, 'This file could not be read.') };
+    }
+
+    try {
+      const kind = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'xlsx';
+      const saved = await storeHealthDocument(auth.userId, { file, fileName: parsed.preview.fileName, kind, preview: parsed.preview, textLines: parsed.textLines });
+      revalidatePath('/');
+      return {
+        success: true,
+        data: { id: saved.id, chunkCount: saved.chunkCount },
+        message: saved.storedOriginal
+          ? `Saved ${parsed.preview.fileName} and indexed ${saved.chunkCount} sections for AI search.`
+          : `Indexed ${saved.chunkCount} sections of ${parsed.preview.fileName}. The original was over 50 MB, so only its text was kept.`,
+      };
+    } catch (error) {
+      // EmbeddingError messages are written for the user; anything else is logged.
+      return { success: false, message: error instanceof EmbeddingError ? error.message : userMessage(error, 'The document could not be saved.') };
+    }
+  } finally {
+    // The staged copy is never kept: a saved original lives in health-documents.
+    await removeStaged(auth.userId, 'health-document', path);
   }
 }
 
