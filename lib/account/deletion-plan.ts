@@ -67,24 +67,49 @@ export function deletionConfirmed(confirm: unknown) {
   return typeof confirm === 'string' && confirm.trim() === 'DELETE';
 }
 
-export type DeletionAuthCheck = { ok: true } | { ok: false; needs: 'unlock' | 'password' };
+export type SensitiveAuthCheck = { ok: true } | { ok: false; needs: 'unlock' | 'password' };
 
 /**
- * Deleting an account needs Orbis unlocked on this device, always, and either a
- * sign-in in the last ten minutes or the password given again.
+ * Deleting the account or exporting its data needs Orbis unlocked on this
+ * device, always, and either a sign-in in the last ten minutes or the password
+ * given again, so a stolen cookie or a device left open isn't enough.
  */
-export function deletionAuthCheck(input: { amr: unknown; nowSec: number; unlocked: boolean; passwordVerified: boolean }): DeletionAuthCheck {
+export function sensitiveAuthCheck(input: { amr: unknown; nowSec: number; unlocked: boolean; passwordVerified: boolean }): SensitiveAuthCheck {
   if (!input.unlocked) return { ok: false, needs: 'unlock' };
   if (input.passwordVerified || hasFreshAuth(input.amr, input.nowSec, DELETION_FRESH_AUTH_SEC)) return { ok: true };
   return { ok: false, needs: 'password' };
 }
 
-/** Storage answers a missing bucket with a not-found error; that bucket has nothing to empty. */
+export type SensitiveRefusal = 'signed-out' | 'unlock' | 'password' | 'wrong-password';
+
+/** The HTTP status for a refused export: 401 when signed out, 403 otherwise. */
+export function refusalStatus(reason: SensitiveRefusal) {
+  return reason === 'signed-out' ? 401 : 403;
+}
+
+/** What to tell someone who was refused, for "delete your account" or "export your data". */
+export function refusalMessage(reason: SensitiveRefusal, doing: string) {
+  switch (reason) {
+    case 'signed-out':
+      return `Sign in again to ${doing}.`;
+    case 'unlock':
+      return `Unlock Orbis on this device first, then ${doing}.`;
+    case 'password':
+      return `Enter your password to ${doing}. It’s only needed if you haven’t signed in in the last 10 minutes.`;
+    case 'wrong-password':
+      return 'That password isn’t right. Try again.';
+  }
+}
+
+/**
+ * Storage answers a missing bucket with statusCode 404 and "Bucket not found";
+ * that bucket has nothing to empty. Any other error is a real failure.
+ */
 export function isMissingBucketError(error: unknown) {
   if (!error || typeof error !== 'object') return false;
-  const { message, status, statusCode } = error as { message?: unknown; status?: unknown; statusCode?: unknown };
-  if (status === 404 || statusCode === '404' || statusCode === 404) return true;
-  return typeof message === 'string' && /not found/i.test(message);
+  const { message, statusCode } = error as { message?: unknown; statusCode?: unknown };
+  if (statusCode === '404' || statusCode === 404) return true;
+  return typeof message === 'string' && /bucket not found/i.test(message);
 }
 
 export function exportFilename(now = new Date()) {

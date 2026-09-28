@@ -4,11 +4,13 @@ import {
   DELETION_FRESH_AUTH_SEC,
   EXPORT_TABLES,
   STORAGE_BUCKETS,
-  deletionAuthCheck,
   deletionConfirmed,
   deletionSteps,
   exportFilename,
   isMissingBucketError,
+  refusalMessage,
+  refusalStatus,
+  sensitiveAuthCheck,
 } from './deletion-plan';
 
 test('the auth user is deleted last, after connections and files', () => {
@@ -43,22 +45,29 @@ test('deletion needs the word DELETE typed exactly', () => {
   assert.equal(deletionConfirmed(undefined), false);
 });
 
-test('a sign-in within ten minutes is enough, an older one needs the password, and a locked device never passes', () => {
+test('deleting or exporting needs a sign-in within ten minutes or the password, and a locked device never passes', () => {
   const now = 1_800_000_000;
   const fresh = [{ method: 'password', timestamp: now - 120 }];
+  const freshOtp = [{ method: 'otp', timestamp: now - 60 }];
   const stale = [{ method: 'password', timestamp: now - DELETION_FRESH_AUTH_SEC - 1 }];
   assert.equal(DELETION_FRESH_AUTH_SEC, 600);
-  assert.deepEqual(deletionAuthCheck({ amr: fresh, nowSec: now, unlocked: true, passwordVerified: false }), { ok: true });
-  assert.deepEqual(deletionAuthCheck({ amr: stale, nowSec: now, unlocked: true, passwordVerified: false }), { ok: false, needs: 'password' });
-  assert.deepEqual(deletionAuthCheck({ amr: stale, nowSec: now, unlocked: true, passwordVerified: true }), { ok: true });
-  assert.deepEqual(deletionAuthCheck({ amr: fresh, nowSec: now, unlocked: false, passwordVerified: true }), { ok: false, needs: 'unlock' });
-  assert.deepEqual(deletionAuthCheck({ amr: undefined, nowSec: now, unlocked: true, passwordVerified: false }), { ok: false, needs: 'password' });
+  assert.deepEqual(sensitiveAuthCheck({ amr: fresh, nowSec: now, unlocked: true, passwordVerified: false }), { ok: true });
+  assert.deepEqual(sensitiveAuthCheck({ amr: freshOtp, nowSec: now, unlocked: true, passwordVerified: false }), { ok: true });
+  assert.deepEqual(sensitiveAuthCheck({ amr: stale, nowSec: now, unlocked: true, passwordVerified: false }), { ok: false, needs: 'password' });
+  assert.deepEqual(sensitiveAuthCheck({ amr: stale, nowSec: now, unlocked: true, passwordVerified: true }), { ok: true });
+  assert.deepEqual(sensitiveAuthCheck({ amr: fresh, nowSec: now, unlocked: false, passwordVerified: true }), { ok: false, needs: 'unlock' });
+  assert.deepEqual(sensitiveAuthCheck({ amr: undefined, nowSec: now, unlocked: true, passwordVerified: false }), { ok: false, needs: 'password' });
+  // A refreshed token keeps its original timestamp, so an old session never looks fresh.
+  assert.deepEqual(sensitiveAuthCheck({ amr: [{ method: 'password' }], nowSec: now, unlocked: true, passwordVerified: false }), { ok: false, needs: 'password' });
 });
 
 test('a missing bucket is recognised so it can be skipped', () => {
   assert.equal(isMissingBucketError({ message: 'Bucket not found', status: 400, statusCode: '404' }), true);
-  assert.equal(isMissingBucketError({ message: 'not found', status: 404 }), true);
-  assert.equal(isMissingBucketError({ message: 'The resource was not found' }), true);
+  assert.equal(isMissingBucketError({ message: 'Bucket not found' }), true);
+  assert.equal(isMissingBucketError({ message: 'Something', statusCode: '404' }), true);
+  // Any other not-found (an object, a route) is a real failure, not a missing bucket.
+  assert.equal(isMissingBucketError({ message: 'Object not found', status: 400, statusCode: '400' }), false);
+  assert.equal(isMissingBucketError({ message: 'The resource was not found', status: 404 }), false);
   assert.equal(isMissingBucketError({ message: 'Internal error', status: 500 }), false);
   assert.equal(isMissingBucketError(null), false);
 });
@@ -67,4 +76,13 @@ test('the export file is named for the day it was made, in India', () => {
   assert.equal(exportFilename(new Date('2026-09-28T06:00:00Z')), 'orbis-export-2026-09-28.json');
   // 20:00 UTC is already the next morning in India.
   assert.equal(exportFilename(new Date('2026-09-28T20:00:00Z')), 'orbis-export-2026-09-29.json');
+});
+
+test('a refused export or deletion says what to do, and a signed-out export is a 401', () => {
+  assert.equal(refusalMessage('password', 'export your data'), 'Enter your password to export your data. It’s only needed if you haven’t signed in in the last 10 minutes.');
+  assert.equal(refusalMessage('unlock', 'delete your account'), 'Unlock Orbis on this device first, then delete your account.');
+  assert.equal(refusalMessage('signed-out', 'export your data'), 'Sign in again to export your data.');
+  assert.equal(refusalMessage('wrong-password', 'export your data'), 'That password isn’t right. Try again.');
+  assert.equal(refusalStatus('signed-out'), 401);
+  for (const reason of ['unlock', 'password', 'wrong-password'] as const) assert.equal(refusalStatus(reason), 403);
 });

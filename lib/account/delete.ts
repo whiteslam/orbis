@@ -13,7 +13,7 @@ type Admin = ReturnType<typeof createAdminClient>;
 // What the person is told when a step fails. Before the last step the account
 // and its rows are all still there; only what the earlier steps removed is gone.
 const FAILED: Record<DeletionStep, string> = {
-  'revoke-connections': 'Your account wasn’t deleted, and nothing in it has been removed. A connected app may already be disconnected. Try again in a moment.',
+  'revoke-connections': 'Your account wasn’t deleted. A connected app may already be disconnected; everything else is still there.',
   'remove-storage': 'Your account wasn’t deleted yet. Your connected apps are disconnected and some of your stored files may already be gone, but everything else is still there. Try again in a moment.',
   'delete-user': 'Your connected apps and stored files were removed, but the account itself couldn’t be deleted. Try again in a moment, or ask us for help from the support page.',
 };

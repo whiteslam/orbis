@@ -2,24 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { deleteAccount } from '@/lib/account/delete';
-import { deletionAuthCheck, deletionConfirmed } from '@/lib/account/deletion-plan';
+import { deletionConfirmed, refusalMessage } from '@/lib/account/deletion-plan';
+import { sensitiveRequester } from '@/lib/account/sensitive-auth';
 import { userMessage } from '@/lib/errors';
 import { clearAppUnlock, isAppUnlocked } from '@/lib/security/app-lock';
-import { passwordMatches } from '@/lib/security/verify-password';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export type AccountActionState = { success: boolean; message: string; needsPassword?: boolean };
-
-const MAX_PASSWORD_LENGTH = 200;
-
-async function requester() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-  if (error || !claims || typeof claims.sub !== 'string') return null;
-  return { supabase, claims, userId: claims.sub, unlocked: await isAppUnlocked(claims) };
-}
 
 /**
  * Deletes the signed-in person's account for good. Needs "DELETE" typed, Orbis
@@ -27,31 +17,17 @@ async function requester() {
  * password given again. Signs this browser out once the account is gone.
  */
 export async function deleteAccountAction(input: { password?: string; confirm: string }): Promise<AccountActionState> {
-  const who = await requester();
-  if (!who) return { success: false, message: 'Sign in again to delete your account.' };
   if (!input || typeof input !== 'object' || !deletionConfirmed(input.confirm)) {
     return { success: false, message: 'Type DELETE to confirm.' };
   }
-
-  const nowSec = Math.floor(Date.now() / 1000);
-  const email = typeof who.claims.email === 'string' ? who.claims.email : '';
-  let check = deletionAuthCheck({ amr: who.claims.amr, nowSec, unlocked: who.unlocked, passwordVerified: false });
-  if (!check.ok && check.needs === 'password') {
-    const password = typeof input.password === 'string' ? input.password : '';
-    if (!password) return { success: false, needsPassword: true, message: 'Enter your password to delete your account.' };
-    // The lock was checked first, so a locked device can't be used to test passwords.
-    const verified = password.length <= MAX_PASSWORD_LENGTH && (await passwordMatches(email, password));
-    if (!verified) return { success: false, needsPassword: true, message: 'That password isn’t right. Try again.' };
-    check = deletionAuthCheck({ amr: who.claims.amr, nowSec, unlocked: who.unlocked, passwordVerified: true });
-  }
-  if (!check.ok) {
-    return check.needs === 'unlock'
-      ? { success: false, message: 'Unlock Orbis on this device first, then delete your account.' }
-      : { success: false, needsPassword: true, message: 'Enter your password to delete your account.' };
+  const who = await sensitiveRequester(input.password);
+  if (!who.ok) {
+    const needsPassword = who.reason === 'password' || who.reason === 'wrong-password';
+    return { success: false, needsPassword, message: refusalMessage(who.reason, 'delete your account') };
   }
 
   try {
-    await deleteAccount(who.userId, email);
+    await deleteAccount(who.userId, who.email);
   } catch (error) {
     return { success: false, message: userMessage(error, 'Your account wasn’t deleted. Try again in a moment.') };
   }
@@ -69,12 +45,14 @@ export async function deleteAccountAction(input: { password?: string; confirm: s
  * this explicit action, scoped to the signed-in user.
  */
 export async function purgeSocialHistoryAction(): Promise<AccountActionState> {
-  const who = await requester();
-  if (!who) return { success: false, message: 'Sign in again to clear your post history.' };
-  if (!who.unlocked) return { success: false, message: 'Unlock Orbis on this device first.' };
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (claimsError || typeof userId !== 'string') return { success: false, message: 'Sign in again to clear your post history.' };
+  if (!(await isAppUnlocked(data?.claims))) return { success: false, message: 'Unlock Orbis on this device first.' };
 
   try {
-    const { error } = await createAdminClient().from('social_post_revisions').delete().eq('user_id', who.userId);
+    const { error } = await createAdminClient().from('social_post_revisions').delete().eq('user_id', userId);
     if (error) throw error;
   } catch (error) {
     return { success: false, message: userMessage(error, 'Your post history couldn’t be cleared. Try again in a moment.') };

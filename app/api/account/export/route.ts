@@ -1,8 +1,8 @@
-import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename } from '@/lib/account/deletion-plan';
+import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename, refusalMessage, refusalStatus } from '@/lib/account/deletion-plan';
+import { sensitiveRequester } from '@/lib/account/sensitive-auth';
 import { listUserObjects } from '@/lib/account/storage';
-import { isAppUnlocked } from '@/lib/security/app-lock';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import type { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
 
@@ -31,18 +31,32 @@ async function readTable(supabase: Supabase, userId: string, table: string, key:
   }
 }
 
-// GET /api/account/export → a JSON download of the signed-in person's data.
-export async function GET() {
-  const supabase = await createClient();
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
-  const claims = claimsData?.claims;
-  const userId = claims?.sub;
-  if (claimsError || typeof userId !== 'string') {
-    return Response.json({ message: 'Sign in again to export your data.' }, { status: 401, headers: NO_STORE });
+/** Reads `{ password? }` from a same-origin JSON request; anything else is refused. */
+async function readPassword(request: Request): Promise<{ password: unknown } | null> {
+  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return null;
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return null;
+  try {
+    const body = await request.json();
+    return { password: body && typeof body === 'object' ? (body as { password?: unknown }).password : undefined };
+  } catch {
+    return null;
   }
-  if (!(await isAppUnlocked(claims))) {
-    return Response.json({ message: 'Unlock Orbis on this device first, then export your data.' }, { status: 403, headers: NO_STORE });
+}
+
+// POST /api/account/export { password? } → a JSON download of the signed-in
+// person's data. POST rather than GET so the password can travel in the body
+// and a refusal comes back as a message the page shows, not a saved file. It
+// needs the same proof as deleting the account: Orbis unlocked here, and a
+// sign-in in the last ten minutes or the password.
+export async function POST(request: Request) {
+  const input = await readPassword(request);
+  if (!input) return Response.json({ message: 'Your export couldn’t be started. Reload Orbis and try again.' }, { status: 400, headers: NO_STORE });
+  const who = await sensitiveRequester(input.password);
+  if (!who.ok) {
+    return Response.json({ reason: who.reason, message: refusalMessage(who.reason, 'export your data') }, { status: refusalStatus(who.reason), headers: NO_STORE });
   }
+  const { supabase, userId, email } = who;
 
   const tables: Record<string, unknown[]> = {};
   const unavailable: string[] = [];
@@ -70,7 +84,7 @@ export async function GET() {
   const now = new Date();
   const body = {
     exportedAt: now.toISOString(),
-    account: { id: userId, email: typeof claims?.email === 'string' ? claims.email : null },
+    account: { id: userId, email: email || null },
     about: 'Everything Orbis holds for your account, as JSON. Stored files are listed by name but not included; each list says where in Orbis to download them. Passwords, app keys and connection tokens are never exported.',
     tables,
     ...(unavailable.length ? { notIncluded: { tables: unavailable, reason: 'These could not be read just now. Export again later to include them.' } } : {}),
