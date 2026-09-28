@@ -40,7 +40,7 @@ In the Supabase dashboard, add `http://localhost:3000/auth/callback` to Authenti
 
 Apply everything in `supabase/migrations/` in filename order through the SQL Editor, or use the combined `supabase/pending.sql` bundle if one is current for your project state. Every migration is written to be safe to run more than once.
 
-The Phase 1 migrations, applied **in order and before deploying this branch**:
+The Phase 1 migrations. Apply **`0201`, `0202` and `0203` before deploying this branch, then `0200` immediately after the deploy**: `0200` removes the browser session's right to add push subscriptions, which the previously deployed code still uses, so applying it first breaks turning on notifications until the new code is live. If you use `supabase db push`, the other in-flight migrations `202609280100`–`202609280103` sort before `0200`, so pushing them after `0200` is applied needs `--include-all`.
 
 | Migration | What it locks down |
 | --- | --- |
@@ -72,7 +72,7 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 
 - Set the **Required** and whichever **Optional** variables you need (see `.env.example`) as server environment variables in your Vercel project. `NEXT_PUBLIC_*` variables are exposed to the browser by design; nothing else should be.
 - Set `NEXT_PUBLIC_SITE_URL` to the deployed HTTPS origin and `GOOGLE_REDIRECT_URI` to its Gmail callback; add both to Supabase's and Google's redirect allowlists.
-- Apply the migrations above before the first deploy of this branch (rate limits and uploads fail closed without them).
+- Apply `0201`–`0203` before the first deploy of this branch (rate limits and uploads fail closed without them), and `0200` immediately after it.
 - Pin the Vercel function region to the same region as your Supabase project, to keep server-to-database latency low.
 - If you schedule the daily notification (`/api/notifications/dispatch`) with Vercel Cron or an external scheduler, set `CRON_SECRET` and have the scheduler send it.
 - See `docs/phase-1-owner-actions.md` for the full checklist, including account-security settings that only exist in the Supabase dashboard and can't be set from code.
