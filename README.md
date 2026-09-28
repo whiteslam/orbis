@@ -1,88 +1,96 @@
-# Orbis — Personal Intelligence System
+# Orbis
 
-Orbis is a personal intelligence workspace with Supabase email/password authentication, owner-scoped finance data, a read-only Gmail connection flow, and a private workbook-to-advice experience.
+Orbis is a private, single-user personal intelligence app: one phone-frame shell over your finances, health documents, investments, daily routines and social drafts, with an AI layer that only ever sees what you've explicitly turned on.
 
-## Included
-- Phone-frame web application shell
-- Home / AI board
-- Finance tab with owner-scoped transaction data and Gmail transaction-alert connection states
-- Health tab with bounded Excel/PDF preview and data-grounded AI advice
-- User-managed context notes, a private editable personal profile and fitness persona, investment holdings, goals, and habits
-- Responsive full-screen mobile mode
-- Reusable components with owner-scoped storage
+## Features by tab
 
-## Run
+- **Home** — a single daily brief (weather, money, a nudge), backed by route handlers that load in parallel so the shell renders before either is ready; a quiet row for today's routines and planned social posts.
+- **Expense** (Finance) — owner-scoped transactions, a read-only Gmail alert connection, manual transaction entry, and a deterministic parser for statement-style alerts.
+- **Health** — bounded preview and parsing of uploaded `.xlsx`/`.pdf` workbooks (uploaded directly to Supabase Storage via a signed URL, not through the app server), data-grounded AI advice with mandatory citations, a documents/plans library, and Apple Health step counts.
+- **Invest** — manual holdings plus optional Zerodha Kite Connect and Groww sync, market data from Alpha Vantage, and AI-assisted portfolio commentary.
+- **Social** — a month calendar, list and grid view of planned/posted social content, AI-drafted post copy, and a quiet Home row for what's due today.
+- **Profile** — account settings, app lock and PIN, notification and AI preferences, saved context notes, fitness persona, personal profile, routines/habits, a journal, data export, and account deletion.
+
+Signed-out visitors get a separate public site: a landing page, `/privacy`, `/terms`, `/support`, `/delete-account`, an offline fallback, `robots.txt`/`sitemap.xml` and a generated share image — all reading the site name and canonical URL from `lib/site.ts`.
+
+## Architecture
+
+- **One shell, App Router.** `components/orbis-app.tsx` renders the whole signed-in experience as a single phone-frame client component with a tab switcher (`home` / `finance` / `health` / `investment` / `social` / `personal`); only Home is in the first download, everything else is `next/dynamic`. Home's own data comes from two route handlers (`/api/home/brief`, `/api/home/portfolio`) rather than server actions, so they can be requested in parallel with a timeout instead of blocking a render.
+- **Supabase for auth and storage, RLS everywhere.** Every user-owned table is row-level-secured to its owner; server code additionally narrows table grants explicitly (`202609280200_hardening.sql`) so RLS is not the only gate. Every server entry point derives the user from `supabase.auth.getClaims()` plus an app-lock check (`isAppUnlocked`) — never from a value the browser supplies.
+- **Server actions, typed results.** Mutations are `'use server'` functions that return `{ success: boolean; message: string; … }`; errors meant for the user are typed copy, everything else becomes a generic message and the real error goes to `console.error`.
+- **An AI router with sensitivity, not a hardcoded model.** `lib/ai/router.ts` reads a provider/model registry (`ai_providers`, `ai_models`) and routes `'personal'`-sensitivity requests (the brief, plans, workbook advice, portfolio suggestions) only to a provider the registry marks `may_train = false` — today, Groq. `'general'` requests may also reach OpenRouter, Gemini or Mistral. Nothing reaches any provider until the person turns AI on once in Profile → Settings (`ai_preferences.ai_enabled`, migration `202609280203_ai_consent.sql`); until then every AI feature falls back to wording Orbis wrote itself.
+- **A nonce-based CSP.** `proxy.ts` (the Next.js proxy/middleware entry point) generates a fresh nonce per request, builds a strict `script-src 'self' 'nonce-…' 'strict-dynamic'` policy in `lib/security/csp.ts`, and forwards it as both a request header (so Next stamps its own scripts) and the response header. Static security headers (`Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) are set in `next.config.ts`.
+- **A PWA shell.** A service worker registers on every load in production, caches the app shell, and serves `/offline` when the network is unavailable; the manifest and icons make it installable.
+
+## Local setup
+
 ```bash
 pnpm install
+cp .env.example .env.local
 pnpm dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3000. `.env.local` is git-ignored; never commit real credentials.
 
-## Supabase Auth
+`.env.example` groups variables **Required** (the app won't start, or a core path like sign-in or the app lock breaks without it) and **Optional** (a feature quietly stands down without it — most AI providers, Gmail, Zerodha, Groww, market data, and push notifications are optional). Read the comment above each variable before setting it; several have consequences if changed after the fact (`APP_LOCK_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`/`CREDENTIAL_ENCRYPTION_KEY`).
 
-Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set `NEXT_PUBLIC_SITE_URL` to `http://localhost:3000` locally and to the app's canonical HTTPS origin in production. The local callback URL `http://localhost:3000/auth/callback` must be allowed in the Supabase project's Auth redirect URL settings for signup confirmation and password recovery links to return to this app; add the production callback URL when deploying. Keep `SUPABASE_SECRET_KEY` server-only. Never commit `.env.local`.
+In the Supabase dashboard, add `http://localhost:3000/auth/callback` to Authentication → URL Configuration → Redirect URLs (and the production callback when you deploy), or sign-up confirmation and password-recovery links won't return to the app.
 
-## Public pages
+## Migrations
 
-Signed-out visitors land on a public landing page at `/`, with `/privacy`, `/terms`, `/support` and `/delete-account` alongside it, a generated `/opengraph-image`, and `robots.txt`/`sitemap.xml`. They share `PublicShell` (`components/marketing/public-shell.tsx`) and read the site name, canonical URL and optional support address from `lib/site.ts`. Set `NEXT_PUBLIC_SITE_URL` for the canonical origin used in metadata, robots and the sitemap, and `NEXT_PUBLIC_SUPPORT_EMAIL` to show a real contact address instead of "through the support page".
+Apply everything in `supabase/migrations/` in filename order through the SQL Editor, or use the combined `supabase/pending.sql` bundle if one is current for your project state. Every migration is written to be safe to run more than once.
 
-## Passkeys and app lock
+The Phase 1 migrations, applied **in order and before deploying this branch**:
 
-Orbis supports passkey sign-in (Face ID, Touch ID, fingerprint or device PIN) through Supabase Auth's WebAuthn support. Supabase runs and verifies the ceremony, and Orbis never receives biometric data. In the Supabase dashboard, open Authentication and enable Passkeys. Set the relying party ID to the production domain (for example `orbis-starter.vercel.app`), and allow the origins `https://orbis-starter.vercel.app` and `http://localhost:3000`. A passkey only works on the domain it was created for, so passkeys made in production do not work on localhost.
+| Migration | What it locks down |
+| --- | --- |
+| `202609280200_hardening.sql` | Narrows table grants to what the app actually uses (RLS was not previously the only gate); adds a push-endpoint host check; hardens a `SECURITY DEFINER` function's search path. |
+| `202609280201_rate_limits.sql` | Per-person daily/hourly limits for uploads, file parsing and Gmail sync, plus the `workbook-uploads` storage bucket for signed direct uploads. **Uploads, parsing and Gmail sync are refused until this migration exists** — the checks fail closed, not open. |
+| `202609280202_staged_upload_claims.sql` | Makes each signed upload path claimable exactly once, so a reused upload token can't be processed twice. |
+| `202609280203_ai_consent.sql` | Adds the one AI on/off switch (`ai_preferences.ai_enabled`, default **false**) that `lib/ai/router.ts` checks before routing any request. **AI features stay off for everyone until this migration exists**, regardless of provider keys. |
 
-After 5 minutes without activity, or when the app returns from the background after that long, Orbis locks. The lock is enforced on the server. While locked, the home page renders only the lock screen and every data action refuses to run. Unlocking needs a passkey or the account password, checked through a fresh authentication entry in the Supabase JWT. The unlock state is an httpOnly cookie signed with `APP_LOCK_SECRET`, generated with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. Without that variable, the key is derived from `SUPABASE_SECRET_KEY`, so set it explicitly in production. After signing in, a 6-digit device PIN is required, and it then unlocks Orbis on that device. Only a salted scrypt hash is stored, in `user_app_pins`, which only the server can read. After 5 wrong PINs the user must unlock with their password and set a new PIN. Apply `supabase/migrations/202609240016_app_pin.sql` to enable it. Until then, the PIN step is skipped. Unit tests: `pnpm test`.
+See `docs/phase-1-owner-actions.md` for the full pre-deploy checklist these migrations are part of.
 
-## Gmail OAuth setup
+## Scripts
 
-Gmail is a separate Google connection; Supabase's **OAuth Server** setting is not required. Enable the Gmail API in the Google Cloud project for the supplied Web OAuth client, then add this exact **Authorized redirect URI** to that client:
+| Script | What it does |
+| --- | --- |
+| `pnpm dev` | Runs the app locally. |
+| `pnpm build` | Production build. |
+| `pnpm start` | Serves the production build. |
+| `pnpm lint` | ESLint (flat config). |
+| `pnpm typecheck` | `tsc --noEmit`. |
+| `pnpm test` | Unit tests (Vitest). |
+| `pnpm test:public` | Playwright against the signed-out public site only (`playwright.public.config.ts`). |
+| `pnpm test:e2e` | Full Playwright suite. **This creates real user accounts in whatever Supabase project your `.env` points at — do not run it against your production project.** |
 
-```text
-http://localhost:3000/auth/gmail/callback
-```
+CI (`.github/workflows/`) runs `typecheck`, `lint`, `test`, `build` and `pnpm audit --prod --audit-level=high` on every push to `main` and every pull request, against placeholder Supabase env values.
 
-The supplied OAuth JSON currently authorizes `http://Orbis.ractrotech.com` only, so the local callback must be added in Google Cloud before connecting Gmail locally. Add the client ID and secret to ignored `.env.local` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; set `GOOGLE_REDIRECT_URI` to the callback above; and set `GMAIL_TOKEN_ENCRYPTION_KEY` to a fresh base64-encoded 32-byte key (for example, generate one with `openssl rand -base64 32`). Never copy credential values into this README or `.env.example`.
+TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release rejects TypeScript 7 (`^6` also happily resolves to a TS7 prerelease under some registries, so the pin is exact, not a caret range).
 
-Google consent screen configuration must include your account as a test user while the app is in testing mode. Orbis requests the restricted `gmail.readonly` scope, so Google verification and potentially a security assessment may be required before public production use.
+## Deploy
 
-## Apply the Finance and Gmail schema
+- Set the **Required** and whichever **Optional** variables you need (see `.env.example`) as server environment variables in your Vercel project. `NEXT_PUBLIC_*` variables are exposed to the browser by design; nothing else should be.
+- Set `NEXT_PUBLIC_SITE_URL` to the deployed HTTPS origin and `GOOGLE_REDIRECT_URI` to its Gmail callback; add both to Supabase's and Google's redirect allowlists.
+- Apply the migrations above before the first deploy of this branch (rate limits and uploads fail closed without them).
+- Pin the Vercel function region to the same region as your Supabase project, to keep server-to-database latency low.
+- If you schedule the daily notification (`/api/notifications/dispatch`) with Vercel Cron or an external scheduler, set `CRON_SECRET` and have the scheduler send it.
+- See `docs/phase-1-owner-actions.md` for the full checklist, including account-security settings that only exist in the Supabase dashboard and can't be set from code.
 
-After signing in to the Supabase Dashboard, open **SQL Editor** and run migrations in filename order: `202609240001_finance_gmail.sql` through `202609240012_health_steps.sql`. Until these migrations are applied, the corresponding Finance/Gmail, workbook advice, transaction review, Goals/Habits, saved-context, Investment, aggregate AI event logging, fitness persona, personal profile, manual transaction, portfolio AI, and Apple Health steps features are unavailable.
+## Security model summary
 
-## Workbook advice
+- **Authentication and session.** Supabase email/password and passkey (WebAuthn) sign-in. Every server entry point re-derives the user from `supabase.auth.getClaims()`; nothing trusts a client-supplied user id.
+- **App lock.** After 5 minutes idle, or on return from the background, the app locks; the home page renders only the lock screen and every data action refuses to run until it's unlocked with a passkey, password, or a 6-digit device PIN (salted scrypt hash, server-only).
+- **Sensitive actions need fresh proof.** Changing your password, exporting your data, and deleting your account all require either a recent password-recovery sign-in or your current password re-entered while unlocked — not just an open session. New passwords must be at least 10 characters.
+- **Private build option.** `ORBIS_ALLOWED_EMAILS`, when set, closes sign-up entirely and signs out anyone already in a session whose address isn't listed, checked on every request.
+- **CSP and headers.** A strict, nonce-based Content-Security-Policy plus HSTS, frame-denial, MIME-sniffing protection and a locked-down Permissions-Policy (see Architecture above).
+- **AI consent and data sensitivity.** AI is off by default per account; the router only ever sends personally-sensitive requests to a provider that has committed not to train on them, and never sends anything until consent is recorded.
+- **Rate limits and uploads.** Costly actions (uploads, parsing, Gmail sync) are capped per person per day/hour, checked server-side and failing closed if the limiting mechanism itself is unavailable. Large files go straight from the browser to a private Storage bucket with a one-time signed URL and a server-side claim that can only be consumed once.
+- **Provider allowlists.** The AI router, push-notification sending, and OAuth (Google, Zerodha) all validate destination hosts and callback state against a fixed allowlist rather than trusting configuration alone.
+- **Data export and deletion.** Profile → Settings offers a full JSON export of your own data (fresh auth required) and permanent account deletion (typed confirmation, fresh auth required), covering the tables listed in `lib/account/deletion-plan.ts`.
 
-The Health tab accepts `.xlsx` and text-based `.pdf` files up to 100 MB; CSV and older `.xls` files are not supported. PDF previews are limited to 50 pages, 20,000 text items, and 120,000 extracted characters. Scanned image-only PDFs are not supported yet. XLSX archives are expanded through a capped streaming check before workbook parsing; spreadsheet limits also cap sheets, rows, columns, cells, and preview size. Orbis parses files in memory, shows a bounded preview and extracted observations, and does not save uploaded content or generated advice. Excel advice requires at least three numeric values in a column; PDF advice is grounded in bounded extracted text snippets. Every recommendation shown must cite a detected observation. Only after you request advice and confirm the disclosure does Orbis send a bounded summary (not the original file) to OpenRouter. Saved context notes are excluded unless you separately opt in; when enabled, Orbis ranks a bounded set of your notes against document content, then includes up to five notes with a 3,000-character cap. Your personal profile is excluded unless you separately opt in for that request; the disclosure names its preferred name, role, and “More about me” text. Your saved fitness persona is sent only after a separate opt-in, and only for a health or fitness document. Each account has five advice attempts per UTC day; provider errors also count as attempts. Migrations 007–009 add content-free AI attempt metadata, the private fitness persona, and the private personal profile; these tables do not store uploaded files or generated advice. Set `OPENROUTER_API_KEY` as a server-only variable. The code default is `openai/gpt-4o-mini`; set `OPENROUTER_MODEL` to override it. The current local and production configuration selects `nvidia/nemotron-3-ultra-550b-a55b`. Advice is informational and should not be treated as medical diagnosis or guaranteed financial guidance.
+## More
 
-The Personal tab includes an editable starter fitness persona based on a historical 2021 plan. Save it to your private account after applying migration 008. It treats old measurements and calorie targets as historical, not current. The persona is not sent to OpenRouter unless you opt in for an individual health/fitness workbook request.
-
-The Personal tab also includes an account-private profile for your preferred name, work or role, and up to 3,000 characters of background and preferences. The preferred name appears in the Home greeting. The profile is sent to OpenRouter only when you opt in for an individual workbook request; apply migration 009 before saving it.
-
-The live production app is [orbis-starter.vercel.app](https://orbis-starter.vercel.app). Sign-in and connected data features require the Supabase migrations and OAuth redirect allowlists described below.
-
-The project directory currently uses `.env.local` for local credentials and is ignored by both Git and `.vercelignore`. For Vercel, add the Supabase URL, publishable key, secret key, site URL, OpenRouter key, and Gmail OAuth/encryption values in the Vercel project's server environment before enabling those features. Set `NEXT_PUBLIC_SITE_URL` and `GOOGLE_REDIRECT_URI` to the deployed HTTPS origin and add the corresponding callback URLs to Supabase and Google. Do not pull production secrets into a file that may be committed.
-
-## Next build order
-1. Supabase Auth; add owner-scoped RLS alongside each real user-owned data table
-2. Finance schema + Gmail OAuth sync
-3. Deterministic transaction parser
-4. Health onboarding + Excel ingestion and advice
-5. User-managed context notes and explicit opt-in to AI advice
-6. OpenRouter AI gateway and request budget
-7. Daily Orbis Brief from confirmed user data
-8. Manual investment holdings tracker
-
-## Environment variables
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-SUPABASE_SECRET_KEY=
-SUPABASE_JWKS_URL=
-APP_LOCK_SECRET=
-NEXT_PUBLIC_SITE_URL=
-NEXT_PUBLIC_SUPPORT_EMAIL=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/gmail/callback
-GMAIL_TOKEN_ENCRYPTION_KEY=
-OPENROUTER_API_KEY=
-```
+- [`AUDIT_REPORT.md`](./AUDIT_REPORT.md) — the codebase audit this Phase 1 plan was built from.
+- [`BUILD_ROADMAP.md`](./BUILD_ROADMAP.md) — where the project stands and what's next.
+- [`docs/phase-1-owner-actions.md`](./docs/phase-1-owner-actions.md) — the checklist of steps only the project owner can do (Vercel/Supabase dashboard settings, migrations, legal copy).
