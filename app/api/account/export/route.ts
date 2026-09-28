@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   if (!input) return Response.json({ message: 'Your export couldn’t be started. Reload Orbis and try again.' }, { status: 400, headers: NO_STORE });
   const who = await sensitiveRequester(input.password);
   if (!who.ok) {
-    return Response.json({ reason: who.reason, message: refusalMessage(who.reason, 'export your data') }, { status: refusalStatus(who.reason), headers: NO_STORE });
+    return Response.json({ reason: who.reason, message: who.message ?? refusalMessage(who.reason, 'export your data') }, { status: refusalStatus(who.reason), headers: NO_STORE });
   }
   const { supabase, userId, email } = who;
 

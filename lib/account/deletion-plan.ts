@@ -1,6 +1,7 @@
 // What deleting an account removes, in what order, and what an export contains.
 // Pure, so the plan can be tested without a database.
 
+import { rateLimitMessage } from '@/lib/security/rate-limit-rules';
 import { hasFreshAuth } from '@/lib/security/unlock-token';
 import { indiaToday } from '@/lib/social/month';
 
@@ -80,10 +81,11 @@ export function sensitiveAuthCheck(input: { amr: unknown; nowSec: number; unlock
   return { ok: false, needs: 'password' };
 }
 
-export type SensitiveRefusal = 'signed-out' | 'unlock' | 'password' | 'wrong-password';
+export type SensitiveRefusal = 'signed-out' | 'unlock' | 'password' | 'wrong-password' | 'rate-limited';
 
-/** The HTTP status for a refused export: 401 when signed out, 403 otherwise. */
+/** The HTTP status for a refused export: 401 when signed out, 429 after too many password tries, 403 otherwise. */
 export function refusalStatus(reason: SensitiveRefusal) {
+  if (reason === 'rate-limited') return 429;
   return reason === 'signed-out' ? 401 : 403;
 }
 
@@ -98,6 +100,8 @@ export function refusalMessage(reason: SensitiveRefusal, doing: string) {
       return `Enter your password to ${doing}. It’s only needed if you haven’t signed in in the last 10 minutes.`;
     case 'wrong-password':
       return 'That password isn’t right. Try again.';
+    case 'rate-limited':
+      return rateLimitMessage('password');
   }
 }
 

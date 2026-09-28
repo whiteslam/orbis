@@ -23,7 +23,7 @@ export async function deleteAccountAction(input: { password?: string; confirm: s
   const who = await sensitiveRequester(input.password);
   if (!who.ok) {
     const needsPassword = who.reason === 'password' || who.reason === 'wrong-password';
-    return { success: false, needsPassword, message: refusalMessage(who.reason, 'delete your account') };
+    return { success: false, needsPassword, message: who.message ?? refusalMessage(who.reason, 'delete your account') };
   }
 
   try {

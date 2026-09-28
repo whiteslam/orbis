@@ -3,13 +3,14 @@ import 'server-only';
 import { sensitiveAuthCheck, type SensitiveRefusal } from '@/lib/account/deletion-plan';
 import { signedInSession, type SignedInSession } from '@/lib/auth/session';
 import { isAppUnlocked } from '@/lib/security/app-lock';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { passwordMatches } from '@/lib/security/verify-password';
 
 const MAX_PASSWORD_LENGTH = 200;
 
 export type SensitiveRequester =
   | { ok: true; supabase: SignedInSession['supabase']; userId: string; email: string; claims: SignedInSession['claims'] }
-  | { ok: false; reason: SensitiveRefusal };
+  | { ok: false; reason: SensitiveRefusal; message?: string };
 
 /**
  * Who is asking to delete or export the account, and whether they have proved
@@ -31,6 +32,10 @@ export async function sensitiveRequester(password: unknown): Promise<SensitiveRe
   if (!check.ok && check.needs === 'password') {
     const given = typeof password === 'string' ? password : '';
     if (!given) return { ok: false, reason: 'password' };
+    // Counted before every check (after the lock), so these routes can't be
+    // used to guess the password.
+    const limited = await rateLimitRefusal(session.userId, 'password');
+    if (limited) return { ok: false, reason: 'rate-limited', message: limited };
     const verified = given.length <= MAX_PASSWORD_LENGTH && (await passwordMatches(email, given));
     if (!verified) return { ok: false, reason: 'wrong-password' };
     check = sensitiveAuthCheck({ amr: claims.amr, nowSec, unlocked, passwordVerified: true });

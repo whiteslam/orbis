@@ -83,6 +83,8 @@ test('a refused export or deletion says what to do, and a signed-out export is a
   assert.equal(refusalMessage('unlock', 'delete your account'), 'Unlock Orbis on this device first, then delete your account.');
   assert.equal(refusalMessage('signed-out', 'export your data'), 'Sign in again to export your data.');
   assert.equal(refusalMessage('wrong-password', 'export your data'), 'That password isn’t right. Try again.');
+  assert.equal(refusalMessage('rate-limited', 'export your data'), 'Too many password attempts. Try again in 15 minutes.');
   assert.equal(refusalStatus('signed-out'), 401);
+  assert.equal(refusalStatus('rate-limited'), 429);
   for (const reason of ['unlock', 'password', 'wrong-password'] as const) assert.equal(refusalStatus(reason), 403);
 });

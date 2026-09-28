@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { canChangePassword, MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
+import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { passwordMatches } from '@/lib/security/verify-password';
 import { ACCESS_DENIED_MESSAGE, accessAllowed, accessRestricted } from '@/lib/security/access';
 
@@ -157,7 +158,11 @@ export async function updatePassword(formData: FormData): Promise<AuthActionStat
   if (!check.ok && check.needs === 'current-password') {
     if (!currentPassword) return { error: 'Enter your current password.', message: null };
     const email = typeof claims.email === 'string' ? claims.email : '';
-    const verified = email ? await passwordMatches(email, currentPassword) : false;
+    if (!email) return { error: 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.', message: null };
+    // Counted before every check, so an open session can't be used to guess the password.
+    const limited = await rateLimitRefusal(claims.sub, 'password');
+    if (limited) return { error: limited, message: null };
+    const verified = await passwordMatches(email, currentPassword);
     if (!verified) return { error: 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.', message: null };
     check = canChangePassword({ amr: claims.amr, nowSec, unlocked, currentPasswordVerified: true });
   }

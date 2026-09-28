@@ -11,3 +11,7 @@ test('the message is plain and says when to try again', () => {
   assert.match(rateLimitMessage('sync'), /try again in an hour/i);
   assert.match(rateLimitMessage('uploads'), /tomorrow/i);
 });
+test('password checks allow five tries in fifteen minutes', () => {
+  assert.deepEqual(limitFor('password'), { limit: 5, windowSeconds: 900 });
+  assert.equal(rateLimitMessage('password'), 'Too many password attempts. Try again in 15 minutes.');
+});
