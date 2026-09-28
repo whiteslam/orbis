@@ -3,8 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Flame, LoaderCircle, Trash2 } from 'lucide-react';
-import { deleteJournalEntryAction, saveJournalEntryAction } from '@/app/personal/journal-actions';
+import { deleteJournalEntryAction, loadDeletedJournalAction, loadJournalHistoryAction, saveJournalEntryAction } from '@/app/personal/journal-actions';
 import { FieldLabel } from '@/components/field/field';
+import { HistoryPanel, type HistoryRow } from '@/components/personal/history-panel';
+import { VoiceNotes } from '@/components/personal/voice-notes';
+import { journalRevisionLine, type JournalRevision } from '@/lib/history/describe';
 import { MOODS, SUGGESTED_TAGS, type JournalEntry, type JournalSummary } from '@/lib/journal/types';
 import { safeAction } from '@/lib/client/safe-action';
 
@@ -66,6 +69,43 @@ function StreakHero({ journal, todayKey }: { journal: JournalSummary; todayKey: 
       </div>
     </div>
   );
+}
+
+/** A version to bring back, saved as a new edit of that day. */
+function restoreVersion(date: string, version: NonNullable<JournalRevision['previous']>) {
+  return () => safeAction(saveJournalEntryAction)({ date, mood: version.mood, body: version.body, tags: version.tags });
+}
+
+function historyRows(items: JournalRevision[]): HistoryRow[] {
+  return items.map((item) => ({
+    id: item.id,
+    createdAt: item.createdAt,
+    line: journalRevisionLine(item),
+    before: item.action === 'created' ? null : item.previous?.body || null,
+    restore: item.previous ? restoreVersion(item.date, item.previous) : undefined,
+    restoreLabel: item.action === 'deleted' ? 'Bring back' : 'Restore this version',
+  }));
+}
+
+async function loadHistory(date: string) {
+  const result = await safeAction(loadJournalHistoryAction)(date);
+  return { success: result.success, message: result.message, rows: historyRows(result.items ?? []) };
+}
+
+async function loadDeleted() {
+  const result = await safeAction(loadDeletedJournalAction)();
+  return {
+    success: result.success,
+    message: result.message,
+    rows: (result.items ?? []).map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      line: `${prettyDate(item.date)} · ${item.previous?.body.trim().slice(0, 80) || 'no text'}`,
+      before: item.previous?.body || null,
+      restore: item.previous ? restoreVersion(item.date, item.previous) : undefined,
+      restoreLabel: 'Bring back',
+    })),
+  };
 }
 
 function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: string; onDone: () => void }) {
@@ -131,6 +171,8 @@ export function Journal({ journal }: { journal: JournalSummary }) {
   const router = useRouter();
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [historyDate, setHistoryDate] = useState<string | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   if (journal.state === 'setup') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal isn’t set up yet. Apply the profile/journal migration in Supabase, then refresh.</p></>;
@@ -141,9 +183,12 @@ export function Journal({ journal }: { journal: JournalSummary }) {
   const past = journal.entries.filter((entry) => entry.date !== todayKey);
   const shown = showAll ? past : past.slice(0, PAST_PREVIEW);
   const moodOf = (value: number) => MOODS.find((item) => item.value === value)!;
+  const voiceOf = (date: string) => (journal.voice ?? []).filter((note) => note.date === date);
+
+  const toggleHistory = (date: string) => setHistoryDate(historyDate === date ? null : date);
 
   function remove(date: string) {
-    if (!window.confirm(`Delete your journal entry for ${prettyDate(date)}?`)) return;
+    if (!window.confirm(`Delete your journal entry for ${prettyDate(date)}? You can bring it back from Deleted entries.`)) return;
     startTransition(async () => {
       await safeAction(deleteJournalEntryAction)(date);
       router.refresh();
@@ -161,11 +206,16 @@ export function Journal({ journal }: { journal: JournalSummary }) {
             <p className="pf-prompt"><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
             {todayEntry.body && <p className="fd-prose">{todayEntry.body}</p>}
             {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{todayEntry.tags.map((tag) => `#${tag}`).join(' ')}</p>}
-            <div className="fd-act"><button className="ghost" type="button" onClick={() => setEditingDate(todayKey)}>Edit today’s entry</button></div>
+            <div className="fd-act">
+              <button className="ghost" type="button" onClick={() => setEditingDate(todayKey)}>Edit today’s entry</button>
+              <button className="fd-link" type="button" aria-expanded={historyDate === todayKey} onClick={() => toggleHistory(todayKey)}>History</button>
+            </div>
+            {historyDate === todayKey && <HistoryPanel title="Changes to today’s entry" load={() => loadHistory(todayKey)} empty="No changes recorded yet." />}
           </div>
         ) : (
           <Editor key={todayKey} entry={todayEntry} date={todayKey} onDone={() => setEditingDate(null)} />
         )}
+        <VoiceNotes date={todayKey} notes={voiceOf(todayKey)} />
       </section>
 
       <FieldLabel>Past entries</FieldLabel>
@@ -183,7 +233,12 @@ export function Journal({ journal }: { journal: JournalSummary }) {
                     <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
                   </div>
                   {entry.body && <p className="pf-entry-body">{entry.body}</p>}
-                  <button type="button" className="fd-link pf-edit" onClick={() => setEditingDate(entry.date)}>Edit</button>
+                  {voiceOf(entry.date).length > 0 && <VoiceNotes date={entry.date} notes={voiceOf(entry.date)} />}
+                  <div className="hs-links">
+                    <button type="button" className="fd-link pf-edit" onClick={() => setEditingDate(entry.date)}>Edit</button>
+                    <button type="button" className="fd-link pf-edit" aria-expanded={historyDate === entry.date} onClick={() => toggleHistory(entry.date)}>History</button>
+                  </div>
+                  {historyDate === entry.date && <HistoryPanel title={`Changes to ${prettyDate(entry.date)}`} load={() => loadHistory(entry.date)} empty="No changes recorded yet." />}
                 </>
               )}
             </article>
@@ -196,7 +251,10 @@ export function Journal({ journal }: { journal: JournalSummary }) {
         </div>
       ) : <p className="fd-empty">Your past entries will show up here.</p>}
 
-      <p className="fd-note">Entries stay private to your account. Orbis doesn’t use them for advice or notifications.</p>
+      <button type="button" className="fd-link pf-more" aria-expanded={showDeleted} onClick={() => setShowDeleted(!showDeleted)}>{showDeleted ? 'Hide deleted entries' : 'Deleted entries'}</button>
+      {showDeleted && <HistoryPanel title="Deleted entries" load={loadDeleted} empty="Nothing deleted. Entries you delete wait here." />}
+
+      <p className="fd-note">Entries and voice notes stay private to your account. Orbis doesn’t use them for advice or notifications; Ask reads them only when you ask a question with Journal ticked.</p>
     </>
   );
 }

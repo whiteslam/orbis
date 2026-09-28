@@ -6,6 +6,7 @@ import { SignOutButton } from '@/components/auth/sign-out-button';
 import { FieldLabel, QuietList, useScrollTop } from '@/components/field/field';
 import { AccountData } from '@/components/personal/account-data';
 import { AppIntegrations } from '@/components/personal/app-integrations';
+import { AskOrbis } from '@/components/personal/ask-orbis';
 import { ContextNotes } from '@/components/personal/context-notes';
 import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
 import { HomeCityEditor, Integrations } from '@/components/personal/integrations';
@@ -25,14 +26,16 @@ import type { NotificationSettings as NotificationSettingsData } from '@/lib/not
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { AppConnections, Integration } from '@/lib/providers/status';
 
-export type ProfileSection = 'journal' | 'profile' | 'settings';
+export type ProfileSection = 'journal' | 'ask' | 'profile' | 'settings';
 
 // Journal first: it is the only one of the three with a reason to open today —
 // an entry that closes at midnight and a streak that decays. Profile and
 // Settings are configuration you touch twice. The identity block sits above the
-// tabs, so the screen still reads as you whichever section is open.
+// tabs, so the screen still reads as you whichever section is open. Ask sits
+// beside the journal because the journal is most of what it reads.
 const SECTIONS: Array<[ProfileSection, string]> = [
   ['journal', 'Journal'],
+  ['ask', 'Ask'],
   ['profile', 'Profile'],
   ['settings', 'Settings'],
 ];
@@ -154,6 +157,10 @@ export function ProfileScreen(props: {
 
       {section === 'journal' && <Journal journal={props.journal} />}
 
+      {section === 'ask' && <Group title="Ask about your own data" note="Questions answered from your journal, notes, spending, routines and steps.">
+        <AskOrbis />
+      </Group>}
+
       {section === 'profile' && <>
         <p className="fd-lead">{composeProfileSummary(input)}</p>
 
@@ -188,7 +195,7 @@ export function ProfileScreen(props: {
         <Group title="Your day" note="The times your day already has. The brief leads with whatever is due, and records what you say happened to it.">
           <RoutineSettings summary={props.routines} />
         </Group>
-        <Group title="AI brief" note="Home opens with a short brief. Orbis writes it from your own data without sending anything; letting a model write it instead means that data leaves your device.">
+        <Group title="AI" note="Home opens with a short brief. Orbis writes it from your own data without sending anything; letting a model write it instead means that data leaves your device.">
           <HomeBriefSetting preferences={props.aiPreferences} />
         </Group>
         {props.homeLocation.state !== 'setup' && (

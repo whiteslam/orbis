@@ -168,3 +168,45 @@
 
 /* Account */
 .pf-account .auth-signout { flex: none; font-size: 12.5px; }
+
+/* Edit history: what changed and when, with a way back. */
+.hs-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.pf-card .hs-links { gap: 6px; }
+.hs-panel { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.hs-title { margin: 0; color: var(--fd-ink); font-size: 12.5px; font-weight: 650; }
+.hs-loading, .hs-empty { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; color: var(--fd-faint); font-size: 12px; }
+.hs-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.hs-list li { padding: 8px 0; border-top: 1px solid var(--fd-rule); }
+.hs-list li:first-child { border-top: 0; }
+.hs-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; color: var(--fd-soft); font-size: 12.5px; line-height: 1.5; }
+.hs-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.hs-row time { display: block; color: var(--fd-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.hs-actions { display: flex; gap: 12px; font-size: 12px; font-weight: 650; }
+.hs-before { margin: 8px 0 0; padding: 9px 11px; border-radius: 10px; background: var(--fd-card); color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pf-card form > div { display: flex; gap: 8px; margin-top: 10px; }
+.hs-note-edit { margin-top: 0; }
+
+/* Archived routines: off the day, never lost. */
+.rt-archive-toggle { display: block; margin: 4px 0 10px; font-size: 12.5px; font-weight: 650; }
+.rt-archived .rt-row-open { cursor: default; opacity: .75; }
+.rt-archived .fd-link { flex: none; font-size: 12px; font-weight: 650; }
+.rt-archived .rt-delete { color: var(--fd-alert); }
+
+/* Voice notes on a journal day. */
+.vn-box { margin-top: 12px; }
+.vn-list { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
+.vn-list li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border-radius: 12px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.vn-list li > span { flex: 1; min-width: 0; }
+.vn-play { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: var(--fd-btn); color: var(--fd-btn-ink); cursor: pointer; }
+.vn-record { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.vn-record.on { background: var(--fd-alert); box-shadow: none; color: #fff; font-variant-numeric: tabular-nums; }
+.vn-status { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--fd-faint); font-size: 12px; }
+
+/* Ask Orbis: a question, the sources it may read, and an answer with what it relied on. */
+.ak-sources { margin-top: 10px; }
+.ak-examples { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 16px; font-size: 12.5px; }
+.ak-answer { margin-top: 18px; padding: 15px; border-radius: 16px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.ak-q { margin: 0; color: var(--fd-faint); font-size: 12px; font-weight: 600; }
+.ak-a { margin: 8px 0 0; color: var(--fd-ink); font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ak-cites { margin: 12px 0 0; color: var(--fd-soft); font-size: 11.5px; line-height: 1.55; }
+.ak-cites span { color: var(--fd-faint); font-weight: 650; }

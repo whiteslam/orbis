@@ -48,11 +48,15 @@ export function ruleNotification(context: NotificationContext): { title: string;
     : context.routines.length
       ? 'Everything on today’s list is answered.'
       : '';
+  const waiting = context.bankAlertsWaiting;
+  const alertLine = waiting > 0 ? `${waiting} bank alert${waiting === 1 ? '' : 's'} waiting for review.` : '';
 
+  // Bank alerts ride along twice a day at most, as one line in a slot that goes
+  // out anyway, and only while something is still waiting.
   const parts: Record<NotificationContext['slot'], string[]> = {
-    morning: [routineLine, context.socialLine, 'A good start sets up the day.'],
+    morning: [routineLine, alertLine, context.socialLine, 'A good start sets up the day.'],
     lunch: [routineLine, 'Eat well and drink some water.', spendLine],
-    evening: [routineLine, spendLine],
+    evening: [routineLine, alertLine, spendLine],
     night: [routineLine, 'Aim for a good night’s sleep.'],
   };
   return {

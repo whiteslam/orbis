@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { friendlyProviderMessage, ProviderError } from '@/lib/providers/core';
 import { geocodeCity } from '@/lib/providers/weather';
+import { listDeletedNotes, listNoteHistory } from '@/lib/history/repository';
 
 async function authenticatedClient() {
   const supabase = await createClient();
@@ -34,6 +35,38 @@ export async function deleteContextNoteAction(id: string) {
   if (error || !data) return { success: false, message: 'Note could not be removed.' };
   revalidatePath('/');
   return { success: true, message: 'Note removed.' };
+}
+
+export async function updateContextNoteAction(id: string, noteInput: string) {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to edit this note.' };
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return { success: false, message: 'This note is invalid.' };
+  if (typeof noteInput !== 'string') return { success: false, message: 'Enter a note.' };
+  const note = noteInput.trim().slice(0, 1000);
+  if (!note) return { success: false, message: 'Enter a note, or delete it instead.' };
+  const { data, error } = await auth.supabase.from('user_context_notes').update({ note, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', auth.userId).select('id').maybeSingle();
+  if (error || !data) return { success: false, message: 'Note could not be saved.' };
+  revalidatePath('/');
+  return { success: true, message: 'Note updated.' };
+}
+
+/** What changed in one note, newest first. */
+export async function loadNoteHistoryAction(id: string) {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to see this history.', items: [] };
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return { success: false, message: 'This note is invalid.', items: [] };
+  const history = await listNoteHistory(auth.userId, id);
+  if (history.state !== 'ready') return { success: false, message: history.state === 'setup' ? 'Apply the edit history migration in Supabase to keep a history.' : 'History could not be loaded. Try again.', items: [] };
+  return { success: true, message: '', items: history.items };
+}
+
+/** Notes that were deleted and can be saved again. */
+export async function loadDeletedNotesAction() {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to see deleted notes.', items: [] };
+  const deleted = await listDeletedNotes(auth.userId);
+  if (deleted.state !== 'ready') return { success: false, message: deleted.state === 'setup' ? 'Apply the edit history migration in Supabase to keep deleted notes.' : 'Deleted notes could not be loaded. Try again.', items: [] };
+  return { success: true, message: '', items: deleted.items };
 }
 
 export async function saveFitnessPersonaAction(personaInput: string) {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Clock, Plus, Trash2 } from 'lucide-react';
-import { deleteRoutineAction, saveRoutineAction } from '@/app/routines/actions';
+import { Archive, Clock, Plus } from 'lucide-react';
+import { archiveRoutineAction, deleteRoutineAction, saveRoutineAction } from '@/app/routines/actions';
 import { clockLabel, DAY_LABELS, ROUTINE_KINDS, type Routine, type RoutineKind, type RoutinesSummary } from '@/lib/routines/types';
 import { safeAction } from '@/lib/client/safe-action';
 
@@ -20,6 +20,7 @@ export function RoutineSettings({ summary }: { summary: RoutinesSummary }) {
   const [draft, setDraft] = useState(blank);
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -46,6 +47,10 @@ export function RoutineSettings({ summary }: { summary: RoutinesSummary }) {
     setOpen(true);
   }
 
+  const active = summary.routines.filter((routine) => routine.active);
+  const archived = summary.routines.filter((routine) => !routine.active);
+  const when = (routine: Routine) => `${clockLabel(routine.atTime)} · ${routine.days.length === 7 ? 'every day' : routine.days.map((day) => DAY_LABELS[day]).join(', ')}`;
+
   const toggleDay = (day: number) => setDraft((current) => ({
     ...current,
     days: current.days.includes(day) ? current.days.filter((item) => item !== day) : [...current.days, day].sort(),
@@ -53,24 +58,25 @@ export function RoutineSettings({ summary }: { summary: RoutinesSummary }) {
 
   return (
     <div className="rt-settings">
-      {summary.routines.length > 0 && (
+      {active.length > 0 && (
         <div className="rt-list">
-          {summary.routines.map((routine) => (
+          {active.map((routine) => (
             <div className="rt-row" key={routine.id}>
               <button type="button" className="rt-row-open" onClick={() => edit(routine)}>
                 <span className="fd-two">
                   {routine.title}
-                  <small>{clockLabel(routine.atTime)} · {routine.days.length === 7 ? 'every day' : routine.days.map((day) => DAY_LABELS[day]).join(', ')}</small>
+                  <small>{when(routine)}</small>
                 </span>
               </button>
               <button
                 type="button"
                 className="workbook-icon-button"
-                aria-label={`Remove ${routine.title}`}
+                aria-label={`Archive ${routine.title}`}
+                title="Archive"
                 disabled={isPending}
-                onClick={() => { if (window.confirm(`Remove ${routine.title}? What you already logged against it is kept.`)) run(() => safeAction(deleteRoutineAction)(routine.id)); }}
+                onClick={() => run(() => safeAction(archiveRoutineAction)(routine.id, true))}
               >
-                <Trash2 size={15} />
+                <Archive size={15} />
               </button>
             </div>
           ))}
@@ -117,7 +123,34 @@ export function RoutineSettings({ summary }: { summary: RoutinesSummary }) {
         <button type="button" className="fd-button" onClick={() => setOpen(true)}><Plus size={14} aria-hidden="true" /> Add a routine</button>
       )}
 
-      {!summary.routines.length && !open && (
+      {archived.length > 0 && (
+        <>
+          <button type="button" className="fd-link rt-archive-toggle" aria-expanded={showArchived} onClick={() => setShowArchived(!showArchived)}>
+            {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
+          </button>
+          {showArchived && (
+            <div className="rt-list rt-archived">
+              {archived.map((routine) => (
+                <div className="rt-row" key={routine.id}>
+                  <span className="fd-two rt-row-open">
+                    {routine.title}
+                    <small>{when(routine)}{routine.archivedAt ? ` · archived ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(routine.archivedAt))}` : ''}</small>
+                  </span>
+                  <button type="button" className="fd-link" disabled={isPending} onClick={() => run(() => safeAction(archiveRoutineAction)(routine.id, false))}>Restore</button>
+                  <button
+                    type="button"
+                    className="fd-link rt-delete"
+                    disabled={isPending}
+                    onClick={() => { if (window.confirm(`Delete ${routine.title} for good? What you already logged against it is kept.`)) run(() => safeAction(deleteRoutineAction)(routine.id)); }}
+                  >Delete</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {!active.length && !open && (
         <p className="fd-note"><Clock size={12} aria-hidden="true" /> Add the times your day already has, like a 7 pm gym session or breakfast at 8. The brief then knows what to ask you about.</p>
       )}
       {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}

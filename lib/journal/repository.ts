@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { JournalEntry, JournalSummary } from '@/lib/journal/types';
 import { createClient } from '@/lib/supabase/server';
+import { listVoiceNotes } from '@/lib/voice/repository';
 
 function istToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
@@ -43,5 +44,6 @@ export async function getJournal(userId: string): Promise<JournalSummary> {
     body: row.body,
     tags: row.tags ?? [],
   }));
-  return { state: 'ready', entries, streak: streakOf(new Set(entries.map((entry) => entry.date))) };
+  const voice = await listVoiceNotes(userId, Array.from(new Set([istToday(), ...entries.map((entry) => entry.date)])));
+  return { state: 'ready', entries, streak: streakOf(new Set(entries.map((entry) => entry.date))), voice };
 }

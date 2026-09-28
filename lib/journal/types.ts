@@ -1,3 +1,5 @@
+import type { VoiceNote } from '@/lib/voice/types';
+
 export type JournalEntry = {
   date: string;
   mood: 1 | 2 | 3 | 4 | 5;
@@ -9,6 +11,8 @@ export type JournalSummary = {
   state: 'ready' | 'setup' | 'unavailable';
   entries: JournalEntry[];
   streak: number;
+  /** Voice notes for today and the loaded entries' days. Empty before the voice migration. */
+  voice?: VoiceNote[];
 };
 
 export const MOODS = [

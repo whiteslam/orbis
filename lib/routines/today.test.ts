@@ -8,7 +8,7 @@ const at = (hhmm: string) => new Date(`2026-09-24T${hhmm}:00Z`);
 const SEVEN_PM = at('13:30');
 
 const routine = (over: Partial<Routine> = {}): Routine => ({
-  id: 'gym', title: 'Gym', kind: 'workout', atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, ...over,
+  id: 'gym', title: 'Gym', kind: 'workout', atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, archivedAt: null, ...over,
 });
 
 const summary = (routines: Routine[], events: RoutineEvent[] = []): RoutinesSummary => ({ state: 'ready', routines, events });

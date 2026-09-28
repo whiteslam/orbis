@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { isAppUnlocked } from '@/lib/security/app-lock';
-import { clearRoutineEvent, deleteRoutine, recordRoutineEvent, saveRoutine } from '@/lib/routines/repository';
+import { clearRoutineEvent, deleteRoutine, recordRoutineEvent, saveRoutine, setRoutineArchived } from '@/lib/routines/repository';
 import { ROUTINE_KINDS, type RoutineKind, type RoutineStatus } from '@/lib/routines/types';
 
 async function authed() {
@@ -39,6 +39,19 @@ export async function saveRoutineAction(input: { id?: string; title: string; kin
   return { success: true, message: input.id ? 'Routine updated.' : `${title} added.` };
 }
 
+export async function archiveRoutineAction(id: string, archived: boolean) {
+  const userId = await authed();
+  if (!userId) return { success: false, message: 'Sign in again to change this.' };
+  if (!validId(id) || typeof archived !== 'boolean') return { success: false, message: 'That routine is invalid.' };
+  try {
+    await setRoutineArchived(userId, id, archived);
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'That routine could not be changed.' };
+  }
+  revalidatePath('/');
+  return { success: true, message: archived ? 'Archived. It is off your day, and you can restore it any time.' : 'Restored to your day.' };
+}
+
 export async function deleteRoutineAction(id: string) {
   const userId = await authed();
   if (!userId) return { success: false, message: 'Sign in again to remove this.' };
@@ -49,7 +62,7 @@ export async function deleteRoutineAction(id: string) {
     return { success: false, message: error instanceof Error ? error.message : 'That routine could not be removed.' };
   }
   revalidatePath('/');
-  return { success: true, message: 'Routine removed. What you already logged against it is kept.' };
+  return { success: true, message: 'Deleted for good. What you already logged against it is kept.' };
 }
 
 /**

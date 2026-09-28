@@ -24,6 +24,8 @@ export type Routine = {
   /** Days this runs, 0 = Sunday. */
   days: number[];
   active: boolean;
+  /** When it was archived. Archived routines are hidden from the day but never lost. */
+  archivedAt: string | null;
 };
 
 export type RoutineStatus = 'done' | 'skipped' | 'other';

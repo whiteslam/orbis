@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { createClient } from '@/lib/supabase/server';
+import { listDeletedJournalDays, listJournalHistory } from '@/lib/history/repository';
 
 async function authenticatedClient() {
   const supabase = await createClient();
@@ -52,4 +53,23 @@ export async function deleteJournalEntryAction(date: string) {
   if (error) return { success: false, message: 'The entry could not be deleted.' };
   revalidatePath('/');
   return { success: true, message: 'Entry deleted.' };
+}
+
+/** What changed in one day's entry, newest first. */
+export async function loadJournalHistoryAction(date: string) {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to see this history.', items: [] };
+  if (!validDate(date)) return { success: false, message: 'This entry is invalid.', items: [] };
+  const history = await listJournalHistory(auth.userId, date);
+  if (history.state !== 'ready') return { success: false, message: history.state === 'setup' ? 'Apply the edit history migration in Supabase to keep a history.' : 'History could not be loaded. Try again.', items: [] };
+  return { success: true, message: '', items: history.items };
+}
+
+/** Entries that were deleted and can be brought back. */
+export async function loadDeletedJournalAction() {
+  const auth = await authenticatedClient();
+  if (!auth) return { success: false, message: 'Sign in again to see deleted entries.', items: [] };
+  const deleted = await listDeletedJournalDays(auth.userId);
+  if (deleted.state !== 'ready') return { success: false, message: deleted.state === 'setup' ? 'Apply the edit history migration in Supabase to keep deleted entries.' : 'Deleted entries could not be loaded. Try again.', items: [] };
+  return { success: true, message: '', items: deleted.items };
 }

@@ -32,7 +32,7 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * stored credentials (gmail_connections, groww_connections, zerodha_connections,
  * user_app_pins, push_subscriptions), and service internals that are not
  * content (gmail_sync_messages, health_document_chunks, rate_limit_buckets,
- * staged_upload_claims, workbook_ai_usage, social_ai_usage,
+ * staged_upload_claims, workbook_ai_usage, social_ai_usage, ask_orbis_usage,
  * ai_generation_events). Shared tables with no user_id (api_*, ai_providers,
  * ai_models) hold nothing personal.
  */
@@ -59,6 +59,9 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'notification_log',
   'social_posts',
   'social_post_revisions',
+  'journal_entry_revisions',
+  'context_note_revisions',
+  'journal_voice_notes',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */

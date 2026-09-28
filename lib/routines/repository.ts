@@ -15,6 +15,7 @@ function toRoutine(row: Record<string, unknown>): Routine {
     atTime: String(row.at_time).slice(0, 5),
     days: Array.isArray(row.days) ? (row.days as number[]).map(Number) : [],
     active: row.active !== false,
+    archivedAt: typeof row.archived_at === 'string' ? row.archived_at : null,
   };
 }
 
@@ -40,15 +41,18 @@ export async function getRoutinesSummary(userId: string, now = new Date()): Prom
   try {
     const supabase = await createClient();
     const today = localParts(now).date;
-    const [routines, events] = await Promise.all([
-      supabase.from('routines').select('id,title,kind,at_time,days,active').eq('user_id', userId).order('at_time').limit(40),
+    const listRoutines = (columns: string) => supabase.from('routines').select(columns).eq('user_id', userId).order('at_time').limit(60);
+    const [first, events] = await Promise.all([
+      listRoutines('id,title,kind,at_time,days,active,archived_at'),
       supabase.from('routine_events').select('id,routine_id,title,local_date,status,note').eq('user_id', userId).eq('local_date', today).limit(40),
     ]);
+    // Before the archive migration there is no archived_at; the day still works without it.
+    const routines = first.error?.code === '42703' ? await listRoutines('id,title,kind,at_time,days,active') : first;
     const error = routines.error ?? events.error;
     if (error) return { state: isMissingTable(error.code) ? 'setup' : 'unavailable', routines: [], events: [] };
     return {
       state: 'ready',
-      routines: (routines.data ?? []).map(toRoutine),
+      routines: ((routines.data ?? []) as unknown as Record<string, unknown>[]).map(toRoutine),
       events: (events.data ?? []).map(toEvent),
     };
   } catch {
@@ -67,6 +71,24 @@ export async function saveRoutine(userId: string, draft: RoutineDraft, id?: stri
   if (error) throw new Error(isMissingTable(error.code) ? 'Apply the routines migration in Supabase, then try again.' : 'That routine could not be saved.');
 }
 
+/**
+ * Puts a routine away, or brings it back. Archived routines leave the brief and
+ * notifications but keep their name, time, days and everything logged.
+ */
+export async function setRoutineArchived(userId: string, id: string, archived: boolean) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('routines')
+    .update({ active: !archived, archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
+  if (error?.code === '42703') throw new Error('Apply the routine archive migration in Supabase, then try again.');
+  if (error || !data) throw new Error(archived ? 'That routine could not be archived.' : 'That routine could not be restored.');
+}
+
+/** Permanent removal, offered only from the archive. What was logged against it is kept. */
 export async function deleteRoutine(userId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('routines').delete().eq('id', id).eq('user_id', userId);

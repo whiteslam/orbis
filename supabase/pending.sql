@@ -1454,3 +1454,257 @@ create policy "Users manage their own social media files" on storage.objects
   for all to authenticated
   using (bucket_id = 'social-media' and (storage.foldername(name))[1] = (select auth.uid())::text)
   with check (bucket_id = 'social-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280300_edit_history.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: edit history for the journal and saved notes.
+--
+--   journal_entry_revisions  every change to a journal entry, keyed by its day
+--   context_note_revisions   every change to a saved note
+--
+-- History is written by triggers, not by the app, for two reasons: a history
+-- row can never describe a change that did not happen (the trigger only runs
+-- when the write succeeded), and the user can read history but never write or
+-- rewrite it (authenticated gets select only). Restoring an old version is an
+-- ordinary edit, so it shows up as one more row, never as a rewrite.
+--
+-- Neither table has a foreign key to the row it describes, so a deleted entry's
+-- history stays readable.
+
+create table if not exists public.journal_entry_revisions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  entry_date date not null,
+  action text not null check (action in ('created', 'edited', 'deleted')),
+  -- { mood, body, tags } before and after; null where there was nothing.
+  previous jsonb,
+  snapshot jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists journal_entry_revisions_entry_idx
+  on public.journal_entry_revisions (user_id, entry_date, created_at desc);
+
+alter table public.journal_entry_revisions enable row level security;
+revoke all on public.journal_entry_revisions from public, anon, authenticated;
+grant select on public.journal_entry_revisions to authenticated;
+
+drop policy if exists "Users read their own journal history" on public.journal_entry_revisions;
+create policy "Users read their own journal history" on public.journal_entry_revisions
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+create or replace function public.record_journal_revision()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.journal_entry_revisions (user_id, entry_date, action, previous, snapshot)
+    values (new.user_id, new.entry_date, 'created', null,
+            pg_catalog.jsonb_build_object('mood', new.mood, 'body', new.body, 'tags', pg_catalog.to_jsonb(new.tags)));
+    return new;
+  elsif tg_op = 'UPDATE' then
+    -- Saving without changing anything is not an edit.
+    if new.mood is not distinct from old.mood and new.body is not distinct from old.body and new.tags is not distinct from old.tags then
+      return new;
+    end if;
+    insert into public.journal_entry_revisions (user_id, entry_date, action, previous, snapshot)
+    values (new.user_id, new.entry_date, 'edited',
+            pg_catalog.jsonb_build_object('mood', old.mood, 'body', old.body, 'tags', pg_catalog.to_jsonb(old.tags)),
+            pg_catalog.jsonb_build_object('mood', new.mood, 'body', new.body, 'tags', pg_catalog.to_jsonb(new.tags)));
+    return new;
+  end if;
+  -- A delete cascading from account removal leaves nothing to keep history for.
+  if exists (select 1 from auth.users where id = old.user_id) then
+    insert into public.journal_entry_revisions (user_id, entry_date, action, previous, snapshot)
+    values (old.user_id, old.entry_date, 'deleted',
+            pg_catalog.jsonb_build_object('mood', old.mood, 'body', old.body, 'tags', pg_catalog.to_jsonb(old.tags)), null);
+  end if;
+  return old;
+end;
+$$;
+
+revoke all on function public.record_journal_revision() from public, anon, authenticated;
+
+drop trigger if exists journal_entries_history on public.journal_entries;
+create trigger journal_entries_history
+  after insert or update or delete on public.journal_entries
+  for each row execute function public.record_journal_revision();
+
+create table if not exists public.context_note_revisions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  note_id uuid not null,
+  action text not null check (action in ('created', 'edited', 'deleted')),
+  previous text,
+  snapshot text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists context_note_revisions_note_idx
+  on public.context_note_revisions (user_id, note_id, created_at desc);
+
+alter table public.context_note_revisions enable row level security;
+revoke all on public.context_note_revisions from public, anon, authenticated;
+grant select on public.context_note_revisions to authenticated;
+
+drop policy if exists "Users read their own note history" on public.context_note_revisions;
+create policy "Users read their own note history" on public.context_note_revisions
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+create or replace function public.record_context_note_revision()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.context_note_revisions (user_id, note_id, action, previous, snapshot)
+    values (new.user_id, new.id, 'created', null, new.note);
+    return new;
+  elsif tg_op = 'UPDATE' then
+    if new.note is not distinct from old.note then
+      return new;
+    end if;
+    insert into public.context_note_revisions (user_id, note_id, action, previous, snapshot)
+    values (new.user_id, new.id, 'edited', old.note, new.note);
+    return new;
+  end if;
+  if exists (select 1 from auth.users where id = old.user_id) then
+    insert into public.context_note_revisions (user_id, note_id, action, previous, snapshot)
+    values (old.user_id, old.id, 'deleted', old.note, null);
+  end if;
+  return old;
+end;
+$$;
+
+revoke all on function public.record_context_note_revision() from public, anon, authenticated;
+
+drop trigger if exists user_context_notes_history on public.user_context_notes;
+create trigger user_context_notes_history
+  after insert or update or delete on public.user_context_notes
+  for each row execute function public.record_context_note_revision();
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280301_routine_archive.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: archive routines instead of deleting them.
+--
+-- `active` already hides a routine from the brief and notifications; nothing set
+-- it until now. `archived_at` records when it was put away, so the archive can
+-- list what was retired and when, and restoring clears both.
+
+alter table public.routines add column if not exists archived_at timestamptz;
+
+-- Rows that were already inactive count as archived from now.
+update public.routines set archived_at = now() where active = false and archived_at is null;
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280302_journal_voice_notes.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: voice notes on journal days.
+--
+-- A voice note belongs to a day, not to an entry row, because an entry is one
+-- row per day and is replaced on every save. The audio lives in a private
+-- bucket under <user_id>/…, and is only ever served through a short-lived
+-- signed URL.
+
+create table if not exists public.journal_voice_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  entry_date date not null,
+  storage_path text not null unique,
+  mime_type text not null check (mime_type ~ '^audio/'),
+  duration_seconds integer not null check (duration_seconds between 1 and 300),
+  size_bytes integer not null check (size_bytes between 1 and 10485760),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists journal_voice_notes_day_idx
+  on public.journal_voice_notes (user_id, entry_date, created_at);
+
+alter table public.journal_voice_notes enable row level security;
+revoke all on public.journal_voice_notes from public, anon;
+grant select, insert, delete on public.journal_voice_notes to authenticated;
+
+drop policy if exists "Users manage their own voice notes" on public.journal_voice_notes;
+create policy "Users manage their own voice notes" on public.journal_voice_notes
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- Private audio bucket. 10 MB is well above what a five-minute clip needs in
+-- any browser's recording format, so the cap only stops abuse.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('journal-voice', 'journal-voice', false, 10485760,
+        array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/wav'])
+on conflict (id) do nothing;
+
+drop policy if exists "Users manage their own voice files" on storage.objects;
+create policy "Users manage their own voice files" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'journal-voice' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'journal-voice' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280303_ask_orbis_usage.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: a daily allowance for "Ask Orbis", questions about your own data.
+--
+-- The same shape as workbook_ai_usage: one counter row per user per day,
+-- claimed atomically by a service-role function before the question is sent,
+-- so double-clicks and parallel tabs cannot exceed the limit.
+
+create table if not exists public.ask_orbis_usage (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  usage_date date not null,
+  requests_used integer not null default 0 check (requests_used >= 0),
+  primary key (user_id, usage_date)
+);
+
+alter table public.ask_orbis_usage enable row level security;
+revoke all on public.ask_orbis_usage from public, anon, authenticated;
+grant select, insert, update, delete on public.ask_orbis_usage to service_role;
+
+create or replace function public.consume_ask_orbis_request(p_user_id uuid, p_daily_limit integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_requests_used integer;
+begin
+  if p_daily_limit < 1 or p_daily_limit > 50 then
+    return false;
+  end if;
+
+  insert into public.ask_orbis_usage (user_id, usage_date, requests_used)
+  values (p_user_id, (pg_catalog.now() at time zone 'Asia/Kolkata')::date, 1)
+  on conflict (user_id, usage_date)
+  do update set requests_used = public.ask_orbis_usage.requests_used + 1
+    where public.ask_orbis_usage.requests_used < p_daily_limit
+  returning requests_used into v_requests_used;
+
+  return v_requests_used is not null;
+end;
+$$;
+
+revoke all on function public.consume_ask_orbis_request(uuid, integer) from public, anon, authenticated;
+grant execute on function public.consume_ask_orbis_request(uuid, integer) to service_role;

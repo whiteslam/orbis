@@ -18,6 +18,12 @@ export type NotificationContext = {
   stepsToday: number | null;
   /** Today's planned social posts as one morning line; '' in other slots or when nothing is due. */
   socialLine: string;
+  /**
+   * Bank emails still waiting for the user to review. Reported as one count in
+   * the regular notification, never as a push per alert, so ten alerts read as
+   * "10 bank alerts waiting" instead of ten pings.
+   */
+  bankAlertsWaiting: number;
 };
 
 const shift = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
@@ -29,7 +35,7 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
   const localDate = clock.date;
   const localTime = `${String(Math.floor(clock.minutes / 60)).padStart(2, '0')}:${String(clock.minutes % 60).padStart(2, '0')}`;
 
-  const [social, profile, persona, routines, events, transactions, steps] = await Promise.all([
+  const [social, profile, persona, routines, events, transactions, steps, waiting] = await Promise.all([
     // One social nudge a day at most: it is only looked up for the morning slot.
     slot === 'morning'
       ? admin.from('social_posts').select('planned_for,status,format,media_path').eq('user_id', userId).eq('planned_for', localDate).neq('status', 'published').limit(30)
@@ -40,6 +46,8 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
     admin.from('routine_events').select('routine_id,status,note').eq('user_id', userId).eq('local_date', localDate).limit(20),
     admin.from('transactions').select('amount,currency,occurred_at').eq('user_id', userId).eq('direction', 'expense').gte('occurred_at', `${shift(localDate, -32)}T00:00:00Z`).limit(500),
     admin.from('health_daily_steps').select('steps').eq('user_id', userId).eq('date', localDate).maybeSingle(),
+    // The same "waiting" the Expense tab shows: pending, and either unsure or unrecognised.
+    admin.from('gmail_sync_messages').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('sync_state', 'pending').in('parse_status', ['needs_review', 'unrecognized']),
   ]);
 
   // Today's routines, each carrying whatever the user has already said about it,
@@ -87,5 +95,6 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
       format: row.format as SocialFormat,
       mediaPath: (row.media_path as string | null) ?? null,
     })), localDate),
+    bankAlertsWaiting: waiting.error ? 0 : waiting.count ?? 0,
   };
 }

@@ -158,6 +158,22 @@ A private, month-by-month planner for the user's own social posts, ported from W
 - [ ] Apply all Supabase migrations and configure production Supabase/Google OAuth redirects
 - [ ] Verify sign-in, finance review, goals/habits, context notes, and workbook advice on the deployed URL
 
+### 9. Keeping what you write, and asking about it — Code complete; database setup pending
+
+Ideas carried over from WBT Command HQ (Appendix B of the social planner plan).
+
+- [x] Edit history for journal entries and saved notes, written by database triggers (append-only; restore is a new edit; deleted entries and notes can be brought back)
+- [x] Saved notes can be edited, not only added and deleted
+- [x] Routines archive instead of delete; archived routines leave the brief and notifications and can be restored or deleted for good
+- [x] Voice notes on journal days (up to 5 × 5 minutes per day, private `journal-voice` bucket, signed links only on play)
+- [x] Ask Orbis: questions about your own journal, notes, spending, routines and steps over the last six months; only ticked sources are read, `personal` sensitivity only, citations checked against what was supplied, 20 questions per day
+- [x] Bank alerts waiting for review appear as one grouped line in the morning and evening notifications, never as a push per alert
+- [ ] Apply `supabase/migrations/202609280300_edit_history.sql`, `202609280301_routine_archive.sql`, `202609280302_journal_voice_notes.sql` and `202609280303_ask_orbis_usage.sql` (or re-run `supabase/pending.sql`)
+- [ ] Verify with the signed-in account: edit a journal entry and restore the old version; delete and bring it back; archive and restore a routine; record and play a voice note on a phone; ask a question with Journal and Spending ticked
+- [ ] Not built: "newer version waiting — take it or keep yours". Today no sync overwrites user data (Gmail sync only inserts; broker holdings are fetched live, never stored); revisit if that changes
+- [ ] Not built: archive for goals and habits (they have tables but no screens since the Atlas redesign)
+- [ ] Consider pgvector retrieval for Ask Orbis once keyword ranking proves too coarse
+
 ## One-time external setup checklist
 
 1. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240009` in filename order.

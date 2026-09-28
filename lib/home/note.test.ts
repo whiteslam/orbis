@@ -228,7 +228,7 @@ test('the weather is one sentence, with no follow-on forecast', () => {
 // ── The schedule ─────────────────────────────────────────────────────────────
 
 const due = (over: Partial<import('../routines/types.ts').RoutineToday> = {}) => ({
-  routine: { id: 'gym', title: 'Gym', kind: 'workout' as const, atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true },
+  routine: { id: 'gym', title: 'Gym', kind: 'workout' as const, atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, archivedAt: null },
   minutesAway: 0,
   event: null,
   ...over,
