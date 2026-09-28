@@ -4,6 +4,7 @@ const TABS: Array<[Tab, RegExp]> = [
   ['Expense', /#finance$/],
   ['Health', /#health$/],
   ['Invest', /#invest$/],
+  ['Social', /#social$/],
   ['Profile', /#profile$/],
 ];
 

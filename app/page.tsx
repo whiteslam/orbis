@@ -11,6 +11,8 @@ import { getStepsSummary } from '@/lib/health/steps-repository';
 import { getLatestAiResult } from '@/lib/ai/results';
 import { getAiPreferences } from '@/lib/ai/preferences';
 import { getRoutinesSummary } from '@/lib/routines/repository';
+import { listMonth } from '@/lib/social/repository';
+import { indiaToday, periodOfDate } from '@/lib/social/month';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 import { createClient } from '@/lib/supabase/server';
 import { APP_LOCK_IDLE_MS, isAppUnlocked } from '@/lib/security/app-lock';
@@ -48,7 +50,9 @@ export default async function Page() {
   // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
   if (pinStatus === 'none' || pinStatus === 'locked') return <PinSetup reset={pinStatus === 'locked'} />;
 
-  const [financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines] = await Promise.all([
+  // This month in India, where the social planner counts its months.
+  const socialPeriod = periodOfDate(indiaToday());
+  const [financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth] = await Promise.all([
     getFinanceSummary(userId),
     getContextNotes(userId),
     getFitnessPersona(userId),
@@ -65,10 +69,11 @@ export default async function Page() {
     getLatestAiResult(userId, 'portfolio_advice') as Promise<SavedPortfolioAdvice | null>,
     getAiPreferences(userId),
     getRoutinesSummary(userId),
+    listMonth(userId, socialPeriod),
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <OrbisApp financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} />
+      <OrbisApp financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} />
     </AppLockGuard>
   );
 }

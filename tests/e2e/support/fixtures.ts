@@ -1,7 +1,7 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { readUsers, TEST_PIN, type TestUser } from './env';
 
-export type Tab = 'Home' | 'Expense' | 'Health' | 'Invest' | 'Profile';
+export type Tab = 'Home' | 'Expense' | 'Health' | 'Invest' | 'Social' | 'Profile';
 
 /**
  * Opens Orbis as a signed-in user, clearing the app lock if it is showing.

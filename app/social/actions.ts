@@ -207,7 +207,7 @@ export async function deletePostAction(id: string): Promise<Result> {
  * Starts an upload. The server picks the path, under the user's own folder and
  * this post's, so the browser can only ever upload where it is allowed to.
  */
-export async function signMediaUploadAction(postId: string, file: { name: string; type: string; size: number }) {
+export async function signMediaUploadAction(postId: string, file: { name: string; type: string; size: number }): Promise<{ success: boolean; message: string; path?: string; token?: string }> {
   const userId = await authed();
   if (!userId) return SIGN_IN;
   if (!validId(postId)) return INVALID;

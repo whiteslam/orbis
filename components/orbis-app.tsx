@@ -8,6 +8,7 @@ import {
   HeartPulse,
   Home,
   Landmark,
+  Megaphone,
   Mail,
   PenLine,
   Sparkles,
@@ -56,11 +57,13 @@ import { InvestDashboard } from '@/components/invest/invest-dashboard';
 import { StepsCard } from '@/components/health/steps-card';
 import type { StepsSummary } from '@/lib/health/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { SocialScreen } from '@/components/social/social-screen';
+import type { SocialMonth } from '@/lib/social/repository';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 
-type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment';
+type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment' | 'social';
 
-const TAB_TO_HASH: Record<Tab, string> = { home: 'home', finance: 'finance', health: 'health', investment: 'invest', personal: 'profile' };
+const TAB_TO_HASH: Record<Tab, string> = { home: 'home', finance: 'finance', health: 'health', investment: 'invest', social: 'social', personal: 'profile' };
 const HASH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_HASH).map(([tab, hash]) => [hash, tab as Tab])) as Record<string, Tab>;
 
 const nav = [
@@ -68,6 +71,7 @@ const nav = [
   ['finance', 'Expense', WalletCards],
   ['health', 'Health', HeartPulse],
   ['investment', 'Invest', TrendingUp],
+  ['social', 'Social', Megaphone],
   ['personal', 'Profile', UserRound],
 ] as const;
 
@@ -483,7 +487,7 @@ function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSaved
   );
 }
 
-function GenericScreen({ tab, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health'>; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+function GenericScreen({ tab, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health' | 'social'>; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
   if (tab !== 'investment') return null;
   return (
     <div className="screen-body field">
@@ -492,7 +496,7 @@ function GenericScreen({ tab, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home'
   );
 }
 
-export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary }) {
+export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string } }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
@@ -516,7 +520,8 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
     const requestedTab = url.searchParams.get('tab');
     const notice = url.searchParams.get('gmail');
     // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority.
-    const fromHash = HASH_TO_TAB[url.hash.slice(1)];
+    // A tab may carry its own state after a slash (#social/2026-09); only the part before it names the tab.
+    const fromHash = HASH_TO_TAB[url.hash.slice(1).split('/')[0]];
     if (fromHash && !requestedTab) setTab(fromHash);
     if (requestedTab === 'finance') setTab('finance');
     if (requestedTab === 'settings') {
@@ -533,6 +538,8 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
 
   useEffect(() => {
     const hash = tab === 'home' ? '' : `#${TAB_TO_HASH[tab]}`;
+    // Leave a tab's own state (#social/2026-09) alone while that tab is open.
+    if (hash && window.location.hash.startsWith(`${hash}/`)) return;
     if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
   }, [tab]);
 
@@ -551,6 +558,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
       />
     );
+    if (tab === 'social') return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
     if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
     if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'personal') {
@@ -576,7 +584,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
       );
     }
     return <GenericScreen tab={tab} savedPortfolioAdvice={savedPortfolioAdvice} />;
-  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines]);
+  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines, socialMonth]);
 
   return (
     <main className="stage">

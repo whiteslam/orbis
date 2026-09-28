@@ -4,7 +4,7 @@
 // and what to do about it, and demotes everything else to a hairline row. Each
 // tab has its own composer; they all return these two shapes.
 
-export type FocusTarget = 'finance' | 'health' | 'invest' | 'personal';
+export type FocusTarget = 'finance' | 'health' | 'invest' | 'personal' | 'social';
 
 /**
  * The services a brief card can cite. Each one gets a small mark beside its
