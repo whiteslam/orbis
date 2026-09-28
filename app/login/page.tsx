@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { accessRestricted } from '@/lib/security/access';
 import { AuthForm } from '@/components/auth/auth-form';
 import { AuthShell } from '@/components/auth/auth-shell';
 
-export const metadata: Metadata = { title: 'Sign in — Orbis' };
+export const metadata: Metadata = { title: 'Sign in', robots: { index: false } };
 
 export default async function LoginPage({
   searchParams,
@@ -19,7 +20,17 @@ export default async function LoginPage({
   const privateError = params.error === 'private';
 
   return (
-    <AuthShell footer={<p className="auth-note">Orbis holds only what you connect or upload. It reads nothing until you ask, and it never sends, edits or deletes anything in the accounts you link.</p>}>
+    <AuthShell
+      footer={(
+        <>
+          <p className="auth-note">Orbis holds only what you connect or upload. It reads nothing until you ask, and it never sends, edits or deletes anything in the accounts you link.</p>
+          <ul className="auth-legal">
+            <li><Link href="/privacy">Privacy</Link></li>
+            <li><Link href="/terms">Terms</Link></li>
+          </ul>
+        </>
+      )}
+    >
       {linkError && <p className="auth-feedback error" role="alert">That link has expired or was already used. Request a fresh password recovery email.</p>}
       {privateError && <p className="auth-feedback error" role="alert">Orbis is private right now and not accepting sign-ins.</p>}
       <AuthForm initialMessage={initialMessage} signupOpen={!accessRestricted()} />

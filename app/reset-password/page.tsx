@@ -6,7 +6,7 @@ import { PasswordResetForm } from '@/components/auth/password-reset-form';
 import { hasFreshRecovery, MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 import { createClient } from '@/lib/supabase/server';
 
-export const metadata: Metadata = { title: 'Set a new password — Orbis' };
+export const metadata: Metadata = { title: 'Set a new password', robots: { index: false } };
 
 // A recovery link opened in the last 15 minutes is enough on its own. Any other
 // session must also give the current password (updatePassword checks it again).
@@ -23,7 +23,14 @@ export default async function ResetPasswordPage() {
   const needsCurrentPassword = !recoveredJustNow(data.claims.amr);
 
   return (
-    <AuthShell>
+    <AuthShell
+      footer={(
+        <ul className="auth-legal">
+          <li><Link href="/privacy">Privacy</Link></li>
+          <li><Link href="/terms">Terms</Link></li>
+        </ul>
+      )}
+    >
       <div className="auth-heading">
         <p className="eyebrow">{needsCurrentPassword ? 'ACCOUNT' : 'ACCOUNT RECOVERY'}</p>
         <h1>{needsCurrentPassword ? 'Change your password' : 'Choose a new password'}</h1>

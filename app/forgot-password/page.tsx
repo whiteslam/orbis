@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { PasswordResetForm } from '@/components/auth/password-reset-form';
 
-export const metadata: Metadata = { title: 'Forgot password — Orbis' };
+export const metadata: Metadata = { title: 'Forgot password', robots: { index: false } };
 
 export default async function ForgotPasswordPage({
   searchParams,
@@ -13,7 +13,14 @@ export default async function ForgotPasswordPage({
   const params = await searchParams;
 
   return (
-    <AuthShell>
+    <AuthShell
+      footer={(
+        <ul className="auth-legal">
+          <li><Link href="/privacy">Privacy</Link></li>
+          <li><Link href="/terms">Terms</Link></li>
+        </ul>
+      )}
+    >
       {params.error === 'link-expired' && <p className="auth-feedback error" role="alert">That recovery link has expired or was already used. Request a fresh one below.</p>}
       <div className="auth-heading">
         <p className="eyebrow">ACCOUNT RECOVERY</p>

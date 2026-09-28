@@ -4,13 +4,31 @@ import './globals.css';
 import './atlas-health.css';
 import './atlas-profile.css';
 import './atlas-social.css';
+import './marketing.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
+import { SITE_NAME, siteUrl } from '@/lib/site';
+
+const DESCRIPTION = 'One calm daily brief for your money, health and routines — read-only connections, private by default, and AI that never trains on your personal data.';
 
 export const metadata: Metadata = {
-  title: 'Orbis — Personal Intelligence',
-  description: 'Finance, health and personal intelligence in one place.',
-  applicationName: 'Orbis',
-  appleWebApp: { capable: true, title: 'Orbis', statusBarStyle: 'default' },
+  metadataBase: new URL(siteUrl()),
+  title: { default: `${SITE_NAME} — Personal Intelligence`, template: `%s — ${SITE_NAME}` },
+  description: DESCRIPTION,
+  applicationName: SITE_NAME,
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'default' },
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Personal Intelligence`,
+    description: DESCRIPTION,
+    url: '/',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — Personal Intelligence`,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

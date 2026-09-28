@@ -23,6 +23,10 @@ Open http://localhost:3000
 
 Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Set `NEXT_PUBLIC_SITE_URL` to `http://localhost:3000` locally and to the app's canonical HTTPS origin in production. The local callback URL `http://localhost:3000/auth/callback` must be allowed in the Supabase project's Auth redirect URL settings for signup confirmation and password recovery links to return to this app; add the production callback URL when deploying. Keep `SUPABASE_SECRET_KEY` server-only. Never commit `.env.local`.
 
+## Public pages
+
+Signed-out visitors land on a public landing page at `/`, with `/privacy`, `/terms`, `/support` and `/delete-account` alongside it, a generated `/opengraph-image`, and `robots.txt`/`sitemap.xml`. They share `PublicShell` (`components/marketing/public-shell.tsx`) and read the site name, canonical URL and optional support address from `lib/site.ts`. Set `NEXT_PUBLIC_SITE_URL` for the canonical origin used in metadata, robots and the sitemap, and `NEXT_PUBLIC_SUPPORT_EMAIL` to show a real contact address instead of "through the support page".
+
 ## Passkeys and app lock
 
 Orbis supports passkey sign-in (Face ID, Touch ID, fingerprint or device PIN) through Supabase Auth's WebAuthn support. Supabase runs and verifies the ceremony, and Orbis never receives biometric data. In the Supabase dashboard, open Authentication and enable Passkeys. Set the relying party ID to the production domain (for example `orbis-starter.vercel.app`), and allow the origins `https://orbis-starter.vercel.app` and `http://localhost:3000`. A passkey only works on the domain it was created for, so passkeys made in production do not work on localhost.
@@ -75,6 +79,7 @@ SUPABASE_SECRET_KEY=
 SUPABASE_JWKS_URL=
 APP_LOCK_SECRET=
 NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SUPPORT_EMAIL=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:3000/auth/gmail/callback

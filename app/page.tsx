@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import OrbisApp from '@/components/orbis-app';
+import { Landing } from '@/components/marketing/landing';
 import { getFinanceSummary } from '@/lib/finance/repository';
 import { getContextNotes } from '@/lib/memory/notes';
 import { getFitnessPersona, getHomeLocation, getPersonalProfile } from '@/lib/personal/repository';
@@ -28,7 +29,7 @@ export default async function Page() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
 
-  if (error || !data?.claims) redirect('/login');
+  if (error || !data?.claims) return <Landing />;
 
   const userId = data.claims.sub;
   if (typeof userId !== 'string') redirect('/login');
