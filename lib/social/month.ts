@@ -16,6 +16,13 @@ const parts = (period: string) => ({ year: Number(period.slice(0, 4)), month: Nu
 export const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-01$/;
 export const DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
+/** Today as 'YYYY-MM-DD' in India, where the month and "today" are counted. */
+export function indiaToday(now = new Date()) {
+  const pieces = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const get = (type: string) => pieces.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 /** '2026-09-01' */
 export function periodOf(year: number, month: number) {
   return `${year}-${pad(month)}-01`;

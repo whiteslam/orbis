@@ -195,7 +195,9 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
     // Idea/draft moves through here; a ready post leaves ready only by an edit or unready.
     delete changes.status;
   }
-  if (before.status === 'ready' && editUnreadies(before, changes)) changes.status = 'draft';
+  // An edit that un-approves, or one that leaves the post failing the ready check
+  // (its day cleared or moved out of its month), sends it back to draft.
+  if (before.status === 'ready' && (editUnreadies(before, changes) || readyProblem({ ...before, ...changes }))) changes.status = 'draft';
   const touchedWords = changes.title !== undefined || changes.caption !== undefined;
 
   const row: Record<string, unknown> = {};

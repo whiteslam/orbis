@@ -1,12 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { editUnreadies, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth } from './month.ts';
+import { editUnreadies, indiaToday, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth } from './month.ts';
 import type { SocialPost } from './types.ts';
 
 const post = (over: Partial<SocialPost> = {}): SocialPost => ({
   id: 'p1', period: '2026-09-01', title: 'Launch', headline: null, caption: 'Hello', hashtags: [], format: 'post',
   platforms: ['instagram'], plannedFor: '2026-09-14', status: 'draft', mediaPath: null, mediaType: null, mediaUrl: null,
   published: null, source: 'manual', position: 0, updatedAt: '2026-09-01T00:00:00Z', ...over,
+});
+
+test('indiaToday reads the date in Asia/Kolkata, not UTC', () => {
+  // 20:00 UTC on 30 September is already 1 October in India.
+  assert.equal(indiaToday(new Date('2026-09-30T20:00:00Z')), '2026-10-01');
+  assert.equal(indiaToday(new Date('2026-09-30T10:00:00Z')), '2026-09-30');
 });
 
 test('periodOf pads the month', () => {
