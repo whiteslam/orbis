@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { FieldLabel, QuietList, useScrollTop } from '@/components/field/field';
+import { AccountData } from '@/components/personal/account-data';
 import { AppIntegrations } from '@/components/personal/app-integrations';
 import { ContextNotes } from '@/components/personal/context-notes';
 import { FitnessPersonaEditor } from '@/components/personal/fitness-persona';
@@ -203,6 +204,7 @@ export function ProfileScreen(props: {
             <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
             <SignOutButton variant="text" />
           </div>
+          <AccountData />
         </Group>
       </>}
     </div>

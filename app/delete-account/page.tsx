@@ -22,8 +22,9 @@ export default function DeleteAccountPage() {
       <div className="mkt-legal-body">
         <h2>In the app</h2>
         <p>
-          Sign in to {SITE_NAME}, then go to <strong>Profile → Account → Delete account</strong>. You will be asked to
-          confirm once, since deletion cannot be undone.
+          Sign in to {SITE_NAME}, then go to <strong>Profile → Settings → Account → Delete account</strong>. You will be asked to type DELETE,
+          and for your password if you haven&apos;t signed in recently, since deletion cannot be undone. You can export
+          a copy of your data from the same place first.
         </p>
         <p>
           <Link href="/login">Sign in</Link> to get started.

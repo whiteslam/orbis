@@ -1,10 +1,10 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { createClient as createStandaloneClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { canChangePassword, MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
+import { passwordMatches } from '@/lib/security/verify-password';
 import { ACCESS_DENIED_MESSAGE, accessAllowed, accessRestricted } from '@/lib/security/access';
 
 export type AuthActionState = {
@@ -131,22 +131,6 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
 }
 
 /**
- * Checks the current password without touching this browser's session: a
- * separate client with no cookie storage signs in, and that throwaway session is
- * signed out again straight away.
- */
-async function currentPasswordMatches(email: string, password: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return false;
-  const verifier = createStandaloneClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-  const { data, error } = await verifier.auth.signInWithPassword({ email, password });
-  if (error || !data.session) return false;
-  await verifier.auth.signOut({ scope: 'local' }).catch(() => undefined);
-  return true;
-}
-
-/**
  * Sets a new password. A recovery link opened in the last 15 minutes is enough
  * on its own; otherwise Orbis must be unlocked on this device and the current
  * password must be given, so a session left open can't be used to take over the
@@ -173,7 +157,7 @@ export async function updatePassword(formData: FormData): Promise<AuthActionStat
   if (!check.ok && check.needs === 'current-password') {
     if (!currentPassword) return { error: 'Enter your current password.', message: null };
     const email = typeof claims.email === 'string' ? claims.email : '';
-    const verified = email ? await currentPasswordMatches(email, currentPassword) : false;
+    const verified = email ? await passwordMatches(email, currentPassword) : false;
     if (!verified) return { error: 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.', message: null };
     check = canChangePassword({ amr: claims.amr, nowSec, unlocked, currentPasswordVerified: true });
   }

@@ -33,7 +33,7 @@ export default function SupportPage() {
 
         <h2>How do I delete my account?</h2>
         <p>
-          Sign in, then go to <strong>Profile → Account → Delete account</strong>, or open the {' '}
+          Sign in, then go to <strong>Profile → Settings → Account → Delete account</strong>, or open the {' '}
           <Link href="/delete-account">delete-account page</Link> for details on what gets removed. If you cannot
           sign in, {email ? <>email <a href={`mailto:${email}`}>{email}</a></> : 'use the address above once it is available'}{' '}
           and we will delete it for you.
