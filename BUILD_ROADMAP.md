@@ -2,7 +2,7 @@
 
 Use this file to see where the project stands and what to do next, even between Codex sessions. Update the status and checkboxes as work is completed.
 
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-28
 **Current app:** `http://localhost:3000` (`pnpm dev`)
 **Current focus:** Apply the Supabase migrations through `202609240009_personal_profile.sql`, finish redirect setup, then verify production sign-in and connected features
 
@@ -125,6 +125,19 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Add owner-scoped RLS for investment holdings
 - [ ] Apply `supabase/migrations/202609240006_investment_holdings.sql` in Supabase and verify with the signed-in account
 
+### 6c. Social planner — Code complete; database setup pending
+
+A private, month-by-month planner for the user's own social posts, ported from WBT Command HQ's Organic Social section with the reviewer taken out. Plan: `docs/superpowers/plans/2026-09-28-social-planner.md`.
+
+- [x] Social tab: month switcher, Monday-start calendar (format dots, selected-day list, "No date yet" tray), list and grid views
+- [x] Post view: format, day, title, headline, caption with per-platform limits, hashtags, platforms, one picture or video (private `social-media` bucket, signed links only)
+- [x] Idea → draft → ready → published. Ready is checked (title, caption, a day in the month, media for reels and stories); editing a ready post's words, media or format sends it back to draft; published posts are locked until marked not published
+- [x] Append-only history per post, kept after the post is deleted
+- [x] Draft with AI through the router: only the brief is sent unless "Use my profile" is ticked (then `personal`), drafts are only ever added, 10 a day
+- [x] Home quiet row ("Social today") and one morning notification line when posts are due
+- [ ] Apply `supabase/migrations/202609280001_social_planner.sql` (or re-run `supabase/pending.sql`)
+- [ ] Verify with the signed-in account: create a post, try Mark ready on a reel without media, add one, mark ready, edit the caption (drops to draft), mark ready again, mark published with a link, check History, delete, and confirm the history survives
+
 ### 7. Daily Orbis Brief — Core experience complete
 
 - [x] Show a concise Home snapshot from confirmed expenses, pending alerts, goals, and today's habit check-ins
@@ -152,6 +165,7 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 3. In Google Cloud, enable Gmail API, add `https://orbis-starter.vercel.app/auth/gmail/callback` to the OAuth web client, and add the Google account as a consent-screen test user.
 4. In the production Supabase settings, set the site URL to `https://orbis-starter.vercel.app`.
 5. Verify password sign-in/recovery, Gmail connection and transaction review, goals/habits, notes, manual holdings, and workbook advice with a sample workbook.
+6. For the social planner, run `supabase/migrations/202609280001_social_planner.sql` (it also creates the private `social-media` Storage bucket), or re-run `supabase/pending.sql`.
 
 ## Resume checklist
 
