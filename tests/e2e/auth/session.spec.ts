@@ -16,14 +16,19 @@ test('sign out returns to login and protects home again', async ({ browser, user
   await page.getByRole('tab', { name: 'Settings' }).click();
   await page.getByRole('button', { name: /sign out/i }).last().click();
   await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
+  // Signed out, '/' is the public landing page rather than the app.
   await page.goto('/');
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('a[href="/login"]').first()).toBeVisible();
+  await expect(page.getByRole('navigation').getByRole('button', { name: 'Expense', exact: true })).toHaveCount(0);
   await context.close();
 });
 
-base('protected home redirects to login when signed out', async ({ page }) => {
+base('signed-out home shows the landing page with a way to sign in', async ({ page }) => {
   await page.goto('/');
-  await base.expect(page).toHaveURL(/\/login/);
+  await base.expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await base.expect(page.locator('a[href="/login"]').first()).toBeVisible();
+  await base.expect(page.getByRole('navigation').getByRole('button', { name: 'Expense', exact: true })).toHaveCount(0);
 });
 
 base('invalid credentials show an error and stay on login', async ({ page }) => {
@@ -31,6 +36,6 @@ base('invalid credentials show an error and stay on login', async ({ page }) => 
   await page.getByLabel('Email').fill('nobody-orbis-qa@example.com');
   await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-1');
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
-  await base.expect(page.getByText(/did not match|temporarily unavailable|Too many/)).toBeVisible();
+  await base.expect(page.getByText(/didn['’]t work|temporarily unavailable|Too many/)).toBeVisible();
   await base.expect(page).toHaveURL(/\/login/);
 });

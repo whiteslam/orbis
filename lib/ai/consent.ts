@@ -12,4 +12,4 @@ export function aiAllowed(prefs: AiConsent): boolean {
   return prefs.aiEnabled === true && typeof prefs.aiConsentedAt === 'string' && prefs.aiConsentedAt.length > 0;
 }
 
-export const AI_OFF_MESSAGE = 'AI features are off. Turn them on in Profile → Settings → AI.';
+export const AI_OFF_MESSAGE = 'AI features are off. Turn them on in Profile → Settings.';

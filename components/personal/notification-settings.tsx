@@ -14,6 +14,15 @@ function urlBase64ToUint8Array(value: string) {
   return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
 }
 
+const SERVICE_WORKER_TIMEOUT_MS = 10_000;
+
+/** The active service worker registration, or null if none is ready within `ms`. */
+function serviceWorkerReady(ms: number): Promise<ServiceWorkerRegistration | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), ms); });
+  return Promise.race([navigator.serviceWorker.ready, timeout]).finally(() => clearTimeout(timer));
+}
+
 function isIosBrowserTab() {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -64,7 +73,10 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         return { success: false, message: 'Notifications weren’t allowed. You can change this in your browser settings.' };
       }
       // register-sw.tsx registers the service worker on every load; this just waits for it.
-      const registration = await navigator.serviceWorker.ready;
+      // `ready` never settles if no worker activates (not registered in dev, or a failed
+      // install), so it is given a time limit rather than leaving the button spinning.
+      const registration = await serviceWorkerReady(SERVICE_WORKER_TIMEOUT_MS);
+      if (!registration) return { success: false, message: 'Notifications couldn’t start on this device. Reload the app and try again.' };
       const subscription = (await registration.pushManager.getSubscription())
         ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
       const json = subscription.toJSON();
