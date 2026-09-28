@@ -197,7 +197,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
   if (!apiKey) return { success: false, message: 'Workbook preview is ready, but AI advice is not configured yet. Add OPENROUTER_API_KEY to the server environment.' };
 
   const { verificationToken: _verificationToken, ...workbookData } = preview;
-  let savedContextNotes: string[] = [];
+  const savedContextNotes: string[] = [];
   let fitnessPersona: string | null = null;
   let personalProfile: { preferredName?: string; role?: string; aboutMe?: string } | null = null;
   let steps: ReturnType<typeof stepContext> | null = null;

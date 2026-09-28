@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { composeFinanceFocus, composeFinanceRows } from './finance.ts';
 import { composeHealthFocus, composeHealthRows } from './health.ts';

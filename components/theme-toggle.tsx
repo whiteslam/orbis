@@ -20,6 +20,8 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme | undefined>(undefined);
 
   useEffect(() => {
+    // Reads the theme the pre-paint script already applied to the document.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(currentTheme());
   }, []);
 

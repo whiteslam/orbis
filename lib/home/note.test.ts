@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { composeNote } from './note.ts';
 import type { FinanceSummary } from '../finance/types.ts';

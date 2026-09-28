@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { editUnreadies, indiaToday, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth, socialReminder } from './month.ts';
 import type { SocialPost } from './types.ts';

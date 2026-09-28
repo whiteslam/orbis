@@ -19,6 +19,8 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    // Keeps the draft in step with the saved profile after a save or reload.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(profile ?? EMPTY_PROFILE);
   }, [profile]);
 

@@ -42,6 +42,8 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
     router.refresh();
   }, [router]);
 
+  // Passkey support can only be read client-side; the server render assumes it is unavailable.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setCanUsePasskey(supportsPasskeys()), []);
 
   // Offer saved passkeys in the email field's autofill list while signing in.

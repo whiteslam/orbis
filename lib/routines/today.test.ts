@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { currentRoutine, localParts, missedRoutines, relativeWhen, routinesToday, settledToday } from './today.ts';
 import type { Routine, RoutineEvent, RoutinesSummary } from './types.ts';

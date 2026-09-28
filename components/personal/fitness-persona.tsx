@@ -28,6 +28,8 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    // Keeps the draft in step with the saved persona after a save or reload.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(persona ?? '');
   }, [persona]);
 

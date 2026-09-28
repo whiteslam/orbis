@@ -27,7 +27,10 @@ export function LockButton() {
 export function AppLockGuard({ idleMs, children }: { idleMs: number; children: ReactNode }) {
   const router = useRouter();
   const [locked, setLocked] = useState(false);
+  // Seeds the idle clock once on mount; re-running this on every render would defeat the timers below.
+  // eslint-disable-next-line react-hooks/purity
   const lastActivity = useRef(Date.now());
+  // eslint-disable-next-line react-hooks/purity
   const lastHeartbeat = useRef(Date.now());
   const lockedRef = useRef(false);
 

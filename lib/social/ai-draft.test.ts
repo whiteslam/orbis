@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { buildDraftPrompt, draftMaxTokens, parseAiDraft } from './ai-draft.ts';
 

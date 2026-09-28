@@ -122,6 +122,8 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
   const dataKey = JSON.stringify([financeSummary.pendingCandidateCount, financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
   useEffect(() => {
     if (!aiBriefEnabled) {
+      // Turning the setting off clears the cached brief immediately, rather than waiting for a refetch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWritten(null);
       return;
     }
@@ -191,6 +193,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   const firstRun = ready && !summary.transactions.length && !waiting && !(month && (month.spent > 0 || month.received > 0));
 
   // The review queue empties as alerts are confirmed; leave it once nothing is waiting.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (view === 'review' && !waiting) setView('main'); }, [view, waiting]);
 
   function sync() {
@@ -530,6 +533,8 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
     // A tab may carry its own state after a slash (#social/2026-09); only the part before it names the tab.
     const fromHash = HASH_TO_TAB[url.hash.slice(1).split('/')[0]];
     const opening = requestedTab === 'finance' ? 'finance' : requestedTab === 'settings' ? 'personal' : !requestedTab && fromHash ? fromHash : null;
+    // One-time read of the URL a link arrived with, not a value the render depends on.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (requestedTab === 'settings') setProfileSection('settings');
     if (opening && opening !== 'home') {
       pendingTab.current = opening;

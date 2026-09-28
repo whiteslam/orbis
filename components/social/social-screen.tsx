@@ -58,13 +58,15 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
   // A reload onto #social/2026-11 opens that month rather than this one.
   useEffect(() => {
     const fromHash = periodFromHash();
-    if (fromHash && fromHash !== initial.period) load(fromHash);
     // Only on first mount: later months are chosen with the switcher.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (fromHash && fromHash !== initial.period) load(fromHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // The server re-reads the current month after every write; take its copy when it is the month on screen.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initial.period === period) setMonth(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
