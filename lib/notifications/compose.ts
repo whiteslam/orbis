@@ -50,7 +50,7 @@ export function ruleNotification(context: NotificationContext): { title: string;
       : '';
 
   const parts: Record<NotificationContext['slot'], string[]> = {
-    morning: [routineLine, 'A good start sets up the day.'],
+    morning: [routineLine, context.socialLine, 'A good start sets up the day.'],
     lunch: [routineLine, 'Eat well and drink some water.', spendLine],
     evening: [routineLine, spendLine],
     night: [routineLine, 'Aim for a good night’s sleep.'],

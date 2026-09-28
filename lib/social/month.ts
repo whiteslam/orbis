@@ -130,6 +130,21 @@ export function monthSummary(posts: SocialPost[]) {
   ].filter(Boolean).join(' · ');
 }
 
+/**
+ * The morning nudge: every post due today in one line, or '' when nothing is.
+ * WBT batched its reminders the same way — one message, never one per post.
+ */
+export function socialReminder(posts: Pick<SocialPost, 'plannedFor' | 'status' | 'format' | 'mediaPath'>[], today: string) {
+  const due = posts.filter((post) => post.plannedFor === today && post.status !== 'published');
+  if (!due.length) return '';
+  const notReady = due.filter((post) => post.status !== 'ready');
+  const lead = `${due.length} ${due.length === 1 ? 'post' : 'posts'} planned for today`;
+  if (!notReady.length) return `${lead}, all ready to go.`;
+  const needMedia = notReady.filter((post) => post.format !== 'post' && !post.mediaPath).length;
+  if (needMedia) return `${lead} — ${needMedia} still ${needMedia === 1 ? 'needs' : 'need'} a picture or video.`;
+  return due.length === 1 ? `${lead} — not ready yet.` : `${lead} — ${notReady.length} not ready yet.`;
+}
+
 /** Does this edit knock a ready post back to draft? True when caption, title, media or format changed. */
 export function editUnreadies(before: SocialPost, after: Partial<SocialPost>) {
   return (after.caption !== undefined && after.caption !== before.caption)

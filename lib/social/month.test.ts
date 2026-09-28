@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { editUnreadies, indiaToday, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth } from './month.ts';
+import { editUnreadies, indiaToday, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth, socialReminder } from './month.ts';
 import type { SocialPost } from './types.ts';
 
 const post = (over: Partial<SocialPost> = {}): SocialPost => ({
@@ -86,6 +86,19 @@ test('monthSummary counts ready and published', () => {
   const posts = [post(), post({ status: 'ready' }), post({ status: 'published', published: { at: 'x', platform: 'instagram', link: null } })];
   assert.equal(monthSummary(posts), '3 posts · 1 ready · 1 published');
   assert.equal(monthSummary([post()]), '1 post');
+});
+
+test('socialReminder says nothing when nothing is due', () => {
+  assert.equal(socialReminder([], '2026-09-14'), '');
+  assert.equal(socialReminder([post({ status: 'published', published: { at: 'x', platform: 'x', link: null } })], '2026-09-14'), '');
+  assert.equal(socialReminder([post({ plannedFor: '2026-09-15' })], '2026-09-14'), '');
+});
+
+test('socialReminder batches the day into one line', () => {
+  assert.equal(socialReminder([post({ status: 'ready' }), post({ status: 'ready' })], '2026-09-14'), '2 posts planned for today, all ready to go.');
+  assert.equal(socialReminder([post(), post({ status: 'ready' })], '2026-09-14'), '2 posts planned for today — 1 not ready yet.');
+  assert.equal(socialReminder([post({ format: 'reel' }), post({ status: 'ready' })], '2026-09-14'), '2 posts planned for today — 1 still needs a picture or video.');
+  assert.equal(socialReminder([post()], '2026-09-14'), '1 post planned for today — not ready yet.');
 });
 
 test('editUnreadies is true only for caption, title, media or format changes', () => {

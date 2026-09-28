@@ -2,6 +2,8 @@ import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { localClock, type Slot } from '@/lib/notifications/schedule';
+import { socialReminder } from '@/lib/social/month';
+import type { SocialFormat, SocialStatus } from '@/lib/social/types';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -14,6 +16,8 @@ export type NotificationContext = {
   routines: Array<{ title: string; at: string; status: string | null }>;
   spending: { currency: string; today: number; month: number; todayCount: number } | null;
   stepsToday: number | null;
+  /** Today's planned social posts as one morning line; '' in other slots or when nothing is due. */
+  socialLine: string;
 };
 
 const shift = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
@@ -25,7 +29,11 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
   const localDate = clock.date;
   const localTime = `${String(Math.floor(clock.minutes / 60)).padStart(2, '0')}:${String(clock.minutes % 60).padStart(2, '0')}`;
 
-  const [profile, persona, routines, events, transactions, steps] = await Promise.all([
+  const [social, profile, persona, routines, events, transactions, steps] = await Promise.all([
+    // One social nudge a day at most: it is only looked up for the morning slot.
+    slot === 'morning'
+      ? admin.from('social_posts').select('planned_for,status,format,media_path').eq('user_id', userId).eq('planned_for', localDate).neq('status', 'published').limit(30)
+      : Promise.resolve({ data: [], error: null }),
     admin.from('user_personal_profiles').select('preferred_name').eq('user_id', userId).maybeSingle(),
     admin.from('user_fitness_personas').select('persona').eq('user_id', userId).maybeSingle(),
     admin.from('routines').select('id,title,at_time,days').eq('user_id', userId).eq('active', true).order('at_time').limit(20),
@@ -73,5 +81,11 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
       .map((routine) => ({ title: String(routine.title).slice(0, 60), at: String(routine.at_time).slice(0, 5), status: answered.get(routine.id as string) ?? null })),
     spending,
     stepsToday: typeof steps.data?.steps === 'number' ? steps.data.steps : null,
+    socialLine: social.error ? '' : socialReminder((social.data ?? []).map((row) => ({
+      plannedFor: row.planned_for as string,
+      status: row.status as SocialStatus,
+      format: row.format as SocialFormat,
+      mediaPath: (row.media_path as string | null) ?? null,
+    })), localDate),
   };
 }
