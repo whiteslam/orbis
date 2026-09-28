@@ -63,8 +63,8 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
         setDevice(permission === 'denied' ? 'blocked' : 'off');
         return { success: false, message: 'Notifications weren’t allowed. You can change this in your browser settings.' };
       }
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      await navigator.serviceWorker.ready;
+      // register-sw.tsx registers the service worker on every load; this just waits for it.
+      const registration = await navigator.serviceWorker.ready;
       const subscription = (await registration.pushManager.getSubscription())
         ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
       const json = subscription.toJSON();

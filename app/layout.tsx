@@ -6,6 +6,7 @@ import './atlas-profile.css';
 import './atlas-social.css';
 import './marketing.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
+import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';
 
 const DESCRIPTION = 'One calm daily brief for your money, health and routines — read-only connections, private by default, and AI that never trains on your personal data.';
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body>
         <KeyboardAware />
+        <RegisterServiceWorker />
         {children}
       </body>
     </html>

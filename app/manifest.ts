@@ -9,9 +9,16 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    orientation: 'portrait',
-    background_color: '#f4f7fb',
-    theme_color: '#f4f7fb',
+    // Matches app/layout.tsx's light `themeColor`; the dark one only applies
+    // via the media-query variant the manifest spec doesn't support.
+    background_color: '#f2f2f7',
+    theme_color: '#f2f2f7',
+    categories: ['finance', 'health', 'productivity', 'lifestyle'],
+    shortcuts: [
+      { name: 'Expense', url: '/#finance' },
+      { name: 'Health', url: '/#health' },
+      { name: 'Social', url: '/#social' },
+    ],
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

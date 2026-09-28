@@ -10,7 +10,6 @@ export function OrbisMark({ size = 42, className }: { size?: number; className?:
       width={size}
       height={size}
       className={['orbis-mark', className].filter(Boolean).join(' ')}
-      priority
     />
   );
 }
