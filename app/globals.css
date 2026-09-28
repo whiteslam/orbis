@@ -437,6 +437,16 @@ button { font: inherit; }
 .fd-line b.empty { color: var(--fd-faint); font-weight: 500; }
 .fd-note { margin: 18px 0 0; color: var(--fd-faint); font-size: 11px; line-height: 1.55; }
 
+/* Important mail on Home: hairline rows like the quiet list, three short lines each. */
+.fd-mail-row { display: flex; flex-direction: column; gap: 2px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); color: inherit; text-decoration: none; min-width: 0; }
+.fd-mail-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.fd-mail-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 550; color: var(--fd-soft); }
+.fd-mail-row.unread .fd-mail-top b, .fd-mail-row.unread .fd-mail-subject { font-weight: 650; color: var(--fd-ink); }
+.fd-mail-top time { flex: none; color: var(--fd-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fd-mail-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--fd-soft); }
+.fd-mail-snippet { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; font-size: 11.5px; color: var(--fd-faint); line-height: 1.45; }
+.fd-mail-more { margin-top: 10px; }
+
 /* Tab screens: a title where Home has its date row. */
 .fd-head { margin-bottom: 18px; }
 .fd-head h1 { margin: 2px 0 0; font-size: 31px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; color: var(--fd-ink); }

@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         <p>Orbis only holds what you connect, upload or type in. Depending on what you use, that can include:</p>
         <ul>
           <li>Your account email address</li>
-          <li>Transaction and bank/card alert emails read from a connected Gmail account (read-only, alerts only — Orbis never sends, edits or deletes anything in Gmail)</li>
+          <li>The sender, subject, date and Gmail’s short preview of mail Gmail marks as important, read live from a connected Gmail account to show on Home and not stored (read-only — Orbis never sends, edits or deletes anything in Gmail)</li>
           <li>Holdings from a connected broker account (Zerodha or Groww), read-only</li>
           <li>Step counts synced from your device</li>
           <li>Health documents you upload for a preview and AI-grounded observations</li>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Supabase</strong> — hosts your account, your data and file storage</li>
           <li><strong>Vercel</strong> — hosts and runs the application</li>
-          <li><strong>Google</strong> — Gmail (read-only transaction and bank/card alerts) and Calendar, only if you connect them</li>
+          <li><strong>Google</strong> — Gmail (read-only, important mail on Home) and Calendar, only if you connect them</li>
           <li><strong>Zerodha</strong> and <strong>Groww</strong> — read-only broker holdings, only if you connect them</li>
           <li><strong>Groq, Google Gemini, Mistral and OpenRouter</strong> — the AI providers behind Orbis&apos;s AI features, chosen automatically by a router (see below)</li>
           <li><strong>Open-Meteo</strong> — weather for your approximate location</li>

@@ -1,5 +1,5 @@
 // What the Finance tab leads with: the answer to "where did the money go",
-// unless something is broken or waiting on a decision first.
+// unless something is broken first.
 
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
@@ -33,33 +33,6 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
       action: null,
     };
   }
-  if (summary.connection?.status === 'reconnect_required') {
-    return {
-      id: 'gmail-reconnect',
-      headline: 'Gmail stopped talking to Orbis.',
-      body: `Google expired the connection for ${summary.connection.email}, so no new bank alerts are arriving. Reconnect below; everything already saved stays exactly as it is.`,
-      action: null,
-    };
-  }
-  if (summary.pendingCandidateCount > 0) {
-    const alerts = summary.pendingCandidateCount;
-    const unreadable = summary.unparsedCandidateCount;
-    return {
-      id: 'review-alerts',
-      headline: alerts === 1 ? 'One alert is waiting to be confirmed.' : `${alerts} alerts are waiting to be confirmed.`,
-      body: `They are in the queue below. Orbis read an amount and a merchant out of each email but counts none of it as spending until you agree, and anything you reject is deleted rather than kept.${unreadable > 0 ? ` ${count(unreadable, 'alert')} could not be parsed and ${unreadable === 1 ? 'needs' : 'need'} the amount typed in.` : ''}`,
-      action: null,
-    };
-  }
-  if (!summary.connection) {
-    return {
-      id: 'connect-gmail',
-      headline: 'Connect Gmail and this screen fills itself in.',
-      body: 'Orbis reads the alert emails your bank already sends — read-only, never sending or deleting anything — and keeps each message ID so nothing is counted twice. You can also add expenses by hand below.',
-      action: null,
-    };
-  }
-
   const totals = monthTotals(summary, now);
   if (totals && totals.month.spent > 0) {
     const { month, days, top } = totals;
@@ -76,9 +49,7 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
   return {
     id: 'quiet-month',
     headline: 'Nothing has been logged yet this month.',
-    body: summary.connection.lastSyncAt
-      ? 'Gmail is connected and syncing, so either the month is genuinely quiet or your bank has not sent an alert Orbis recognises. Adding one by hand takes a few seconds.'
-      : 'Gmail is connected but has not synced yet. Run a sync below, or add an expense by hand to start the month.',
+    body: 'Adding an expense by hand takes a few seconds, and the month fills in from there.',
     action: null,
   };
 }
@@ -98,7 +69,6 @@ export function composeFinanceRows({ summary, now = new Date() }: { summary: Fin
     { label: 'Daily average', value: month && month.spent > 0 && totals ? money(month.spent / totals.days, month.currency) : 'No data', empty: !month || month.spent === 0, target: null },
     { label: 'Largest category', value: top ? `${top.category} · ${money(top.amount, month?.currency ?? 'INR')}` : 'No data', empty: !top, target: null },
     { label: 'Received this month', value: month && month.received > 0 ? money(month.received, month.currency) : 'None', empty: !month || month.received === 0, target: null },
-    { label: 'Alerts to confirm', value: String(summary.pendingCandidateCount), empty: summary.pendingCandidateCount === 0, target: null },
     { label: 'Saved transactions', value: summary.transactions.length ? count(summary.transactions.length, 'transaction') : 'None yet', empty: summary.transactions.length === 0, target: null },
   ];
 }

@@ -58,17 +58,17 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
         <AppHead
           tile={<b>G</b>}
           name="Google"
-          detail={google ? google.email : 'Gmail alerts and Calendar, read-only'}
+          detail={google ? google.email : 'Important mail and Calendar, read-only'}
           status={google ? <Status state={googleNeedsReconnect ? 'warn' : 'on'}>{googleNeedsReconnect ? 'Reconnect' : 'Connected'}</Status> : <Status state="off">Not connected</Status>}
         />
         <ul className="pf-scopes">
-          <li className={google?.gmail ? 'on' : undefined}><Mail size={13} aria-hidden="true" />Gmail · bank and card alerts{google?.gmail && google.lastSyncAt ? ` · synced ${when(google.lastSyncAt)}` : ''}{google && !google.gmail ? ' · not granted' : ''}</li>
+          <li className={google?.gmail ? 'on' : undefined}><Mail size={13} aria-hidden="true" />Gmail · important mail on Home{google && !google.gmail ? ' · not granted' : ''}</li>
           <li className={google?.calendar ? 'on' : undefined}><CalendarDays size={13} aria-hidden="true" />Calendar · events for your daily notifications{google && !google.calendar ? ' · not granted' : ''}</li>
         </ul>
         <div className="fd-act pf-act">
           {!google && <a className="fd-button" href="/auth/gmail/start?return=settings">Connect Google</a>}
           {google && (googleNeedsReconnect || !google.calendar) && <a className="fd-button" href="/auth/gmail/start?return=settings">{googleNeedsReconnect ? 'Reconnect Google' : 'Add Calendar access'}</a>}
-          {google && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading Gmail alerts and Calendar.', safeAction(disconnectGmailAction))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
+          {google && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading your important mail and Calendar.', safeAction(disconnectGmailAction))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
         </div>
       </article>
 

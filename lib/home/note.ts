@@ -120,18 +120,11 @@ function weatherLine(weather: BriefWeather, when: PartOfDay, seed: number): stri
 /**
  * The one thing about money worth a sentence right now.
  *
- * Something waiting on the user outranks a reading of the month, and only one
- * of them makes the caption: two sentences total is the whole budget.
+ * Only one reading of the month makes the caption: two sentences total is the
+ * whole budget.
  */
 function financeLine(finance: FinanceSummary, day: number, seed: number): string | null {
-  if (finance.loadError) return 'I can’t reach your finance data at the moment, so spending and alerts are stale.';
-  if (finance.connection?.status === 'reconnect_required') {
-    return `Google expired access for ${finance.connection.email}, so no new bank alerts are coming in.`;
-  }
-
-  const alerts = finance.pendingCandidateCount;
-  if (alerts === 1) return 'There’s one bank alert waiting on a yes or no.';
-  if (alerts > 1) return `${alerts} bank alerts are waiting on a yes or no, ${alerts <= 3 ? 'a minute at most' : `about ${Math.ceil(alerts / 4)} minutes`}.`;
+  if (finance.loadError) return 'I can’t reach your finance data at the moment, so spending is stale.';
 
   const spend = finance.monthlyExpenses.length === 1 ? finance.monthlyExpenses[0] : null;
   if (spend && spend.amount > 0) {
@@ -197,19 +190,6 @@ function trainingLine(training: BriefTraining, when: PartOfDay, seed: number): s
 }
 
 
-/**
- * The only setup worth a sentence here is the one that makes the rest of the
- * note possible. Asking for a file upload is a Health-tab errand, not something
- * to greet someone with.
- */
-function setupLines(finance: FinanceSummary, when: string, seed: number): string[] {
-  if (!finance.databaseReady || finance.connection) return [];
-  return [pick([
-    `Connect Gmail and I can start tracking your expenses ${when}. It’s read-only, bank alerts only, never the message body.`,
-    `If you connect Gmail I’ll pick up your bank alerts from ${when} on. It’s read-only and one tap to undo.`,
-  ], seed, 4)];
-}
-
 function portfolioLine(portfolio: BriefPortfolio, seed: number): string | null {
   if (portfolio.state !== 'ok' || portfolio.total <= 0) return null;
   const day = portfolio.day && portfolio.day.coverage >= 0.6 ? portfolio.day : null;
@@ -244,14 +224,6 @@ export function partOfDay(hour: number): PartOfDay {
   return 'night';
 }
 
-const AHEAD: Record<PartOfDay, string> = {
-  early: 'later today',
-  morning: 'this morning',
-  afternoon: 'this afternoon',
-  evening: 'this evening',
-  night: 'tomorrow',
-};
-
 function clock(now: Date) {
   return new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TIME_ZONE })
     .format(now)
@@ -285,7 +257,7 @@ export function composeNote(input: NoteInput): HomeNote {
   if (gym) candidates.push({ text: gym, from: 'orbis' });
 
   const cash = financeLine(input.finance, today.day, seed);
-  if (cash) candidates.push({ text: cash, from: input.finance.connection ? 'gmail' : 'orbis' });
+  if (cash) candidates.push({ text: cash, from: 'orbis' });
 
   const investing = input.portfolio ? portfolioLine(input.portfolio, seed) : null;
   if (investing) candidates.push({ text: investing, from: 'groww' });
@@ -293,18 +265,13 @@ export function composeNote(input: NoteInput): HomeNote {
   const kept = candidates.slice(0, MAX_SUBJECTS);
   const sources = new Set<SourceId>(kept.map((subject) => subject.from));
 
-  // A setup suggestion only speaks when there was nothing truer to say.
   if (!kept.length) {
-    const setup = setupLines(input.finance, AHEAD[when], seed);
-    if (setup.length) {
-      return { id: 'setup', greeting: greet(today.hour, firstName, seed), time: clock(now), when, caption: setup[0], sources: ['orbis'] };
-    }
     return {
       id: 'quiet',
       greeting: greet(today.hour, firstName, seed),
       time: clock(now),
       when,
-      caption: 'Nothing needs you right now. No alerts, nothing waiting in Finance or Health. I’ll say something when that changes.',
+      caption: 'Nothing needs you right now, nothing waiting in Finance or Health. I’ll say something when that changes.',
       sources: ['orbis'],
     };
   }

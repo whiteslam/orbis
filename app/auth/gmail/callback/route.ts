@@ -22,8 +22,8 @@ function clearCookies(response: NextResponse) {
 }
 
 export async function GET(request: NextRequest) {
-  // Connections started from Profile → Settings return there; others go to Finance.
-  const returnTab = request.cookies.get(googleReturnCookieName)?.value === 'settings' ? 'settings' : 'finance';
+  // Connections started from Profile → Settings return there; others go to Home, where the mail is.
+  const returnTab = request.cookies.get(googleReturnCookieName)?.value === 'settings' ? 'settings' : 'home';
   const redirect = (status: string) => clearCookies(resultRedirect(returnTab, status));
 
   const stateCookie = request.cookies.get(gmailStateCookieName)?.value;

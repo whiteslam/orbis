@@ -25,6 +25,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Starting the Gmail connection failed', error);
-    return NextResponse.redirect(new URL('/?tab=finance&gmail=setup-error', getSiteUrl()));
+    return NextResponse.redirect(new URL('/?tab=home&gmail=setup-error', getSiteUrl()));
   }
 }

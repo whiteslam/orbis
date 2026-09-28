@@ -57,7 +57,7 @@ export function AiConsent({ preferences, onChange }: { preferences: AiPreference
       <p className="fd-note">When it is on, each feature sends only what it needs, and only when it runs:</p>
       <ul className="pf-scopes">
         <li>Home brief: your first name, this month’s spending total and top category, the routine due now and how many you missed, how many health documents you keep, and the weather. Only if the brief setting below is on.</li>
-        <li>Daily notification: your first name, today’s and this month’s spending totals, today’s routines and your notes on them, today’s steps, your fitness persona, how many bank alerts are waiting for review, and any social posts planned for today.</li>
+        <li>Daily notification: your first name, today’s and this month’s spending totals, today’s routines and your notes on them, today’s steps, your fitness persona, and any social posts planned for today.</li>
         <li>Workbook advice: a summary of the file you upload, plus the saved notes, fitness persona, profile and steps you tick.</li>
         <li>Portfolio suggestions: your holdings’ names, values, amounts invested and asset mix.</li>
         <li>Health plans: passages from your health documents, your profile, fitness persona, step averages and your answers.</li>

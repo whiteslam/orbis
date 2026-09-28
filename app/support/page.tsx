@@ -41,8 +41,8 @@ export default function SupportPage() {
 
         <h2>Does Orbis ever change or delete anything in the accounts I connect?</h2>
         <p>
-          No. Gmail, broker and health connections are all read-only. Orbis only reads transaction and bank/card
-          alert emails and read-only holdings; it never sends, edits or deletes anything on your behalf.
+          No. Gmail, broker and health connections are all read-only. Orbis only reads the sender, subject and
+          preview of your important mail, and read-only holdings; it never sends, edits or deletes anything on your behalf.
         </p>
 
         <h2>Does the AI train on my data?</h2>

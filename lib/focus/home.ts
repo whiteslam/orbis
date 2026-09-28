@@ -27,7 +27,6 @@ export function composeQuietRows({ finance, steps, documentCount }: QuietInput):
 
   return [
     { label: 'Spending this month', value: expenses, empty: !spend && finance.monthlyExpenses.length === 0, target: 'finance' },
-    { label: 'Alerts to confirm', value: String(finance.pendingCandidateCount), empty: finance.pendingCandidateCount === 0, target: 'finance' },
     { label: 'Steps, 7-day average', value: stepsValue, empty: steps.average7 === null, target: 'health' },
     { label: 'Health documents', value: documentCount ? count(documentCount, 'file') : 'None yet', empty: documentCount === 0, target: 'health' },
   ];

@@ -10,8 +10,7 @@ import type { StepsSummary } from '../health/types.ts';
 const NOW = new Date('2026-09-25T09:00:00Z');
 
 const finance = (over: Partial<FinanceSummary> = {}): FinanceSummary => ({
-  databaseReady: true, loadError: false, connection: null,
-  pendingCandidateCount: 0, unparsedCandidateCount: 0, reviewCandidates: [],
+  databaseReady: true, loadError: false,
   transactions: [], monthlyExpenses: [], ...over,
 } as FinanceSummary);
 
@@ -30,8 +29,8 @@ test('the fingerprint moves when the data does, or when the day turns a corner',
   const evening = snapshotFingerprint(briefSnapshot({ ...base, now: new Date('2026-09-25T15:00:00Z') }));
   assert.notEqual(quiet, evening, 'the wording is written for a stretch of the day');
 
-  const withAlert = snapshotFingerprint(briefSnapshot({ ...base, finance: finance({ pendingCandidateCount: 2 }) }));
-  assert.notEqual(quiet, withAlert, 'confirming alerts must force a rewrite');
+  const spent = snapshotFingerprint(briefSnapshot({ ...base, finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 1_200 }] }) }));
+  assert.notEqual(quiet, spent, 'new spending must force a rewrite');
 
   const tomorrow = snapshotFingerprint(briefSnapshot({ ...base, now: new Date('2026-09-26T09:00:00Z') }));
   assert.notEqual(quiet, tomorrow, 'a brief never outlives its day');

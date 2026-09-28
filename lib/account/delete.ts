@@ -3,7 +3,7 @@ import 'server-only';
 import { STORAGE_BUCKETS, deletionSteps, type DeletionStep } from '@/lib/account/deletion-plan';
 import { removeUserObjects } from '@/lib/account/storage';
 import { UserFacingError } from '@/lib/errors';
-import { disconnectGmail } from '@/lib/finance/sync';
+import { disconnectGmail } from '@/lib/gmail/connection';
 import { deleteGrowwConnection } from '@/lib/invest/groww-connection';
 import { deleteZerodhaConnection } from '@/lib/invest/zerodha-connection';
 import { createAdminClient } from '@/lib/supabase/admin';

@@ -32,7 +32,7 @@ export function Landing() {
           <div className="mkt-feature-icon"><Wallet size={19} aria-hidden="true" /></div>
           <div>
             <h2>Money, in one place</h2>
-            <p>Transaction alerts from a read-only Gmail connection and your broker holdings, brought together without giving up access to move money.</p>
+            <p>Spending you log and your broker holdings, brought together without giving up access to move money.</p>
           </div>
         </article>
         <article className="mkt-feature">

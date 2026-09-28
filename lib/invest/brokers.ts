@@ -52,6 +52,21 @@ export const BROKERS: BrokerMeta[] = [
     gapNote: 'Mutual funds aren’t available through the Groww Trade API.',
     connect: 'keys',
   },
+  {
+    id: 'zerodha',
+    name: 'Zerodha',
+    logo: '/brands/zerodha.svg',
+    covers: 'stocks and ETFs',
+    keysUrl: 'https://developers.kite.trade/apps',
+    keysLabel: 'Kite Connect → My apps',
+    fields: { key: 'API key', secret: 'API secret', keyPlaceholder: '' },
+    priceNote: 'Prices: last traded price from Kite for every holding.',
+    pricesShort: 'Kite LTP',
+    gapNote: 'Mutual funds held in Zerodha Coin aren’t read yet.',
+    connect: 'redirect',
+    connectPath: '/auth/zerodha/start',
+    sessionNote: 'Zerodha ends every session overnight, so you log in again each day to refresh holdings.',
+  },
 ];
 
 export const BROKER_IDS = BROKERS.map((broker) => broker.id);

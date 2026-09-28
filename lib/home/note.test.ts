@@ -11,10 +11,6 @@ const NOW = new Date('2026-09-24T14:30:00Z'); // 8pm IST on the 24th
 const finance = (over: Partial<FinanceSummary> = {}): FinanceSummary => ({
   databaseReady: true,
   loadError: false,
-  connection: { email: 'you@example.com', status: 'connected', lastSyncAt: null },
-  pendingCandidateCount: 0,
-  unparsedCandidateCount: 0,
-  reviewCandidates: [],
   transactions: [],
   monthlyExpenses: [],
   month: null,
@@ -60,7 +56,7 @@ test('the wording holds within a stretch of the day rather than re-rolling', () 
 
 test('it reads as sentences, never as a card stripped of its box', () => {
   const note = settled({
-    finance: finance({ pendingCandidateCount: 2, monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
+    finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
     weather: raining,
   });
   const body = text(note);
@@ -96,12 +92,6 @@ test('spending is reported with its pace and its biggest category', () => {
   assert.match(text(note), /mostly on food/);
 });
 
-test('alerts waiting are asked for in plain words with an honest time cost', () => {
-  assert.match(text(settled({ finance: finance({ pendingCandidateCount: 1 }) })), /one bank alert/i);
-  assert.match(text(settled({ finance: finance({ pendingCandidateCount: 2 }) })), /2 bank alerts/);
-  assert.match(text(settled({ finance: finance({ pendingCandidateCount: 12 }) })), /12 bank alerts/);
-});
-
 test('the portfolio line quotes a day only when it covers the portfolio', () => {
   assert.match(text(settled({ portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 1 } }) })), /up ₹4,820|up 1\.0%/i);
 
@@ -117,20 +107,8 @@ test('the portfolio line quotes a day only when it covers the portfolio', () => 
   assert.ok(!/portfolio/i.test(text(settled({ portfolio: portfolio({ state: 'off', total: 0, holdingCount: 0, gain: null, largest: null }) }))));
 });
 
-test('setup suggestions only speak when there was nothing truer to say', () => {
-  const busy = settled({
-    finance: finance({ connection: null, pendingCandidateCount: 3, monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
-    weather: raining,
-    portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 1 } }),
-  });
-  assert.ok(busy.caption.length > 0);
-  assert.ok(!/Connect Gmail/.test(text(busy)), 'a nudge never displaces a reading');
-
-  assert.match(text(settled({ finance: finance({ connection: null }) })), /Connect Gmail/);
-});
-
 test('Home never asks for a file upload', () => {
-  assert.ok(!/workbook|upload|Excel|PDF/i.test(text(settled({ finance: finance({ connection: null }) }))), 'that errand belongs on the Health tab');
+  assert.ok(!/workbook|upload|Excel|PDF/i.test(text(settled())), 'that errand belongs on the Health tab');
 });
 
 test('a quiet account gets one honest sentence, not a wall of nudges', () => {
@@ -142,11 +120,11 @@ test('a quiet account gets one honest sentence, not a wall of nudges', () => {
 test('the note lists the services behind it, once, with no duplicates', () => {
   const note = settled({
     weather: raining,
-    finance: finance({ pendingCandidateCount: 2 }),
+    finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
     portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 1 } }),
   });
   // Two subjects ship, so two services are credited, not every one consulted.
-  assert.deepEqual(note.sources, ['open-meteo', 'gmail']);
+  assert.deepEqual(note.sources, ['open-meteo', 'orbis']);
   assert.equal(new Set(note.sources).size, note.sources.length);
 });
 
@@ -154,11 +132,10 @@ test('the note lists the services behind it, once, with no duplicates', () => {
 
 test('the note never uses an em dash, whatever it is saying', () => {
   const everything = [
-    settled({ weather: raining, training: training(), portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 0.72 }, largest: { name: 'HDFCBANK', share: 0.52 } }), finance: finance({ pendingCandidateCount: 4, monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }) }),
+    settled({ weather: raining, training: training(), portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 0.72 }, largest: { name: 'HDFCBANK', share: 0.52 } }), finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }) }),
     settled({ weather: weather({ temperature: 38 }), training: training({ today: { focus: 'Legs', rest: true, durationMinutes: null, exercises: [] } }) }),
     settled({ weather: weather({ temperature: 8 }) }),
-    settled({ finance: finance({ connection: null }) }),
-    settled({ finance: finance({ connection: { email: 'you@example.com', status: 'reconnect_required', lastSyncAt: null } }) }),
+    settled({ finance: finance({ loadError: true }) }),
     settled(),
   ];
   for (const note of everything) {
@@ -211,7 +188,7 @@ test('two subjects at most, whatever else is true', () => {
   const everything = settled({
     weather: raining,
     training: training(),
-    finance: finance({ pendingCandidateCount: 4, monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
+    finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
     portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 1 } }),
   });
   assert.equal(everything.caption.split(/(?<=[.?])\s/).length, 2);
@@ -238,7 +215,7 @@ test('what is due leads the caption, ahead of weather and money', () => {
   const note = settled({
     routine: due(),
     weather: raining,
-    finance: finance({ pendingCandidateCount: 3, monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
+    finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
   });
   assert.equal(note.id, 'routine-first');
   assert.match(note.caption.split(/(?<=[.?])\s/)[0], /^Gym is now, at 7 pm\./);

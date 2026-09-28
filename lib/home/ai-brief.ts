@@ -24,9 +24,6 @@ export type BriefSnapshot = {
   name: string | null;
   finance: {
     available: boolean;
-    connected: boolean;
-    needsReconnect: boolean;
-    alertsToConfirm: number;
     spentThisMonth: string | null;
     perDay: string | null;
     topCategory: string | null;
@@ -78,9 +75,6 @@ export function briefSnapshot(input: {
     name: input.name?.trim().split(/\s+/)[0] || null,
     finance: {
       available: input.finance.databaseReady && !input.finance.loadError,
-      connected: Boolean(input.finance.connection),
-      needsReconnect: input.finance.connection?.status === 'reconnect_required',
-      alertsToConfirm: input.finance.pendingCandidateCount,
       spentThisMonth: spend && spend.amount > 0 ? money(spend.amount, spend.currency) : null,
       perDay: spend && spend.amount > 0 ? money(spend.amount / Math.max(today.day, 1), spend.currency) : null,
       topCategory,
@@ -121,7 +115,6 @@ export function snapshotFingerprint(snapshot: BriefSnapshot) {
 export function snapshotSummary(snapshot: BriefSnapshot) {
   return [
     snapshot.routine ? snapshot.routine.title : null,
-    snapshot.finance.alertsToConfirm ? count(snapshot.finance.alertsToConfirm, 'alert') : null,
     snapshot.documentCount ? count(snapshot.documentCount, 'document') : null,
   ].filter(Boolean).join(', ') || 'nothing connected';
 }

@@ -1,27 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   Bell,
-  Check,
   HeartPulse,
   Home,
   Landmark,
   Megaphone,
-  Mail,
   PenLine,
   Sparkles,
   TrendingUp,
   UserRound,
   WalletCards,
-  X,
 } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
-import { disconnectGmailAction, syncFinanceAction } from '@/app/finance/actions';
 import { adviceFromSaved, savedWhen, splitSummary, type ShownAdvice } from '@/lib/workbook/shown-advice';
 import { documentAdded } from '@/lib/health-docs/format';
 import { planWeek } from '@/lib/health/plan-week';
@@ -48,6 +44,7 @@ import { RoutineCheck } from '@/components/home/routine-check';
 import type { Focus, FocusTarget } from '@/lib/focus/types';
 import { FieldHead, FieldHero, FieldLabel, FieldSubHead, FocusNote, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { WeatherCard } from '@/components/home/weather-card';
+import { ImportantMail } from '@/components/home/important-mail';
 import type { ContextNote } from '@/lib/memory/notes';
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
@@ -56,7 +53,6 @@ import type { JournalSummary } from '@/lib/journal/types';
 import type { NotificationSettings } from '@/lib/notifications/preferences';
 import type { AppConnections } from '@/lib/providers/status';
 import type { StepsSummary } from '@/lib/health/types';
-import { safeAction } from '@/lib/client/safe-action';
 import type { SocialMonth } from '@/lib/social/repository';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 
@@ -80,7 +76,6 @@ const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').the
 const HealthLibrary = dynamic(() => import('@/components/health/health-library').then((m) => m.HealthLibrary), { loading: PartLoading });
 const WorkbookAsk = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAsk), { loading: PartLoading });
 const WorkbookAdviceView = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAdviceView), { loading: PartLoading });
-const GmailReviewQueue = dynamic(() => import('@/components/finance/gmail-review-queue').then((m) => m.GmailReviewQueue), { loading: PartLoading });
 const ManualTransactionForm = dynamic(() => import('@/components/finance/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
 const SpendingSummary = dynamic(() => import('@/components/finance/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
 
@@ -117,7 +112,7 @@ const nav = [
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, savedAdviceAt, preferredName, aiBriefEnabled, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
+function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, savedAdviceAt, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
@@ -163,7 +158,7 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
   // only when the data behind the brief changes. The server returns the saved
   // brief unless the numbers moved, so this is one request per real change
   // rather than one per visit, or one per piece of data arriving.
-  const dataKey = JSON.stringify([financeSummary.pendingCandidateCount, financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
+  const dataKey = JSON.stringify([financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
   const ready = briefReady({ weather: weatherPhase, portfolioSettled });
   const sentKey = useRef<string | null>(null);
   useEffect(() => {
@@ -210,6 +205,14 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
 
       <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
 
+      {gmailNotice && (
+        <div className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`} role="status">
+          <span>{gmailNotice === 'connected' ? 'Gmail connected.' : gmailNotice === 'cancelled' ? 'Gmail connection was cancelled.' : gmailNotice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : 'Gmail could not be connected. Try again.'}</span>
+          <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
+        </div>
+      )}
+      <ImportantMail />
+
       <QuietList heading={heading} rows={quiet} onOpen={openTab} />
 
       <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
@@ -217,17 +220,10 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
   );
 }
 
-function financeDate(value: string, withTime = false) {
-  const options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeZone: 'Asia/Kolkata' };
-  if (withTime) options.timeStyle = 'short';
-  return new Intl.DateTimeFormat('en-IN', options).format(new Date(value));
-}
+type FinanceView = 'main' | 'add';
 
-type FinanceView = 'main' | 'review' | 'add';
-
-function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSummary; notice: string | null; clearNotice: () => void }) {
+function FinanceScreen({ summary }: { summary: FinanceSummary }) {
   const [view, setView] = useState<FinanceView>('main');
-  const [isPending, startTransition] = useTransition();
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
   const top = useScrollTop(view);
 
@@ -236,46 +232,17 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
   // direction would be inventing one.
   const month = summary.month;
   const ready = summary.databaseReady && !summary.loadError;
-  const monthReady = Boolean(month && ready);
+  const monthReady = ready && Boolean(month);
   const monthName = month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
   const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
-  const waiting = Boolean(summary.connection && ready && summary.pendingCandidateCount > 0);
-  // Nothing saved and nothing waiting: the screen is a doorway, not a dashboard.
-  const firstRun = ready && !summary.transactions.length && !waiting && !(month && (month.spent > 0 || month.received > 0));
-
-  // The review queue empties as alerts are confirmed; leave it once nothing is waiting.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (view === 'review' && !waiting) setView('main'); }, [view, waiting]);
-
-  function sync() {
-    setActionMessage(null);
-    startTransition(async () => {
-      const result = await safeAction(syncFinanceAction)();
-      setActionMessage({ text: result.message, success: result.success });
-    });
-  }
-
-  function disconnect() {
-    if (!window.confirm('Disconnect Gmail and remove saved transaction alert IDs from Orbis?')) return;
-    setActionMessage(null);
-    startTransition(async () => {
-      const result = await safeAction(disconnectGmailAction)();
-      setActionMessage({ text: result.message, success: result.success });
-    });
-  }
+  // Nothing saved: the screen is a doorway, not a dashboard.
+  const firstRun = ready && !summary.transactions.length && !(month && (month.spent > 0 || month.received > 0));
 
   // addManualTransactionAction has already revalidated '/', so the new row is on its way.
   function saved(message: string) {
     setActionMessage({ text: message, success: true });
     setView('main');
   }
-
-  if (view === 'review') return (
-    <div className="screen-body field">
-      <span ref={top} hidden />
-      <GmailReviewQueue candidates={summary.reviewCandidates} unparsedCount={summary.unparsedCandidateCount} pendingCount={summary.pendingCandidateCount} onBack={() => setView('main')} />
-    </div>
-  );
 
   if (view === 'add') return (
     <div className="screen-body field">
@@ -284,17 +251,7 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
     </div>
   );
 
-  const notices = (
-    <>
-      {notice && (
-        <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
-          <span>{notice === 'connected' ? 'Gmail connected.' : notice === 'cancelled' ? 'Gmail connection was cancelled.' : notice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : 'Gmail could not be connected. Try again.'}</span>
-          <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
-        </div>
-      )}
-      {actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>}
-    </>
-  );
+  const notices = actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>;
 
   if (firstRun) return (
     <div className="screen-body field">
@@ -303,42 +260,20 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
       {notices}
       <section className="fd-focus">
         <h2>Nothing saved this month.</h2>
-        <p>{summary.connection ? 'Gmail is connected. Sync to pull in new bank alerts, or add one by hand.' : 'Two ways in. Connect Gmail and bank alerts arrive on their own, or add one by hand and skip the setup entirely.'}</p>
+        <p>Add what you spend as it happens. Amount, category, done.</p>
       </section>
-
-      <div className="fd-option">
-        <span className="fd-tile" aria-hidden="true"><Mail size={18} strokeWidth={1.8} /></span>
-        <div>
-          <strong>{summary.connection ? 'Gmail alerts' : 'Connect Gmail'}</strong>
-          <p>{summary.connection
-            ? `${summary.connection.email} · ${summary.connection.status === 'connected' ? 'connected, read-only' : 'reconnect required'}`
-            : 'Read-only, bank and card alerts only, never the message body. Two minutes to set up, one tap to undo.'}</p>
-          <div className="fd-act">
-            {!summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
-            {summary.connection?.status === 'reconnect_required' && <a className="fd-button" href="/auth/gmail/start">Reconnect Gmail</a>}
-            {summary.connection?.status === 'connected' && <button type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>}
-          </div>
-        </div>
-      </div>
 
       <div className="fd-option">
         <span className="fd-tile" aria-hidden="true"><PenLine size={18} strokeWidth={1.8} /></span>
         <div>
           <strong>Add manually</strong>
-          <p>Cash spends, UPI payments, or anything Gmail would never see. Amount, category, done.</p>
-          <div className="fd-act"><button className="ghost" type="button" onClick={() => setView('add')}>Add one now</button></div>
+          <p>Cash spends, UPI payments, cards, anything. It takes a few seconds.</p>
+          <div className="fd-act"><button type="button" onClick={() => setView('add')}>Add one now</button></div>
         </div>
       </div>
 
-      {!summary.connection && <>
-        <FieldLabel>What Orbis will read</FieldLabel>
-        <div className="fd-check yes"><Check size={15} strokeWidth={2.2} aria-hidden="true" /><span>Bank and card alert emails</span></div>
-        <div className="fd-check no"><X size={15} strokeWidth={2.2} aria-hidden="true" /><span>Message bodies, attachments, contacts</span></div>
-        <div className="fd-check no"><X size={15} strokeWidth={2.2} aria-hidden="true" /><span>Sending, editing or deleting anything</span></div>
-      </>}
-
       <CurrencyCard note="works without any account" />
-      <p className="fd-note">Orbis only uses what you connect or upload. Nothing here is inferred about you.</p>
+      <p className="fd-note">Orbis only uses what you enter here. Nothing is inferred about you.</p>
     </div>
   );
 
@@ -353,28 +288,12 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
           delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
         />
       )}
-      {/* Connect, reconnect, sync and manual entry are the only entry points on
-          this screen, so they stay under the title as a plain row. */}
+      {/* Manual entry is the only way in, so it stays under the title as a plain row. */}
       <div className="fd-act">
-        {ready && !summary.connection && <a className="fd-button" href="/auth/gmail/start">Connect Gmail</a>}
-        {summary.connection?.status === 'reconnect_required' && <a className="fd-button" href="/auth/gmail/start">Reconnect Gmail</a>}
-        {summary.connection?.status === 'connected' && (
-          <button type="button" disabled={isPending} onClick={sync}>{isPending ? 'Syncing…' : 'Sync now'}</button>
-        )}
-        {ready && <button className="ghost" type="button" onClick={() => setView('add')}>Add manually</button>}
+        {ready && <button type="button" onClick={() => setView('add')}>Add manually</button>}
       </div>
 
       {notices}
-
-      {waiting && (
-        <section className="fd-quiet">
-          <h2>Waiting on you</h2>
-          <button className="fd-line" type="button" onClick={() => setView('review')}>
-            <span>Gmail alerts to review</span>
-            <b>{summary.pendingCandidateCount} · Review</b>
-          </button>
-        </section>
-      )}
 
       {summary.month && ready && (
         <SpendingSummary month={summary.month} />
@@ -389,30 +308,9 @@ function FinanceScreen({ summary, notice, clearNotice }: { summary: FinanceSumma
             ? 'Saved transactions aren’t available right now.'
             : summary.loadError
               ? 'Transactions could not be loaded. Refreshing the app tries again.'
-              : 'Nothing saved yet. Alerts only count as spending once you confirm them.'}
+              : 'Nothing saved yet.'}
         </p>
       )}
-
-      <section className="fd-source" aria-labelledby="gmail-title">
-        <div>
-          <strong id="gmail-title">Gmail alerts</strong>
-          {!summary.databaseReady ? (
-            <p>Connecting Gmail isn’t available right now. Try again later.</p>
-          ) : summary.loadError ? (
-            <p>Finance data could not be loaded. Refresh the app and try again.</p>
-          ) : summary.connection ? (
-            <p>
-              {summary.connection.email} · {summary.connection.status === 'connected' ? 'connected, read-only' : 'reconnect required'}
-              {summary.connection.lastSyncAt && ` · synced ${financeDate(summary.connection.lastSyncAt, true)}`}
-            </p>
-          ) : (
-            <p>Orbis can read bank and card alerts, but never sends, edits or deletes email.</p>
-          )}
-        </div>
-        {ready && summary.connection?.status === 'connected' && (
-          <button className="fd-link alert" type="button" disabled={isPending} onClick={disconnect}>Disconnect</button>
-        )}
-      </section>
 
       <CurrencyCard />
     </div>
@@ -544,11 +442,11 @@ function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSaved
   );
 }
 
-function GenericScreen({ tab, savedPortfolioAdvice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health' | 'social'>; savedPortfolioAdvice: SavedPortfolioAdvice | null }) {
+function GenericScreen({ tab, savedPortfolioAdvice, brokerNotice, clearBrokerNotice }: { tab: Exclude<Tab, 'home' | 'finance' | 'health' | 'social'>; savedPortfolioAdvice: SavedPortfolioAdvice | null; brokerNotice: string | null; clearBrokerNotice: () => void }) {
   if (tab !== 'investment') return null;
   return (
     <div className="screen-body field">
-      <InvestDashboard savedAdvice={savedPortfolioAdvice} />
+      <InvestDashboard savedAdvice={savedPortfolioAdvice} notice={brokerNotice} clearNotice={clearBrokerNotice} />
     </div>
   );
 }
@@ -557,6 +455,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('home');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
+  const [zerodhaNotice, setZerodhaNotice] = useState<string | null>(null);
   // Journal is the only section with a reason to open today, so it is the landing
   // one. Deep links (Home's "open settings", the Google callback) still say where to go.
   const [profileSection, setProfileSection] = useState<ProfileSection>('journal');
@@ -586,10 +485,11 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
     const url = new URL(window.location.href);
     const requestedTab = url.searchParams.get('tab');
     const notice = url.searchParams.get('gmail');
-    // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority.
+    const brokerNotice = url.searchParams.get('zerodha');
+    // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority (?tab=home stays on Home).
     // A tab may carry its own state after a slash (#social/2026-09); only the part before it names the tab.
     const fromHash = HASH_TO_TAB[url.hash.slice(1).split('/')[0]];
-    const opening = requestedTab === 'finance' ? 'finance' : requestedTab === 'settings' ? 'personal' : !requestedTab && fromHash ? fromHash : null;
+    const opening = requestedTab === 'finance' ? 'finance' : requestedTab === 'invest' ? 'investment' : requestedTab === 'settings' ? 'personal' : !requestedTab && fromHash ? fromHash : null;
     // One-time read of the URL a link arrived with, not a value the render depends on.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (requestedTab === 'settings') setProfileSection('settings');
@@ -598,9 +498,11 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
       setTab(opening);
     }
     if (notice) setGmailNotice(notice);
-    if (requestedTab || notice) {
+    if (brokerNotice) setZerodhaNotice(brokerNotice);
+    if (requestedTab || notice || brokerNotice) {
       url.searchParams.delete('tab');
       url.searchParams.delete('gmail');
+      url.searchParams.delete('zerodha');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     }
   }, []);
@@ -630,12 +532,14 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         savedAdviceAt={savedWorkbookAdvice?.createdAt ?? null}
         preferredName={personalProfile.profile?.preferredName ?? null}
         aiBriefEnabled={aiPreferences.homeBriefEnabled && aiAllowed(aiPreferences)}
+        gmailNotice={gmailNotice}
+        clearGmailNotice={() => setGmailNotice(null)}
         openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
         openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
       />
     );
     if (tab === 'social') return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
-    if (tab === 'finance') return <FinanceScreen summary={financeSummary} notice={gmailNotice} clearNotice={() => setGmailNotice(null)} />;
+    if (tab === 'finance') return <FinanceScreen summary={financeSummary} />;
     if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'personal') {
       return (
@@ -659,8 +563,8 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         />
       );
     }
-    return <GenericScreen tab={tab} savedPortfolioAdvice={savedPortfolioAdvice} />;
-  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines, socialMonth]);
+    return <GenericScreen tab={tab} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
+  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines, socialMonth, zerodhaNotice]);
 
   return (
     <main className="stage">

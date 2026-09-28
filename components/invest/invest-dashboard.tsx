@@ -25,7 +25,16 @@ type InvestView = { name: 'main' } | { name: 'connect'; broker: BrokerId; reconn
  * the analysis sections drop out. Connecting and suggestions each open their
  * own view rather than unfolding a form in the middle of the screen.
  */
-export function InvestDashboard({ savedAdvice }: { savedAdvice: SavedPortfolioAdvice | null }) {
+// What /auth/zerodha/callback reports back through ?zerodha=.
+const ZERODHA_NOTICE: Record<string, string> = {
+  connected: 'Zerodha connected. Holdings are loading below.',
+  cancelled: 'Zerodha login was cancelled.',
+  rejected: 'Zerodha didn’t accept that login. Try connecting again.',
+  'not-configured': 'Zerodha can’t be connected on this server yet.',
+  failed: 'Zerodha could not be connected. Try again.',
+};
+
+export function InvestDashboard({ savedAdvice, notice, clearNotice }: { savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [view, setView] = useState<InvestView>({ name: 'main' });
@@ -99,6 +108,13 @@ export function InvestDashboard({ savedAdvice }: { savedAdvice: SavedPortfolioAd
           label={analysis.positions.length === 1 ? 'in 1 holding' : `across ${analysis.positions.length} holdings`}
           delta={gain}
         />
+      )}
+
+      {notice && (
+        <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
+          <span>{ZERODHA_NOTICE[notice] ?? ZERODHA_NOTICE.failed}</span>
+          <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
+        </div>
       )}
 
       <FocusSurface focus={focus} />

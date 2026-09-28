@@ -1,0 +1,11 @@
+<!--
+  A neutral monogram, not Zerodha's trademark.
+
+  Orbis ships one real brand file (groww.png, supplied by the user). Rather than
+  reproduce a logo it has no licence to, a redirect broker gets a plain tile
+  with its initial. Drop a licensed zerodha.svg here to replace it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Zerodha">
+  <rect width="24" height="24" rx="6" fill="#387ed1"/>
+  <path d="M8 8h8l-8 8h8" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

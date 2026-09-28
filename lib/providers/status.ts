@@ -153,9 +153,9 @@ export async function getIntegrationStatus(userId: string, email: string | null)
   integrations.push({
     id: 'gmail',
     label: 'Gmail',
-    purpose: 'Bank and card alerts · read-only',
+    purpose: 'Important mail on Home · read-only',
     state: !gmail ? 'not_configured' : gmail.status === 'connected' ? 'connected' : 'attention',
-    detail: !gmail ? 'Connect in Finance' : gmail.status === 'connected' ? null : 'Reconnect in Finance',
+    detail: !gmail ? 'Connect in Profile → Settings' : gmail.status === 'connected' ? null : 'Reconnect in Profile → Settings',
     lastSyncAt: gmail?.last_sync_at ?? null,
     usage: null,
   });

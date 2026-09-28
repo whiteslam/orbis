@@ -12,10 +12,6 @@ const NOW = new Date('2026-09-24T14:30:00Z'); // 8pm IST on the 24th
 const finance = (overrides: Partial<FinanceSummary> = {}): FinanceSummary => ({
   databaseReady: true,
   loadError: false,
-  connection: { email: 'you@example.com', status: 'connected', lastSyncAt: '2026-09-24T09:00:00Z' },
-  pendingCandidateCount: 0,
-  unparsedCandidateCount: 0,
-  reviewCandidates: [],
   transactions: [],
   monthlyExpenses: [],
   month: null,
@@ -56,18 +52,6 @@ test('finance leads with the month once there is spending to report', () => {
   assert.match(focus.body, /a day/);
   assert.match(focus.body, /Food is the largest share at 38%/);
   assert.match(focus.body, /24 days in/);
-});
-
-test('finance puts alerts and a broken connection ahead of the month', () => {
-  const alerts = composeFinanceFocus({ summary: finance({ month: month(), pendingCandidateCount: 2, unparsedCandidateCount: 1 }), now: NOW });
-  assert.equal(alerts.id, 'review-alerts');
-  assert.match(alerts.body, /1 alert could not be parsed/);
-
-  const broken = composeFinanceFocus({
-    summary: finance({ month: month(), pendingCandidateCount: 2, connection: { email: 'you@example.com', status: 'reconnect_required', lastSyncAt: null } }),
-    now: NOW,
-  });
-  assert.equal(broken.id, 'gmail-reconnect');
 });
 
 test('finance rows report a daily average only when there is a month to divide', () => {
