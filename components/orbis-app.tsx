@@ -38,6 +38,9 @@ import { loadBriefPortfolioAction } from '@/app/invest/actions';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import { composeQuietRows } from '@/lib/focus/home';
+import { composeSocialRow } from '@/lib/focus/social';
+import { indiaToday } from '@/lib/social/month';
+import type { SocialPost } from '@/lib/social/types';
 import { composeNote, type HomeNote } from '@/lib/home/note';
 import { trainingForToday } from '@/lib/home/training';
 import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
@@ -77,7 +80,7 @@ const nav = [
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, savedAdviceAt, preferredName, aiBriefEnabled, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
+function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, savedAdviceAt, preferredName, aiBriefEnabled, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; savedAdviceAt: string | null; preferredName: string | null; aiBriefEnabled: boolean; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
   const router = useRouter();
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [written, setWritten] = useState<string | null>(null);
@@ -127,7 +130,9 @@ function HomeScreen({ financeSummary, stepsSummary, documentCount, plan, routine
       .then((result) => { if (live && result.state === 'ok') setWritten(result.caption); });
     return () => { live = false; };
   }, [aiBriefEnabled, dataKey, weather]);
-  const quiet = composeQuietRows(input);
+  // The social row only appears for someone using the planner this month.
+  const socialRow = composeSocialRow(socialPosts, indiaToday());
+  const quiet = socialRow ? [...composeQuietRows(input), socialRow] : composeQuietRows(input);
   const heading = quiet.every((row) => row.empty) ? 'Quiet today' : 'Everything else';
 
   return (
@@ -551,6 +556,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         documentCount={healthLibrary.documents.length}
         plan={healthLibrary.plans[0] ?? null}
         routines={routines}
+        socialPosts={socialMonth.posts}
         savedAdviceAt={savedWorkbookAdvice?.createdAt ?? null}
         preferredName={personalProfile.profile?.preferredName ?? null}
         aiBriefEnabled={aiPreferences.homeBriefEnabled}
