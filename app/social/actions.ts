@@ -19,7 +19,11 @@ import {
   updatePost,
 } from '@/lib/social/repository';
 import { PERIOD_PATTERN } from '@/lib/social/month';
-import { cleanPostInput, cleanPublish } from '@/lib/social/validate';
+import { cleanPlatforms, cleanPostInput, cleanPublish, isFormat } from '@/lib/social/validate';
+import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, parseAiDraft, type DraftTone } from '@/lib/social/ai-draft';
+import { routeJson } from '@/lib/ai/router';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
 async function authed() {
@@ -264,6 +268,91 @@ export async function removeMediaAction(postId: string): Promise<Result> {
   } catch (error) {
     return failure(error, 'That file could not be removed.');
   }
+}
+
+const DAILY_DRAFT_LIMIT = 10;
+// A second Generate within this many seconds is a double click, not a new request.
+const DRAFT_GAP_SECONDS = 20;
+
+/**
+ * Drafts posts for a month with AI, through the router.
+ *
+ * Only what the user typed into the brief is sent, unless they ticked "Use my
+ * profile" — then the request is 'personal', which the router only lets reach
+ * a provider that does not train on it. Results are only ever added as new
+ * drafts: the AI never overwrites words the user wrote.
+ */
+export async function draftMonthWithAiAction(input: {
+  period: string;
+  brief: string;
+  count: number;
+  formats: string[];
+  platforms: string[];
+  tone: string;
+  useProfile: boolean;
+}): Promise<Result> {
+  const userId = await authed();
+  if (!userId) return SIGN_IN;
+  if (!input || typeof input !== 'object') return { success: false, message: 'Say what the month is about.' };
+  if (typeof input.period !== 'string' || !PERIOD_PATTERN.test(input.period)) return { success: false, message: 'That month is invalid.' };
+  const brief = typeof input.brief === 'string' ? input.brief.trim() : '';
+  if (!brief) return { success: false, message: 'Say what the month is about.' };
+  if (brief.length > MAX_BRIEF_LENGTH) return { success: false, message: `Keep the brief under ${MAX_BRIEF_LENGTH.toLocaleString('en-IN')} characters.` };
+  if (!Number.isInteger(input.count) || input.count < 1 || input.count > MAX_DRAFT_COUNT) return { success: false, message: `Choose between 1 and ${MAX_DRAFT_COUNT} posts.` };
+  const formats = Array.isArray(input.formats) ? Array.from(new Set(input.formats.filter(isFormat))) : [];
+  if (!formats.length) return { success: false, message: 'Choose at least one format.' };
+  const platforms = cleanPlatforms(input.platforms);
+  if (!DRAFT_TONES.includes(input.tone as DraftTone)) return { success: false, message: 'Choose a tone.' };
+  const tone = input.tone as DraftTone;
+  const useProfile = input.useProfile === true;
+
+  let profile: { preferredName: string; role: string; aboutMe: string } | null = null;
+  if (useProfile) {
+    const summary = await getPersonalProfile(userId);
+    if (!summary.profile) return { success: false, message: 'Your profile is empty. Fill in Profile → About you, or untick "Use my profile".' };
+    profile = summary.profile;
+  }
+
+  try {
+    const { data: verdict, error } = await createAdminClient().rpc('consume_social_ai_request', {
+      p_user_id: userId,
+      p_daily_limit: DAILY_DRAFT_LIMIT,
+      p_gap_seconds: DRAFT_GAP_SECONDS,
+    });
+    if (error) return { success: false, message: 'AI drafts are not set up yet. Apply the social planner migration in Supabase.' };
+    if (verdict === 'busy') return { success: false, message: 'Already drafting. Give it a moment.' };
+    if (verdict !== 'ok') return { success: false, message: `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.` };
+  } catch {
+    return { success: false, message: 'AI drafts are not available right now. Try again later.' };
+  }
+
+  const prompt = buildDraftPrompt({ period: input.period, brief, count: input.count, formats, platforms, tone, profile });
+  const result = await routeJson({
+    userId,
+    feature: 'social_drafts',
+    sensitivity: useProfile ? 'personal' : 'general',
+    system: prompt.system,
+    user: prompt.user,
+    maxTokens: 3000,
+    temperature: 0.7,
+    timeoutMs: 30_000,
+  });
+  if (!result) return { success: false, message: 'No AI model is available right now. Try again later or write the posts yourself.' };
+
+  const drafts = parseAiDraft(result.text, { period: input.period, count: input.count, formats });
+  if (!drafts.length) return { success: false, message: 'The AI reply could not be used. Try again, or change the brief.' };
+
+  const posts: SocialPost[] = [];
+  for (const draft of drafts) {
+    try {
+      posts.push(await insertPost(userId, { ...draft, platforms, status: 'draft', source: 'ai' }, 'ai_draft'));
+    } catch {
+      // One bad draft should not cost the others.
+    }
+  }
+  if (!posts.length) return { success: false, message: 'The drafts could not be saved. Try again.' };
+  revalidatePath('/');
+  return { success: true, message: `${posts.length} ${posts.length === 1 ? 'draft' : 'drafts'} added. Edit them before marking ready.`, posts };
 }
 
 export async function loadPostHistoryAction(id: string): Promise<{ success: boolean; message: string; history?: SocialRevision[] }> {
