@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { CredentialCryptoError, decryptCredential, encryptCredential } from '@/lib/crypto/credentials';
+import { UserFacingError } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type StoredZerodhaSession = {
@@ -70,7 +71,7 @@ export async function saveZerodhaSession(userId: string, input: { accessToken: s
     status: 'connected',
     last_sync_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
-  if (error) throw new Error(isMissingTable(error.code) ? 'Apply the Zerodha connections migration in Supabase, then try again.' : 'Your Zerodha session could not be saved.');
+  if (error) throw isMissingTable(error.code) ? new Error('zerodha_connections is missing: apply the Zerodha connections migration.') : new UserFacingError('Your Zerodha session could not be saved.');
 }
 
 export async function markZerodhaReconnect(userId: string) {
@@ -83,5 +84,5 @@ export async function markZerodhaReconnect(userId: string) {
 
 export async function deleteZerodhaConnection(userId: string) {
   const { error } = await createAdminClient().from('zerodha_connections').delete().eq('user_id', userId);
-  if (error) throw new Error('Zerodha could not be disconnected. Try again.');
+  if (error) throw new UserFacingError('Zerodha could not be disconnected. Try again.');
 }

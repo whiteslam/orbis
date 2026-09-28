@@ -2,10 +2,11 @@
 
 import { useState, useTransition, type FormEvent } from 'react';
 import { requestPasswordReset, updatePassword, type AuthActionState } from '@/app/auth/actions';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 
 const initialState: AuthActionState = { error: null, message: null };
 
-export function PasswordResetForm({ mode }: { mode: 'request' | 'reset' }) {
+export function PasswordResetForm({ mode, needsCurrentPassword = false }: { mode: 'request' | 'reset'; needsCurrentPassword?: boolean }) {
   const [state, setState] = useState(initialState);
   const [isPending, startTransition] = useTransition();
   const isReset = mode === 'reset';
@@ -28,10 +29,14 @@ export function PasswordResetForm({ mode }: { mode: 'request' | 'reset' }) {
         <label htmlFor="recovery-email">Email</label>
         <input id="recovery-email" name="email" type="email" autoComplete="email" required maxLength={254} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
       </> : <>
+        {needsCurrentPassword && <>
+          <label htmlFor="current-password">Current password</label>
+          <input id="current-password" name="currentPassword" type="password" autoComplete="current-password" required aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
+        </>}
         <label htmlFor="new-password">New password</label>
-        <input id="new-password" name="password" type="password" autoComplete="new-password" required minLength={8} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
+        <input id="new-password" name="password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
         <label htmlFor="confirm-new-password">Confirm new password</label>
-        <input id="confirm-new-password" name="confirmPassword" type="password" autoComplete="new-password" required minLength={8} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
+        <input id="confirm-new-password" name="confirmPassword" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'recovery-feedback' : undefined} />
       </>}
 
       {state.error && <p id="recovery-feedback" className="auth-feedback error" role="alert">{state.error}</p>}

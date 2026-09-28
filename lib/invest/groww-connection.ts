@@ -2,6 +2,7 @@ import 'server-only';
 
 import { CredentialCryptoError, decryptCredential, encryptCredential } from '@/lib/crypto/credentials';
 import type { GrowwCredentials } from '@/lib/invest/groww';
+import { UserFacingError } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type StoredGrowwConnection = {
@@ -53,7 +54,7 @@ export async function saveGrowwConnection(userId: string, credentials: GrowwCred
     status: 'connected',
     last_sync_at: new Date().toISOString(),
   });
-  if (error) throw new Error(isMissingTable(error.code) ? 'Apply the Groww connections migration in Supabase, then try again.' : 'Your Groww connection could not be saved.');
+  if (error) throw isMissingTable(error.code) ? new Error('groww_connections is missing: apply the Groww connections migration.') : new UserFacingError('Your Groww connection could not be saved.');
 }
 
 export async function recordGrowwSync(userId: string, outcome: 'ok' | 'auth_failed') {
@@ -70,5 +71,5 @@ export async function recordGrowwSync(userId: string, outcome: 'ok' | 'auth_fail
 export async function deleteGrowwConnection(userId: string) {
   const admin = createAdminClient();
   const { error } = await admin.from('groww_connections').delete().eq('user_id', userId);
-  if (error) throw new Error('Groww could not be disconnected. Try again.');
+  if (error) throw new UserFacingError('Groww could not be disconnected. Try again.');
 }

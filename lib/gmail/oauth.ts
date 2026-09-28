@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { signState, verifyState } from '@/lib/security/oauth-state';
 import { createClient } from '@/lib/supabase/server';
 import { isAppUnlocked } from '@/lib/security/app-lock';
 import { encryptRefreshToken } from '@/lib/gmail/crypto';
@@ -39,38 +39,14 @@ export async function getAuthenticatedUserId() {
   return userId;
 }
 
-function signState(state: string, userId: string) {
-  const { clientSecret } = getGmailConfig();
-  return createHmac('sha256', clientSecret).update(`${state}.${userId}`).digest('base64url');
-}
-
+// State signing lives in lib/security/oauth-state.ts, shared with Zerodha.
 export function createSignedGmailState(userId: string) {
-  const state = randomBytes(32).toString('base64url');
-  return { state, cookieValue: `${state}.${userId}.${signState(state, userId)}` };
+  return signState(userId, 'gmail');
 }
 
-export function verifySignedGmailState(cookieValue: string | undefined, returnedState: string | null) {
-  if (!cookieValue || !returnedState) return null;
-  const parts = cookieValue.split('.');
-  if (parts.length !== 3) return null;
-
-  const [state, userId, signature] = parts;
-  if (!state || state !== returnedState || !userId || !signature) return null;
-
-  let expected: string;
-  try {
-    expected = signState(state, userId);
-  } catch {
-    return null;
-  }
-
-  const providedBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-  if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) {
-    return null;
-  }
-
-  return userId;
+/** True when the callback's state is the one issued to `userId` by /auth/gmail/start. */
+export function verifySignedGmailState(cookieValue: string | undefined, returnedState: string | null, userId: string) {
+  return verifyState(cookieValue, returnedState, userId, 'gmail');
 }
 
 export const googleReturnCookieName = 'orbis_google_return';

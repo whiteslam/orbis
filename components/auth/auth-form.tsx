@@ -9,6 +9,7 @@ import { confirmUnlockAction } from '@/app/security/actions';
 import { createClient } from '@/lib/supabase/client';
 import { passkeyErrorMessage, supportsPasskeys } from '@/components/security/passkey-errors';
 import { safeAction } from '@/lib/client/safe-action';
+import { MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 
 const initialState: AuthActionState = { error: null, message: null };
 
@@ -105,11 +106,11 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
         <input id="auth-email" name="email" type="email" autoComplete={isSignup ? 'email' : 'username webauthn'} required maxLength={254} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'auth-feedback' : undefined} />
 
         <label htmlFor="auth-password">Password</label>
-        <input id="auth-password" name="password" type="password" autoComplete={isSignup ? 'new-password' : 'current-password'} required minLength={8} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'auth-feedback' : undefined} />
+        <input id="auth-password" name="password" type="password" autoComplete={isSignup ? 'new-password' : 'current-password'} required minLength={isSignup ? MIN_PASSWORD_LENGTH : 8} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'auth-feedback' : undefined} />
 
         {isSignup && <>
           <label htmlFor="auth-confirm-password">Confirm password</label>
-          <input id="auth-confirm-password" name="confirmPassword" type="password" autoComplete="new-password" required minLength={8} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'auth-feedback' : undefined} />
+          <input id="auth-confirm-password" name="confirmPassword" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} aria-invalid={Boolean(state.error)} aria-describedby={state.error || state.message ? 'auth-feedback' : undefined} />
         </>}
 
         {state.error && <p id="auth-feedback" className="auth-feedback error" role="alert">{state.error}</p>}

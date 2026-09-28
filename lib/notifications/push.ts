@@ -2,12 +2,18 @@ import 'server-only';
 
 import webpush from 'web-push';
 import type { createAdminClient } from '@/lib/supabase/admin';
+import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
 export type PushPayload = { title: string; body: string; tag: string; url: string };
 
 let configured = false;
+
+// A push service that hangs must not hold the scheduler; a user with many
+// devices must not open dozens of sockets at once.
+const PUSH_TIMEOUT_MS = 5_000;
+const PUSH_CONCURRENCY = 4;
 
 // VAPID keys identify Orbis to the browser push services. The subject is a contact URL or mailto: address.
 export function pushConfigured() {
@@ -36,12 +42,18 @@ export async function pushToUser(admin: Admin, userId: string, payload: PushPayl
 
   let sent = 0;
   let failed = 0;
-  await Promise.all((devices ?? []).map(async (device) => {
+  const send = async (device: { endpoint: string; p256dh: string; auth: string }) => {
+    // Rows written before the endpoint CHECK existed are never contacted if they
+    // point anywhere but a real push service.
+    if (!isAllowedPushEndpoint(device.endpoint)) {
+      failed += 1;
+      return;
+    }
     try {
       await webpush.sendNotification(
         { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } },
         JSON.stringify(payload),
-        { TTL: 60 * 60, urgency: 'normal', topic: payload.tag.slice(0, 32) },
+        { TTL: 60 * 60, urgency: 'normal', topic: payload.tag.slice(0, 32), timeout: PUSH_TIMEOUT_MS },
       );
       sent += 1;
     } catch (pushError) {
@@ -51,6 +63,20 @@ export async function pushToUser(admin: Admin, userId: string, payload: PushPayl
         await admin.from('push_subscriptions').delete().eq('user_id', userId).eq('endpoint', device.endpoint);
       }
     }
-  }));
+  };
+  await inBatches(devices ?? [], PUSH_CONCURRENCY, send);
   return { sent, failed, devices: devices?.length ?? 0, error: null as string | null };
+}
+
+/** Runs `task` over `items` with at most `limit` in flight at once. */
+async function inBatches<T>(items: T[], limit: number, task: (item: T) => Promise<void>) {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await task(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }

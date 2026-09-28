@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+import { UserFacingError } from '@/lib/errors';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -31,7 +32,7 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
       declaredExpandedBytes += entry.uncompressedSize;
       if (entryCount > MAX_ARCHIVE_ENTRIES || declaredExpandedBytes > MAX_ARCHIVE_EXPANDED_BYTES) {
         archive.close();
-        throw new Error('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
+        throw new UserFacingError('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
       }
 
       const stream = await archive.openReadStreamPromise(entry);
@@ -40,14 +41,14 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
         if (streamedExpandedBytes > MAX_ARCHIVE_EXPANDED_BYTES) {
           stream.destroy();
           archive.close();
-          throw new Error('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
+          throw new UserFacingError('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
         }
       }
     }
   } catch (error) {
     archive.close();
     if (error instanceof Error && error.message.includes('safe processing limit')) throw error;
-    throw new Error('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
+    throw new UserFacingError('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
   }
 }
 
@@ -94,7 +95,7 @@ type PdfTextSegment = { x: number; text: string };
 
 async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
   if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
-    throw new Error('This file does not look like a valid PDF. Choose an Excel workbook or text-based PDF.');
+    throw new UserFacingError('This file does not look like a valid PDF. Choose an Excel workbook or text-based PDF.');
   }
 
   const loadingTask = getDocument({
@@ -107,7 +108,7 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
   try {
     const document = await loadingTask.promise;
     if (document.numPages > MAX_PDF_PAGES) {
-      throw new Error(`This PDF has more than ${MAX_PDF_PAGES} pages. Split it into smaller files and try again.`);
+      throw new UserFacingError(`This PDF has more than ${MAX_PDF_PAGES} pages. Split it into smaller files and try again.`);
     }
 
     const lines: Array<{ pageNumber: number; lineNumber: number; text: string }> = [];
@@ -124,7 +125,7 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
         textItemCount += 1;
         textCharacterCount += item.str.length;
         if (textItemCount > MAX_PDF_TEXT_ITEMS || textCharacterCount > MAX_PDF_TEXT_CHARS) {
-          throw new Error('This PDF contains too much text to preview safely. Choose a shorter or simpler document.');
+          throw new UserFacingError('This PDF contains too much text to preview safely. Choose a shorter or simpler document.');
         }
 
         const y = Math.round(item.transform[5] * 2) / 2;
@@ -145,7 +146,7 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
 
       for (const text of pageLines) {
         if (lines.length >= MAX_ROWS) {
-          throw new Error(`This PDF has more than ${MAX_ROWS} text lines. Choose a shorter document and try again.`);
+          throw new UserFacingError(`This PDF has more than ${MAX_ROWS} text lines. Choose a shorter document and try again.`);
         }
         lines.push({ pageNumber, lineNumber: lines.length + 1, text });
       }
@@ -153,7 +154,7 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
     }
 
     if (!lines.length) {
-      throw new Error('Orbis could not find selectable text in this PDF. Scanned image-only PDFs are not supported yet; choose a text-based PDF or Excel workbook.');
+      throw new UserFacingError('Orbis could not find selectable text in this PDF. Scanned image-only PDFs are not supported yet; choose a text-based PDF or Excel workbook.');
     }
 
     const meaningfulLines = lines.filter((line) => line.text.length >= 8);
@@ -182,12 +183,12 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
     };
     const preview: ParsedWorkbookPreview = { fileName: safeFileName(file.name), sheets: [sheet], observations };
     if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
-      throw new Error('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
+      throw new UserFacingError('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
     }
     return { preview, textLines: lines.map((line) => `Page ${line.pageNumber}: ${line.text}`) };
   } catch (error) {
     if (error instanceof Error && /^(This PDF|Orbis could not find selectable text)/.test(error.message)) throw error;
-    throw new Error('Orbis could not read this file. Check that it is a valid, unprotected PDF.');
+    throw new UserFacingError('Orbis could not read this file. Check that it is a valid, unprotected PDF.');
   } finally {
     await loadingTask.destroy().catch(() => undefined);
   }
@@ -201,13 +202,13 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
 
 // Preview plus the full text as lines, for saving and search (RAG).
 export async function parseDocument(file: File): Promise<ParsedDocument> {
-  if (!(file instanceof File)) throw new Error('Choose an Excel workbook or PDF file.');
+  if (!(file instanceof File)) throw new UserFacingError('Choose an Excel workbook or PDF file.');
   const extension = file.name.toLowerCase().split('.').pop();
   if (extension !== 'xlsx' && extension !== 'pdf') {
-    throw new Error('Use an .xlsx workbook or .pdf file. CSV and older .xls files are not supported.');
+    throw new UserFacingError('Use an .xlsx workbook or .pdf file. CSV and older .xls files are not supported.');
   }
-  if (!file.size) throw new Error('This file is empty. Choose a workbook or PDF with data.');
-  if (file.size > MAX_FILE_BYTES) throw new Error('This file is larger than 100 MB. Choose a smaller file and try again.');
+  if (!file.size) throw new UserFacingError('This file is empty. Choose a workbook or PDF with data.');
+  if (file.size > MAX_FILE_BYTES) throw new UserFacingError('This file is larger than 100 MB. Choose a smaller file and try again.');
 
   const bytes = Buffer.from(await file.arrayBuffer());
   if (extension === 'pdf') return parsePdf(file, bytes);
@@ -217,11 +218,11 @@ export async function parseDocument(file: File): Promise<ParsedDocument> {
     await checkXlsxArchiveSize(bytes);
     await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   } catch (error) {
-    throw new Error('Orbis could not read this file. Check that it is a valid, unprotected .xlsx workbook.');
+    throw new UserFacingError('Orbis could not read this file. Check that it is a valid, unprotected .xlsx workbook.');
   }
 
-  if (workbook.worksheets.length === 0) throw new Error('No worksheets with data were found in this file.');
-  if (workbook.worksheets.length > MAX_SHEETS) throw new Error(`This workbook has more than ${MAX_SHEETS} worksheets. Remove extra sheets and try again.`);
+  if (workbook.worksheets.length === 0) throw new UserFacingError('No worksheets with data were found in this file.');
+  if (workbook.worksheets.length > MAX_SHEETS) throw new UserFacingError(`This workbook has more than ${MAX_SHEETS} worksheets. Remove extra sheets and try again.`);
 
   let totalRows = 0;
   let totalCells = 0;
@@ -235,12 +236,12 @@ export async function parseDocument(file: File): Promise<ParsedDocument> {
     const rows: Array<{ rowNumber: number; values: string[] }> = [];
     worksheet.eachRow({ includeEmpty: false }, (row) => {
       totalRows += 1;
-      if (totalRows > MAX_ROWS + MAX_SHEETS) throw new Error(`This workbook has more than ${MAX_ROWS} non-empty rows. Remove extra rows and try again.`);
+      if (totalRows > MAX_ROWS + MAX_SHEETS) throw new UserFacingError(`This workbook has more than ${MAX_ROWS} non-empty rows. Remove extra rows and try again.`);
       maxColumn = Math.max(maxColumn, row.cellCount);
-      if (maxColumn > MAX_COLUMNS) throw new Error(`A worksheet has more than ${MAX_COLUMNS} columns. Remove extra columns and try again.`);
+      if (maxColumn > MAX_COLUMNS) throw new UserFacingError(`A worksheet has more than ${MAX_COLUMNS} columns. Remove extra columns and try again.`);
       const values = Array.from({ length: maxColumn }, (_, index) => safeCellValue(row.getCell(index + 1).value));
       totalCells += values.filter(Boolean).length;
-      if (totalCells > MAX_CELLS) throw new Error(`This workbook has more than ${MAX_CELLS} filled cells. Use a smaller workbook and try again.`);
+      if (totalCells > MAX_CELLS) throw new UserFacingError(`This workbook has more than ${MAX_CELLS} filled cells. Use a smaller workbook and try again.`);
       if (values.some(Boolean)) rows.push({ rowNumber: row.number, values });
     });
 
@@ -286,11 +287,11 @@ export async function parseDocument(file: File): Promise<ParsedDocument> {
     });
   }
 
-  if (!sheets.length) throw new Error('No usable rows were found. Add a header row and at least one data row, then try again.');
+  if (!sheets.length) throw new UserFacingError('No usable rows were found. Add a header row and at least one data row, then try again.');
 
   const preview: ParsedWorkbookPreview = { fileName: safeFileName(file.name), sheets, observations };
   if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
-    throw new Error('This workbook is too complex to preview safely. Reduce its worksheets, columns, or cell text and try again.');
+    throw new UserFacingError('This workbook is too complex to preview safely. Reduce its worksheets, columns, or cell text and try again.');
   }
   return { preview, textLines };
 }

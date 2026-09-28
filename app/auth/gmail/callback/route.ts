@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
 
   const stateCookie = request.cookies.get(gmailStateCookieName)?.value;
   const returnedState = request.nextUrl.searchParams.get('state');
-  const stateUserId = verifySignedGmailState(stateCookie, returnedState);
   let currentUserId: string | null;
   try {
     currentUserId = await getAuthenticatedUserId();
@@ -36,7 +35,7 @@ export async function GET(request: NextRequest) {
     return redirect('error');
   }
 
-  if (!stateUserId || !currentUserId || stateUserId !== currentUserId) {
+  if (!currentUserId || !verifySignedGmailState(stateCookie, returnedState, currentUserId)) {
     return redirect('error');
   }
 

@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { userMessage } from '@/lib/errors';
 import { EmbeddingError } from '@/lib/health-docs/embeddings';
 import { buildPlanContext, generateHealthPlan, generatePlanQuestions, MIN_QUESTIONS } from '@/lib/health-docs/planner';
 import { deleteHealthDocument, signedDownloadUrl, storeHealthDocument } from '@/lib/health-docs/repository';
@@ -64,7 +65,7 @@ export async function uploadHealthDocumentAction(formData: FormData): Promise<Re
   try {
     parsed = await parseDocument(file);
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'This file could not be read.' };
+    return { success: false, message: userMessage(error, 'This file could not be read.') };
   }
 
   try {
@@ -79,7 +80,8 @@ export async function uploadHealthDocumentAction(formData: FormData): Promise<Re
         : `Indexed ${saved.chunkCount} sections of ${parsed.preview.fileName}. The original was over 50 MB, so only its text was kept.`,
     };
   } catch (error) {
-    return { success: false, message: error instanceof EmbeddingError || error instanceof Error ? error.message : 'The document could not be saved.' };
+    // EmbeddingError messages are written for the user; anything else is logged.
+    return { success: false, message: error instanceof EmbeddingError ? error.message : userMessage(error, 'The document could not be saved.') };
   }
 }
 
@@ -90,7 +92,7 @@ export async function deleteHealthDocumentAction(id: string): Promise<Result<nul
   try {
     await deleteHealthDocument(auth.userId, id);
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'The document could not be deleted.' };
+    return { success: false, message: userMessage(error, 'The document could not be deleted.') };
   }
   revalidatePath('/');
   return { success: true, data: null, message: 'Document and its search index deleted.' };
@@ -103,7 +105,7 @@ export async function downloadHealthDocumentAction(id: string): Promise<Result<s
   try {
     return { success: true, data: await signedDownloadUrl(auth.userId, id) };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'The file could not be downloaded.' };
+    return { success: false, message: userMessage(error, 'The file could not be downloaded.') };
   }
 }
 

@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
 import { stepContext } from '@/lib/health/steps-stats';
 import { parseWorkbook } from '@/lib/workbook/parse';
+import { userMessage } from '@/lib/errors';
 import type { ParsedWorkbookPreview, WorkbookActionResult, WorkbookAdvice, WorkbookPreview } from '@/lib/workbook/types';
 
 const MAX_PREVIEW_BYTES = 24 * 1024;
@@ -139,7 +140,7 @@ export async function parseWorkbookAction(formData: FormData): Promise<WorkbookA
     const parsed = await parseWorkbook(file);
     return { success: true, data: withSignature(userId, parsed) };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'This workbook could not be read.' };
+    return { success: false, message: userMessage(error, 'This workbook could not be read.') };
   }
 }
 

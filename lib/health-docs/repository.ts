@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { UserFacingError } from '@/lib/errors';
 import { embedTexts, toVectorLiteral } from '@/lib/health-docs/embeddings';
 import type { HealthDocument, HealthPlanRecord } from '@/lib/health-docs/types';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -65,7 +66,7 @@ export async function getHealthLibrary(userId: string): Promise<LibraryState> {
 export async function storeHealthDocument(userId: string, input: { file: File; fileName: string; kind: 'pdf' | 'xlsx'; preview: unknown; textLines: string[] }) {
   const admin = createAdminClient();
   const chunks = chunkLines(input.fileName, input.textLines);
-  if (!chunks.length) throw new Error('No readable text was found to save from this file.');
+  if (!chunks.length) throw new UserFacingError('No readable text was found to save from this file.');
   const vectors = await embedTexts(chunks);
 
   const { data: document, error } = await admin.from('health_documents').insert({
@@ -76,13 +77,13 @@ export async function storeHealthDocument(userId: string, input: { file: File; f
     preview: input.preview,
     chunk_count: chunks.length,
   }).select('id').single();
-  if (error || !document) throw new Error(isMissing(error?.code) ? 'Apply the health documents migration in Supabase first.' : 'The document could not be saved.');
+  if (error || !document) throw isMissing(error?.code) ? new Error('health_documents is missing: apply the health documents migration.') : new UserFacingError('The document could not be saved.');
 
   try {
     const rows = chunks.map((content, index) => ({ document_id: document.id, user_id: userId, chunk_index: index, content, embedding: toVectorLiteral(vectors[index]) }));
     for (let start = 0; start < rows.length; start += 100) {
       const { error: chunkError } = await admin.from('health_document_chunks').insert(rows.slice(start, start + 100));
-      if (chunkError) throw new Error('The document text could not be indexed.');
+      if (chunkError) throw new UserFacingError('The document text could not be indexed.');
     }
 
     let storedOriginal = false;
@@ -107,18 +108,18 @@ export async function storeHealthDocument(userId: string, input: { file: File; f
 export async function deleteHealthDocument(userId: string, documentId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin.from('health_documents').select('storage_path').eq('id', documentId).eq('user_id', userId).maybeSingle();
-  if (error || !data) throw new Error('This document was not found.');
+  if (error || !data) throw new UserFacingError('This document was not found.');
   if (data.storage_path) await admin.storage.from(HEALTH_BUCKET).remove([data.storage_path]);
   const { error: deleteError } = await admin.from('health_documents').delete().eq('id', documentId).eq('user_id', userId);
-  if (deleteError) throw new Error('The document could not be deleted.');
+  if (deleteError) throw new UserFacingError('The document could not be deleted.');
 }
 
 export async function signedDownloadUrl(userId: string, documentId: string) {
   const admin = createAdminClient();
   const { data } = await admin.from('health_documents').select('storage_path,file_name').eq('id', documentId).eq('user_id', userId).maybeSingle();
-  if (!data?.storage_path) throw new Error('The original file isn’t stored for this document.');
+  if (!data?.storage_path) throw new UserFacingError('The original file isn’t stored for this document.');
   const { data: signed, error } = await admin.storage.from(HEALTH_BUCKET).createSignedUrl(data.storage_path, 60, { download: data.file_name });
-  if (error || !signed) throw new Error('The download link could not be created.');
+  if (error || !signed) throw new UserFacingError('The download link could not be created.');
   return signed.signedUrl;
 }
 

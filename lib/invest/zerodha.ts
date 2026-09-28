@@ -29,9 +29,17 @@ export function envZerodhaCredentials(): ZerodhaCredentials | null {
   return apiKey && apiSecret ? { apiKey, apiSecret } : null;
 }
 
-/** Where the user is sent to authorise Orbis. Kite appends the request_token to the app's redirect URL. */
-export function zerodhaLoginUrl(apiKey: string) {
-  return `${LOGIN_URL}?v=3&api_key=${encodeURIComponent(apiKey)}`;
+/** The httpOnly cookie holding the signed OAuth state between /auth/zerodha/start and its callback. */
+export const zerodhaStateCookieName = 'orbis-zerodha-oauth-state';
+
+/**
+ * Where the user is sent to authorise Orbis. Kite appends the request_token to
+ * the app's redirect URL, plus whatever `redirect_params` carries (a URL-encoded
+ * query string), which is how the signed OAuth state comes back.
+ */
+export function zerodhaLoginUrl(apiKey: string, state?: string) {
+  const base = `${LOGIN_URL}?v=3&api_key=${encodeURIComponent(apiKey)}`;
+  return state ? `${base}&redirect_params=${encodeURIComponent(`state=${encodeURIComponent(state)}`)}` : base;
 }
 
 /**

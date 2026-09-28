@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
 import { localClock } from '@/lib/notifications/schedule';
+import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 
 const MAX_DEVICES = 10;
 
@@ -54,24 +55,30 @@ export async function subscribePushAction(input: { endpoint: string; p256dh: str
   if (!auth) return { success: false, message: 'Sign in again to enable notifications.' };
   if (!input || typeof input.endpoint !== 'string' || typeof input.p256dh !== 'string' || typeof input.auth !== 'string') return { success: false, message: 'This device could not be registered.' };
 
-  let endpoint: URL;
-  try {
-    endpoint = new URL(input.endpoint);
-  } catch {
-    return { success: false, message: 'This device could not be registered.' };
-  }
-  if (endpoint.protocol !== 'https:' || input.endpoint.length > 1000 || !/^[A-Za-z0-9_-]{20,200}$/.test(input.p256dh) || !/^[A-Za-z0-9_-]{8,100}$/.test(input.auth)) {
+  // https only, and only the real browser push services: the server later sends
+  // requests to this URL, so it must never point anywhere else.
+  if (input.endpoint.length > 1000 || !isAllowedPushEndpoint(input.endpoint) || !/^[A-Za-z0-9_-]{20,200}$/.test(input.p256dh) || !/^[A-Za-z0-9_-]{8,100}$/.test(input.auth)) {
     return { success: false, message: 'This device could not be registered.' };
   }
 
-  const { data: existing, error: countError } = await auth.supabase.from('push_subscriptions').select('endpoint').eq('user_id', auth.userId);
+  // Browsers can't insert or update subscriptions directly (202609280200_hardening.sql),
+  // so this action writes them with the service role, always scoped to this user.
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch (caught) {
+    console.error(caught);
+    return { success: false, message: 'This device could not be registered.' };
+  }
+
+  const { data: existing, error: countError } = await admin.from('push_subscriptions').select('endpoint').eq('user_id', auth.userId);
   if (countError) return { success: false, message: isMissing(countError.code) ? setupMessage : 'This device could not be registered.' };
   const known = (existing ?? []).some((row) => row.endpoint === input.endpoint);
   if (!known && (existing ?? []).length >= MAX_DEVICES) return { success: false, message: `You can enable notifications on up to ${MAX_DEVICES} devices. Turn one off first.` };
 
   // An endpoint belongs to exactly one browser; re-registering replaces its keys.
-  await auth.supabase.from('push_subscriptions').delete().eq('user_id', auth.userId).eq('endpoint', input.endpoint);
-  const { error } = await auth.supabase.from('push_subscriptions').insert({
+  await admin.from('push_subscriptions').delete().eq('user_id', auth.userId).eq('endpoint', input.endpoint);
+  const { error } = await admin.from('push_subscriptions').insert({
     user_id: auth.userId,
     endpoint: input.endpoint,
     p256dh: input.p256dh,

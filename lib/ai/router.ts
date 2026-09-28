@@ -56,6 +56,26 @@ const MAX_TOTAL_MS = 50_000;
 const MIN_ATTEMPT_MS = 1_500;
 
 /**
+ * The registry says which secret to send and where to send it, so a bad row
+ * (a typo, or a write to the table) could post a real API key, or the user's
+ * data, to any server. Code decides which secrets and hosts are possible at all;
+ * the registry only chooses among them. These match the providers seeded in
+ * 202609240018_ai_registry.sql.
+ */
+const ALLOWED_KEY_ENVS = new Set(['GROQ_API_KEY', 'OPENROUTER_API_KEY', 'GEMINI_API_KEY', 'MISTRAL_API_KEY']);
+const ALLOWED_HOSTS = new Set(['api.groq.com', 'openrouter.ai', 'generativelanguage.googleapis.com', 'api.mistral.ai']);
+
+function providerAllowed(apiKeyEnv: unknown, baseUrl: unknown) {
+  if (typeof apiKeyEnv !== 'string' || !ALLOWED_KEY_ENVS.has(apiKeyEnv) || typeof baseUrl !== 'string') return false;
+  try {
+    const url = new URL(baseUrl);
+    return url.protocol === 'https:' && ALLOWED_HOSTS.has(url.host);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Bookkeeping runs after the response is sent, so a slow insert never adds to
  * what the user waits for. Outside a request (a script, a test) there is no
  * response to wait for, so it simply runs in the background.
@@ -87,6 +107,7 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
     .flatMap((model) => {
       const provider = byId.get(model.provider_id as string);
       if (!provider || model.supports_json === false) return [];
+      if (!providerAllowed(provider.api_key_env, provider.base_url)) return [];
       if (provider.cooldown_until && provider.cooldown_until > now) return [];
       if (model.cooldown_until && model.cooldown_until > now) return [];
       // A model may override its provider's training stance; the stricter of the two wins.

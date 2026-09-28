@@ -10,6 +10,7 @@ import { deleteGrowwConnection, saveGrowwConnection } from '@/lib/invest/groww-c
 import { deleteZerodhaConnection } from '@/lib/invest/zerodha-connection';
 import { credentialEncryptionReady } from '@/lib/crypto/credentials';
 import type { LivePortfolioData } from '@/lib/invest/types';
+import { UserFacingError, userMessage } from '@/lib/errors';
 
 async function authenticatedClient() {
   const supabase = await createClient();
@@ -44,7 +45,7 @@ async function verifyAndSave(broker: BrokerId, userId: string, credentials: Cred
     case 'zerodha':
       // Kite has no key-and-secret path: a session only comes from its own
       // login, which /auth/zerodha/start handles.
-      throw new Error('Zerodha is connected by logging in at Zerodha, not with a key and secret.');
+      throw new UserFacingError('Zerodha is connected by logging in at Zerodha, not with a key and secret.');
   }
 }
 
@@ -69,14 +70,17 @@ export async function connectBrokerAction(input: { broker: string; apiKey: strin
   const apiSecret = input.apiSecret.trim();
   if (apiKey.length < 20 || apiKey.length > 4000 || !/^[A-Za-z0-9._-]+$/.test(apiKey)) return { success: false, message: `That doesn’t look like a ${meta.name} ${meta.fields.key.toLowerCase()}. Copy the full key from the ${meta.keysLabel} page.` };
   if (apiSecret.length < 8 || apiSecret.length > 200 || /\s/.test(apiSecret)) return { success: false, message: `That doesn’t look like a ${meta.name} ${meta.fields.secret.toLowerCase()}. Copy it exactly as shown.` };
-  if (!credentialEncryptionReady()) return { success: false, message: 'Secure storage is not configured on the server. Set CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY) first.' };
+  if (!credentialEncryptionReady()) {
+    console.error('connectBrokerAction: CREDENTIAL_ENCRYPTION_KEY (or GMAIL_TOKEN_ENCRYPTION_KEY) is not set.');
+    return { success: false, message: 'Secure storage isn’t set up on the server yet, so this account can’t be saved. Try again later.' };
+  }
 
   try {
     await verifyAndSave(input.broker, auth.userId, { apiKey, apiSecret });
   } catch (error) {
     if (error instanceof GrowwAuthError) return { success: false, message: `${meta.name} didn’t accept this key and secret. Check both, and approve the key on the ${meta.keysLabel} page if it asks.` };
     if (error instanceof GrowwError) return { success: false, message: error.message };
-    return { success: false, message: error instanceof Error ? error.message : `${meta.name} could not be reached. Try again shortly.` };
+    return { success: false, message: userMessage(error, `${meta.name} could not be reached. Try again shortly.`) };
   }
   revalidatePath('/');
   return { success: true, message: `${meta.name} connected. Syncing your holdings…` };
@@ -90,7 +94,7 @@ export async function disconnectBrokerAction(broker: string) {
   try {
     await forget(broker, auth.userId);
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : `${meta.name} could not be disconnected.` };
+    return { success: false, message: userMessage(error, `${meta.name} could not be disconnected. Try again.`) };
   }
   revalidatePath('/');
   return { success: true, message: `${meta.name} disconnected. Your saved key and secret were deleted from Orbis.` };
