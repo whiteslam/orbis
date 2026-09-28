@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:public": "playwright test -c playwright.public.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

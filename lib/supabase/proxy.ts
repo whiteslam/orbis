@@ -1,8 +1,18 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+// Refreshes the Supabase session cookie. `forwardHeaders` are added to the request
+// headers that reach the rendering server (the CSP nonce travels this way). They are
+// merged into a fresh copy each time a response is built so a refreshed cookie header
+// is never lost.
+export async function updateSession(request: NextRequest, forwardHeaders: Record<string, string> = {}) {
+  const next = () => {
+    const headers = new Headers(request.headers);
+    Object.entries(forwardHeaders).forEach(([name, value]) => headers.set(name, value));
+    return NextResponse.next({ request: { headers } });
+  };
+
+  let response = next();
   const pendingCookies = new Map<string, { name: string; value: string; options?: CookieOptions }>();
 
   const supabase = createServerClient(
@@ -19,7 +29,7 @@ export async function updateSession(request: NextRequest) {
           });
           cookiesToSet.forEach((cookie) => pendingCookies.set(cookie.name, cookie));
 
-          response = NextResponse.next({ request });
+          response = next();
           pendingCookies.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
