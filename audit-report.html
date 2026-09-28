@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Audit &mdash; Orbis — personal intelligence system</title>
+<style>
+:root {
+  --bg:#faf9f7; --card:#ffffff; --ink:#1f1d1a; --muted:#6b6660;
+  --line:#e5e1db; --track:#e8e4de; --accent:#4a5568;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#171614; --card:#211f1d; --ink:#f0ede8; --muted:#9c968e;
+          --line:#332f2b; --track:#332f2b; --accent:#9aa5b1; }
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:32px 20px 80px; background:var(--bg); color:var(--ink);
+  font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; }
+h1 { font-size:26px; margin:0 0 4px; letter-spacing:-0.02em; }
+h2 { font-size:17px; margin:0 0 6px; }
+h3 { font-size:15px; margin:0 0 16px; text-transform:uppercase;
+  letter-spacing:0.07em; color:var(--muted); font-weight:600; }
+h4 { font-size:13px; margin:14px 0 6px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:0.05em; }
+.meta { color:var(--muted); font-size:13px; margin:0 0 26px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:22px; margin-bottom:18px; }
+.banner { display:flex; gap:22px; align-items:center; background:var(--card);
+  border:1px solid var(--line); border-left-width:5px; border-radius:12px;
+  padding:22px; margin-bottom:18px; }
+.banner-score { display:flex; flex-direction:column; align-items:center;
+  line-height:1; min-width:96px; }
+.banner-num { font-size:46px; font-weight:700; letter-spacing:-0.03em; }
+.banner-grade { font-size:15px; font-weight:600; margin-top:4px; }
+.banner-body p { margin:0; color:var(--muted); }
+.cap-note { margin-top:10px !important; font-size:13px;
+  border-left:3px solid #b3261e; padding-left:10px; }
+.gauges { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
+.gauge { text-align:center; }
+.gauge-num { font:700 28px ui-sans-serif,sans-serif; letter-spacing:-0.02em; }
+.gauge-grade { font:600 12px ui-sans-serif,sans-serif; fill:var(--muted); }
+.gauge-label { font-size:13px; color:var(--muted); margin-top:2px; }
+.sevbar { display:flex; height:10px; border-radius:5px; overflow:hidden;
+  background:var(--track); margin-bottom:12px; }
+.seg { min-width:4px; }
+.chips { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--muted); }
+.chip i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+.finding { border:1px solid var(--line); border-radius:9px; margin-bottom:9px;
+  background:var(--card); overflow:hidden; }
+.finding summary { cursor:pointer; padding:13px 15px; display:flex;
+  align-items:center; gap:11px; list-style:none; }
+.finding summary::-webkit-details-marker { display:none; }
+.finding summary:hover { background:rgba(127,127,127,0.05); }
+.badge { color:#fff; font-size:10px; font-weight:700; letter-spacing:0.06em;
+  padding:3px 7px; border-radius:4px; flex-shrink:0; }
+.ftitle { font-weight:600; flex:1; }
+.faxis { font-size:12px; color:var(--muted); flex-shrink:0; }
+.fbody { padding:0 15px 16px; border-top:1px solid var(--line); }
+.fbody p { margin:12px 0 0; }
+.loc { display:inline-block; margin-top:12px; font-size:12.5px; }
+code { background:rgba(127,127,127,0.12); padding:2px 6px; border-radius:4px;
+  font:13px ui-monospace,SFMono-Regular,Menlo,monospace; }
+pre { background:rgba(127,127,127,0.09); padding:13px; border-radius:8px;
+  overflow-x:auto; margin:0; }
+pre code { background:none; padding:0; font-size:12.5px; line-height:1.55; }
+.manual { margin-top:14px; padding:11px 13px; border-radius:8px;
+  background:rgba(179,38,30,0.09); border-left:3px solid #b3261e; font-size:14px; }
+.seorow { display:grid; grid-template-columns:150px 1fr 56px; gap:10px;
+  align-items:center; margin-bottom:9px; }
+.seolabel { font-size:13.5px; }
+.seotrack { height:8px; background:var(--track); border-radius:4px; overflow:hidden; }
+.seofill { height:100%; border-radius:4px; }
+.seoval { font-size:13px; color:var(--muted); text-align:right; }
+.seonote { grid-column:1/-1; font-size:12.5px; color:var(--muted); margin:-4px 0 6px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; font-size:12px; text-transform:uppercase;
+  letter-spacing:0.05em; color:var(--muted); padding:0 10px 9px 0;
+  border-bottom:1px solid var(--line); font-weight:600; }
+td { padding:10px 10px 10px 0; border-bottom:1px solid var(--line);
+  vertical-align:top; }
+tbody tr:last-child td { border-bottom:none; }
+.gain { color:#15803d; font-weight:600; }
+.scatterwrap { margin-bottom:20px; }
+.scatter { width:100%; max-width:400px; display:block; margin:0 auto; }
+.dotnum { font:600 3.4px ui-sans-serif,sans-serif; fill:#fff; text-anchor:middle; }
+.axlabel { font:3.6px ui-sans-serif,sans-serif; fill:var(--muted); text-anchor:middle; }
+.hint { text-align:center; font-size:12.5px; color:var(--muted); margin:6px 0 0; }
+ul.plain { margin:0; padding-left:20px; }
+ul.plain li { margin-bottom:7px; }
+.empty { color:var(--muted); font-style:italic; margin:0; }
+footer { text-align:center; color:var(--muted); font-size:12.5px; margin-top:34px; }
+@media (max-width:640px) {
+  .banner { flex-direction:column; text-align:center; }
+  .seorow { grid-template-columns:1fr; }
+  .seoval { text-align:left; }
+}
+</style>
+</head><body><div class="wrap">
+  <h1>Orbis — personal intelligence system &mdash; Audit Report</h1>
+  <p class="meta">2026-09-28 &amp;middot; Next.js 16.3 (App Router, Turbopack) · React 19 · TypeScript (strict) · Supabase (Postgres + RLS + Storage + Auth) · Vercel &amp;middot; Whole repository at main (cb1567a) plus another session&#x27;s uncommitted work in the tree; production reached only for public GETs (login, manifest, robots, well-known files). One production build measured. No Lighthouse, no e2e run, no access to the Supabase or Vercel dashboards.</p>
+
+  
+    <section class="banner" style="border-color:#b3261e">
+      <div class="banner-score" style="color:#b3261e">
+        <span class="banner-num">52</span>
+        <span class="banner-grade">F</span>
+      </div>
+      <div class="banner-body">
+        <h2>Overall health</h2>
+        <p>Orbis is carefully built underneath: row-level security on every table, encrypted connection tokens, a privacy-aware AI router, strict TypeScript and friendly error handling. What stands between it and a product strangers pay for is mostly around it, not in it. Right now anyone can sign up on the live site, there is no privacy policy or account deletion (both app stores require them), Gmail and the broker connections need approvals or commercial terms before strangers can use them, and the app renders its whole home page two or three times on every open. The quickest wins (closing sign-up, security headers, stopping the double renders, code-splitting the tabs) are a day or two; store launch and billing are weeks.</p>
+        
+      </div>
+    </section>
+
+  <section class="card"><h3>Scores by axis</h3><div class="gauges">
+    <div class="gauge">
+      <svg viewBox="0 0 150 150" width="150" height="150" role="img"
+           aria-label="Security score 42 out of 100">
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="var(--track)" stroke-width="11"/>
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="#b3261e" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="383.27"
+                stroke-dashoffset="222.30" transform="rotate(-90 75.0 75.0)"/>
+        <text x="75.0" y="71.0" text-anchor="middle" class="gauge-num" fill="#b3261e">42</text>
+        <text x="75.0" y="92.0" text-anchor="middle" class="gauge-grade">F</text>
+      </svg>
+      <div class="gauge-label">Security</div>
+    </div>
+    <div class="gauge">
+      <svg viewBox="0 0 150 150" width="150" height="150" role="img"
+           aria-label="Performance score 42 out of 100">
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="var(--track)" stroke-width="11"/>
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="#b3261e" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="383.27"
+                stroke-dashoffset="222.30" transform="rotate(-90 75.0 75.0)"/>
+        <text x="75.0" y="71.0" text-anchor="middle" class="gauge-num" fill="#b3261e">42</text>
+        <text x="75.0" y="92.0" text-anchor="middle" class="gauge-grade">F</text>
+      </svg>
+      <div class="gauge-label">Performance</div>
+    </div>
+    <div class="gauge">
+      <svg viewBox="0 0 150 150" width="150" height="150" role="img"
+           aria-label="SEO score 58 out of 100">
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="var(--track)" stroke-width="11"/>
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="#b3261e" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="383.27"
+                stroke-dashoffset="160.98" transform="rotate(-90 75.0 75.0)"/>
+        <text x="75.0" y="71.0" text-anchor="middle" class="gauge-num" fill="#b3261e">58</text>
+        <text x="75.0" y="92.0" text-anchor="middle" class="gauge-grade">F</text>
+      </svg>
+      <div class="gauge-label">SEO</div>
+    </div>
+    <div class="gauge">
+      <svg viewBox="0 0 150 150" width="150" height="150" role="img"
+           aria-label="Code Quality score 78 out of 100">
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="var(--track)" stroke-width="11"/>
+        <circle cx="75.0" cy="75.0" r="61.0" fill="none" stroke="#a16207" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="383.27"
+                stroke-dashoffset="84.32" transform="rotate(-90 75.0 75.0)"/>
+        <text x="75.0" y="71.0" text-anchor="middle" class="gauge-num" fill="#a16207">78</text>
+        <text x="75.0" y="92.0" text-anchor="middle" class="gauge-grade">C</text>
+      </svg>
+      <div class="gauge-label">Code Quality</div>
+    </div></div></section>
+
+  <section class="card">
+    <h3>Findings by severity</h3>
+    <div class="sevbar"><div class="seg" style="flex:16;background:#c2410c" title="16 high"></div><div class="seg" style="flex:26;background:#a16207" title="26 medium"></div><div class="seg" style="flex:22;background:#4b5563" title="22 low"></div></div><div class="chips"><span class="chip"><i style="background:#b3261e"></i>0 Critical</span><span class="chip"><i style="background:#c2410c"></i>16 High</span><span class="chip"><i style="background:#a16207"></i>26 Medium</span><span class="chip"><i style="background:#4b5563"></i>22 Low</span></div>
+  </section>
+
+  <section class="card">
+    <h3>All findings</h3>
+    
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Anyone can create an account on the live site</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/security/access.ts; production /login serves signupOpen:true</code>
+            <p>ORBIS_ALLOWED_EMAILS is not set in Vercel, so the Create account button is live. A stranger can store financial and health data in an app with no privacy policy, no terms, no way to delete their account and no upload rate limits (see the medium findings), and every stranger shares your free AI and data-provider quotas.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Set ORBIS_ALLOWED_EMAILS=&lt;your address&gt; in Vercel → Project → Settings → Environment Variables (Production), then redeploy. Open sign-up again deliberately once privacy, terms, deletion and rate limits exist.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Set the env var in the Vercel dashboard today. Also check Supabase → Authentication → Users for accounts you do not recognise.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Home renders the whole page twice on every open</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx:515</code>
+            <p>The Home effect calls router.refresh() on mount and on every return from background, so each open re-runs the ~34-request server render a second time. On 4G that is a visible re-render and double the database load.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Skip the refresh on first mount (ref flag) and only refresh on visibility after the app was hidden for 60 s or more. Better: refresh only the slices that change instead of router.refresh().</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Every save renders the full page twice (revalidatePath plus router.refresh)</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/finance/actions.ts:23 and 53 other revalidatePath(&#x27;/&#x27;) calls; 33 router.refresh() call sites e.g. components/orbis-app.tsx:201</code>
+            <p>A server action that revalidates already returns a fresh page; the client then asks for another one. Saving a journal entry or confirming a transaction costs about 68 database round-trips and two full payloads before the screen settles.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Keep revalidatePath in the actions and delete the router.refresh() calls that follow them. Longer term, tag per-slice caches (&#x27;use cache&#x27; + cacheTag) so a journal save does not re-query finance, brokers and health.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Background Home requests make the user&#x27;s own taps wait</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx:95 (loadBriefPortfolioAction, loadHomeBriefAction)</code>
+            <p>Next runs server actions one at a time per client. The portfolio fetch and the AI brief (up to 20 s per model) are queued on every Home mount, so tapping Done on a routine, Sync or Save can sit dead for seconds.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Move these reads to GET route handlers called with fetch, or render them server-side inside &lt;Suspense&gt;. Keep server actions for writes.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">The AI home brief is generated 2–3 times per open and burns the daily quota</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx:123; lib/home/ai-brief.ts:113</code>
+            <p>The request fires with weather=null, again when weather arrives and again when the portfolio lands; each misses the saved brief. The 12-a-day limit is gone after about five opens, and the written brief appears late.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Wait until weather has settled (ready, error or needs city) and the portfolio has loaded or timed out before asking; debounce data changes.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No code splitting: every tab ships in the first download</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx:24 (static imports of every screen)</code>
+            <p>&#x27;/&#x27; ships about 392 KB gzip of JavaScript (1.47 MB raw), including recharts and all six tabs, before Home is usable on a mid-range Android phone.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Wrap FinanceScreen, HealthScreen, InvestDashboard, SocialScreen and ProfileScreen in next/dynamic; dynamic-import the recharts chart and PlanView. Expected first load ~200–230 KB gzip.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No privacy policy page</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/ (no /privacy route; live /privacy is 404)</code>
+            <p>Google Play and the App Store both refuse apps without a public privacy-policy URL; Google&#x27;s OAuth verification needs one too; India&#x27;s DPDP Act and GDPR require one for financial and health data.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add app/privacy/page.tsx (static, indexable): data collected, why, processors (Supabase, Vercel, Google, Zerodha, Groww, the AI providers, weather/market APIs), retention, deletion, grievance contact. Link it from /login and Profile.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> The legal text needs your approval, ideally a lawyer&#x27;s review.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No account deletion or data export</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/personal/profile-screen.tsx:208-211 (Account has Sign out only); no deleteUser anywhere</code>
+            <p>Blocks both stores (Play account-deletion policy, Apple 5.1.1(v)) and DPDP/GDPR erasure. Deleted journal entries, notes and posts also stay in history tables users cannot clear.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add deleteAccountAction: require fresh password/passkey, revoke Gmail/Zerodha/Groww, remove the user&#x27;s folders in every storage bucket, then auth.admin.deleteUser (ON DELETE CASCADE removes rows). Add a public /delete-account page, a &#x27;purge history&#x27; option and a JSON/ZIP export.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Publish the deletion URL in the Play Console and App Store Connect.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Gmail read access needs Google verification and a yearly security assessment</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/gmail/oauth.ts:77-78 (gmail.readonly, calendar.readonly)</code>
+            <p>gmail.readonly is a restricted scope. Until Google verifies the app (including a paid, yearly CASA assessment) it stays in testing: 100 users maximum and tokens that expire every 7 days. This blocks selling the automatic expense feature.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Treat Gmail as an opt-in beta. For v1, offer other ways in: statement/CSV import, forwarding alerts to a per-user address, SMS parsing on Android, or India&#x27;s Account Aggregator network. Drop calendar.readonly if nothing uses it.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Start Google OAuth verification (needs a custom domain, a homepage and the privacy policy).</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Personal data goes to third-party AI without a consent screen</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/ai/router.ts; lib/health-docs/*; lib/ask; app/health/actions.ts</code>
+            <p>Apple 5.1.2(i) requires telling users and getting permission before personal data is shared with third-party AI; Play&#x27;s Data safety form must declare it as shared. Undisclosed health-data sharing is a rejection or removal risk.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add a one-time consent step naming the AI providers and data categories, a switch to turn AI off, and list the providers in the privacy policy.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">Broker connections are built for one owner</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/invest/groww.ts:36 (GROWW_OWNER_EMAIL); lib/invest/zerodha.ts:26 (one server-wide Kite key)</code>
+            <p>Groww only works for the owner&#x27;s email; one personal Kite Connect app serving many users likely falls under Zerodha&#x27;s commercial terms. Selling the app breaks Invest or risks the brokers&#x27; terms.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>For v1 import holdings from CAS statements (CAMS/KFintech) or CSV. Hide direct broker connections for non-owners until commercial terms are agreed.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Ask Zerodha and Groww about multi-user/commercial API terms.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">A wrapped website risks App Store rejection (guideline 4.2)</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">No ios/, android/ or capacitor config in the repo</code>
+            <p>A login-gated website in a WebView is a common rejection. Today there is no native value: steps come from a manual Apple Health export upload, and web push does not work inside an iOS WebView.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Wrap with Capacitor (iOS) and a Trusted Web Activity or Capacitor (Android) and add real native features: native push, HealthKit and Health Connect steps, Face ID / fingerprint unlock, the share sheet for Social, home-screen widgets.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No Digital Asset Links file for an Android TWA</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">/.well-known/assetlinks.json → 404</code>
+            <p>Without it a Trusted Web Activity shows a browser URL bar and looks like a web wrapper to Play reviewers.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>After generating the Android app, add public/.well-known/assetlinks.json with the package name and the Play App Signing SHA-256 (add get_login_creds so passkeys work in the app).</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Copy the SHA-256 from Play Console → App integrity.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">pnpm test always fails</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">vitest.config.ts; 13 of 18 lib/**/*.test.ts files use node:test</code>
+            <p>vitest reports &#x27;No test suite found&#x27; for node:test files and exits 1; node&#x27;s own runner can&#x27;t resolve &#x27;@/&#x27; imports in three of them. No single command runs all 143 test cases green, so nothing can gate a release.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Convert the 13 files to vitest (swap the import to vitest; keep node assert or use expect) and add coverage.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No linter or formatter, and the lint script is broken</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">package.json scripts.lint = &#x27;next lint&#x27;</code>
+            <p>next lint was removed in Next 16, so the script fails; nothing checks React hook rules or style.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>npx @next/codemod@canary next-lint-to-eslint-cli . ; add eslint.config.mjs (next/core-web-vitals, react-hooks) and Prettier or Biome.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#c2410c">HIGH</span>
+            <span class="ftitle">No continuous integration</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">.github/workflows (missing)</code>
+            <p>Nothing checks types, tests or the build on push; a buyer&#x27;s due diligence flags this immediately.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>GitHub Actions: pnpm install --frozen-lockfile, tsc --noEmit, lint, vitest run --coverage, next build, pnpm audit --prod --audit-level=high.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No security headers (CSP, frame blocking, HSTS, nosniff, referrer, permissions)</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">next.config.ts:3-10</code>
+            <p>The screen with the PIN pad and broker-key form can be framed by any site (clickjacking), and there is no second line of defence if an XSS ever lands. X-Powered-By: Next.js is sent.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>poweredByHeader: false, plus headers() for Content-Security-Policy (frame-ancestors &#x27;none&#x27;, Supabase hosts in connect/img/media-src, a nonce for the inline theme script), Strict-Transport-Security, X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, Permissions-Policy (camera=(), microphone=(self), geolocation=(self)).</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Password can be changed without re-authentication, even while the app is locked</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/auth/actions.ts:132-146; app/reset-password/page.tsx:11-14</code>
+            <p>Anyone with a signed-in browser (a locked phone left open, or a stolen session cookie) can set a new password and take over the account. The PIN/passkey lock guards the app&#x27;s server actions but not the data API.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Allow updatePassword only with a fresh recovery/OTP sign-in, or with the current password plus an unlocked app. Describe the lock honestly in the UI or move it into RLS with a short-lived &#x27;unlocked&#x27; claim.</code></pre></div>
+            <div class="manual"><strong>You must do this yourself:</strong> Supabase → Auth: enable &#x27;Secure password change&#x27; and &#x27;Leaked password protection&#x27;.</div>
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Push endpoints can point anywhere (blind SSRF and fan-out from the cron)</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">supabase/migrations/202609240015_profile_journal_notifications.sql:64-82; lib/notifications/push.ts:39-45</code>
+            <p>RLS lets users insert push_subscriptions directly, bypassing the https check and 10-device cap. The dispatcher then POSTs to every stored URL every 5 minutes with no timeout, so one account can make Orbis hit arbitrary hosts and delay everyone&#x27;s notifications. notification_log rows can also be edited to dodge the test-send limit.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add a CHECK limiting endpoint hosts to the real push services, revoke direct INSERT/UPDATE (write through the server action only), pass { timeout: 5000 } to web-push and limit concurrency; revoke update on notification_log and grant update (read_at) only.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No rate limits or storage quotas on uploads, parsing and sync</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">next.config.ts:7 (bodySizeLimit 101mb); app/health/library-actions.ts:57-84; app/health/actions.ts:131-144; storage policies for social-media and journal-voice</code>
+            <p>Any account can loop 100 MB document parses, embedding calls, Gmail syncs, or direct uploads to the media buckets with no per-user quota: cost and storage exhaustion. (AI features themselves have daily caps.)</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add a per-user token bucket (Postgres RPC like the existing consume_* functions, or Upstash) on uploads, parse and sync; cap documents and total bytes per user; issue signed upload URLs instead of open bucket INSERT.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Large uploads cannot work on Vercel (server-action body limit)</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">next.config.ts:7; app/health/actions.ts:131; app/health/library-actions.ts:57; app/personal/voice-actions.ts:26</code>
+            <p>Vercel functions accept about 4.5 MB per request, so the advertised 100 MB workbook and 50 MB document uploads through server actions fail in production.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Upload straight to Supabase Storage with signed upload URLs (as the social planner does) and process from storage.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">34 uncached database calls on every render, served from the wrong region</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/page.tsx:48-74; lib/providers/status.ts; lib/finance/repository.ts</code>
+            <p>getPinStatus runs alone before the main Promise.all; finance goes three levels deep; gmail/groww/zerodha connections are each read 2–3 times. Functions default to Washington (iad1) while users and data are in India, so TTFB is estimated at 1–2 s.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Pin functions to the Supabase region (export const preferredRegion or vercel.json regions, e.g. bom1), fold getPinStatus into the Promise.all, share one connections loader, and consider one home_bootstrap RPC.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Every render sends every tab&#x27;s data to the phone</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/page.tsx:55</code>
+            <p>Up to 60 journal bodies, 20 full health-plan documents, 200 social posts with fresh signed URLs and more ride along with Home, and again on every refresh.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Give each tab its own route and loader (/finance, /health, …) or stream them behind Suspense; select plan summaries instead of full plan JSON.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Nothing is cached: broker holdings are fetched live on every Home visit</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/invest/live.ts:118; public/sw.js (push only)</code>
+            <p>Each return to Home calls Groww/Zerodha again and re-asks for the brief; the installed app has no offline shell.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>&#x27;use cache&#x27; + cacheTag per user slice with tag invalidation in actions; a 60–120 s cache for holdings; app-shell caching in the service worker.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">AI requests have no overall deadline</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/ai/router.ts:137</code>
+            <p>Up to four models are tried in turn, each with its own 20–55 s timeout, so the worst case exceeds the 60 s function limit and the user waits the whole time. Telemetry writes are awaited before the answer returns.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Give the request a total budget shared across attempts, and log with after() from next/server.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Wasted Zerodha query on every render</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/providers/status.ts:125</code>
+            <p>The Promise.all runs five queries but uses four.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Remove it, or share connection rows with getAppConnections.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No terms of service or support page</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/ (live /terms is 404)</code>
+            <p>App Store Connect needs a Support URL, Play needs a contact, and selling needs terms that limit liability for AI money and health output.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add /terms and /support with not-financial/medical-advice language and a contact address.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No public landing page; the root redirects to /login</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/page.tsx</code>
+            <p>Nothing to rank, nothing to use as the store marketing URL, the Google OAuth homepage or the page a buyer sees.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add a marketing route group for signed-out visitors: what it does, screenshots, pricing, privacy/terms/support links.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Service worker has no offline fallback and registers only when notifications are on</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">public/sw.js; components/personal/notification-settings.tsx:64</code>
+            <p>Offline, the installed app shows the browser&#x27;s error page; this lowers the PWA/TWA quality bar.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Register on every load; add a fetch handler with a cached /offline page and app-shell caching; keep the push handlers.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Passkeys will not work inside a native wrapper without associated domains</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/auth/auth-form.tsx; /.well-known/apple-app-site-association → 404</code>
+            <p>Passkey sign-in fails in a Capacitor iOS app without webcredentials associated domains.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Serve apple-app-site-association (webcredentials + applinks) and add the Associated Domains entitlement.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No billing path that meets store rules</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">package.json (no billing SDK); per-feature caps hard-coded e.g. app/ask/actions.ts:10</code>
+            <p>Digital subscriptions sold inside the store apps must use Apple IAP and Google Play Billing; there are no plans or entitlements to gate on.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add plans/entitlements tables and read caps from them; Razorpay or Stripe on the web, RevenueCat (or native IAP/Play Billing) in the apps.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Health features need store declarations and disclaimers</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/health-docs (medical documents, plan builder); lib/health (steps)</code>
+            <p>Play&#x27;s Health apps declaration and Data safety entries apply; Apple 1.4.1 covers health advice; HealthKit forbids ads and data resale.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Medical disclaimers on every AI health output, declare health and fitness data, follow HealthKit/Health Connect permission rules when added.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Third-party logos and trademarks in the UI</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">public/brands/groww.png (lib/invest/brokers.ts:45); public/brands/zerodha.svg (unused); &#x27;Apple Health&#x27; and &#x27;Gmail&#x27; labels</code>
+            <p>Store IP review risk; Apple restricts use of its marks (5.2.5).</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Use text names or brand-approved badges; say &#x27;the Health app&#x27;; delete the unused zerodha.svg.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">The sign-in and app-lock check is hand-copied into about 17 places</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">authed() in app/ask, home, personal/voice, routines, social actions; authenticatedClient() in health/steps, invest, personal, journal, notification actions; lib/gmail/oauth.ts:27</code>
+            <p>This is the security gate. One copy that drifts (for example, forgets isAppUnlocked) becomes a data leak while the app is locked.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>lib/auth/session.ts exporting requireUser(): { supabase, userId, claims } | null, and replace every copy.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">India time zone, INR and the owner&#x27;s own details are hard-coded</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">&#x27;Asia/Kolkata&#x27; in 34 files with 7+ &#x27;today&#x27; helpers; lib/personal/fitness-persona.ts:13 (the owner&#x27;s 92 kg plan); components/orbis-app.tsx:146 (avatar falls back to &#x27;G&#x27;); lib/notifications/push.ts:20</code>
+            <p>The app is wrong for anyone outside India, and new users see the owner&#x27;s personal content. Changing it means editing 34 files.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>lib/time/zone.ts (dateKey, zonedParts, partOfDay with a tz argument), per-user timezone/currency/locale in the profile with IST/INR defaults; remove owner-specific content.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Setup errors meant for the developer are shown to users; no onboarding</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/providers/status.ts:95,103; app/health/actions.ts:197; components/orbis-app.tsx:234</code>
+            <p>Users read &#x27;Apply the Zerodha connections migration in Supabase&#x27; or &#x27;Set ZERODHA_API_KEY&#x27;. Sign-up goes straight to a mandatory PIN with no welcome or guided first connection.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Show a friendly &#x27;unavailable right now&#x27; and log the detail server-side; add a 3–4 step onboarding (name and time zone, choose modules, connect one source or try sample data, set up the lock).</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">No error monitoring and no error or loading boundaries</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/ (no error.tsx, global-error.tsx or loading.tsx); no Sentry or analytics</code>
+            <p>When something breaks for a user you will not know, and they see a blank or broken screen.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add Sentry (or similar), app/error.tsx, app/global-error.tsx and loading skeletons; privacy-safe product analytics (PostHog EU or self-hosted).</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">The whole app is one client component with tabs in state</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx (626 lines, 877-character line at :504); app/page.tsx:55-76</code>
+            <p>Every change touches one file; no tab has its own URL, loading state, error boundary or bundle; the back gesture and deep links are fragile.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Route segments app/(app)/{home,finance,health,invest,social,profile}/page.tsx with a shared nav layout; each loads its own data.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">Five money formatters with four different rounding rules</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/focus/types.ts:48; lib/notifications/compose.ts:19; components/finance/spending-summary.tsx:9; components/finance/transaction-list.tsx:12; components/invest/format.ts:4</code>
+            <p>The same amount can read differently on Home, Expense, Invest and in notifications.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>lib/format/money.ts formatMoney(amount, currency, { compact, decimals }) used everywhere.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">The riskiest code has no tests</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/finance (sync.ts, parse-alert.ts), lib/workbook/parse.ts, lib/ai/router.ts, lib/crypto, lib/gmail, lib/invest</code>
+            <p>The bank-alert parser, upload hardening and privacy routing are what a buyer expects to see tested; 12 of 24 lib modules have none.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Fixture-based vitest cases for parse-alert, workbook limits, router sensitivity gating and token encryption; coverage in CI.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">&#x27;Always include&#x27; toggle for health documents silently does nothing</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/health/library-actions.ts:45-49</code>
+            <p>It updates health_documents with the user&#x27;s client, but that table has no UPDATE policy, so nothing changes and the user is told it worked.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Do the update with the admin client scoped by user_id (like the other health-document writes), or add an owner UPDATE policy for that column.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#a16207">MEDIUM</span>
+            <span class="ftitle">README is out of date</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">README.md</code>
+            <p>It describes removed features (goals, habits), 12 migrations instead of 30, says advice is not saved (it is), and misses 19 environment variables. A buyer or new developer is misled from the first page.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Rewrite: features, architecture sketch, setup from .env.example, migrations, tests, deploy.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Zerodha connect has no state/CSRF check</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/auth/zerodha/start/route.ts:22; callback/route.ts:14-39</code>
+            <p>A crafted callback link can attach the attacker&#x27;s Kite session to a victim&#x27;s Orbis, feeding them false holdings.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Copy the Gmail pattern: HMAC-signed state cookie, passed as redirect_params and verified in the callback.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Owner&#x27;s Groww keys granted by email match</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/invest/live.ts:43-45; lib/providers/status.ts:100,137-141</code>
+            <p>In a multi-user product the owner&#x27;s brokerage is one email match away.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Remove the env-credential fallback, or bind it to a fixed user id.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Sign-in reveals whether an account exists; weak password rules</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/auth/actions.ts:81-86,43,136</code>
+            <p>Different messages for unconfirmed vs wrong password; 8-character minimum and no breach check on accounts that hold Gmail and broker access.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>One generic message; 10+ characters; Supabase leaked-password protection; passkeys or TOTP as a second factor.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Table grants rely on Supabase defaults</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">202609240019_notification_log.sql:32-34; 202609280102_journal_voice_notes.sql; 202609240017_health_documents_plans.sql:684-686</code>
+            <p>Narrow grants are ineffective because authenticated keeps all privileges; RLS is the only gate.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>revoke all from public, anon, authenticated, then grant exactly what is intended.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">One SECURITY DEFINER function has a mutable search_path</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">supabase/migrations/202609240016_app_pin.sql:19-20</code>
+            <p>Hygiene only (service-role only, schema-qualified body).</p>
+            <div class="fix"><h4>Fix</h4><pre><code>alter function public.consume_app_pin_attempt(uuid) set search_path = &#x27;&#x27;;</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">AI router trusts the database for which secret to send and where</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/ai/router.ts:73,140-145</code>
+            <p>Anyone able to edit ai_providers could send SUPABASE_SECRET_KEY or the encryption key to their own host.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Allowlist env var names and base-URL hosts in code.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">E2E tests use the production service key and create users in production</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">tests/e2e/support/env.ts:30-37</code>
+            <p>The most powerful key lives on test machines; test accounts land in the live database.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Separate Supabase project or branch for tests.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Raw error messages returned to the browser</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/health/library-actions.ts:67,82,93,106; app/invest/actions.ts:81,95; app/routines/actions.ts:36</code>
+            <p>Unexpected library errors are shown verbatim.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Typed user-facing errors (like SocialError); generic text for everything else; log the original.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Unpinned core dependencies and a moderate uuid advisory</span>
+            <span class="faxis">Security</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">package.json:15-21 (&#x27;latest&#x27;); uuid &lt;11.1.1 via exceljs</code>
+            <p>A fresh install can pull a new major unreviewed.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Pin versions, --frozen-lockfile in CI, Dependabot/Renovate, pnpm audit and gitleaks in CI.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Home content jumps as the brief, weather and portfolio arrive</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/orbis-app.tsx:117</code>
+            <p>Estimated CLS 0.1–0.2; feels unpolished.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Reserve heights and cross-fade the brief text in place.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">132 KB global stylesheet on every page</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/layout.tsx:2-5</code>
+            <p>22 KB gzip render-blocking CSS even on /login.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Move tab CSS into CSS Modules or imports inside the dynamically loaded tabs.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Blurred background blobs and a hidden preloaded logo on phones</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/globals.css:286; components/brand/orbis-mark</code>
+            <p>GPU paint cost on low-end Android and a wasted high-priority request.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>.ambient { display: none } in the phone media query; drop priority on the hidden logo.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Social images use raw &lt;img&gt; at full resolution</span>
+            <span class="faxis">Performance</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">components/social/social-list.tsx:16; post-drawer.tsx:400</code>
+            <p>Heavy downloads and layout shift in the Social tab.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>next/image with a Supabase remotePattern, or Supabase image transforms plus width/height.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">No robots.txt or sitemap</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/ (no robots.ts or sitemap.ts)</code>
+            <p>Auth pages can be indexed; crawlers get no guidance.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>app/robots.ts (disallow /api, /auth) and app/sitemap.ts for the public pages.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Short titles, one shared description, no canonical</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/layout.tsx:8-13; app/login/page.tsx:6</code>
+            <p>Weak snippets; duplicate descriptions.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>metadataBase + canonical; noindex on /login and /forgot-password; 120–160 character descriptions on public pages.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">No Open Graph, Twitter card or structured data</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/layout.tsx</code>
+            <p>Shared links have no preview.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>openGraph/twitter metadata, opengraph-image.png, SoftwareApplication JSON-LD on the landing page.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Manifest lacks screenshots, categories and shortcuts; colours disagree</span>
+            <span class="faxis">SEO</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/manifest.ts; app/layout.tsx:25-28</code>
+            <p>Plain install prompt; status bar and splash colours differ from the app.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Add screenshots (narrow/wide), categories, shortcuts; align theme/background colours with light and dark.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Dead files and exports</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">lib/ai/openrouter.ts; lib/providers/crypto.ts; LockButton/useLockApp in components/security/app-lock-guard.tsx; 26 unused exports (knip)</code>
+            <p>Noise, and COINGECKO_API_KEY in .env.example for nothing.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>Delete them; add knip to CI.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Unused tables still in the schema</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">migrations 0004 (goals, habits, habit_checkins) and 0006 (investment_holdings)</code>
+            <p>Dead schema confuses anyone reading the data model.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>A migration that drops them after export, or mark them deprecated.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">isMissingTable and validId redefined in many files (validId inconsistently)</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">12 copies of isMissingTable; validId in 4 action files, loose vs strict regex</code>
+            <p>Drift; the loose regex accepts 36 dashes.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>lib/supabase/errors.ts and lib/validate/id.ts (strict UUID).</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">The workbook AI quota is shared by unrelated features</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">consume_workbook_ai_request called from app/health/actions.ts, library-actions.ts and app/home/brief-actions.ts</code>
+            <p>Home briefs use up the workbook allowance; limits are hard to reason about.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>One consume_ai_request(feature, limit) keyed by feature.</code></pre></div>
+            
+          </div>
+        </details>
+        <details class="finding" >
+          <summary>
+            <span class="badge" style="background:#4b5563">LOW</span>
+            <span class="ftitle">Dark theme tokens written twice; very long lines</span>
+            <span class="faxis">Code Quality</span>
+          </summary>
+          <div class="fbody">
+            <code class="loc">app/globals.css:126-194 vs 197-265; 199 lines over 200 characters</code>
+            <p>Edits must be made twice; hard to review.</p>
+            <div class="fix"><h4>Fix</h4><pre><code>light-dark() tokens; a formatter with printWidth 120.</code></pre></div>
+            
+          </div>
+        </details>
+  </section>
+
+  <section class="card"><h3>SEO breakdown</h3>
+        <div class="seorow">
+          <div class="seolabel">Crawlability &amp; indexing</div>
+          <div class="seotrack"><div class="seofill" style="width:48.0%;background:#b3261e"></div></div>
+          <div class="seoval">12/25</div>
+          <div class="seonote">Auth pages server-rendered; no robots, sitemap or canonical; only auth pages exposed</div>
+        </div>
+        <div class="seorow">
+          <div class="seolabel">On-page metadata</div>
+          <div class="seotrack"><div class="seofill" style="width:60.0%;background:#c2410c"></div></div>
+          <div class="seoval">15/25</div>
+          <div class="seonote">Unique but short titles; one shared 55-character description; one h1 per page; lang set</div>
+        </div>
+        <div class="seorow">
+          <div class="seolabel">Social &amp; structured data</div>
+          <div class="seotrack"><div class="seofill" style="width:0.0%;background:#b3261e"></div></div>
+          <div class="seoval">0/15</div>
+          <div class="seonote">No OG, Twitter card or JSON-LD</div>
+        </div>
+        <div class="seorow">
+          <div class="seolabel">Content quality</div>
+          <div class="seotrack"><div class="seofill" style="width:86.7%;background:#4d7c0f"></div></div>
+          <div class="seoval">13/15</div>
+          <div class="seonote">Correct decorative alt; descriptive links; no header/footer/nav landmarks</div>
+        </div>
+        <div class="seorow">
+          <div class="seolabel">Technical &amp; CWV</div>
+          <div class="seotrack"><div class="seofill" style="width:90.0%;background:#15803d"></div></div>
+          <div class="seoval">18/20</div>
+          <div class="seonote">HTTPS + HSTS preload, responsive; LCP/CLS estimated, not measured</div>
+        </div></section>
+  
+    <section class="card">
+      <h3>Duplicate code &mdash; merge plan</h3>
+      <table>
+        <thead><tr><th>Cluster</th><th>Files</th><th>Dup. lines</th><th>Proposed home</th><th>Notes</th></tr></thead>
+        <tbody><tr><td>Sign-in + app-lock gate</td><td><code>app/ask/actions.ts</code> <code>app/home/brief-actions.ts</code> <code>app/routines/actions.ts</code> <code>app/social/actions.ts</code> <code>app/personal/voice-actions.ts</code> <code>app/health/steps-actions.ts</code> <code>app/health/library-actions.ts</code> <code>app/invest/actions.ts</code> <code>app/personal/actions.ts</code> <code>app/personal/journal-actions.ts</code> <code>app/personal/notification-actions.ts</code> <code>lib/gmail/oauth.ts</code> </td><td>100</td><td><code>lib/auth/session.ts → requireUser()</code></td><td>About 17 copies under three names; the shared one lives in the Gmail module</td></tr><tr><td>India time-zone helpers</td><td><code>lib/focus/types.ts</code> <code>lib/routines/today.ts</code> <code>lib/home/note.ts</code> <code>lib/home/ai-brief.ts</code> <code>lib/social/month.ts</code> <code>lib/ask/select.ts</code> <code>lib/journal/repository.ts</code> <code>lib/finance/repository.ts</code> <code>components/personal/journal.tsx</code> <code>components/finance/transaction-list.tsx</code> </td><td>60</td><td><code>lib/time/zone.ts (tz as a parameter)</code></td><td>Merge first, then add a per-user time zone</td></tr><tr><td>Money formatting</td><td><code>lib/focus/types.ts</code> <code>lib/notifications/compose.ts</code> <code>components/finance/spending-summary.tsx</code> <code>components/finance/transaction-list.tsx</code> <code>components/invest/format.ts</code> </td><td>30</td><td><code>lib/format/money.ts</code></td><td>Four different rounding rules today</td></tr><tr><td>isMissingTable</td><td><code>lib/ai/preferences.ts</code> <code>lib/finance/repository.ts</code> <code>lib/health-docs/repository.ts</code> <code>lib/routines/repository.ts</code> <code>lib/social/repository.ts</code> <code>lib/voice/repository.ts</code> <code>lib/invest/groww-connection.ts</code> <code>lib/invest/zerodha-connection.ts</code> </td><td>12</td><td><code>lib/supabase/errors.ts</code></td><td>Social&#x27;s copy is already exported</td></tr><tr><td>Dark-theme token blocks</td><td><code>app/globals.css</code> <code>app/atlas-social.css</code> </td><td>81</td><td><code>light-dark() tokens in globals.css</code></td><td>Each theme is currently written twice</td></tr></tbody>
+      </table>
+    </section>
+  
+    <section class="card">
+      <h3>Prioritized actions</h3>
+      <div class="scatterwrap">
+        <svg viewBox="-6 0 112 98" class="scatter" role="img" aria-label="Impact versus effort chart">
+          <line x1="10" y1="88" x2="98" y2="88" stroke="var(--track)" stroke-width="0.5"/>
+          <line x1="10" y1="5" x2="10" y2="88" stroke="var(--track)" stroke-width="0.5"/>
+          <text x="54" y="95.5" class="axlabel">Effort &rarr;</text>
+          <text x="0" y="46" class="axlabel" transform="rotate(-90 0 46)">Impact &rarr;</text>
+          <circle cx="18" cy="18" r="3.6" fill="var(--accent)"/><text x="18" y="19.4" class="dotnum">1</text><circle cx="22" cy="33" r="3.6" fill="var(--accent)"/><text x="22" y="34.4" class="dotnum">2</text><circle cx="14" cy="36" r="3.6" fill="var(--accent)"/><text x="14" y="37.4" class="dotnum">3</text><circle cx="18" cy="58" r="3.6" fill="var(--accent)"/><text x="18" y="59.4" class="dotnum">4</text><circle cx="22" cy="61" r="3.6" fill="var(--accent)"/><text x="22" y="62.4" class="dotnum">5</text><circle cx="14" cy="33" r="3.6" fill="var(--accent)"/><text x="14" y="34.4" class="dotnum">6</text><circle cx="18" cy="61" r="3.6" fill="var(--accent)"/><text x="18" y="62.4" class="dotnum">7</text><circle cx="22" cy="58" r="3.6" fill="var(--accent)"/><text x="22" y="59.4" class="dotnum">8</text><circle cx="46" cy="36" r="3.6" fill="var(--accent)"/><text x="46" y="37.4" class="dotnum">9</text><circle cx="50" cy="33" r="3.6" fill="var(--accent)"/><text x="50" y="34.4" class="dotnum">10</text><circle cx="54" cy="36" r="3.6" fill="var(--accent)"/><text x="54" y="37.4" class="dotnum">11</text><circle cx="46" cy="58" r="3.6" fill="var(--accent)"/><text x="46" y="59.4" class="dotnum">12</text><circle cx="50" cy="61" r="3.6" fill="var(--accent)"/><text x="50" y="62.4" class="dotnum">13</text><circle cx="54" cy="33" r="3.6" fill="var(--accent)"/><text x="54" y="34.4" class="dotnum">14</text><circle cx="78" cy="36" r="3.6" fill="var(--accent)"/><text x="78" y="37.4" class="dotnum">15</text><circle cx="82" cy="33" r="3.6" fill="var(--accent)"/><text x="82" y="34.4" class="dotnum">16</text><circle cx="86" cy="36" r="3.6" fill="var(--accent)"/><text x="86" y="37.4" class="dotnum">17</text><circle cx="78" cy="33" r="3.6" fill="var(--accent)"/><text x="78" y="34.4" class="dotnum">18</text>
+        </svg>
+        <p class="hint">Top-left is where to start: high impact, low effort.</p>
+      </div>
+      <table class="actions">
+        <thead><tr><th>#</th><th>Action</th><th>Axis</th><th>Impact</th><th>Effort</th><th>Score gain</th></tr></thead>
+        <tbody><tr><td>1</td><td>Set ORBIS_ALLOWED_EMAILS in Vercel to close public sign-up</td><td>Security</td><td>Critical</td><td>Low</td><td class='gain'>+15 security</td></tr><tr><td>2</td><td>Stop the double renders (mount refresh, router.refresh after actions)</td><td>Performance</td><td>High</td><td>Low</td><td class='gain'>+10 perf</td></tr><tr><td>3</td><td>Only request the AI brief once weather and portfolio have settled</td><td>Performance</td><td>High</td><td>Low</td><td class='gain'>quota + latency</td></tr><tr><td>4</td><td>Security headers + poweredByHeader: false</td><td>Security</td><td>Medium</td><td>Low</td><td class='gain'>+6 security</td></tr><tr><td>5</td><td>Pin Vercel functions to the Supabase region</td><td>Performance</td><td>Medium</td><td>Low</td><td class='gain'>TTFB</td></tr><tr><td>6</td><td>next/dynamic for every non-Home tab and the charts</td><td>Performance</td><td>High</td><td>Low</td><td class='gain'>+15 perf</td></tr><tr><td>7</td><td>Re-auth for password change; enable Supabase secure password change</td><td>Security</td><td>Medium</td><td>Low</td><td class='gain'>+6 security</td></tr><tr><td>8</td><td>Lock down push_subscriptions and notification_log grants</td><td>Security</td><td>Medium</td><td>Low</td><td class='gain'>+6 security</td></tr><tr><td>9</td><td>Privacy, terms, support, landing page + robots, sitemap, OG</td><td>SEO</td><td>High</td><td>Medium</td><td class='gain'>+25 SEO; store blocker</td></tr><tr><td>10</td><td>Account deletion, history purge and data export</td><td>SEO</td><td>High</td><td>Medium</td><td class='gain'>+6 security; store blocker</td></tr><tr><td>11</td><td>Convert tests to vitest, add ESLint/Prettier and GitHub Actions CI</td><td>Code Quality</td><td>High</td><td>Medium</td><td class='gain'>+13 code quality</td></tr><tr><td>12</td><td>Extract requireUser, time-zone and money helpers</td><td>Code Quality</td><td>Medium</td><td>Medium</td><td class='gain'>safer + per-user time zone</td></tr><tr><td>13</td><td>Rate limits, storage quotas and signed direct uploads</td><td>Security</td><td>Medium</td><td>Medium</td><td class='gain'>+6 security</td></tr><tr><td>14</td><td>Onboarding, friendly errors, Sentry and error boundaries</td><td>Code Quality</td><td>High</td><td>Medium</td><td class='gain'>premium feel</td></tr><tr><td>15</td><td>Split into route segments with per-route data and caching</td><td>Performance</td><td>High</td><td>High</td><td class='gain'>+10 perf, +6 code quality</td></tr><tr><td>16</td><td>Capacitor/TWA wrapper with native push, HealthKit/Health Connect, biometrics</td><td>SEO</td><td>High</td><td>High</td><td class='gain'>store launch</td></tr><tr><td>17</td><td>Gmail verification + CASA, or non-Gmail expense import</td><td>SEO</td><td>High</td><td>High</td><td class='gain'>sellable Expense</td></tr><tr><td>18</td><td>Plans, entitlements and billing (Razorpay/Stripe web, RevenueCat apps)</td><td>SEO</td><td>High</td><td>High</td><td class='gain'>revenue</td></tr></tbody>
+      </table>
+    </section>
+  <section class="card"><h3>Dead code</h3><ul class="plain"><li>lib/ai/openrouter.ts — no imports (knip + grep, confirmed)</li><li>lib/providers/crypto.ts — no imports (knip + grep, confirmed); COINGECKO_API_KEY in .env.example is unused</li><li>components/security/app-lock-guard.tsx LockButton / useLockApp — only reference each other (confirmed)</li><li>public/brands/zerodha.svg — not referenced (confirmed)</li><li>Tables goals, habits, habit_checkins, investment_holdings — no code references (confirmed by grep; still in the live schema, likely)</li><li>~26 unused exports and 14 unused exported types (knip; several are used in their own file and only need un-exporting)</li></ul></section>
+  <section class="card"><h3>What&#x27;s new &amp;mdash; modernization</h3><ul class="plain"><li>next lint was removed in Next 16 — migrate with @next/codemod next-lint-to-eslint-cli and a flat config</li><li>&#x27;latest&#x27; pins for next, react, react-dom, recharts, lucide-react, typescript and @types — installed: next 16.3.6, react 19.3.0, TypeScript 7.0.2; pin them and add packageManager/engines (Node &gt;= 22)</li><li>Two test runners (node:test and vitest 5) — standardise on vitest with coverage</li><li>Dark theme could use CSS light-dark() and color-scheme instead of duplicated selector blocks</li><li>App Router route segments with &#x27;use cache&#x27; + cacheTag/updateTag are the current Next 16 idiom for per-tab data</li><li>No .gitattributes — git warns about LF/CRLF on every commit</li></ul></section>
+  <section class="card"><h3>Suggestions</h3><ul class="plain"><li>Desktop: replace the phone mock-up with a real responsive layout (sidebar + 2–3 column dashboard) on wide screens</li><li>Navigation: go back to five tabs (Social as an optional module or inside Profile) and use real routes so the back gesture works</li><li>Lock: let users pick the idle timeout, prefer passkey/biometric, skip the PIN when a passkey exists</li><li>Home with nothing connected: a &#x27;set up your brief&#x27; checklist or sample data instead of &#x27;Quiet today&#x27;</li><li>Replace window.confirm with styled sheets and undo toasts (edit history already makes undo possible)</li><li>Haptics and motion on confirm/complete; loading skeletons for every tab</li><li>A &#x27;What Orbis knows about you&#x27; page fed by ai_generation_events and the history tables — a trust feature competitors lack</li><li>Background Gmail sync with a &#x27;last synced&#x27; chip on Home</li><li>Paid AI tiers with zero-retention / no-training terms in a data-processing agreement; budget cost per user</li><li>Move from Vercel Hobby (non-commercial) to Pro and a paid Supabase plan with backups/PITR; staging + production projects; Supabase CLI migrations</li><li>Queue the notification dispatcher (it handles users one by one inside 50 s) before growth</li><li>Positioning: &#x27;one calm daily brief across money, health and routines, with AI that does not train on your data&#x27; — lead with that; Social planner and workbook advice are extras</li></ul></section>
+  <section class="card"><h3>Not assessed</h3><ul class="plain"><li>Real Lighthouse / Core Web Vitals — no signed-in run; LCP, INP, CLS and TTFB are estimates</li><li>Supabase dashboard: which migrations are applied, email confirmation, auth rate limits, MFA, backups, whether RLS in production matches the migrations</li><li>Vercel dashboard: region, env var scoping, plan, preview protection</li><li>E2E suite (creates real users in the production project) and a11y results</li><li>Commercial terms and prices for Kite Connect, Groww API, Groq/OpenRouter/Gemini/Mistral — check before relying on them</li><li>Legal review of any privacy or terms text</li></ul></section>
+
+  <footer>Generated by the project-audit skill. Scores are advisory, not a security guarantee.</footer>
+</div></body></html>
