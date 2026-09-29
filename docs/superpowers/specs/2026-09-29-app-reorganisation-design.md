@@ -43,16 +43,20 @@ Success means:
 | `journal` | Journal | Journal (with voice notes and history), **Saved notes** (moved from Profile) |
 | `social` | Social | Unchanged |
 
-**Assistant.** The floating mic becomes the one Ask Orbis entry point. The panel gets a text field beside the mic, so typing and talking share one conversation. The source chips from today's Ask Orbis move into the panel. Profile → Ask is removed.
+**Assistant.** The floating button becomes the one Ask Orbis entry point. The panel gets a text field beside the mic, so typing and talking share one conversation. The source chips from today's Ask Orbis move into the panel and apply to both typed and spoken questions. Profile → Ask is removed.
+
+Because typed Ask no longer has another home, the button and panel always show. Only the mic inside the panel is hidden when `SARVAM_API_KEY` is unset.
+
+Settings opens as a sheet above the bottom nav, and tapping a tab closes it.
 
 **Settings.** A full-screen sheet opened from the avatar on every tab's header. It replaces Profile. The sections, in order:
 
 1. **You:** name and about you (ProfileEditor), location
-2. **Connections:** one list of Gmail/Calendar, Zerodha, Groww and Apple Health. Each row shows a *Read-only* badge, status, what it reads, last sync, and Connect/Reconnect/Disconnect. This replaces App integrations, Data services and the identity chips. Invest keeps a small status line that links here.
+2. **Connections:** one list of Gmail/Calendar, Zerodha, Groww and Apple Health. Each row shows a *Read-only* badge, status, what it reads, last sync, and Connect/Reconnect/Disconnect. This replaces App integrations and the identity chips. Data services (weather, rates, AI providers) follow as a sub-list under the same heading. Invest keeps its broker card, because connecting where you use it is fine; the Connections list is the one place that shows everything.
 3. **AI & privacy:** the global AI switch and consent (AiConsent) first, the Home brief toggle second
 4. **Notifications**
 5. **Your day:** routines
-6. **Security:** PIN set/change/remove, passkey, lock now. This wires the existing security components into a visible home.
+6. **Security:** *Lock now* (`lockAppAction`) and *Change PIN* (`setPinAction`). The PIN is mandatory, so there is no remove. The passkey stays as the existing Home prompt.
 7. **Your data:** post history, export, delete account, sign out
 
 ### Compatibility
@@ -76,14 +80,14 @@ components/
   settings/                settings-sheet.tsx + one file per section
   assistant/               talk-to-orbis (renamed assistant-panel) + ask-orbis pieces
 app/
-  styles/                  base.css, shell.css, today.css, money.css, health.css,
-                           journal.css, social.css, settings.css, assistant.css, auth.css
+  styles/                  globals.css split along its section comments (01-base … 10-assistant),
+                           atlas-*.css, plus settings.css for the new sheet
 ```
 
 - `orbis-app.tsx` becomes `app-shell.tsx`. Each screen moves to its own file, unchanged except for imports.
-- **Server actions stay where they are.** Moving them changes action IDs and buys nothing. Only `app/personal/*` is renamed to `app/journal/*` and `app/settings/*` to match.
+- **Server actions stay where they are,** including `app/personal/*`. Moving them changes action IDs and buys nothing.
 - **CSS:**
-  - `globals.css` is split by feature into `app/styles/`, which `app/layout.tsx` imports in order.
+  - `globals.css` is split into `app/styles/` along its existing section comments, keeping the order. The concatenation must stay byte-identical to the old file. `app/layout.tsx` imports the files in order, and the `atlas-*.css` files move alongside.
   - Class names are not renamed in this project; renaming 1,600 lines of selectors is high-risk and low-value.
   - Duplicate `fd-` rules in `atlas-profile.css` are merged.
 - **Dead code removed:**
@@ -118,7 +122,7 @@ Each stage is one commit (or a short series), leaves the app working, and ends w
 - Renaming CSS classes.
 - A habits UI. The `goals`/`habits`/`habit_checkins` tables stay untouched until you decide to build or drop them.
 - Merging Health's file Q&A into the assistant.
-- Moving server action files beyond the `personal` → `journal`/`settings` rename.
+- Moving server action files.
 
 ## Decisions needed from you
 
