@@ -25,7 +25,7 @@ function AppHead({ tile, name, detail, status }: { tile: React.ReactNode; name: 
   return (
     <div className="pf-app-head">
       <span className="fd-tile pf-tile" aria-hidden="true">{tile}</span>
-      <div><strong>{name}</strong><span className="pf-readonly">Read-only</span><small>{detail}</small></div>
+      <div><strong><span>{name}</span><span className="pf-readonly">Read-only</span></strong><small>{detail}</small></div>
       {status}
     </div>
   );
