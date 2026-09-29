@@ -86,6 +86,16 @@ export function TalkToOrbis() {
     silence();
   }, []);
 
+  // Escape closes the panel first when it's open over Settings — Settings'
+  // own Escape handler checks for .talk-sheet and stands down while this runs.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   function say(result: TalkResult) {
     const done = () => setPhase((current) => (current === 'speaking' ? 'idle' : current));
     if (result.audio) {
@@ -252,7 +262,7 @@ export function TalkToOrbis() {
             ))}
           </div>
           <div className="talk-log" aria-live="polite">
-            {!turns.length && <p className="talk-hint">{`Ask about your spending, journal, routines or steps, by typing${voice ? ' or speaking in any Indian language' : ''}. Recordings aren’t kept.`}</p>}
+            {!turns.length && <p className="talk-hint">{`Ask about your spending, journal, saved notes, routines or steps, by typing${voice ? ' or speaking in any Indian language' : ''}. Recordings aren’t kept.`}</p>}
             {turns.map((turn, index) => (
               <div key={index} className="talk-turn">
                 <p className="talk-q">{turn.question}</p>

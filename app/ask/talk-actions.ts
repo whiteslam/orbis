@@ -6,7 +6,9 @@ import { requireUser } from '@/lib/auth/session';
 import { speak, transcribe } from '@/lib/voice/sarvam';
 import { languageName, talkAudioProblem, trimHistory, ttsLanguage } from '@/lib/voice/talk';
 
-/** What a spoken question may look at. Small, everyday sources; notes stay typed-only. */
+/** What a spoken question looks at by default when the client sends none. The panel's
+ *  chips can turn any source on or off, saved notes included — voice reads whichever
+ *  sources the chips allow, same as a typed question. */
 const TALK_SOURCES: AskSource[] = ['journal', 'spending', 'routines', 'steps'];
 
 export type TalkResult = {

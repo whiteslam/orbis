@@ -19,6 +19,12 @@ test('Ask Orbis is on every tab and answers a typed question, voice or not', asy
   await expect(panel.getByRole('button', { name: 'Journal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(panel.getByRole('button', { name: 'Speak' })).toHaveCount(voice ? 1 : 0);
 
+  // Escape closes the panel, same as the Close button.
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await button.click();
+  await expect(panel).toBeVisible();
+
   // Test users have AI off, so the answer is the consent message: proof the typed path reached the server.
   await panel.getByLabel('Type a question').fill('How much did I spend this week?');
   await panel.getByRole('button', { name: 'Ask', exact: true }).click();
