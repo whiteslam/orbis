@@ -14,6 +14,7 @@ import './styles/atlas-health.css';
 import './styles/atlas-profile.css';
 import './styles/atlas-social.css';
 import './styles/marketing.css';
+import './styles/settings.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';

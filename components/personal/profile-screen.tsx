@@ -14,6 +14,7 @@ import { Journal } from '@/components/journal/journal';
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { HomeBriefSetting } from '@/components/settings/home-brief-setting';
 import { RoutineSettings } from '@/components/settings/routine-settings';
+import { GOOGLE_NOTICE } from '@/components/settings/settings-sheet';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import { ProfileEditor } from '@/components/settings/profile-editor';
@@ -39,13 +40,6 @@ const SECTIONS: Array<[ProfileSection, string]> = [
   ['profile', 'Profile'],
   ['settings', 'Settings'],
 ];
-
-const GOOGLE_NOTICE: Record<string, { text: string; success: boolean }> = {
-  connected: { text: 'Google connected.', success: true },
-  cancelled: { text: 'Google connection was cancelled.', success: false },
-  'setup-error': { text: 'Google sign-in isn’t set up on the server yet.', success: false },
-  error: { text: 'Google could not be connected. Try again.', success: false },
-};
 
 /**
  * A settings section in the Field language: the same tracked label the other

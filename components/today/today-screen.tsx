@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bell, UserRound } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
+import { SettingsButton } from '@/components/shell/settings-context';
 import { FocusNote, QuietList } from '@/components/field/field';
 import { RoutineCheck } from '@/components/today/routine-check';
 import { WeatherCard } from '@/components/today/weather-card';
@@ -41,13 +41,12 @@ const PORTFOLIO_WAIT_MS = 8_000;
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openSettings }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openSettings: () => void }) {
+export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void }) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<BriefPortfolio | null>(null);
   const [portfolioSettled, setPortfolioSettled] = useState(false);
-  const firstName = preferredName?.trim().split(/\s+/)[0] || null;
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
 
   const input = { finance: financeSummary, steps: stepsSummary, documentCount, portfolio };
@@ -119,8 +118,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
         <p className="fd-date" suppressHydrationWarning>{today}</p>
         <div className="fd-top-actions">
           <ThemeToggle />
-          <button className="icon-btn" type="button" aria-label="Notification settings" title="Notification settings" onClick={openSettings}><Bell size={18} /></button>
-          <button className="avatar" type="button" aria-label="Open your profile" title="Profile" onClick={() => openTab('personal')}>{firstName?.charAt(0).toLocaleUpperCase() || <UserRound size={16} aria-hidden="true" />}</button>
+          <SettingsButton />
         </div>
       </header>
 

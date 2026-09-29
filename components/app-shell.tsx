@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { HeartPulse, Home, Megaphone, TrendingUp, UserRound, WalletCards } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { TabLoading } from '@/components/shell/loading';
+import { SettingsProvider } from '@/components/shell/settings-context';
 import { TodayScreen } from '@/components/today/today-screen';
 import { aiAllowed } from '@/lib/ai/consent';
 import type { AiPreferences } from '@/lib/ai/preferences';
@@ -21,6 +22,7 @@ import type { AppConnections, Integration } from '@/lib/providers/status';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import type { ProfileSection } from '@/components/personal/profile-screen';
+import type { SettingsSection } from '@/lib/shell/tabs';
 
 // Today is what opens, so it is the only screen in the first download. Every
 // other tab loads the first time it is opened.
@@ -31,6 +33,7 @@ const SocialScreen = dynamic(() => import('@/components/social/social-screen').t
 const ProfileScreen = dynamic(() => import('@/components/personal/profile-screen').then((m) => m.ProfileScreen), { loading: TabLoading });
 // The mic shows on every screen but is not needed to draw Today, so it follows it.
 const TalkToOrbis = dynamic(() => import('@/components/assistant/talk-to-orbis').then((m) => m.TalkToOrbis));
+const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet').then((m) => m.SettingsSheet));
 
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;
@@ -57,6 +60,12 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   // Journal is the only section with a reason to open today, so it is the landing
   // one. Deep links (Home's "open settings", the Google callback) still say where to go.
   const [profileSection, setProfileSection] = useState<ProfileSection>('journal');
+  // Which Settings section is open, or null. Task 6 renders the sheet.
+  const [settings, setSettings] = useState<SettingsSection | null>(null);
+  const settingsAccess = useMemo(() => ({
+    open: (section: SettingsSection = 'you') => setSettings(section),
+    initial: personalProfile.profile?.preferredName?.trim().charAt(0).toLocaleUpperCase() || null,
+  }), [personalProfile.profile?.preferredName]);
 
   // The brief is only true for as long as its data is. Opening the app already
   // rendered it fresh, and every save revalidates the page, so Home re-reads
@@ -132,7 +141,6 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         gmailNotice={gmailNotice}
         clearGmailNotice={() => setGmailNotice(null)}
         openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
-        openSettings={() => { setProfileSection('settings'); setTab('personal'); }}
       />
     );
     if (tab === 'social') return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
@@ -174,15 +182,27 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       <div className="phone">
         <div className="phone-speaker" />
         <div className="phone-screen">
-          {screen}
-          <TalkToOrbis />
-          <nav className="bottom-nav">
-            {nav.map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setTab(id)} className={tab === id ? 'active' : ''} aria-label={label}>
-                <Icon size={17}/><span>{label}</span>
-              </button>
-            ))}
-          </nav>
+          <SettingsProvider value={settingsAccess}>
+            {screen}
+            {settings && (
+              <SettingsSheet
+                section={settings}
+                onClose={() => setSettings(null)}
+                openHealth={() => { setSettings(null); setTab('health'); }}
+                googleNotice={gmailNotice}
+                clearGoogleNotice={() => setGmailNotice(null)}
+                data={{ personalProfile, notificationSettings, aiPreferences, routines, appConnections, homeLocation, integrations, stepsSummary }}
+              />
+            )}
+            <TalkToOrbis />
+            <nav className="bottom-nav">
+              {nav.map(([id, label, Icon]) => (
+                <button key={id} onClick={() => { setTab(id); setSettings(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
+                  <Icon size={17}/><span>{label}</span>
+                </button>
+              ))}
+            </nav>
+          </SettingsProvider>
         </div>
       </div>
     </main>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, CloudSun, Footprints, HeartPulse, Mail, Orbit, TrendingUp, X, type LucideIcon } from 'lucide-react';
+import { SettingsButton } from '@/components/shell/settings-context';
 import type { Focus, FocusTarget, QuietRow, SourceId } from '@/lib/focus/types';
 import type { HomeNote } from '@/lib/home/note';
 
@@ -10,7 +11,10 @@ export function FieldHead({ title, subtitle }: { title: string; subtitle?: strin
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
   return (
     <header className="fd-head">
-      <p className="fd-date" suppressHydrationWarning>{subtitle ?? today}</p>
+      <div className="fd-head-row">
+        <p className="fd-date" suppressHydrationWarning>{subtitle ?? today}</p>
+        <SettingsButton />
+      </div>
       <h1>{title}</h1>
     </header>
   );

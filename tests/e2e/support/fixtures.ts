@@ -37,6 +37,15 @@ export async function openTab(page: Page, tab: Tab) {
   await page.getByRole('navigation').getByRole('button', { name: tab, exact: true }).click();
 }
 
+/** Every tab, in nav order. Specs that visit all tabs use this, so a layout change is one edit. */
+export const TABS: Tab[] = ['Home', 'Expense', 'Health', 'Invest', 'Social', 'Profile'];
+
+/** Opens Settings from the avatar in the current screen's header. */
+export async function openSettings(page: Page) {
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+}
+
 type Fixtures = {
   userA: TestUser;
   userB: TestUser;

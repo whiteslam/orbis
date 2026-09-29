@@ -1,0 +1,10 @@
+/* ─── Settings: the header avatar and the sheet it opens ───────────── */
+.fd-head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-sheet { position: absolute; inset: 0 0 82px; z-index: 15; overflow-y: auto; padding: 22px 16px 28px; background: var(--fd-field, var(--sys-page)); color: var(--fd-ink); }
+.settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-head h1 { margin: 0; font-size: 31px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+.settings-head button { width: 44px; height: 44px; margin-right: -10px; border: 0; border-radius: 50%; background: transparent; color: var(--fd-soft); display: grid; place-items: center; }
+.settings-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+.settings-jump button { min-height: 32px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: var(--r-pill); background: transparent; color: var(--fd-ink); font-size: 12px; }
+.settings-sheet .pf-group { scroll-margin-top: 12px; }
+.pf-readonly { margin-left: 6px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--sys-tint-green); color: var(--sys-green); font-size: 10.5px; font-weight: 650; white-space: nowrap; }
