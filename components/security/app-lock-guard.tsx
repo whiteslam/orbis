@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation';
 import { LockKeyhole } from 'lucide-react';
 import { lockAppAction, touchAppLockAction } from '@/app/security/actions';
-
-const HEARTBEAT_MS = 60_000;
+import { heartbeatDue } from '@/lib/security/lock-heartbeat';
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const;
 
 // Hides the app after idleMs without activity, or when it returns from the background after that long.
@@ -16,8 +15,8 @@ export function AppLockGuard({ idleMs, children }: { idleMs: number; children: R
   // Seeds the idle clock once on mount; re-running this on every render would defeat the timers below.
   // eslint-disable-next-line react-hooks/purity
   const lastActivity = useRef(Date.now());
-  // eslint-disable-next-line react-hooks/purity
-  const lastHeartbeat = useRef(Date.now());
+  // Null until this page has sent one, so the first activity after a load always does (see heartbeatDue).
+  const lastHeartbeat = useRef<number | null>(null);
   const lockedRef = useRef(false);
 
   const lock = useCallback(() => {
@@ -34,7 +33,7 @@ export function AppLockGuard({ idleMs, children }: { idleMs: number; children: R
       if (lockedRef.current) return;
       if (expired()) return lock();
       lastActivity.current = Date.now();
-      if (Date.now() - lastHeartbeat.current < HEARTBEAT_MS) return;
+      if (!heartbeatDue(lastHeartbeat.current, Date.now())) return;
       lastHeartbeat.current = Date.now();
       void touchAppLockAction().then(({ unlocked }) => { if (!unlocked) lock(); }).catch(() => undefined);
     };

@@ -54,6 +54,11 @@ export function supabaseAdmin() {
         if (prefixes.length) await fetch(`${url}/storage/v1/object/health-documents`, { method: 'DELETE', headers, body: JSON.stringify({ prefixes }) });
       }
     },
+    // Deletes rows matching a PostgREST filter (e.g. `user_id=eq.<id>`), to give a test a known starting state.
+    async deleteRows(table: string, filter: string) {
+      const response = await fetch(`${url}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers });
+      if (!response.ok) throw new Error(`Could not clear ${table}: ${response.status}`);
+    },
     // Signs in as a test user with the public key: what a browser holding that user's session could do.
     async userToken(email: string, password: string) {
       const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {

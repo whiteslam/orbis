@@ -1,8 +1,14 @@
 import { expect, openApp, openSettings, openTab, test } from '../support/fixtures';
+import { supabaseAdmin } from '../support/env';
 
 // Create → reload (data came from the database) → update/delete, through the real UI.
 
-test('journal: mood is required, entry saves, persists, and can be edited', async ({ page, consoleErrors }) => {
+test('journal: mood is required, entry saves, persists, and can be edited', async ({ page, consoleErrors, userA }) => {
+  // This starts from "nothing written today" (an empty editor, no mood). Other
+  // specs, and an earlier run of this one (--repeat-each), write today's entry
+  // for the same user, so clear it first. Today is India's day, as in the app.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  await supabaseAdmin().deleteRows('journal_entries', `user_id=eq.${userA.id}&entry_date=eq.${today}`);
   const text = `QA journal ${Date.now()}`;
   await openApp(page);
   await openTab(page, 'Journal');
