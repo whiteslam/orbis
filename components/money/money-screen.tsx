@@ -12,7 +12,7 @@ const InvestmentsScreen = dynamic(() => import('@/components/money/investments-s
 /** Spending | Investments, drawn under the Money title by whichever view is open. */
 export function MoneySwitch({ view, onView }: { view: MoneyView; onView: (view: MoneyView) => void }) {
   return (
-    <div className="fd-tabs" role="tablist" aria-label="Money">
+    <div className="fd-tabs glass-seg" role="tablist" aria-label="Money">
       <button type="button" role="tab" aria-selected={view === 'spending'} onClick={() => onView('spending')}>Spending</button>
       <button type="button" role="tab" aria-selected={view === 'investments'} onClick={() => onView('investments')}>Investments</button>
     </div>

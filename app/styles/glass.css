@@ -2,44 +2,44 @@
 :root {
   --font-text: var(--font-figtree), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --rounded: var(--font-figtree), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --glass-ground: #eceee9;
-  --glass-fill: rgba(255,255,255,.58);
-  --glass-fill-strong: rgba(255,255,255,.82);
-  --glass-edge: 1px solid rgba(255,255,255,.75);
-  --glass-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 8px 28px rgba(17,19,21,.06);
-  --glass-blur: blur(26px) saturate(170%);
-  --glass-blob-1: #b7c9bc;
-  --glass-blob-2: #e4d3ba;
-  --glass-blob-3: #c7d1e0;
-  --glass-dot: rgba(17,19,21,.07);
-  --fd-field: var(--glass-ground);
+  --gl-ground: #eceee9;
+  --gl-fill: rgba(255,255,255,.58);
+  --gl-fill-strong: rgba(255,255,255,.82);
+  --gl-edge: 1px solid rgba(255,255,255,.75);
+  --gl-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 8px 28px rgba(17,19,21,.06);
+  --gl-blur: blur(26px) saturate(170%);
+  --gl-blob-1: #b7c9bc;
+  --gl-blob-2: #e4d3ba;
+  --gl-blob-3: #c7d1e0;
+  --gl-dot: rgba(17,19,21,.07);
+  --fd-field: var(--gl-ground);
   --fd-ink: #111315;
   --fd-soft: #565b63;
   --fd-accent: #1d7a55;
   --fd-alert: #b4461a;
-  --fd-card: var(--glass-fill);
+  --fd-card: var(--gl-fill);
   --fd-chip: rgba(255,255,255,.5);
   --fd-btn: #111315;
   --fd-btn-ink: #ffffff;
   --fd-veil: rgba(236,238,233,.82);
-  --sys-page: var(--glass-ground);
+  --sys-page: var(--gl-ground);
 }
 
-.phone-screen { background: var(--glass-ground); isolation: isolate; }
-.glass-wall { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--glass-ground); }
+.phone-screen { background: var(--gl-ground); isolation: isolate; }
+.glass-wall { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--gl-ground); }
 .glass-blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .75; }
-.glass-blob.one { width: 340px; height: 340px; left: -120px; top: -90px; background: var(--glass-blob-1); }
-.glass-blob.two { width: 300px; height: 300px; right: -130px; top: 170px; background: var(--glass-blob-2); }
-.glass-blob.three { width: 360px; height: 360px; left: -60px; bottom: -150px; background: var(--glass-blob-3); }
-.glass-grain { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--glass-dot) 1px, transparent 1.3px); background-size: 14px 14px; }
+.glass-blob.one { width: 340px; height: 340px; left: -120px; top: -90px; background: var(--gl-blob-1); }
+.glass-blob.two { width: 300px; height: 300px; right: -130px; top: 170px; background: var(--gl-blob-2); }
+.glass-blob.three { width: 360px; height: 360px; left: -60px; bottom: -150px; background: var(--gl-blob-3); }
+.glass-grain { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--gl-dot) 1px, transparent 1.3px); background-size: 14px 14px; }
 .screen-body, .settings-sheet { position: relative; z-index: 1; }
 .screen-body.field, .settings-sheet { background: transparent; }
 
 /* Chrome: a floating glass tab bar, and Ask Orbis as its own glass circle to the right. */
-.bottom-nav { right: 84px; z-index: 20; background: var(--glass-fill); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: var(--glass-edge); box-shadow: var(--glass-shadow); }
-.bottom-nav button.active { background: var(--glass-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
-.talk-fab { right: 16px; bottom: 10px; width: 62px; height: 62px; background: var(--glass-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: var(--glass-edge); box-shadow: var(--glass-shadow); }
-.avatar, .field .avatar { background: var(--glass-fill); color: var(--fd-ink); border: var(--glass-edge); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); font-weight: 700; }
+.bottom-nav { right: 84px; z-index: 20; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
+.bottom-nav button.active { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+.talk-fab { right: 16px; bottom: 10px; width: 62px; height: 62px; background: var(--gl-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
+.avatar, .field .avatar { background: var(--gl-fill); color: var(--fd-ink); border: var(--gl-edge); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); font-weight: 700; }
 .fd-head h1 { font-weight: 800; letter-spacing: -.035em; }
 
 /* Phones in portrait, and touch devices in landscape (short screens): leave room for the Ask circle. */
@@ -47,3 +47,45 @@
   .bottom-nav { right: calc(84px + env(safe-area-inset-right, 0px)); }
   .talk-fab { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Frosted cards: every grouped section on every screen.
+   .apple-list and .groww-card join the brief's known list: they are the same
+   "field flatten" family as .apple-card in 04-views.css (grouped surfaces that
+   used to blend flat into the ground), so they get the same glass treatment.
+   .field .apple-card / .apple-list / .groww-card repeat the selector at equal
+   specificity to 04-views.css's/06-finance.css's `.field .X` flatten rules so
+   this, loaded last, wins the cascade instead of losing on specificity. */
+.fd-focus, .fd-quiet, .apple-card, .apple-list, .groww-card, .pf-group, .pf-editor, .hl-ask, .setup-list,
+.field .apple-card, .field .apple-list, .field .groww-card {
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  border: var(--gl-edge); box-shadow: var(--gl-shadow);
+  border-radius: 26px; padding: 16px 18px;
+}
+.fd-quiet { margin-top: 14px; padding-top: 6px; padding-bottom: 6px; }
+.fd-quiet > h2, .pf-group > .fd-label { margin-top: 10px; }
+.fd-line { border-bottom-color: color-mix(in srgb, var(--fd-ink) 7%, transparent); }
+.fd-quiet .fd-line:last-child, .pf-group .fd-source:last-child { border-bottom: 0; }
+
+/* Segmented controls: a glass track with a white thumb. */
+.fd-tabs.glass-seg { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 12px; padding: 4px; border-radius: 18px; border: var(--gl-edge); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+.fd-tabs.glass-seg button { min-height: 40px; border-radius: 14px; font-weight: 600; color: var(--fd-soft); }
+.fd-tabs.glass-seg button[aria-selected="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+/* .fd-tabs's other job — a sticky underline tab bar (05-profile.css) — draws a
+   bar under the selected button with ::after. The segmented track has its own
+   selected state (the thumb above), so that underline is switched off here. */
+.fd-tabs.glass-seg button[aria-selected="true"]::after { content: none; }
+
+/* The Ask panel and Settings are glass sheets too. */
+.talk-sheet { background: var(--gl-fill-strong); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); border-radius: 32px; }
+.talk-mic { background: var(--fd-ink); box-shadow: 0 0 0 9px color-mix(in srgb, var(--fd-ink) 6%, transparent), 0 0 0 18px color-mix(in srgb, var(--fd-ink) 4%, transparent); }
+.settings-sheet { -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); background: var(--fd-veil); }
+
+/* Pills and chips. */
+.fd-chips button, .settings-jump button, .talk-sources button { border-radius: 16px; border: var(--gl-edge); background: var(--fd-chip); font-weight: 600; }
+.fd-chips button[aria-pressed="true"], .talk-sources button[aria-pressed="true"] { background: var(--fd-ink); color: var(--fd-btn-ink); border-color: var(--fd-ink); }
+
+/* Headings bold and tight: the brief's fd-head h1 already covers screen
+   titles (Task 12); .fd-focus's statement heading is the other place text
+   reads as a headline rather than a label, so it gets the same treatment. */
+.fd-focus h1, .fd-focus h2 { font-weight: 800; letter-spacing: -.03em; }
