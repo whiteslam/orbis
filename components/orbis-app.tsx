@@ -76,6 +76,8 @@ const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').the
 const HealthLibrary = dynamic(() => import('@/components/health/health-library').then((m) => m.HealthLibrary), { loading: PartLoading });
 const WorkbookAsk = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAsk), { loading: PartLoading });
 const WorkbookAdviceView = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAdviceView), { loading: PartLoading });
+// The mic shows on every screen but is not needed to draw Home, so it follows it.
+const TalkToOrbis = dynamic(() => import('@/components/voice/talk-to-orbis').then((m) => m.TalkToOrbis));
 const ManualTransactionForm = dynamic(() => import('@/components/finance/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
 const SpendingSummary = dynamic(() => import('@/components/finance/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
 
@@ -578,6 +580,7 @@ export default function OrbisApp({ financeSummary, contextNotes, fitnessPersona,
         <div className="phone-speaker" />
         <div className="phone-screen">
           {screen}
+          <TalkToOrbis />
           <nav className="bottom-nav">
             {nav.map(([id, label, Icon]) => (
               <button key={id} onClick={() => setTab(id)} className={tab === id ? 'active' : ''} aria-label={label}>
