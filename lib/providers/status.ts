@@ -61,7 +61,7 @@ export type AppConnections = {
   brokerSetupMessages: Partial<Record<BrokerId, string>>;
 };
 
-// Account-level connections the user links themselves (Settings → App integrations).
+// Account-level connections the user links themselves (Settings → Connections).
 export async function getAppConnections(userId: string, email: string | null): Promise<AppConnections> {
   const result: AppConnections = { google: null, brokers: {}, brokerSetupMessages: {} };
   try {
@@ -143,7 +143,7 @@ export async function getIntegrationStatus(userId: string, email: string | null)
   const owner = growwOwnerEmail();
   if (growwRow) {
     const ok = growwRow.status === 'connected';
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Invest', lastSyncAt: growwRow.last_sync_at, usage: null });
+    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: growwRow.last_sync_at, usage: null });
   } else if (growwConfigured() && owner && email === owner) {
     integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null });
   } else {
@@ -155,7 +155,7 @@ export async function getIntegrationStatus(userId: string, email: string | null)
     label: 'Gmail',
     purpose: 'Important mail on Home · read-only',
     state: !gmail ? 'not_configured' : gmail.status === 'connected' ? 'connected' : 'attention',
-    detail: !gmail ? 'Connect in Profile → Settings' : gmail.status === 'connected' ? null : 'Reconnect in Profile → Settings',
+    detail: !gmail ? 'Connect in Settings → Connections' : gmail.status === 'connected' ? null : 'Reconnect in Settings → Connections',
     lastSyncAt: gmail?.last_sync_at ?? null,
     usage: null,
   });

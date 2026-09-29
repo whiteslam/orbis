@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
         <h2>Deleting your data</h2>
         <p>
-          You can delete your account and everything in it at any time from <strong>Profile → Settings → Account → Delete
+          You can delete your account and everything in it at any time from <strong>Settings → Your data → Delete
           account</strong> inside the app, or from the <Link href="/delete-account">delete-account page</Link>. If
           you cannot sign in, contact us {contact} and we will delete it for you.
         </p>

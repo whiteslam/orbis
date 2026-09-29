@@ -23,8 +23,8 @@ function syncedAt(value: string) {
 
 /**
  * The key and secret fields for one broker. With `steps` (the default) it
- * carries its own intro and two-step instructions, for use inline (Profile →
- * Settings); the Connect screen draws those itself and passes `steps={false}`.
+ * carries its own intro and two-step instructions, for use inline (Settings →
+ * Connections); the Connect screen draws those itself and passes `steps={false}`.
  */
 export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, steps = true }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; onConnected: () => void; steps?: boolean }) {
   const [apiKey, setApiKey] = useState('');

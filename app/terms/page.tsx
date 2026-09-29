@@ -49,7 +49,7 @@ export default function TermsPage() {
 
         <h2>Termination</h2>
         <p>
-          You can stop using Orbis and delete your account at any time from <strong>Profile → Settings → Account → Delete
+          You can stop using Orbis and delete your account at any time from <strong>Settings → Your data → Delete
           account</strong>, or the <Link href="/delete-account">delete-account page</Link>. We may suspend or end
           access to protect the service or other users, such as for abuse or a security risk.
         </p>
