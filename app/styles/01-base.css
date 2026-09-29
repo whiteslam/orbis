@@ -1,0 +1,303 @@
+/* ─── One system, two themes ──────────────────────────────────────────
+   Every tab uses the iOS palette and SF Pro; the Health/Finance
+   "grouped" look is now the baseline rather than a local override.
+   Each surface, label and accent has a dark counterpart in the
+   prefers-color-scheme block below. The legacy names at the end
+   (--bg/--ink/--muted/--line/--card/--accent) are aliases, so rules
+   written against them follow the theme without being rewritten. */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces, back to front. */
+  --sys-bg: #f2f2f7;
+  --sys-surface: #ffffff;
+  --sys-surface-2: #eeeef0;
+  --sys-surface-3: #e5e5ea;
+
+  /* Labels. Ratios are against --sys-surface. */
+  --sys-label: #1c1c1e;
+  --sys-secondary: #6e6e73; /* 4.9:1 — AA for small text */
+  --sys-tertiary: #85858a; /* 3.5:1 — large text and icons only */
+  --sys-separator: rgba(60,60,67,.14);
+  --sys-hairline: rgba(60,60,67,.29);
+
+  /* Accents. */
+  --sys-blue: #0066d6;
+  --sys-blue-press: #005fc4;
+  --sys-green: #1d7a34;
+  --sys-red: #d70015;
+  --sys-pink: #fa114f;
+  --sys-amber: #a45f00;
+  --sys-tint-blue: #e8f1fc;
+  --sys-tint-green: #e9f7f1;
+  --sys-tint-red: #fdeceb;
+  --sys-tint-amber: #fff4e2;
+  /* Soft highlight wash used by the AI, coach and plan panels. */
+  --sys-wash: linear-gradient(135deg, #eaf4ff, #f4f8ff);
+  --sys-wash-border: #dbe6f2;
+  --sys-page: linear-gradient(180deg, #fbfdff, #f6f8fb);
+  --sys-stage: radial-gradient(circle at top, #ffffff 0, #eef5f7 42%, #e8eef5 100%);
+
+  /* Type. */
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", sans-serif;
+  --rounded: "SF Pro Rounded", ui-rounded, -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", sans-serif;
+
+  /* Radius scale, replacing fourteen ad-hoc values. */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 12px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-pill: 999px;
+
+  /* Elevation scale, replacing twenty-four ad-hoc shadows. */
+  --e1: 0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04);
+  --e2: 0 8px 24px rgba(26,43,57,.08);
+  --e3: 0 28px 80px rgba(26,43,57,.13);
+
+  /* Liquid glass. Chrome and overlays only — never behind body text,
+     both for contrast and because blur inside a scroller is expensive.
+     Alpha stays high enough that labels hold their ratio over any backdrop. */
+  --glass-chrome-bg: rgba(255,255,255,.72);
+  --glass-chrome-blur: blur(20px) saturate(180%);
+  --glass-sheet-bg: rgba(255,255,255,.8);
+  --glass-sheet-blur: blur(30px) saturate(180%);
+  --glass-edge: inset 0 1px 0 rgba(255,255,255,.7);
+  --glass-hairline: 1px solid rgba(255,255,255,.35);
+
+  /* Field: the Home layout's own ground and surface. One lifted object per
+     screen, so these deliberately sit outside the grouped-list surfaces. */
+  --fd-field: linear-gradient(176deg, #eef2ef 0%, #e2eae7 46%, #d7e2de 100%);
+  --fd-surface: #ffffff;
+  --fd-ink: #1b2320;
+  --fd-soft: #4f5b57; /* 7.4:1 on --fd-surface */
+  /* 4.8:1 against the darkest stop of --fd-field, which is the worst case:
+     most faint text sits on the ground, not on --fd-surface. The previous
+     #6f7d77 was annotated 4.6:1 but measured 4.31:1 on white and 3.25:1 on
+     that stop, so small text in it failed AA everywhere it was used. */
+  --fd-faint: #556259;
+  --fd-rule: rgba(27,35,32,.10);
+  /* A second, heavier rule: the underline of a field you are typing into. */
+  --fd-hairline: rgba(27,35,32,0.22);
+  --fd-accent: #45685c;
+  --fd-lift: 0 18px 40px rgba(37,61,53,.14);
+  --fd-lift-slide: 0 12px 26px -14px rgba(37,61,53,.55);
+  /* The edges of the brief cards still to come, stacked behind the top one. */
+  --fd-deck-far: rgba(27,35,32,.09);
+  --fd-deck-near: rgba(27,35,32,.16);
+  --fd-btn: #1b2320;
+  --fd-btn-ink: #f2f6f4;
+  --fd-chip: rgba(255,255,255,.62);
+  --fd-card: rgba(255,255,255,.58);
+  --fd-wash: rgba(69,104,92,.11);
+  --fd-ring-track: rgba(27,35,32,.07);
+  /* Destructive text, muted to the Field palette instead of the iOS red. */
+  --fd-alert: #a63a2e;
+  --fd-alert-wash: rgba(166,58,46,.1);
+  /* Sits behind sticky chrome, so it matches the top of --fd-field. */
+  --fd-veil: rgba(234,239,236,.94);
+
+  /* Validated categorical chart palette, in fixed order. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+
+  /* Legacy aliases — the old names now resolve to the one system. */
+  --bg: var(--sys-bg);
+  --ink: var(--sys-label);
+  --muted: var(--sys-secondary);
+  --line: var(--sys-separator);
+  --card: var(--sys-surface);
+  --accent: var(--sys-blue);
+  --accent-soft: var(--sys-tint-blue);
+  --status-good: var(--sys-green);
+  --status-warning: var(--sys-amber);
+  --status-critical: var(--sys-red);
+}
+
+/* Dark values live in one place and are applied two ways: by the OS
+   preference unless the user has explicitly chosen light, and by the
+   toggle writing data-theme on <html>. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+
+    --sys-bg: #000000;
+    --sys-surface: #1c1c1e;
+    --sys-surface-2: #2c2c2e;
+    --sys-surface-3: #3a3a3c;
+
+    --sys-label: #f5f5f7;
+    --sys-secondary: #9e9ea4; /* 5.1:1 on --sys-surface */
+    --sys-tertiary: #7c7c81;
+    --sys-separator: rgba(84,84,88,.6);
+    --sys-hairline: rgba(84,84,88,.9);
+
+    --sys-blue: #0a84ff;
+    --sys-blue-press: #409cff;
+    --sys-green: #30d158;
+    --sys-red: #ff453a;
+    --sys-pink: #ff375f;
+    --sys-amber: #ffd426;
+    --sys-tint-blue: #0a2540;
+    --sys-tint-green: #10301d;
+    --sys-tint-red: #3a1311;
+    --sys-tint-amber: #3a2a05;
+
+    --e1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.06);
+    --e2: 0 8px 24px rgba(0,0,0,.5);
+    --e3: 0 28px 80px rgba(0,0,0,.6);
+
+    --glass-chrome-bg: rgba(28,28,30,.72);
+    --glass-sheet-bg: rgba(28,28,30,.8);
+    --glass-edge: inset 0 1px 0 rgba(255,255,255,.08);
+    --glass-hairline: 1px solid rgba(255,255,255,.1);
+
+    --fd-field: linear-gradient(176deg, #101614 0%, #131b19 46%, #0a100e 100%);
+    --fd-surface: #18211e;
+    --fd-ink: #eaf0ed;
+    --fd-soft: #aebbb6; /* 8.0:1 on --fd-surface */
+    --fd-faint: #8a9793; /* 5.0:1 */
+    --fd-rule: rgba(234,240,237,.11);
+    --fd-hairline: rgba(234,240,237,0.24);
+    --fd-accent: #85b3a3;
+    --fd-lift: 0 18px 40px rgba(0,0,0,.55);
+    --fd-lift-slide: 0 12px 26px -12px rgba(0,0,0,.85);
+    --fd-deck-far: rgba(234,240,237,.09);
+    --fd-deck-near: rgba(234,240,237,.16);
+    --fd-btn: #eaf0ed;
+    --fd-btn-ink: #101715;
+    --fd-chip: rgba(255,255,255,.06);
+    --fd-card: rgba(255,255,255,.045);
+    --fd-wash: rgba(133,179,163,.15);
+    --fd-ring-track: rgba(234,240,237,.09);
+    --fd-alert: #e79489;
+    --fd-alert-wash: rgba(231,148,137,.14);
+    --fd-veil: rgba(17,23,21,.94);
+
+    /* Lifted for legibility on a dark surface. */
+    --series-1: #64a8ff;
+    --series-2: #ff9a6e;
+    --series-3: #46d6a4;
+    --series-4: #ffc94d;
+    --series-5: #ffa3c4;
+    --series-6: #4bc94b;
+    --series-7: #a79bff;
+
+    --sys-wash: linear-gradient(135deg, #16233a, #10182a);
+    --sys-wash-border: rgba(84,84,88,.6);
+    --sys-page: linear-gradient(180deg, #121214, #0a0a0b);
+    --sys-stage: radial-gradient(circle at top, #1c1c1e 0, #121214 42%, #000 100%);
+  }
+}
+
+:root[data-theme="dark"] {
+
+  --sys-bg: #000000;
+  --sys-surface: #1c1c1e;
+  --sys-surface-2: #2c2c2e;
+  --sys-surface-3: #3a3a3c;
+
+  --sys-label: #f5f5f7;
+  --sys-secondary: #9e9ea4; /* 5.1:1 on --sys-surface */
+  --sys-tertiary: #7c7c81;
+  --sys-separator: rgba(84,84,88,.6);
+  --sys-hairline: rgba(84,84,88,.9);
+
+  --sys-blue: #0a84ff;
+  --sys-blue-press: #409cff;
+  --sys-green: #30d158;
+  --sys-red: #ff453a;
+  --sys-pink: #ff375f;
+  --sys-amber: #ffd426;
+  --sys-tint-blue: #0a2540;
+  --sys-tint-green: #10301d;
+  --sys-tint-red: #3a1311;
+  --sys-tint-amber: #3a2a05;
+
+  --e1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.06);
+  --e2: 0 8px 24px rgba(0,0,0,.5);
+  --e3: 0 28px 80px rgba(0,0,0,.6);
+
+  --glass-chrome-bg: rgba(28,28,30,.72);
+  --glass-sheet-bg: rgba(28,28,30,.8);
+  --glass-edge: inset 0 1px 0 rgba(255,255,255,.08);
+  --glass-hairline: 1px solid rgba(255,255,255,.1);
+
+  --fd-field: linear-gradient(176deg, #101614 0%, #131b19 46%, #0a100e 100%);
+  --fd-surface: #18211e;
+  --fd-ink: #eaf0ed;
+  --fd-soft: #aebbb6; /* 8.0:1 on --fd-surface */
+  --fd-faint: #8a9793; /* 5.0:1 */
+  --fd-rule: rgba(234,240,237,.11);
+  --fd-hairline: rgba(234,240,237,0.24);
+  --fd-accent: #85b3a3;
+  --fd-lift: 0 18px 40px rgba(0,0,0,.55);
+  --fd-lift-slide: 0 12px 26px -12px rgba(0,0,0,.85);
+  --fd-deck-far: rgba(234,240,237,.09);
+  --fd-deck-near: rgba(234,240,237,.16);
+  --fd-btn: #eaf0ed;
+  --fd-btn-ink: #101715;
+  --fd-chip: rgba(255,255,255,.06);
+  --fd-card: rgba(255,255,255,.045);
+  --fd-wash: rgba(133,179,163,.15);
+  --fd-ring-track: rgba(234,240,237,.09);
+  --fd-alert: #e79489;
+  --fd-alert-wash: rgba(231,148,137,.14);
+  --fd-veil: rgba(17,23,21,.94);
+
+  /* Lifted for legibility on a dark surface. */
+  --series-1: #64a8ff;
+  --series-2: #ff9a6e;
+  --series-3: #46d6a4;
+  --series-4: #ffc94d;
+  --series-5: #ffa3c4;
+  --series-6: #4bc94b;
+  --series-7: #a79bff;
+
+  --sys-wash: linear-gradient(135deg, #16233a, #10182a);
+  --sys-wash-border: rgba(84,84,88,.6);
+  --sys-page: linear-gradient(180deg, #121214, #0a0a0b);
+  --sys-stage: radial-gradient(circle at top, #1c1c1e 0, #121214 42%, #000 100%);
+}
+
+/* Apple's Reduce Transparency: drop the blur, keep the layout. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-chrome-bg: var(--sys-surface);
+    --glass-chrome-blur: none;
+    --glass-sheet-bg: var(--sys-surface);
+    --glass-sheet-blur: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--sys-bg); color: var(--sys-label); font-family: var(--font-text); font-variant-numeric: tabular-nums; }
+/* Keep iOS from inflating text on rotation, and never let the page itself scroll sideways. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: clip; }
+/* Taps act immediately (no double-tap zoom delay) while pinch-zoom stays available; no grey tap flash. */
+a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+a, button, summary { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; }
+.stage { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 42px 20px; position: relative; overflow: hidden; overflow: clip; background: var(--sys-stage); }
+.ambient { position: absolute; border-radius: var(--r-pill); filter: blur(10px); opacity: .45; }
+.ambient-one { width: 360px; height: 360px; background: var(--sys-tint-green); top: -130px; right: -80px; }
+.ambient-two { width: 320px; height: 320px; background: var(--sys-tint-blue); bottom: -100px; left: -90px; }
+.intro { position: absolute; top: 32px; left: 40px; z-index: 3; display: flex; gap: 12px; align-items: center; }
+.intro h1 { margin: 0; font-size: 28px; letter-spacing: -.05em; }
+.intro p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.orbis-mark { display: block; flex: none; border-radius: 24%; box-shadow: 0 6px 18px rgba(20,32,110,.22); }
+.phone { width: min(410px, 94vw); height: min(840px, 88vh); min-height: 690px; padding: 9px; border-radius: 48px; background: linear-gradient(145deg, #111820, #3f4853 50%, #0d1116); box-shadow: 0 28px 90px rgba(26,43,57,.25), inset 0 0 0 2px rgba(255,255,255,.14); position: relative; z-index: 2; }
+.phone::after { content: ''; position: absolute; inset: 5px; border-radius: 43px; border: 1px solid rgba(255,255,255,.18); pointer-events: none; }
+.phone-speaker { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; border-radius: var(--r-xl); background: #090d11; z-index: 10; box-shadow: inset 0 0 0 1px #222; }
+.phone-screen { height: 100%; overflow: hidden; overflow: clip; border-radius: 40px; background: var(--sys-page); position: relative; }
+.screen-body { --screen-pad-top: 48px; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: var(--screen-pad-top) 16px 94px; scrollbar-width: none; }
+.screen-body::-webkit-scrollbar { display: none; }
+.topbar, .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
+.avatar { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-label); color: var(--sys-bg); font-size: 13px; cursor: pointer; }
+.icon-btn { position: relative; width: 34px; height: 34px; border: 0; background: var(--sys-surface); border-radius: var(--r-md); display: grid; place-items: center; box-shadow: var(--e2); color: var(--ink); }
+.eyebrow, .page-head small { text-transform: uppercase; font-size: 10px !important; letter-spacing: .12em; font-weight: 800; color: var(--accent) !important; }

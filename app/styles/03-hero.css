@@ -1,0 +1,104 @@
+/* ─── Atlas hero: the one number a screen is about ────────────────────────
+   Display-size, tabular, on the ground with no container. The delta beside it
+   is the only place a screen states a direction, so it carries the accent for
+   good news and the Field's own alert red for bad. */
+.fd-hero { margin-top: 18px; }
+.fd-hero-value { margin: 0; font-family: var(--rounded); font-size: clamp(34px, 13.5vw, 52px); font-weight: 650; letter-spacing: -.04em; line-height: 1; color: var(--fd-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.fd-hero-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px; margin-top: 7px; }
+.fd-hero-meta > span:first-child { color: var(--fd-soft); font-size: 13px; line-height: 1.4; }
+.fd-delta { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: var(--r-pill); font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.fd-delta.up, .fd-delta.flat { background: var(--fd-wash); color: var(--fd-accent); }
+.fd-delta.down { background: var(--fd-alert-wash); color: var(--fd-alert); }
+
+/* The brief: a short note on the ground, no fill, no border, no shadow — the
+   same treatment every other statement in this layout gets. It replaced a
+   swipeable deck of tinted cards, whose icon/headline/chip/button/footer frame
+   made a reading of your morning look like a dashboard. */
+.fd-note-brief { margin-top: 6px; }
+.fd-note-greet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0; color: var(--fd-ink); font-size: 23px; font-weight: 650; letter-spacing: -.025em; line-height: 1.25; }
+/* The note is written for a moment, so it says which one. */
+.fd-note-time { color: var(--fd-faint); font-size: 13px; font-weight: 550; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.fd-note-line { margin: 13px 0 0; color: var(--fd-soft); font-size: 15px; line-height: 1.65; text-wrap: pretty; }
+.fd-note-line:first-of-type { margin-top: 12px; }
+/* Where the numbers came from, once, under the note instead of on every tile. */
+.fd-note-from { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 16px 0 0; color: var(--fd-faint); font-size: 11.5px; }
+.fd-note-from span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.fd-note-from svg { flex: none; opacity: .75; }
+
+/* The brief's other half: what is due, and the taps that record what happened.
+   It sits under the note as a hairline block, not a card — the Field language
+   has one lifted object per screen and the brief is not it. */
+.rt-check { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--fd-rule); }
+.rt-check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; color: var(--fd-ink); font-size: 14px; font-weight: 650; }
+.rt-check-head b { color: var(--fd-faint); font-size: 12.5px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.rt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rt-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.rt-actions button:first-child { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.rt-actions button:active { opacity: .85; }
+.rt-actions button:disabled { opacity: .55; cursor: wait; }
+.rt-other { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.rt-other input { flex: 1 1 200px; min-width: 0; box-sizing: border-box; min-height: 40px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 13.5px; outline: none; }
+.rt-other input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+/* Once answered the block stops asking and just states what was recorded. */
+.rt-check.settled { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.rt-check.settled .rt-check-head { color: var(--fd-soft); font-weight: 550; }
+.rt-check.settled .rt-check-head b { color: var(--fd-ink); font-weight: 650; }
+.rt-check-tick { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--fd-accent); color: var(--fd-btn-ink); }
+.rt-check .fd-link { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Routine settings: the list of times your day already has. */
+.rt-settings { margin-top: 14px; }
+.rt-list { margin-bottom: 14px; }
+.rt-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--fd-rule); }
+.rt-row:last-child { border-bottom: 0; }
+.rt-row-open { flex: 1; min-width: 0; padding: 13px 2px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.rt-form { display: grid; gap: 13px; margin-top: 4px; }
+.rt-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rt-form .fd-label { margin-top: 2px; }
+.rt-days { display: flex; flex-wrap: wrap; gap: 7px; }
+.rt-days button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.rt-days button.on { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+
+.fd-weather { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+.fd-weather b { flex: none; font-size: 28px; font-weight: 650; letter-spacing: -.03em; color: var(--fd-ink); }
+.fd-weather > div { min-width: 0; }
+.fd-weather p { margin: 0; color: var(--fd-ink); font-size: 13px; line-height: 1.5; }
+/* The readings sit under the line they belong to, spaced rather than strung
+   together with middots, so the row has somewhere to breathe. */
+.fd-weather-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px !important; color: var(--fd-faint) !important; font-size: 11.5px !important; }
+.fd-weather-meta span { white-space: nowrap; }
+.fd-weather-quiet { display: flex; align-items: center; gap: 7px; width: 100%; margin: 22px 0 0; padding: 0; border: 0; background: none; color: var(--fd-faint); font: inherit; font-size: 12px; text-align: left; }
+.fd-weather-quiet svg { flex: 0 0 auto; color: var(--fd-accent); }
+.fd-weather-button { cursor: pointer; }
+
+.fd-quiet { margin-top: 26px; }
+.fd-quiet h2, .fd-label { margin: 0; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-faint); font-weight: 700; }
+.fd-label { display: block; margin-top: 22px; }
+.fd-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 13px 2px; border: 0; border-bottom: 1px solid var(--fd-rule); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.fd-line span { color: var(--fd-soft); font-size: 13px; }
+.fd-line b { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.fd-line b.empty { color: var(--fd-faint); font-weight: 500; }
+.fd-note { margin: 18px 0 0; color: var(--fd-faint); font-size: 11px; line-height: 1.55; }
+
+/* Important mail on Home: hairline rows like the quiet list, three short lines each. */
+.fd-mail-row { display: flex; flex-direction: column; gap: 2px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); color: inherit; text-decoration: none; min-width: 0; }
+.fd-mail-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.fd-mail-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 550; color: var(--fd-soft); }
+.fd-mail-row.unread .fd-mail-top b, .fd-mail-row.unread .fd-mail-subject { font-weight: 650; color: var(--fd-ink); }
+.fd-mail-top time { flex: none; color: var(--fd-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fd-mail-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--fd-soft); }
+.fd-mail-snippet { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; font-size: 11.5px; color: var(--fd-faint); line-height: 1.45; }
+.fd-mail-more { margin-top: 10px; }
+
+/* Tab screens: a title where Home has its date row. */
+.fd-head { margin-bottom: 18px; }
+.fd-head h1 { margin: 2px 0 0; font-size: 31px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; color: var(--fd-ink); }
+.fd-focus h1, .fd-focus h2 { margin: 0; font-size: 23px; line-height: 1.25; letter-spacing: -.025em; font-weight: 650; color: var(--fd-ink); text-wrap: balance; }
+
+.fd-act button, .fd-button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: var(--r-pill); padding: 11px 18px; background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.fd-act button:active, .fd-button:active { opacity: .85; }
+.fd-link { padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.fd-empty { margin: 6px 0 0; color: var(--fd-faint); font-size: 12.5px; line-height: 1.55; }
+.fd-source { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--fd-rule); }
+.fd-source strong { display: block; font-size: 13px; font-weight: 650; }
+.fd-source p { margin: 3px 0 0; color: var(--fd-soft); font-size: 11.5px; line-height: 1.5; }

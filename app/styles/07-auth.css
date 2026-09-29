@@ -1,0 +1,258 @@
+/* ─── Atlas sign-in, lock and PIN screens ───────────────────────────
+   One column straight on the Field ground: no card, no glass. The
+   column is phone-width and centred on larger screens; .auth-foot
+   sinks to the bottom of it. */
+.auth-stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px; background: var(--fd-field); color: var(--fd-ink); }
+.auth-card { width: min(100%, 400px); min-height: min(100%, 760px); flex: 1 0 auto; max-height: 820px; margin: auto; padding: 38px 0 12px; display: flex; flex-direction: column; }
+.auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 40px; }
+.auth-brand .orbis-mark { border-radius: 11px; }
+.auth-brand strong { font-size: 20px; font-weight: 700; letter-spacing: -.04em; }
+.auth-heading { margin-bottom: 26px; }
+.auth-heading .eyebrow { margin: 0; color: var(--fd-accent) !important; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.auth-heading h1 { margin: 10px 0 0; font-size: 31px; font-weight: 700; letter-spacing: -.035em; line-height: 1.14; }
+.auth-heading > p:last-child { margin: 9px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.auth-mode { display: flex; gap: 6px; padding: 4px; margin: 0 0 26px; border-radius: var(--r-pill); background: var(--fd-rule); }
+.auth-mode button { flex: 1; min-height: 38px; padding: 7px 8px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.auth-mode button.active { background: var(--fd-btn); color: var(--fd-btn-ink); font-weight: 650; }
+.auth-form { display: flex; flex-direction: column; gap: 7px; }
+.auth-form label { margin-top: 9px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+.auth-form label:first-child { margin-top: 0; }
+.auth-form input { box-sizing: border-box; width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--fd-rule); border-radius: 13px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; outline: none; }
+.auth-form input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.auth-submit { min-height: 48px; margin-top: 15px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
+.auth-submit:hover:not(:disabled) { opacity: .88; }
+.auth-submit:disabled { cursor: wait; opacity: .65; }
+.auth-link { color: var(--fd-accent); font-size: 12.5px; font-weight: 650; text-decoration: none; }
+.auth-link:hover { text-decoration: underline; }
+.auth-forgot { display: block; align-self: center; margin-top: 20px; text-align: center; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--fd-faint); font-size: 11.5px; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--fd-rule); }
+.auth-passkey { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; cursor: pointer; }
+.auth-passkey:hover:not(:disabled) { color: var(--fd-accent); }
+.auth-passkey:disabled { cursor: wait; opacity: .65; }
+.auth-foot { margin-top: auto; padding-top: 28px; }
+.auth-note { margin: 0; color: var(--fd-faint); font-size: 11px; line-height: 1.6; text-align: center; }
+.auth-legal { display: flex; justify-content: center; gap: 16px; margin: 14px 0 0; padding: 0; list-style: none; }
+.auth-legal a { color: var(--fd-faint); font-size: 11px; font-weight: 600; text-decoration: none; }
+.auth-legal a:hover { color: var(--fd-soft); text-decoration: underline; }
+.auth-signout { padding: 0; border: 0; background: none; color: var(--fd-alert); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.auth-signout:hover { text-decoration: underline; }
+
+.lock-heading { display: flex; flex-direction: column; align-items: center; }
+.lock-heading h1 { margin: 20px 0 0; font-size: 27px; font-weight: 700; letter-spacing: -.03em; line-height: 1.16; }
+.lock-heading p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.lock-heading strong { color: var(--fd-ink); font-weight: 650; }
+.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; background: var(--fd-wash); color: var(--fd-accent); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.lock-device { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 0; }
+.lock-alt { display: block; margin: 0 auto; padding: 0; border: 0; background: none; color: var(--fd-accent); font-size: 13px; font-weight: 650; cursor: pointer; }
+.lock-alt:hover { text-decoration: underline; }
+.lock-password { margin-top: 32px; }
+.lock-password .auth-passkey { margin-top: 8px; }
+.lock-pin { display: flex; flex-direction: column; align-items: center; margin-top: 38px; }
+.lock-pin label { color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.lock-pin-status { margin: 12px 0 0; color: var(--fd-soft); font-size: 12px; }
+
+/* The PIN: a real numeric field under six dots, so typing and autofill still work. */
+.pin-field { position: relative; width: 236px; height: 52px; margin-top: 12px; }
+.pin-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; font-size: 16px; cursor: text; }
+.pin-dots { height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border: 1px solid var(--fd-rule); border-radius: var(--r-lg); background: var(--fd-card); pointer-events: none; }
+.pin-field:focus-within .pin-dots { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.pin-dots span { width: 13px; height: 13px; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1.5px var(--fd-hairline); transition: background .12s, box-shadow .12s; }
+.pin-dots span.filled { background: var(--fd-ink); box-shadow: none; }
+/* With the keypad: bare dots, no box. */
+.pin-field.keypad { width: auto; height: 28px; }
+.pin-field.keypad .pin-dots { gap: 11px; padding: 0 6px; border: 0; background: none; }
+.pin-field.keypad:focus-within .pin-dots { box-shadow: none; }
+.pin-field.keypad:has(.pin-native:focus-visible) .pin-dots { box-shadow: 0 0 0 1.5px var(--fd-hairline); border-radius: var(--r-pill); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 260px; margin: 30px auto 0; }
+.pin-key { aspect-ratio: 1; min-height: 62px; justify-self: center; width: 100%; max-width: 76px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-family: var(--rounded); font-size: 25px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background .12s, transform .08s; }
+.pin-key:active:not(:disabled) { background: var(--fd-wash); transform: scale(.96); }
+.pin-key:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.pin-key:disabled { cursor: default; }
+.pin-key:disabled:not(.plain) { opacity: .55; }
+.pin-key.plain { background: none; box-shadow: none; color: var(--fd-soft); }
+.pin-key.plain:disabled { opacity: .35; }
+.pin-key.accent { color: var(--fd-accent); }
+
+.auth-card.centered { align-items: center; padding-top: 26px; text-align: center; }
+.auth-card.centered > * { width: 100%; }
+.auth-card.centered .auth-form, .auth-card.centered .auth-feedback { text-align: left; }
+.lock-signout { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 12px; }
+.auth-foot > .lock-signout:first-child { margin-top: 0; }
+/* Keyboard open: pin the column to the top of the visible area so the field sits right above the keyboard. */
+.keyboard-open .auth-stage { padding-top: max(12px, env(safe-area-inset-top, 0px)); }
+.keyboard-open .auth-card { margin-top: 0; padding-top: 8px; min-height: 0; }
+.keyboard-open .auth-card .auth-brand { margin-bottom: 16px; }
+.keyboard-open .auth-foot { display: none; }
+.lock-cover { gap: 14px; align-items: center; justify-content: center; color: var(--fd-soft); font-size: 13px; }
+.lock-cover p { margin: 0; }
+.passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
+.passkey-prompt strong { font-size: 13px; }
+.passkey-prompt p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.passkey-prompt .passkey-error { color: var(--status-critical); }
+.passkey-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
+.passkey-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.passkey-prompt.added { align-items: center; }
+.auth-back { display: block; margin-top: 20px; text-align: center; }
+.auth-feedback { margin: 10px 0 0; padding: 11px 14px; border-radius: 13px; font-size: 12.5px; line-height: 1.5; }
+.auth-feedback.error { background: var(--fd-alert-wash); color: var(--fd-alert); }
+.auth-feedback.success { background: var(--fd-wash); color: var(--fd-accent); }
+/* Phones in portrait, and touch devices in landscape (short screens), run Orbis full-screen. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
+  .stage { padding: 0; display: block; }
+  .intro { display: none; }
+  /* Blurred decorative blobs behind the intro; the phone frame covers the
+     screen at this width, so they never show and only cost paint. */
+  .ambient { display: none; }
+  /* dvh follows the visible area as browser toolbars and the keyboard come and go; vh is the fallback. */
+  .phone { width: 100%; height: 100vh; height: 100dvh; min-height: 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .phone::after, .phone-speaker { display: none; }
+  .phone-screen { border-radius: 0; }
+  .screen-body {
+    --screen-pad-top: calc(22px + env(safe-area-inset-top, 0px));
+    --fd-tabs-top: env(safe-area-inset-top, 0px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-nav {
+    left: max(10px, env(safe-area-inset-left, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .auth-stage { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+}
+/* While the on-screen keyboard is open, give the form the room the bottom nav was using. */
+.keyboard-open .bottom-nav { display: none; }
+.keyboard-open .screen-body { padding-bottom: 24px; }
+@media (pointer: coarse) {
+  /* iOS zooms into any field under 16px and stays zoomed; 16px on touch devices prevents it. */
+  input, select, textarea { font-size: 16px !important; }
+  /* Comfortable touch targets for text buttons (Apple HIG / WCAG 2.5.5). */
+  .finance-button { min-height: 44px; }
+  /* The compact iOS-style pills keep their look; an invisible layer extends the tap area to 44px. */
+  /* Grow small icon buttons' tap area to 44px without changing their look. */
+  .icon-btn::after { content: ''; position: absolute; inset: -5px; }
+}
+@media (max-width: 480px) {
+  .auth-card { padding-top: 24px; }
+}
+.groww-card { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); box-shadow: var(--e2); }
+.groww-head { display: flex; align-items: center; gap: 10px; }
+.groww-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.groww-head small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.groww-head h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -.03em; }
+.groww-icon { width: 38px; height: 38px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--sys-tint-blue); border: 1px solid var(--sys-separator); flex: 0 0 auto; }
+.groww-icon img { display: block; border-radius: 50%; }
+.groww-refresh { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--ink); cursor: pointer; }
+.groww-refresh:disabled { opacity: .6; cursor: wait; }
+.groww-list { margin-top: 10px; }
+.groww-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.groww-row:last-child { border-bottom: 0; }
+.groww-row > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.groww-row strong { font-size: 12px; }
+.groww-row small { color: var(--muted); font-size: 10px; }
+.groww-row-value { align-items: flex-end; flex: 0 0 auto; }
+.groww-card .up { color: var(--sys-green); }
+.groww-card .down { color: var(--sys-red); }
+.groww-muted { margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.groww-card .finance-notice { margin-top: 10px; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.up { color: var(--status-good); }
+.down { color: var(--status-critical); }
+/* The shape of the portfolio, read as hairline rows on the ground. These were
+   three bordered tiles with a coloured top rail and a status pill each, which
+   made a fourth competing surface out of a screen that already carries a total,
+   an allocation and an account card. The dot is the only colour left, and the
+   status word sits in the detail so the reading never depends on seeing it. */
+.invest-health { margin-top: 10px; }
+.invest-reading { display: grid; grid-template-columns: 7px 1fr auto; column-gap: 10px; align-items: baseline; padding: 13px 2px; border-bottom: 1px solid var(--line); }
+.invest-reading:last-child { border-bottom: 0; }
+.invest-reading.good { --status-color: var(--status-good); }
+.invest-reading.warning { --status-color: var(--status-warning); }
+.invest-reading.critical { --status-color: var(--status-critical); }
+.invest-reading > i { width: 7px; height: 7px; border-radius: 50%; background: var(--status-color); transform: translateY(-1px); }
+.invest-reading > span { color: var(--ink); font-size: 13px; font-weight: 600; }
+.invest-reading > b { font-size: 15px; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.invest-reading > small { grid-column: 2 / -1; margin-top: 5px; color: var(--sys-secondary); font-size: 11.5px; line-height: 1.5; text-wrap: pretty; }
+
+.invest-allocation { margin-top: 12px; }
+.invest-sublabel { margin: 18px 0 8px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.invest-strip { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; }
+.invest-strip i { min-width: 3px; height: 100%; }
+.invest-legend { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.invest-legend li { display: grid; grid-template-columns: 10px 1fr auto auto; gap: 8px; align-items: center; font-size: 11px; }
+.invest-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.invest-legend strong { font-size: 11px; }
+.invest-legend small { min-width: 52px; text-align: right; color: var(--muted); font-size: 10px; }
+.invest-bars { display: flex; flex-direction: column; gap: 9px; }
+/* The bar rows sit on the same type scale as every other row on the screen; at
+   10px bold they read as a different component borrowed from somewhere else. */
+.invest-bar { display: grid; grid-template-columns: 84px 1fr 38px; gap: 9px; align-items: center; font-size: 11.5px; }
+.invest-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.invest-bar > div { height: 8px; border-radius: 4px; background: var(--sys-surface-2); overflow: hidden; }
+.invest-bar i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--fd-accent); }
+.invest-bar strong { text-align: right; font-size: 11.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.invest-ai { margin-top: 12px; padding: 14px; border-radius: var(--r-xl); border: 1px solid var(--sys-wash-border); background: var(--sys-wash); }
+.invest-ai-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.invest-ai-head small { color: var(--fd-accent); font-size: 10px; font-weight: 700; letter-spacing: .15em; }
+.invest-ai-head h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -.03em; }
+.invest-ai-icon { width: 34px; height: 34px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--fd-chip); color: var(--fd-accent); flex: 0 0 auto; }
+.invest-ai-summary { margin: 0 0 10px; font-size: 12px; line-height: 1.5; }
+.invest-ai-item { margin-top: 8px; padding: 11px; border-radius: var(--r-md); background: var(--sys-surface); border-left: 3px solid var(--kind-color); }
+.invest-ai-item.risk { --kind-color: var(--status-critical); --kind-soft: var(--fd-alert-wash); }
+.invest-ai-item.opportunity { --kind-color: var(--status-good); --kind-soft: var(--fd-wash); }
+.invest-ai-item.action { --kind-color: var(--fd-accent); --kind-soft: var(--fd-wash); }
+.invest-ai-item em { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: var(--r-pill); background: var(--kind-soft); color: var(--kind-color); font-size: 9px; font-style: normal; font-weight: 800; }
+.invest-ai-item strong { display: block; margin-top: 6px; font-size: 12px; }
+.invest-ai-item p { margin: 4px 0 0; color: var(--sys-secondary); font-size: 11px; line-height: 1.5; }
+.invest-ai .finance-notice { margin-top: 10px; }
+
+
+/* The grouped-list surfaces. Every screen now renders inside .screen-body.field,
+   which remaps these to Field tokens (see the bridge above), so what is left
+   here is the shared geometry rather than a second palette. */
+.apple-section { margin: 20px 4px 7px; font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+.apple-card { margin-bottom: 10px; padding: 14px; border-radius: var(--r-lg); background: var(--sys-surface); }
+.apple-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.apple-card-head strong { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; }
+.apple-card-head span { color: var(--sys-secondary); font-size: 12px; }
+.apple-card-empty { margin: 8px 0 0; color: var(--sys-secondary); font-size: 12px; line-height: 1.5; }
+.apple-metric-label { margin: 12px 0 0; color: var(--sys-secondary); font-size: 11px; font-weight: 600; }
+.apple-metric { margin: 2px 0 0; color: var(--sys-secondary); font-size: 13px; font-weight: 600; }
+.apple-metric b { margin-right: 2px; color: var(--sys-label); font-family: var(--rounded); font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+.apple-metric-range { margin: 0 0 6px; color: var(--sys-secondary); font-size: 11px; }
+.apple-segmented { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; padding: 2px; border-radius: var(--r-sm); background: var(--sys-surface-2); }
+.apple-segmented button { height: 26px; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--sys-label); font-size: 12px; font-weight: 600; cursor: pointer; }
+.apple-segmented button[aria-pressed="true"] { background: var(--sys-surface); box-shadow: var(--e1); }
+.apple-row { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; margin-bottom: 10px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--sys-surface); }
+.apple-row > div:nth-of-type(1) { flex: 1; min-width: 0; }
+.apple-row strong { display: block; font-size: 14px; font-weight: 650; }
+.apple-row small, .apple-row p { display: block; margin: 2px 0 0; color: var(--sys-secondary); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.category-tile { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--r-xs); color: white; }
+.icon-action { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--sys-secondary); cursor: pointer; }
+
+/* Health */
+.rings-card { display: flex; align-items: center; gap: 18px; }
+.activity-rings { flex: 0 0 auto; }
+.activity-ring-progress { animation: ring-fill .9s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes ring-fill { from { stroke-dasharray: 0 var(--ring-length); } }
+.rings-legend { display: flex; flex-direction: column; gap: 9px; margin: 0; min-width: 0; }
+.rings-legend dt { display: flex; align-items: center; gap: 6px; color: var(--sys-label); font-size: 12px; font-weight: 650; }
+.rings-legend dt i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.rings-legend dd { margin: 1px 0 0; color: var(--sys-secondary); font-family: var(--rounded); font-size: 13px; font-weight: 600; }
+.rings-legend dd b { color: var(--sys-label); font-size: 20px; font-weight: 700; }
+.highlight-text { margin: 8px 0 12px; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.highlight-bars { display: flex; flex-direction: column; gap: 10px; }
+.highlight-bars p { margin: 0 0 4px; color: var(--sys-secondary); font-size: 12px; font-weight: 600; }
+.highlight-bars b { color: var(--sys-label); font-family: var(--rounded); font-size: 18px; }
+.highlight-bars i { display: block; height: 8px; min-width: 8px; border-radius: var(--r-pill); }
+.highlight-bars small { display: block; margin-top: 4px; color: var(--sys-secondary); font-size: 11px; }
+.health-source-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; flex-basis: 100%; font-size: 12px; }
+.health-source-confirm span { flex: 1; min-width: 150px; }
+.steps-progress { flex-basis: 100%; margin: 0; color: var(--sys-secondary); font-size: 11px; }
+.steps-progress div { height: 4px; margin-top: 5px; border-radius: var(--r-pill); background: var(--sys-surface-2); overflow: hidden; }
+.steps-progress i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); transition: width .2s; }
+
+/* Finance */

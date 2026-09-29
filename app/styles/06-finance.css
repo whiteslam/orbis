@@ -1,0 +1,287 @@
+/* ─── Finance and its charts, in the Field language ───────────────────────
+   The Field bridge above already flattens Finance's cards onto the ground.
+   What it could not reach were the colours baked into the charts and rows:
+   an iOS-blue bar series, a cold grey ring track, a second green for income,
+   and the cool grey label scale. On the sage ground each of those reads as a
+   different app's palette, so they resolve to Field tokens here. */
+/* Two progress bars carried their own gradients — teal and purple-to-blue. */
+.field .progress, .field .plan-progress { background: var(--fd-ring-track); }
+.field .progress i, .field .plan-progress i { background: var(--fd-accent); }
+/* Income is the accent, not a second, brighter green. */
+.field .finance-transaction-side strong.income { color: var(--fd-accent); }
+
+.field .apple-card-head strong { color: var(--fd-ink); }
+.field .apple-card-head span, .field .apple-card-empty, .field .apple-metric, .field .apple-metric-label, .field .apple-metric-range { color: var(--fd-faint); }
+.field .apple-metric b { color: var(--fd-ink); }
+.field .apple-row strong { color: var(--fd-ink); }
+.field .apple-row small, .field .apple-row p { color: var(--fd-faint); }
+
+/* Transactions: the same hairline row the quiet lists use. */
+.field .transaction-day h4 { margin: 18px 2px 6px; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.field .finance-transaction { padding: 13px 0; border-bottom: 1px solid var(--fd-rule); }
+.field .finance-transaction strong { font-size: 13px; color: var(--fd-ink); }
+.field .finance-transaction small, .field .finance-transaction-note { color: var(--fd-faint); font-size: 11.5px; }
+.field .finance-transaction-delete { color: var(--fd-faint); font-size: 11px; }
+.field .finance-transaction-delete:hover { background: var(--fd-alert-wash); color: var(--fd-alert); }
+.field .apple-list { padding: 0 14px; }
+
+/* Adding a transaction by hand, and the rates strip. */
+.field .manual-entry-icon { border-radius: 50%; background: var(--fd-chip); color: var(--fd-accent); }
+.field .manual-entry-closed strong { font-size: 14px; color: var(--fd-ink); }
+.field .manual-entry-closed p { color: var(--fd-faint); font-size: 11.5px; }
+.field .manual-entry-head small { color: var(--fd-faint); font-size: 10px; letter-spacing: .15em; }
+.field .manual-entry-head h3 { color: var(--fd-ink); font-size: 18px; }
+.field .manual-entry-close { border: 0; border-radius: 50%; background: var(--fd-chip); color: var(--fd-faint); }
+.field .manual-entry-toggle { padding: 0; border-radius: 0; background: none; border-bottom: 1px solid var(--fd-rule); }
+.field .manual-entry-toggle button { position: relative; height: 38px; border-radius: 0; color: var(--fd-faint); font-size: 12.5px; }
+.field .manual-entry-toggle button.active { background: none; color: var(--fd-ink); box-shadow: none; }
+.field .manual-entry-toggle button.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: var(--r-pill); background: var(--fd-ink); }
+.field .manual-entry-amount label,
+.field .manual-entry-group legend,
+.field .manual-entry-fields label,
+.field .manual-entry-note { color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+.field .currency-head { color: var(--fd-accent); }
+.field .currency-head strong { color: var(--fd-ink); font-size: 14px; }
+.field .currency-head small, .field .currency-grid span, .field .currency-muted { color: var(--fd-faint); font-size: 11px; }
+.field .currency-grid div { background: var(--fd-chip); border-radius: var(--r-md); }
+.field .currency-grid strong { color: var(--fd-ink); font-size: 13px; }
+
+/* Alerts waiting on a decision. */
+.field .gmail-review-queue-title small { color: var(--fd-faint); font-size: 10px; letter-spacing: .15em; }
+.field .gmail-review-queue-title h3 { color: var(--fd-ink); font-size: 18px; }
+.field .gmail-review-queue-title > span, .field .gmail-review-privacy { color: var(--fd-faint); font-size: 11.5px; }
+.field .gmail-review-card { padding: 14px 15px; }
+.field .gmail-review-head { color: var(--fd-accent); }
+.field .gmail-review-head strong { color: var(--fd-ink); font-size: 13px; }
+.field .gmail-review-head small, .field .gmail-review-reason { color: var(--fd-faint); font-size: 11.5px; }
+
+/* Sign out sits in the same hairline row Finance uses for its Gmail source. */
+.field .fd-source .icon-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--fd-chip); color: var(--fd-soft); box-shadow: none; }
+
+.section-title { display: flex; justify-content: space-between; align-items: center; margin: 22px 1px 10px; }
+.section-title h3 { margin: 0; font-size: 16px; letter-spacing: -.03em; }
+.section-title button { border: 0; background: transparent; color: var(--sys-blue); font-size: 11px; }
+.stack-card, .chart-card, .empty-state { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--e2); }
+.stack-card { padding: 6px 14px; }
+.insight { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+.insight:last-child { border-bottom: 0; }
+.insight svg { color: var(--accent); flex: 0 0 auto; }
+.insight p { font-size: 12px; margin: 0; line-height: 1.35; }
+.coach-card, .sync-card { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 14px; border-radius: var(--r-xl); background: var(--sys-wash); border: 1px solid var(--sys-wash-border); }
+.coach-card > div:first-child { width: 38px; height: 38px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--sys-surface); color: var(--accent); }
+.coach-card > div:nth-child(2), .sync-card > div { flex: 1; }
+.coach-card strong, .sync-card strong { font-size: 13px; }
+.coach-card p, .sync-card p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.coach-card span, .sync-card span { color: var(--muted); font-size: 20px; }
+.page-head h2 { margin: 2px 0 0; font-size: 25px; letter-spacing: -.04em; }
+.segmented { display: grid; grid-template-columns: repeat(4,1fr); padding: 4px; background: var(--sys-surface-2); border-radius: var(--r-lg); gap: 3px; }
+.segmented button { border: 0; padding: 8px 4px; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-size: 11px; }
+.segmented button.active { background: var(--sys-surface); color: var(--sys-label); box-shadow: var(--e1); }
+.chart-card { padding: 10px 8px 0; color: var(--accent); }
+.category-list { padding: 8px 14px 12px; }
+.category { padding: 9px 0; }
+.category-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 7px; }
+.progress { height: 6px; background: var(--sys-surface-2); border-radius: var(--r-pill); overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); }
+.sync-card { background: var(--sys-surface); border-color: var(--line); }
+.sync-card svg { color: var(--sys-red); }
+.privacy-note { margin-top: 3px; line-height: 1.4; }
+.finance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.finance-button { display: inline-flex; align-items: center; justify-content: center; min-height: 35px; padding: 0 12px; border: 1px solid transparent; border-radius: var(--r-sm); text-decoration: none; font-size: 11px; font-weight: 750; cursor: pointer; }
+.finance-button.primary { background: var(--sys-blue); color: #fff; }
+.finance-button.secondary { background: var(--sys-surface); border-color: var(--line); color: var(--ink); }
+.finance-button:disabled { opacity: .6; cursor: wait; }
+.finance-notice { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: var(--r-md); font-size: 11px; line-height: 1.45; }
+.finance-notice.success { background: var(--sys-tint-green); border: 1px solid var(--sys-separator); color: var(--sys-green); }
+.finance-notice.error { background: var(--sys-tint-red); border: 1px solid var(--sys-separator); color: var(--sys-red); }
+.finance-notice button { border: 0; background: transparent; color: inherit; font-size: 18px; cursor: pointer; }
+.finance-candidate-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 8px; margin: 15px 2px 0; }
+.finance-candidate-summary strong { font-size: 20px; }
+.finance-candidate-summary span { font-size: 11px; }
+.finance-candidate-summary small { flex-basis: 100%; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.gmail-review-queue { margin-top: 14px; }
+.gmail-review-queue-title { display: flex; justify-content: space-between; align-items: end; gap: 10px; }
+.gmail-review-queue-title small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.gmail-review-queue-title h3 { margin: 3px 0 0; font-size: 16px; }
+.gmail-review-queue-title > span { color: var(--muted); font-size: 10px; }
+.gmail-review-privacy { margin: 7px 0 10px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.gmail-parse-button { gap: 6px; }
+.gmail-review-list { display: flex; flex-direction: column; gap: 9px; margin-top: 9px; }
+.gmail-review-card { padding: 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--sys-surface); }
+.gmail-review-head { display: flex; justify-content: space-between; align-items: center; color: var(--accent); }
+.gmail-review-head > div { display: flex; flex-direction: column; gap: 3px; }
+.gmail-review-head strong { color: var(--ink); font-size: 11px; }
+.gmail-review-head small, .gmail-review-reason { color: var(--muted); font-size: 9px; }
+.gmail-review-reason { margin: 7px 0; line-height: 1.45; }
+.gmail-review-fields { display: grid; grid-template-columns: 1fr 72px; gap: 8px; margin-top: 9px; }
+.gmail-review-fields label { display: flex; flex-direction: column; gap: 6px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+/* One field. Review, plan and profile inputs ran 36px to 46px at three type
+   sizes; they are one control at a thumb-sized height. */
+.gmail-review-fields input, .gmail-review-fields select, .plan-free input { width: 100%; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: var(--r-md); background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 13px; }
+.gmail-review-fields input:focus-visible, .gmail-review-fields select:focus-visible, .plan-free input:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; border-color: transparent; }
+.gmail-review-merchant { grid-column: 1 / -1; }
+.gmail-review-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.gmail-review-actions .finance-button { gap: 5px; }
+.gmail-review-message { margin: 7px 0 0; color: var(--sys-red); font-size: 10px; line-height: 1.5; }
+.gmail-review-message.success { color: var(--sys-green); }
+.finance-transactions { margin-top: 2px; }
+.finance-transaction { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.finance-transaction:last-child { border-bottom: 0; }
+.finance-transaction > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.finance-transaction strong { font-size: 11px; }
+.finance-transaction small { color: var(--muted); font-size: 10px; }
+.finance-transaction-meta { display: inline-flex; align-items: center; gap: 4px; }
+.finance-transaction-note { margin: 2px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.finance-transaction-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
+.finance-transaction-side strong.income { color: var(--sys-green); }
+.finance-transaction-delete { display: inline-flex; align-items: center; gap: 3px; padding: 3px 5px; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--muted); font-size: 9px; cursor: pointer; }
+.finance-transaction-delete:hover { background: var(--sys-tint-red); color: var(--sys-red); }
+.finance-transaction-delete:disabled { opacity: .5; cursor: wait; }
+.manual-entry-closed { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; margin-top: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
+.manual-entry-closed > div:nth-child(2) { flex: 1; min-width: 0; }
+.manual-entry-closed strong { font-size: 13px; }
+.manual-entry-closed p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.manual-entry-closed .finance-button { gap: 4px; }
+.manual-entry-closed-message { flex-basis: 100%; margin: 0; }
+.manual-entry-icon { width: 34px; height: 34px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
+.manual-entry { margin-top: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); box-shadow: var(--e2); }
+.manual-entry-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.manual-entry-head small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.manual-entry-head h3 { margin: 3px 0 0; font-size: 16px; letter-spacing: -.03em; }
+.manual-entry-close { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--muted); cursor: pointer; }
+.manual-entry-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 12px; padding: 4px; border-radius: var(--r-md); background: var(--sys-surface-2); }
+.manual-entry-toggle button { height: 32px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.manual-entry-toggle button.active { background: var(--sys-surface); color: var(--ink); box-shadow: 0 2px 8px rgba(29,45,57,.08); }
+.manual-entry-amount { margin-top: 12px; }
+.manual-entry-amount label, .manual-entry-group legend { display: block; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.manual-entry-fields label, .manual-entry-note { color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+/* What you are typing is the largest thing on the screen, as on the Atlas
+   hero — a figure sitting on a rule rather than inside a box. */
+.manual-entry-amount > div { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 0 0 12px; border: 0; border-bottom: 1.5px solid var(--fd-hairline); }
+.manual-entry-amount select { min-height: 40px; padding: 0 8px; border: 0; border-radius: var(--r-sm); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 650; }
+.manual-entry-amount input { flex: 1; min-width: 0; min-height: 48px; border: 0; outline: 0; background: transparent; color: var(--fd-ink); font-family: var(--rounded); font-size: 40px; font-weight: 650; letter-spacing: -.04em; text-align: right; font-variant-numeric: tabular-nums; }
+.manual-entry-amount > div:focus-within { border-bottom-color: var(--fd-accent); }
+.manual-entry-group { margin: 12px 0 0; padding: 0; border: 0; min-width: 0; }
+.manual-entry-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+/* One chip. Categories, payment methods, plan answers and journal tags were
+   four different pills — 28px to 30px tall, in three different accents, one of
+   them a chart colour. They are one control now, at a size a thumb can hit. */
+.manual-entry-chips button,
+.plan-options button,
+.journal-tags button { min-height: 34px; padding: 0 13px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.manual-entry-chips button.active,
+.plan-options button.active,
+.journal-tags button.active { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); font-weight: 650; }
+.manual-entry-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.manual-entry-fields label, .manual-entry-note { display: flex; flex-direction: column; gap: 4px; }
+.manual-entry-wide { grid-column: 1 / -1; }
+.manual-entry-fields input, .manual-entry-note textarea { width: 100%; min-width: 0; box-sizing: border-box; height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--ink); font: inherit; font-size: 11px; }
+.manual-entry-note { margin-top: 12px; }
+.manual-entry-note textarea { height: auto; padding: 8px; resize: vertical; line-height: 1.4; }
+.manual-entry-note small { align-self: flex-end; font-size: 9px; }
+.finance-transaction > strong { text-align: right; white-space: nowrap; }
+.finance-empty { padding: 18px; }
+.finance-empty p { line-height: 1.5; }
+.health-grid { margin-top: 8px; }
+.health-intro { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 14px; padding: 12px; border: 1px solid var(--sys-separator); border-radius: var(--r-lg); background: var(--sys-tint-green); color: var(--accent); }
+.health-intro p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.health-disclaimer { margin: 12px 0; color: var(--fd-faint); font-size: 11px; line-height: 1.55; }
+.coach-card-button { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.workbook-advisor { margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); box-shadow: var(--e2); }
+.workbook-heading { display: flex; align-items: flex-start; gap: 10px; }
+.workbook-icon { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
+.workbook-heading h3 { margin: 1px 0 4px; font-size: 14px; letter-spacing: -.02em; }
+.workbook-heading p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.workbook-upload-form { margin-top: 14px; }
+/* One upload target. The advisor's zone was a filled grey panel with an
+   iOS-blue focus ring; the library's was a small bordered row. Both are the
+   same dashed zone now. */
+.workbook-dropzone, .health-drop { min-height: 96px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed var(--fd-rule); border-radius: var(--r-xl); background: var(--fd-card); color: var(--fd-accent); cursor: pointer; text-align: center; }
+.workbook-dropzone:hover, .health-drop:hover { border-color: var(--fd-accent); background: var(--fd-wash); }
+.workbook-dropzone strong, .health-drop strong { color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
+.workbook-dropzone span, .health-drop span, .workbook-privacy { color: var(--fd-faint); font-size: 11.5px; }
+.workbook-upload-form input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+.workbook-upload-form:focus-within .workbook-dropzone { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.workbook-privacy { margin: 8px 2px 0; line-height: 1.5; }
+.workbook-progress { display: flex; gap: 7px; align-items: center; color: var(--muted); font-size: 11px; }
+.workbook-spinner { animation: workbook-spin 1s linear infinite; }
+@keyframes workbook-spin { to { transform: rotate(360deg); } }
+.workbook-preview { margin-top: 13px; }
+.workbook-file-row, .workbook-sheet-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.workbook-file-row > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.workbook-file-row strong, .workbook-sheet-title strong { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+.workbook-file-row small, .workbook-sheet-title span { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.workbook-icon-button { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--muted); cursor: pointer; }
+.workbook-sheet { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+.workbook-columns { margin: 5px 0 8px; color: var(--muted); font-size: 9px; line-height: 1.5; overflow-wrap: anywhere; }
+.workbook-columns span { color: var(--ink); font-weight: 700; }
+.workbook-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-sm); }
+.workbook-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.workbook-table th, .workbook-table td { max-width: 120px; padding: 6px 7px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.workbook-table thead { background: var(--sys-surface-2); }
+.workbook-table th { font-weight: 750; }
+.workbook-table tbody th { color: var(--muted); }
+.workbook-observations { display: flex; flex-direction: column; gap: 6px; margin-top: 13px; }
+.workbook-observations > strong { font-size: 10px; }
+.workbook-observations p { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 7px 9px; border-radius: var(--r-sm); background: var(--sys-surface-2); color: var(--muted); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+.workbook-observations p span { color: var(--ink); font-weight: 700; }
+.workbook-consent { display: flex; flex-direction: column; gap: 10px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); }
+.workbook-consent label { display: flex; align-items: flex-start; gap: 11px; padding: 4px 0; color: var(--fd-ink); font-size: 12.5px; line-height: 1.55; cursor: pointer; }
+.workbook-consent input { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--fd-accent); }
+.workbook-consent .finance-button { gap: 6px; align-self: flex-start; }
+.workbook-no-observations { margin: 12px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-md); color: var(--muted); font-size: 11px; line-height: 1.5; }
+/* The answer bleeds to the advisor card's edges and sits on the Field ground,
+   so the lifted surface inside it is not white on white. */
+.workbook-advice { margin: 16px -14px -14px; padding: 16px 14px 14px; background: var(--fd-field); border-radius: 0 0 var(--r-xl) var(--r-xl); }
+/* Inside the grouped Health screen the advice keeps the Field surface, so the
+   model's answer is visibly a different kind of object from the data around it. */
+.workbook-advice .fd-focus { padding: 0; }
+.workbook-advice .fd-focus h3 { margin: 10px 0 0; font-size: 18px; line-height: 1.3; letter-spacing: -.02em; font-weight: 650; color: var(--fd-ink); text-wrap: balance; }
+.workbook-advice .fd-focus p { color: var(--fd-soft); }
+.workbook-advice .fd-act { margin-top: 12px; }
+.workbook-advice .fd-step:last-of-type { border-bottom: 0; }
+.workbook-advice .finance-button { margin-top: 12px; }
+.workbook-advice-heading { display: flex; gap: 7px; align-items: center; color: var(--accent); font-size: 12px; }
+.workbook-advice-summary { font-size: 11px; line-height: 1.55; }
+.workbook-advice-item { margin: 9px 0; padding: 10px; border: 1px solid var(--line); border-radius: var(--r-md); }
+.workbook-advice-item > strong { font-size: 11px; }
+.workbook-advice-item p { margin: 5px 0; font-size: 10px; line-height: 1.5; }
+.workbook-advice-item small { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.workbook-caveat { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.workbook-message { display: block; }
+/* Timestamp on advice restored from an earlier session. */
+.ai-saved-note { margin: 0 0 8px; color: var(--muted); font-size: 9px; letter-spacing: .02em; }
+.plan-list { padding: 2px 14px; }
+.plan-row { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.plan-row:last-child { border-bottom: 0; }
+.plan-row > div:nth-child(2) { flex: 1; }
+.plan-row strong { font-size: 12px; }
+.plan-row p { margin: 3px 0 0; font-size: 10px; color: var(--muted); }
+.plan-row small { color: var(--muted); }
+.plan-icon { width: 38px; height: 38px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--sys-surface-2); }
+.feature-icon { margin: 0 auto 12px; width: 56px; height: 56px; border-radius: var(--r-xl); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.personal-form { display: grid; gap: 11px; padding: 15px; margin-top: 14px; }
+.personal-form > strong { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.personal-form label, .progress-form label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
+.personal-form input, .progress-form input { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; }
+.personal-form textarea { width: 100%; min-height: 90px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; resize: vertical; }
+.personal-form .finance-button { justify-self: start; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.memory-note p { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.memory-list { display: grid; gap: 10px; margin-top: 14px; }
+.memory-note { padding: 14px; margin: 0; }
+.memory-note p { margin: 0 0 10px; white-space: pre-wrap; color: var(--ink); }
+.memory-note > div { display: flex; align-items: center; justify-content: space-between; }
+.memory-note small { color: var(--muted); font-size: 10px; }
+.personal-form select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; }
+.empty-state { margin-top: 14px; padding: 24px; text-align: center; }
+.empty-state svg { color: var(--accent); }
+.empty-state strong { display: block; margin-top: 8px; }
+.empty-state p { color: var(--muted); font-size: 11px; }
+/* Floating glass capsule: detached from the edges so the page scrolls
+   under it and the blur has something to refract. */
+.bottom-nav { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 62px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; border-radius: var(--r-pill); border: var(--glass-hairline); background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-chrome-blur); backdrop-filter: var(--glass-chrome-blur); box-shadow: var(--e2), var(--glass-edge); padding: 4px 6px; }
+.bottom-nav button { min-height: 44px; height: 100%; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--sys-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 0; min-width: 0; transition: background .18s ease, color .18s ease; }
+.bottom-nav button span { font-size: 8px; letter-spacing: -.02em; }
+.bottom-nav button.active { background: var(--sys-surface); color: var(--sys-label); font-weight: 800; box-shadow: var(--e1); }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }

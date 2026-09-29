@@ -2,7 +2,20 @@
 
 import { useEffect } from 'react';
 import { BoundaryScreen } from '@/components/field/boundary';
-import './globals.css';
+import './styles/01-base.css';
+import './styles/02-home.css';
+import './styles/03-hero.css';
+import './styles/04-views.css';
+import './styles/05-profile.css';
+import './styles/06-finance.css';
+import './styles/07-auth.css';
+import './styles/08-month.css';
+import './styles/09-boundaries.css';
+import './styles/10-assistant.css';
+import './styles/atlas-health.css';
+import './styles/atlas-profile.css';
+import './styles/atlas-social.css';
+import './styles/marketing.css';
 
 // Replaces the root layout when that fails, so it brings its own document and
 // styles. No inline script: the stored theme is applied after mount instead

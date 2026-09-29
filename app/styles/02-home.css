@@ -1,0 +1,54 @@
+/* ─── Field: Home ─────────────────────────────────────────────────────
+   One decision on one lifted surface; everything else is a hairline row.
+   Nothing here gets a border, a fill and a shadow at once. */
+.screen-body.field {
+  --screen-pad-top: max(34px, calc(22px + env(safe-area-inset-top, 0px)));
+  background: var(--fd-field);
+  color: var(--fd-ink);
+  padding-top: var(--screen-pad-top);
+
+  /* Inside a Field screen the grouped-list palette resolves to the Field one.
+     Hundreds of rules across Finance, Health, Invest and Profile were written
+     against these names, so remapping them here is what keeps every screen on
+     one palette — a blue accent, a cold grey rule or a second green stops
+     being possible on this ground rather than being overridden case by case.
+     The chrome outside .screen-body (the tab bar, sheets) keeps the system
+     palette, which is why this sits on the screen and not on :root. */
+  --ink: var(--fd-ink);
+  --muted: var(--fd-faint);
+  --line: var(--fd-rule);
+  --card: var(--fd-card);
+  --accent: var(--fd-accent);
+  --accent-soft: var(--fd-wash);
+  --status-good: var(--fd-accent);
+  --status-critical: var(--fd-alert);
+  --sys-label: var(--fd-ink);
+  --sys-secondary: var(--fd-soft);
+  --sys-tertiary: var(--fd-faint);
+  --sys-separator: var(--fd-rule);
+  --sys-hairline: var(--fd-rule);
+  --sys-surface: var(--fd-surface);
+  --sys-surface-2: var(--fd-chip);
+  --sys-surface-3: var(--fd-chip);
+  --sys-blue: var(--fd-accent);
+  --sys-blue-press: var(--fd-accent);
+  --sys-green: var(--fd-accent);
+  --sys-red: var(--fd-alert);
+  --sys-tint-blue: var(--fd-wash);
+  --sys-tint-green: var(--fd-wash);
+  --sys-tint-red: var(--fd-alert-wash);
+  --sys-wash: var(--fd-card);
+  --sys-wash-border: var(--fd-rule);
+}
+.fd-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.fd-date { margin: 0; color: var(--fd-faint); font-size: 12px; }
+.fd-top-actions { display: flex; align-items: center; gap: 6px; }
+.field .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--fd-chip); box-shadow: none; color: var(--fd-soft); }
+.field .avatar { width: 32px; height: 32px; background: var(--fd-btn); color: var(--fd-btn-ink); }
+
+/* The statement sits on the ground: no fill, no border, no shadow. */
+.fd-focus { padding: 0; background: none; }
+.fd-focus p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.fd-act { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.fd-act:empty { display: none; }
+
