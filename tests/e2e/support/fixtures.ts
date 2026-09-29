@@ -1,7 +1,7 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { readUsers, TEST_PIN, type TestUser } from './env';
 
-export type Tab = 'Home' | 'Expense' | 'Health' | 'Invest' | 'Social' | 'Profile';
+export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social';
 
 /**
  * Opens Orbis as a signed-in user, clearing the app lock if it is showing.
@@ -38,7 +38,13 @@ export async function openTab(page: Page, tab: Tab) {
 }
 
 /** Every tab, in nav order. Specs that visit all tabs use this, so a layout change is one edit. */
-export const TABS: Tab[] = ['Home', 'Expense', 'Health', 'Invest', 'Social', 'Profile'];
+export const TABS: Tab[] = ['Today', 'Money', 'Health', 'Journal', 'Social'];
+
+/** Money opens on Spending; this switches it to Investments. */
+export async function openInvestments(page: Page) {
+  await openTab(page, 'Money');
+  await page.getByRole('tab', { name: 'Investments' }).click();
+}
 
 /** Opens Settings from the avatar in the current screen's header. */
 export async function openSettings(page: Page) {

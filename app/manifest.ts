@@ -15,8 +15,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#f2f2f7',
     categories: ['finance', 'health', 'productivity', 'lifestyle'],
     shortcuts: [
-      { name: 'Expense', url: '/#finance' },
+      { name: 'Money', url: '/#money' },
       { name: 'Health', url: '/#health' },
+      { name: 'Journal', url: '/#journal' },
       { name: 'Social', url: '/#social' },
     ],
     icons: [

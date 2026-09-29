@@ -18,13 +18,13 @@ export async function GET(request: NextRequest) {
       path: '/auth/gmail',
       maxAge: 10 * 60,
     });
-    // /auth/gmail/start?return=settings brings the user back to Profile → Settings.
+    // /auth/gmail/start?return=settings brings the user back to Settings → Connections.
     if (request.nextUrl.searchParams.get('return') === 'settings') {
       response.cookies.set(googleReturnCookieName, 'settings', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/auth/gmail', maxAge: 10 * 60 });
     }
     return response;
   } catch (error) {
     console.error('Starting the Gmail connection failed', error);
-    return NextResponse.redirect(new URL('/?tab=home&gmail=setup-error', getSiteUrl()));
+    return NextResponse.redirect(new URL('/?tab=today&gmail=setup-error', getSiteUrl()));
   }
 }

@@ -15,11 +15,11 @@ for (const viewport of PHONES) {
     await openApp(page);
     // Regression: tab switches and focusing a field used to scroll the hidden
     // .stage wrapper, leaving the whole app (and bottom nav) shifted up ~100px.
-    for (const tab of ['Expense', 'Health', 'Invest', 'Profile', 'Home'] as const) await openTab(page, tab);
+    for (const tab of ['Money', 'Health', 'Journal', 'Social', 'Today'] as const) await openTab(page, tab);
     // Any field will do: the regression was that focusing one scrolled the
     // hidden .stage wrapper. This used the growth projector's SIP input, which
     // no longer exists, so it uses the manual expense amount instead.
-    await openTab(page, 'Expense');
+    await openTab(page, 'Money');
     await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
     const field = page.getByLabel('Amount');
     await field.focus();

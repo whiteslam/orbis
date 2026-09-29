@@ -7,10 +7,14 @@ test('offline save keeps the draft and shows an error; retry works once online',
   page.on('pageerror', (error) => pageErrors.push(error.message));
   const text = `QA offline ${Date.now()}`;
   await openApp(page);
-  await openTab(page, 'Profile');
-  await page.getByRole('tab', { name: 'Journal' }).click();
+  await openTab(page, 'Journal');
   const editor = page.locator('.pf-editor');
-  if (await page.getByRole('button', { name: 'Edit today’s entry' }).isVisible()) await page.getByRole('button', { name: 'Edit today’s entry' }).click();
+  const editButton = page.getByRole('button', { name: 'Edit today’s entry' });
+  // Journal now loads as its own tab (a dynamic import), so the editor or the
+  // saved view of today's entry may not have rendered yet right after the tab
+  // switch. Wait for whichever of the two shows up before deciding which one it is.
+  await expect(editButton.or(editor.getByRole('radiogroup'))).toBeVisible();
+  if (await editButton.isVisible()) await editButton.click();
   await editor.getByRole('radio', { name: /Okay/ }).click();
   await editor.getByRole('textbox').fill(text);
 

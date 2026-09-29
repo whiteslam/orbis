@@ -1,12 +1,11 @@
-import { expect, openApp, openTab, test } from '../support/fixtures';
+import { expect, openApp, openSettings, openTab, test } from '../support/fixtures';
 
 // Create → reload (data came from the database) → update/delete, through the real UI.
 
 test('journal: mood is required, entry saves, persists, and can be edited', async ({ page, consoleErrors }) => {
   const text = `QA journal ${Date.now()}`;
   await openApp(page);
-  await openTab(page, 'Profile');
-  await page.getByRole('tab', { name: 'Journal' }).click();
+  await openTab(page, 'Journal');
   const editor = page.locator('.pf-editor');
   await editor.getByRole('textbox').fill(text);
   await editor.getByRole('button', { name: /Save entry|Update entry/ }).click();
@@ -18,10 +17,9 @@ test('journal: mood is required, entry saves, persists, and can be edited', asyn
 
   await page.reload();
   await openApp(page);
-  await openTab(page, 'Profile');
-  await page.getByRole('tab', { name: 'Journal' }).click();
+  await openTab(page, 'Journal');
   await expect(page.locator('.pf-entry-view').getByText(text)).toBeVisible();
-  await expect(page.locator('.pf-streak')).toContainText('1 day');
+  await expect(page.locator('.pf-streak')).toContainText(/1\s*day/);
   await page.getByRole('button', { name: 'Edit today’s entry' }).click();
   await page.locator('.pf-editor').getByRole('textbox').fill(`${text} edited`);
   await page.locator('.pf-editor').getByRole('button', { name: 'Update entry' }).click();
@@ -31,8 +29,7 @@ test('journal: mood is required, entry saves, persists, and can be edited', asyn
 
 test('settings: home city and notification preferences save and persist', async ({ page, consoleErrors }) => {
   await openApp(page);
-  await openTab(page, 'Profile');
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openSettings(page);
   await page.getByLabel('Home city').fill('Pune');
   await page.getByRole('button', { name: /^(Save|Change)$/ }).click();
   await expect(page.getByText(/Saved Pune/)).toBeVisible({ timeout: 20_000 });
@@ -44,14 +41,15 @@ test('settings: home city and notification preferences save and persist', async 
 
   await page.reload();
   await openApp(page);
-  await openTab(page, 'Profile');
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await openSettings(page);
   await expect(page.getByText(/Weather uses Pune/)).toBeVisible();
-  await expect(page.getByRole('switch')).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Daily notifications' })).toBeChecked();
   await expect(page.getByLabel('Lunch notification')).not.toBeChecked();
 
-  // The saved city now drives the Home weather card (no browser location in tests).
-  await openTab(page, 'Home');
-  await expect(page.locator('.fd-weather, .fd-weather-quiet')).toContainText(/°|unavailable|Checking/);
+  // The saved city now drives the Today weather card (no browser location in tests).
+  // Important mail reuses the same "quiet" class for its own connect prompt, so this
+  // takes the first match: the weather card renders before it in the DOM.
+  await openTab(page, 'Today');
+  await expect(page.locator('.fd-weather, .fd-weather-quiet').first()).toContainText(/°|unavailable|Checking/);
   expect(consoleErrors).toEqual([]);
 });

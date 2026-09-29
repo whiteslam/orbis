@@ -20,14 +20,14 @@ export async function GET(request: NextRequest) {
   }
 
   const credentials = envZerodhaCredentials();
-  if (!credentials) return NextResponse.redirect(new URL('/?tab=invest&zerodha=not-configured', request.url));
+  if (!credentials) return NextResponse.redirect(new URL('/?tab=investments&zerodha=not-configured', request.url));
 
   let signed: ReturnType<typeof signState>;
   try {
     signed = signState(userId, 'zerodha');
   } catch (caught) {
     console.error(caught);
-    return NextResponse.redirect(new URL('/?tab=invest&zerodha=not-configured', request.url));
+    return NextResponse.redirect(new URL('/?tab=investments&zerodha=not-configured', request.url));
   }
 
   const response = NextResponse.redirect(zerodhaLoginUrl(credentials.apiKey, signed.state));

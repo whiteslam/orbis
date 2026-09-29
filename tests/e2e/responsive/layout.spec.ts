@@ -1,11 +1,10 @@
-import { expect, openApp, openTab, test, type Tab } from '../support/fixtures';
+import { expect, openApp, openTab, TABS, test } from '../support/fixtures';
 
 const VIEWPORTS = [
   { width: 320, height: 568 }, { width: 360, height: 640 }, { width: 375, height: 667 }, { width: 390, height: 844 },
   { width: 393, height: 852 }, { width: 412, height: 915 }, { width: 430, height: 932 }, { width: 844, height: 390 },
   { width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 },
 ];
-const TABS: Tab[] = ['Home', 'Expense', 'Health', 'Invest', 'Social', 'Profile'];
 
 type Finding = { viewport: string; tab: string; kind: string; detail: string };
 

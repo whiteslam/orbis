@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { HeartPulse, Home, Megaphone, TrendingUp, UserRound, WalletCards } from 'lucide-react';
+import { BookOpen, HeartPulse, Home, Megaphone, WalletCards, type LucideIcon } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { TabLoading } from '@/components/shell/loading';
 import { SettingsProvider } from '@/components/shell/settings-context';
@@ -21,16 +21,15 @@ import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from
 import type { AppConnections, Integration } from '@/lib/providers/status';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SocialMonth } from '@/lib/social/repository';
-import type { ProfileSection } from '@/components/personal/profile-screen';
-import type { SettingsSection } from '@/lib/shell/tabs';
+import { hashFor, openingFromUrl, TABS, type MoneyView, type SettingsSection, type TabId } from '@/lib/shell/tabs';
+import type { FocusTarget } from '@/lib/focus/types';
 
 // Today is what opens, so it is the only screen in the first download. Every
 // other tab loads the first time it is opened.
-const SpendingScreen = dynamic(() => import('@/components/money/spending-screen').then((m) => m.SpendingScreen), { loading: TabLoading });
-const InvestmentsScreen = dynamic(() => import('@/components/money/investments-screen').then((m) => m.InvestmentsScreen), { loading: TabLoading });
+const MoneyScreen = dynamic(() => import('@/components/money/money-screen').then((m) => m.MoneyScreen), { loading: TabLoading });
 const HealthScreen = dynamic(() => import('@/components/health/health-screen').then((m) => m.HealthScreen), { loading: TabLoading });
+const JournalScreen = dynamic(() => import('@/components/journal/journal-screen').then((m) => m.JournalScreen), { loading: TabLoading });
 const SocialScreen = dynamic(() => import('@/components/social/social-screen').then((m) => m.SocialScreen), { loading: TabLoading });
-const ProfileScreen = dynamic(() => import('@/components/personal/profile-screen').then((m) => m.ProfileScreen), { loading: TabLoading });
 // The mic shows on every screen but is not needed to draw Today, so it follows it.
 const TalkToOrbis = dynamic(() => import('@/components/assistant/talk-to-orbis').then((m) => m.TalkToOrbis));
 const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet').then((m) => m.SettingsSheet));
@@ -38,28 +37,14 @@ const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;
 
-type Tab = 'home' | 'finance' | 'health' | 'personal' | 'investment' | 'social';
-
-const TAB_TO_HASH: Record<Tab, string> = { home: 'home', finance: 'finance', health: 'health', investment: 'invest', social: 'social', personal: 'profile' };
-const HASH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_HASH).map(([tab, hash]) => [hash, tab as Tab])) as Record<string, Tab>;
-
-const nav = [
-  ['home', 'Home', Home],
-  ['finance', 'Expense', WalletCards],
-  ['health', 'Health', HeartPulse],
-  ['investment', 'Invest', TrendingUp],
-  ['social', 'Social', Megaphone],
-  ['personal', 'Profile', UserRound],
-] as const;
+const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone };
 
 export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string } }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('home');
+  const [tab, setTab] = useState<TabId>('today');
+  const [money, setMoney] = useState<MoneyView>('spending');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
   const [zerodhaNotice, setZerodhaNotice] = useState<string | null>(null);
-  // Journal is the only section with a reason to open today, so it is the landing
-  // one. Deep links (Home's "open settings", the Google callback) still say where to go.
-  const [profileSection, setProfileSection] = useState<ProfileSection>('journal');
   // Which Settings section is open, or null. Task 6 renders the sheet.
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   const settingsAccess = useMemo(() => ({
@@ -67,12 +52,23 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     initial: personalProfile.profile?.preferredName?.trim().charAt(0).toLocaleUpperCase() || null,
   }), [personalProfile.profile?.preferredName]);
 
+  // Today's cards and quiet rows name where they lead in the older vocabulary.
+  const openTarget = (target: FocusTarget) => {
+    setSettings(null);
+    if (target === 'personal') return setSettings('you');
+    if (target === 'finance' || target === 'invest') {
+      setMoney(target === 'invest' ? 'investments' : 'spending');
+      return setTab('money');
+    }
+    setTab(target);
+  };
+
   // The brief is only true for as long as its data is. Opening the app already
   // rendered it fresh, and every save revalidates the page, so Home re-reads
   // from the server only after a real absence: the app in the background for a
   // minute or more, where a task done elsewhere could otherwise linger.
   useEffect(() => {
-    if (tab !== 'home') return;
+    if (tab !== 'today') return;
     let hiddenAt: number | null = document.visibilityState === 'hidden' ? Date.now() : null;
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -87,26 +83,24 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   }, [router, tab]);
 
   // The tab the URL asked for, until it has been applied (see the hash effect below).
-  const pendingTab = useRef<Tab | null>(null);
+  const pendingTab = useRef<TabId | null>(null);
   useEffect(() => {
     const url = new URL(window.location.href);
-    const requestedTab = url.searchParams.get('tab');
+    const opening = openingFromUrl(url.hash, url.searchParams.get('tab'));
     const notice = url.searchParams.get('gmail');
     const brokerNotice = url.searchParams.get('zerodha');
-    // Reload keeps the current tab (#finance, #invest…); ?tab= links from OAuth take priority (?tab=home stays on Home).
-    // A tab may carry its own state after a slash (#social/2026-09); only the part before it names the tab.
-    const fromHash = HASH_TO_TAB[url.hash.slice(1).split('/')[0]];
-    const opening = requestedTab === 'finance' ? 'finance' : requestedTab === 'invest' ? 'investment' : requestedTab === 'settings' ? 'personal' : !requestedTab && fromHash ? fromHash : null;
     // One-time read of the URL a link arrived with, not a value the render depends on.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (requestedTab === 'settings') setProfileSection('settings');
-    if (opening && opening !== 'home') {
-      pendingTab.current = opening;
-      setTab(opening);
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (opening?.money) setMoney(opening.money);
+    if (opening?.settings) setSettings(opening.settings);
+    if (opening && opening.tab !== 'today') {
+      pendingTab.current = opening.tab;
+      setTab(opening.tab);
     }
     if (notice) setGmailNotice(notice);
     if (brokerNotice) setZerodhaNotice(brokerNotice);
-    if (requestedTab || notice || brokerNotice) {
+    /* eslint-enable react-hooks/set-state-in-effect */
+    if (url.searchParams.has('tab') || notice || brokerNotice) {
       url.searchParams.delete('tab');
       url.searchParams.delete('gmail');
       url.searchParams.delete('zerodha');
@@ -114,21 +108,38 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     }
   }, []);
 
+  // A hash-only link (openApp('#invest'), a bookmark, back/forward) changes the URL
+  // without a reload, so it is not seen by the mount effect above; this applies it
+  // instead. Unlike that one-time read, this always sets the tab (even back to Today)
+  // and clears Settings when the new hash doesn't ask for it, because — running after
+  // the app already booted — there is no "still today" default left to lean on.
   useEffect(() => {
-    // Until the tab read from the URL is applied, this still sees 'home'; writing
-    // now would erase the hash (and a tab's own state after it, like #social/2026-11).
+    const onHashChange = () => {
+      const opening = openingFromUrl(window.location.hash, null);
+      if (!opening) return;
+      if (opening.money) setMoney(opening.money);
+      setSettings(opening.settings ?? null);
+      setTab(opening.tab);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    // Until the tab read from the URL is applied, this still sees 'today'; writing
+    // now would erase the hash (and Social's own month after it, #social/2026-11).
     if (pendingTab.current) {
       if (tab !== pendingTab.current) return;
       pendingTab.current = null;
     }
-    const hash = tab === 'home' ? '' : `#${TAB_TO_HASH[tab]}`;
-    // Leave a tab's own state (#social/2026-09) alone while that tab is open.
-    if (hash && window.location.hash.startsWith(`${hash}/`)) return;
+    // Social keeps its month in the hash itself; leave that alone while it is open.
+    if (tab === 'social' && window.location.hash.startsWith('#social/')) return;
+    const hash = hashFor(tab, money);
     if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
-  }, [tab]);
+  }, [tab, money]);
 
   const screen = useMemo(() => {
-    if (tab === 'home') return (
+    if (tab === 'today') return (
       <TodayScreen
         financeSummary={financeSummary}
         stepsSummary={stepsSummary}
@@ -140,36 +151,15 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         aiBriefEnabled={aiPreferences.homeBriefEnabled && aiAllowed(aiPreferences)}
         gmailNotice={gmailNotice}
         clearGmailNotice={() => setGmailNotice(null)}
-        openTab={(target) => { if (target === 'personal') setProfileSection('profile'); setTab(target === 'invest' ? 'investment' : target); }}
+        openTab={openTarget}
       />
     );
-    if (tab === 'social') return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
-    if (tab === 'finance') return <SpendingScreen summary={financeSummary} />;
-    if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
-    if (tab === 'personal') {
-      return (
-        <ProfileScreen
-          key={profileSection}
-          initialSection={profileSection}
-          googleNotice={profileSection === 'settings' ? gmailNotice : null}
-          clearGoogleNotice={() => setGmailNotice(null)}
-          openHealth={() => setTab('health')}
-          personalProfile={personalProfile}
-          fitnessPersona={fitnessPersona}
-          contextNotes={contextNotes}
-          journal={journal}
-          notificationSettings={notificationSettings}
-          aiPreferences={aiPreferences}
-          routines={routines}
-          appConnections={appConnections}
-          homeLocation={homeLocation}
-          integrations={integrations}
-          stepsSummary={stepsSummary}
-        />
-      );
-    }
-    return <InvestmentsScreen savedAdvice={savedPortfolioAdvice} notice={zerodhaNotice} clearNotice={() => setZerodhaNotice(null)} />;
-  }, [appConnections, healthLibrary, contextNotes, financeSummary, fitnessPersona, gmailNotice, homeLocation, integrations, journal, notificationSettings, profileSection, personalProfile, savedPortfolioAdvice, savedWorkbookAdvice, stepsSummary, tab, aiPreferences, routines, socialMonth, zerodhaNotice]);
+    if (tab === 'money') return <MoneyScreen view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
+    if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
+    if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
+    return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
+    // openTarget only calls state setters, which are stable, so it needs no entry below.
+  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal]);
 
   return (
     <main className="stage">
@@ -196,11 +186,14 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
             )}
             <TalkToOrbis />
             <nav className="bottom-nav">
-              {nav.map(([id, label, Icon]) => (
-                <button key={id} onClick={() => { setTab(id); setSettings(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
-                  <Icon size={17}/><span>{label}</span>
-                </button>
-              ))}
+              {TABS.map(({ id, label }) => {
+                const Icon = ICONS[id];
+                return (
+                  <button key={id} onClick={() => { setTab(id); setSettings(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
+                    <Icon size={17} /><span>{label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </SettingsProvider>
         </div>

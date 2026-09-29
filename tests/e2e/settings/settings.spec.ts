@@ -3,8 +3,7 @@ import { expect, openApp, openSettings, openTab, test, TABS } from '../support/f
 test('Settings opens from every tab and closes when a tab is tapped or Escape is pressed', async ({ page, consoleErrors }) => {
   await openApp(page);
   const sheet = page.getByRole('dialog', { name: 'Settings' });
-  // Profile has its own identity header until the five-tab layout replaces it.
-  for (const tab of TABS.filter((name) => name !== 'Profile')) {
+  for (const tab of TABS) {
     await openTab(page, tab);
     await openSettings(page);
     await openTab(page, tab);

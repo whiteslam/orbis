@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { FieldHead, FieldHero, FieldSubHead, useScrollTop } from '@/components/field/field';
+import { FieldHead, FieldHero, FieldLabel, FieldSubHead, useScrollTop } from '@/components/field/field';
+import { FitnessPersonaEditor } from '@/components/health/fitness-persona';
 import { PartLoading } from '@/components/shell/loading';
 import { adviceFromSaved, savedWhen, splitSummary, type ShownAdvice } from '@/lib/workbook/shown-advice';
 import { documentAdded } from '@/lib/health-docs/format';
@@ -10,6 +11,7 @@ import { planWeek } from '@/lib/health/plan-week';
 import type { LibraryState } from '@/lib/health-docs/repository';
 import type { StepsSummary } from '@/lib/health/types';
 import type { SavedWorkbookAdvice } from '@/lib/ai/saved';
+import type { FitnessPersonaSummary } from '@/lib/personal/repository';
 
 const StepsCard = dynamic(() => import('@/components/health/steps-card').then((m) => m.StepsCard), { loading: PartLoading });
 const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').then((m) => m.PlanBuilder), { loading: PartLoading });
@@ -35,7 +37,7 @@ type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' } | { name: 'plans'
 // Main shows the first few documents; the Documents view has the rest.
 const HEALTH_DOCS_ON_MAIN = 3;
 
-export function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+export function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
   const [view, setView] = useState<HealthView>({ name: 'main' });
   // Advice lives here rather than in the Ask view, so a fresh answer survives
   // going back to the tab — the server copy only arrives on the next load.
@@ -133,9 +135,15 @@ export function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, h
         </section>
       )}
 
+      <section className="pf-group">
+        <FieldLabel>Coaching style</FieldLabel>
+        <p className="fd-note tight">Optional: how you want to be coached when you ask for advice on a fitness workbook or plan.</p>
+        <FitnessPersonaEditor key={fitnessPersona.persona ? 'persona-saved' : 'persona-empty'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
+      </section>
+
       <div className="hl-ask">
         <span>Ask about a file. Orbis reads only what you pick, and shows it first.</span>
-        <button type="button" onClick={() => setView({ name: 'ask' })}>Ask</button>
+        <button type="button" onClick={() => setView({ name: 'ask' })}>Ask about a file</button>
       </div>
       <p className="fd-note">Suggestions are informational and aren’t a medical diagnosis.</p>
     </div>

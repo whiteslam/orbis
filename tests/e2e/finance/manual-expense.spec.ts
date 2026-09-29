@@ -27,7 +27,7 @@ function captureActions(page: import('@playwright/test').Page) {
 test('manual expense: create → persists after reload → delete; double click creates one row', async ({ page, userA, consoleErrors }) => {
   const merchant = `QA Coffee ${Date.now()}`;
   await openApp(page);
-  await openTab(page, 'Expense');
+  await openTab(page, 'Money');
   await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
   await page.getByLabel('Amount').fill('123.45');
   await page.getByRole('button', { name: 'Food & dining' }).click();
@@ -40,7 +40,7 @@ test('manual expense: create → persists after reload → delete; double click 
 
   await page.reload();
   await openApp(page);
-  await openTab(page, 'Expense');
+  await openTab(page, 'Money');
   await expect(page.getByText(merchant)).toBeVisible();
 
   page.once('dialog', (dialog) => dialog.accept());
@@ -54,7 +54,7 @@ test('manual expense: create → persists after reload → delete; double click 
 test('manual expense validation: bad amounts are rejected, nothing is saved', async ({ page, userA }) => {
   const merchant = `QA Invalid ${Date.now()}`;
   await openApp(page);
-  await openTab(page, 'Expense');
+  await openTab(page, 'Money');
   await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
   const save = page.getByRole('button', { name: 'Save expense' });
   await expect(save).toBeDisabled(); // no amount yet
@@ -77,7 +77,7 @@ test('server actions refuse replayed requests without a session and across users
   const merchant = `QA Replay ${Date.now()}`;
   const actions = captureActions(page);
   await openApp(page);
-  await openTab(page, 'Expense');
+  await openTab(page, 'Money');
   await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
   await page.getByLabel('Amount').fill('50');
   await page.getByRole('button', { name: 'Transport' }).click();
@@ -114,8 +114,8 @@ test('server actions refuse replayed requests without a session and across users
   const pageB = await contextB.newPage();
   const bActions = captureActions(pageB);
   await openApp(pageB);
-  await openTab(pageB, 'Expense');
-  await pageB.getByRole('button', { name: 'Add', exact: true }).click();
+  await openTab(pageB, 'Money');
+  await pageB.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
   await pageB.getByLabel('Amount').fill('5');
   await pageB.getByRole('button', { name: 'Transport' }).click();
   await pageB.getByLabel(/Paid to/).fill(`QA B ${Date.now()}`);

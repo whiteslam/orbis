@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { PenLine } from 'lucide-react';
 import { CurrencyCard } from '@/components/money/currency-card';
@@ -15,7 +15,7 @@ const SpendingSummary = dynamic(() => import('@/components/money/spending-summar
 
 type FinanceView = 'main' | 'add';
 
-export function SpendingScreen({ summary }: { summary: FinanceSummary }) {
+export function SpendingScreen({ summary, switcher }: { summary: FinanceSummary; switcher?: ReactNode }) {
   const [view, setView] = useState<FinanceView>('main');
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
   const top = useScrollTop(view);
@@ -49,7 +49,7 @@ export function SpendingScreen({ summary }: { summary: FinanceSummary }) {
   if (firstRun) return (
     <div className="screen-body field">
       <span ref={top} hidden />
-      <FieldHead title="Expense" />
+      <FieldHead title="Money" />{switcher}
       {notices}
       <section className="fd-focus">
         <h2>Nothing saved this month.</h2>
@@ -73,7 +73,7 @@ export function SpendingScreen({ summary }: { summary: FinanceSummary }) {
   return (
     <div className="screen-body field">
       <span ref={top} hidden />
-      <FieldHead title="Expense" />
+      <FieldHead title="Money" />{switcher}
       {monthReady && month && month.spent > 0 && (
         <FieldHero
           value={money(month.spent, month.currency)}

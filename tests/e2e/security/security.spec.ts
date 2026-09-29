@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { expect, openApp, test } from '../support/fixtures';
+import { expect, openApp, openSettings, test } from '../support/fixtures';
 import { loadEnv } from '../support/env';
 
 // Server secrets from .env.local that must never appear in anything the browser downloads.
@@ -46,18 +46,14 @@ test('secrets never reach the page, local storage or readable cookies', async ({
 
 test('user-supplied text is rendered as text, not HTML', async ({ page }) => {
   await openApp(page);
-  await page.getByRole('navigation').getByRole('button', { name: 'Profile', exact: true }).click();
-  // Profile lands on Journal, so the name field needs its own section opening.
-  await page.getByRole('tab', { name: 'Profile' }).click();
+  await openSettings(page);
   const payload = `<img src=x onerror="window.__xss=1">QA-${Date.now()}`;
   await page.getByLabel('Name to use').fill(payload.slice(0, 80));
   await page.getByRole('button', { name: 'Save profile' }).click();
   await page.waitForTimeout(1500);
   await page.reload();
   await openApp(page);
-  await page.getByRole('navigation').getByRole('button', { name: 'Profile', exact: true }).click();
-  // Profile lands on Journal, so the name field needs its own section opening.
-  await page.getByRole('tab', { name: 'Profile' }).click();
+  await openSettings(page);
   expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
   expect(await page.locator('img[src="x"]').count()).toBe(0);
 });

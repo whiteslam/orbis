@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const requestToken = url.searchParams.get('request_token');
   const status = url.searchParams.get('status');
   const back = (reason: string) => {
-    const response = NextResponse.redirect(new URL(`/?tab=invest&zerodha=${reason}`, request.url));
+    const response = NextResponse.redirect(new URL(`/?tab=investments&zerodha=${reason}`, request.url));
     // The state is single-use: clear it whatever the outcome.
     response.cookies.set(zerodhaStateCookieName, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/auth/zerodha', maxAge: 0 });
     return response;

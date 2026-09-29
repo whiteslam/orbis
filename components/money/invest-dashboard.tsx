@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { loadInvestLiveAction } from '@/app/invest/actions';
 import { analysePortfolio } from '@/lib/invest/analysis';
 import { BROKERS, brokerMeta, type BrokerId } from '@/lib/invest/brokers';
@@ -34,7 +34,7 @@ const ZERODHA_NOTICE: Record<string, string> = {
   failed: 'Zerodha could not be connected. Try again.',
 };
 
-export function InvestDashboard({ savedAdvice, notice, clearNotice }: { savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void }) {
+export function InvestDashboard({ savedAdvice, notice, clearNotice, switcher }: { savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void; switcher?: ReactNode }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [view, setView] = useState<InvestView>({ name: 'main' });
@@ -101,7 +101,7 @@ export function InvestDashboard({ savedAdvice, notice, clearNotice }: { savedAdv
   return (
     <>
       <span ref={top} hidden />
-      <FieldHead title="Invest" />
+      <FieldHead title="Money" />{switcher}
       {hasData && (
         <FieldHero
           value={inr(analysis.total)}
