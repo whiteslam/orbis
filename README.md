@@ -5,7 +5,7 @@ Orbis is a private, single-user personal intelligence app: one phone-frame shell
 ## Features by tab
 
 - **Today:** setup checklist, the daily brief, routine check-in, weather, important mail, and quiet rows for everything else. Two widgets show activity rings (steps and 7-day average) and this month's spending.
-- **Money:** *Spending* (manual entries and Gmail alerts, this month at a glance) and *Investments* (Zerodha and Groww holdings, portfolio charts, optional AI read).
+- **Money:** *Spending* (what you add manually, this month at a glance) and *Investments* (Zerodha and Groww holdings, portfolio charts, optional AI read).
 - **Health:** steps from an Apple Health export, plans, documents, advice, "Ask about a file", and your coaching style.
 - **Journal:** a daily entry with mood, tags and voice notes, edit history, and saved notes Orbis remembers.
 - **Social:** a month-by-month planner for your own posts.
