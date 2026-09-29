@@ -116,9 +116,20 @@ Each stage is one commit (or a short series), leaves the app working, and ends w
    - New e2e: every legacy hash lands on the right place.
 4. **Docs and cleanup:** README, BUILD_ROADMAP, and the setup checklist on Today.
 
-## Out of scope
+## Visual design: Glass (added 2026-09-29)
 
-- A new visual design. Screens keep their current look; only their placement changes.
+The chosen look is the **Glass** page of the design canvas (https://claude.ai/artifact/UXdvHk5rgspEPurvEg7iVB). It is applied after the reorganisation, as stage 5.
+
+- **Surfaces:** frosted translucent cards (`backdrop-filter: blur(26px) saturate(170%)`, a white hairline edge, 24–28 px radius) over a wallpaper.
+- **Wallpaper:** three heavily blurred, low-saturation shapes (sage `#b7c9bc`, sand `#e4d3ba`, mist `#c7d1e0`) on `#eceee9`, with a faint dot texture. There is no gradient wash anywhere; the old `--fd-field` linear gradient becomes a flat colour.
+- **Type:** Figtree, loaded with `next/font/google`, for both `--font-text` and `--rounded`. Headings are 800 weight with tight tracking.
+- **Colours:** ink `#111315`, secondary `#565b63`, positive `#1d7a55`, negative `#b4461a`. The dark theme uses the same structure on graphite (`#0e0f10`) with dimmed shapes.
+- **Chrome:** a floating glass tab bar, with the Ask Orbis button as a separate glass circle to its right.
+- **Today** gains two square widgets: Activity rings (steps) and Spent this month (with the last six days as bars).
+- **Only real data is shown.** The canvas's sleep, resting heart rate, exercise and mindful rings are future wearable data and are **not** built.
+
+
+
 - Renaming CSS classes.
 - A habits UI. The `goals`/`habits`/`habit_checkins` tables stay untouched until you decide to build or drop them.
 - Merging Health's file Q&A into the assistant.

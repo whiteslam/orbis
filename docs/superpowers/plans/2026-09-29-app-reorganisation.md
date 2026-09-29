@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reorganise Orbis into five tabs (Today · Money · Health · Journal · Social), one Settings sheet opened from an avatar on every screen, and one global Ask Orbis assistant. Split the 595-line shell and the 1,615-line stylesheet along the way.
+**Goal:** Reorganise Orbis into five tabs, then give it the Glass look (Stage 5), (Today · Money · Health · Journal · Social), one Settings sheet opened from an avatar on every screen, and one global Ask Orbis assistant. Split the 595-line shell and the 1,615-line stylesheet along the way.
 
 **Architecture:** Four stages, and each one leaves the app working.
 1. **Code split.** Move the code without changing anything visible.
@@ -1992,6 +1992,410 @@ Expected: no output.
 ```bash
 git add README.md BUILD_ROADMAP.md
 git commit -m "Bring the README and roadmap in line with the five-tab layout
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Stage 5: the Glass look
+
+The design is the **Glass** page of https://claude.ai/artifact/UXdvHk5rgspEPurvEg7iVB (spec: "Visual design: Glass"). Rules for this stage:
+- **Theme values, not class renames.** Existing class names stay. The look comes from overriding the theme variables and styling existing classes in two new files, `app/styles/glass.css` and `app/styles/glass-dark.css`, imported **last** in `app/layout.tsx`.
+- **Only real data.** Do not draw sleep, heart rate, exercise or mindful metrics. Orbis has no source for them.
+- **No gradient washes.** The only gradients allowed are the dot texture (`radial-gradient` dots) and the masks that fade it.
+
+### Task 12: Glass foundation: font, theme values, wallpaper, glass chrome
+
+**Files:**
+- Modify: `app/layout.tsx` (Figtree via `next/font/google`)
+- Create: `app/styles/glass.css`, `app/styles/glass-dark.css`
+- Create: `components/shell/wallpaper.tsx`
+- Modify: `components/app-shell.tsx` (render `<Wallpaper />` first inside `.phone-screen`)
+- Test: `tests/e2e/responsive/glass.spec.ts`
+
+**Interfaces:**
+- Produces:
+  - the CSS variable `--font-figtree`, set on `<html>`
+  - `Wallpaper()`, a decorative `aria-hidden` layer
+  - the classes `.glass-wall`, `.glass-blob`, `.glass-grain`
+
+- [ ] **Step 1: Write the failing e2e `tests/e2e/responsive/glass.spec.ts`**
+
+```ts
+import { expect, openApp, openTab, test, TABS } from '../support/fixtures';
+
+test('Glass: wallpaper behind every tab, frosted chrome, Figtree text', async ({ page }) => {
+  await openApp(page);
+  for (const tab of TABS) {
+    await openTab(page, tab);
+    await expect(page.locator('.glass-wall')).toHaveCount(1);
+  }
+  const chrome = await page.evaluate(() => {
+    const nav = getComputedStyle(document.querySelector('.bottom-nav')!);
+    return { blur: nav.backdropFilter || nav.getPropertyValue('-webkit-backdrop-filter'), font: getComputedStyle(document.body).fontFamily };
+  });
+  expect(chrome.blur).toContain('blur');
+  expect(chrome.font.toLowerCase()).toContain('figtree');
+});
+```
+
+Run: `pnpm test:e2e tests/e2e/responsive/glass.spec.ts`
+Expected: FAIL, `.glass-wall` count 0.
+
+- [ ] **Step 2: Load Figtree in `app/layout.tsx`**
+
+This follows `node_modules/next/dist/docs/01-app/01-getting-started/13-fonts.md`.
+
+```tsx
+import { Figtree } from 'next/font/google';
+
+const figtree = Figtree({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-figtree', display: 'swap' });
+```
+
+Then set `className={figtree.variable}` on the existing `<html lang="en" suppressHydrationWarning>`.
+
+After `import './styles/settings.css';`, add `import './styles/glass.css';` and `import './styles/glass-dark.css';`.
+
+The e2e checks for `figtree` in the computed font family. next/font names the family something like `'Figtree', 'Figtree Fallback'`. If the computed name differs, assert on what next/font actually emits. Read it from the built CSS rather than loosening the test to pass anything.
+
+- [ ] **Step 3: Create `components/shell/wallpaper.tsx`**
+
+```tsx
+// The Glass wallpaper: three soft, low-saturation shapes and a faint dot texture
+// behind every screen. Decorative only; the frosted cards read against it.
+export function Wallpaper() {
+  return (
+    <div className="glass-wall" aria-hidden="true">
+      <i className="glass-blob one" />
+      <i className="glass-blob two" />
+      <i className="glass-blob three" />
+      <i className="glass-grain" />
+    </div>
+  );
+}
+```
+
+In `components/app-shell.tsx`, import it and render `<Wallpaper />` as the **first** child of `.phone-screen`, before `{screen}`.
+
+- [ ] **Step 4: Create `app/styles/glass.css`**
+
+```css
+/* ─── Glass: frosted surfaces over a soft wallpaper (light) ─────────── */
+:root {
+  --font-text: var(--font-figtree), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rounded: var(--font-figtree), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --glass-ground: #eceee9;
+  --glass-fill: rgba(255,255,255,.58);
+  --glass-fill-strong: rgba(255,255,255,.82);
+  --glass-edge: 1px solid rgba(255,255,255,.75);
+  --glass-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 8px 28px rgba(17,19,21,.06);
+  --glass-blur: blur(26px) saturate(170%);
+  --glass-blob-1: #b7c9bc;
+  --glass-blob-2: #e4d3ba;
+  --glass-blob-3: #c7d1e0;
+  --glass-dot: rgba(17,19,21,.07);
+  --fd-field: var(--glass-ground);
+  --fd-ink: #111315;
+  --fd-soft: #565b63;
+  --fd-accent: #1d7a55;
+  --fd-alert: #b4461a;
+  --fd-card: var(--glass-fill);
+  --fd-chip: rgba(255,255,255,.5);
+  --fd-btn: #111315;
+  --fd-btn-ink: #ffffff;
+  --fd-veil: rgba(236,238,233,.82);
+  --sys-page: var(--glass-ground);
+}
+
+.phone-screen { background: var(--glass-ground); isolation: isolate; }
+.glass-wall { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--glass-ground); }
+.glass-blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .75; }
+.glass-blob.one { width: 340px; height: 340px; left: -120px; top: -90px; background: var(--glass-blob-1); }
+.glass-blob.two { width: 300px; height: 300px; right: -130px; top: 170px; background: var(--glass-blob-2); }
+.glass-blob.three { width: 360px; height: 360px; left: -60px; bottom: -150px; background: var(--glass-blob-3); }
+.glass-grain { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--glass-dot) 1px, transparent 1.3px); background-size: 14px 14px; }
+.screen-body, .settings-sheet { position: relative; z-index: 1; }
+.screen-body.field, .settings-sheet { background: transparent; }
+
+/* Chrome: a floating glass tab bar, and Ask Orbis as its own glass circle to the right. */
+.bottom-nav { right: 84px; z-index: 20; background: var(--glass-fill); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: var(--glass-edge); box-shadow: var(--glass-shadow); }
+.bottom-nav button.active { background: var(--glass-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+.talk-fab { right: 16px; bottom: 10px; width: 62px; height: 62px; background: var(--glass-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: var(--glass-edge); box-shadow: var(--glass-shadow); }
+.avatar, .field .avatar { background: var(--glass-fill); color: var(--fd-ink); border: var(--glass-edge); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); font-weight: 700; }
+.fd-head h1 { font-weight: 800; letter-spacing: -.035em; }
+```
+
+**Check the phone breakpoint before relying on these rules.** In `07-auth.css`:
+1. Find the media query that sets `.stage { padding: 0 }` and `.bottom-nav { left/right/bottom: max(…, env(safe-area-inset-*)) }`.
+2. Append a block with that **same** media query to `glass.css`:
+   - `.bottom-nav { right: calc(84px + env(safe-area-inset-right, 0px)); }`
+   - `.talk-fab { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }`
+
+This keeps the nav leaving room for the Ask circle on phones.
+
+- [ ] **Step 5: Create `app/styles/glass-dark.css`**
+
+It uses the same two-selector pattern as `01-base.css`: the media query guarded by `:root:not([data-theme="light"])`, and `:root[data-theme="dark"]`.
+
+```css
+/* ─── Glass: dark ───────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-ground: #0e0f10; --glass-fill: rgba(28,30,32,.62); --glass-fill-strong: rgba(48,51,54,.9);
+    --glass-edge: 1px solid rgba(255,255,255,.08); --glass-shadow: 0 8px 28px rgba(0,0,0,.4);
+    --glass-blob-1: #22332b; --glass-blob-2: #33291c; --glass-blob-3: #1e2635; --glass-dot: rgba(255,255,255,.05);
+    --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
+    --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+  }
+}
+:root[data-theme="dark"] {
+  --glass-ground: #0e0f10; --glass-fill: rgba(28,30,32,.62); --glass-fill-strong: rgba(48,51,54,.9);
+  --glass-edge: 1px solid rgba(255,255,255,.08); --glass-shadow: 0 8px 28px rgba(0,0,0,.4);
+  --glass-blob-1: #22332b; --glass-blob-2: #33291c; --glass-blob-3: #1e2635; --glass-dot: rgba(255,255,255,.05);
+  --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
+  --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+}
+```
+
+- [ ] **Step 6: Verify**
+
+Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e`
+Expected: all green, including `glass.spec.ts`, `a11y.spec.ts` (contrast on the new surfaces) and `layout.spec.ts` (no overflow from the moved nav or Ask button).
+
+If a11y reports a contrast failure on `--fd-soft` or any text over `--glass-fill`, darken that variable (light) or lighten it (dark) until it passes. Never remove or weaken the check.
+
+- [ ] **Step 7: Screenshots for the reviewer**
+
+With a one-off Playwright script (not committed), screenshot each tab plus Settings and Ask. Use 390×844, in light and in dark (`page.emulateMedia({ colorScheme: 'dark' })`), saved into `test-results/glass/`. Compare each with its Glass artboard on the canvas. The reviewer does the same.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A app components tests
+git commit -m "Glass: Figtree, frosted chrome and a soft wallpaper behind every screen
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+```
+
+### Task 13: Glass surfaces on every screen
+
+**Files:**
+- Modify: `app/styles/glass.css` (append the surface rules below)
+- Modify: `components/money/money-screen.tsx` (`MoneySwitch` gets class `glass-seg`)
+
+- [ ] **Step 1: List the containers each screen uses**
+
+Open each tab, Settings and Ask in `pnpm dev`. Note each section's container class. The ones known from the code:
+- `.fd-focus`: the brief
+- `.fd-quiet`: quiet lists; Health's Plans and Documents
+- `.apple-card`: Health's rings and charts
+- `.pf-group`: Settings groups; Journal's saved notes
+- `.pf-editor`: the journal editor
+- `.fd-source`: Settings rows
+- `.fd-tabs`: segmented tabs
+- `.talk-sheet`: the Ask panel
+- `.settings-sheet`
+- `.hl-ask`
+- `.setup-list`
+
+Add any container you find beyond these to Step 2's first selector.
+
+- [ ] **Step 2: Append the surface rules to `app/styles/glass.css`**
+
+```css
+/* Frosted cards: every grouped section on every screen. */
+.fd-focus, .fd-quiet, .apple-card, .pf-group, .pf-editor, .hl-ask, .setup-list {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: var(--glass-edge); box-shadow: var(--glass-shadow);
+  border-radius: 26px; padding: 16px 18px;
+}
+.fd-quiet { margin-top: 14px; padding-top: 6px; padding-bottom: 6px; }
+.fd-quiet > h2, .pf-group > .fd-label { margin-top: 10px; }
+.fd-line { border-bottom-color: color-mix(in srgb, var(--fd-ink) 7%, transparent); }
+.fd-quiet .fd-line:last-child, .pf-group .fd-source:last-child { border-bottom: 0; }
+
+/* Segmented controls: a glass track with a white thumb. */
+.fd-tabs.glass-seg { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 12px; padding: 4px; border-radius: 18px; border: var(--glass-edge); background: var(--glass-fill); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.fd-tabs.glass-seg button { min-height: 40px; border-radius: 14px; font-weight: 600; color: var(--fd-soft); }
+.fd-tabs.glass-seg button[aria-selected="true"] { background: var(--glass-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+
+/* The Ask panel and Settings are glass sheets too. */
+.talk-sheet { background: var(--glass-fill-strong); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: var(--glass-edge); border-radius: 32px; }
+.talk-mic { background: var(--fd-ink); box-shadow: 0 0 0 9px color-mix(in srgb, var(--fd-ink) 6%, transparent), 0 0 0 18px color-mix(in srgb, var(--fd-ink) 4%, transparent); }
+.settings-sheet { -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); background: var(--fd-veil); }
+
+/* Pills and chips. */
+.fd-chips button, .settings-jump button, .talk-sources button { border-radius: 16px; border: var(--glass-edge); background: var(--fd-chip); font-weight: 600; }
+.fd-chips button[aria-pressed="true"], .talk-sources button[aria-pressed="true"] { background: var(--fd-ink); color: var(--fd-btn-ink); border-color: var(--fd-ink); }
+```
+
+**Don't stack cards.** If a container sits inside another one that is also glass (for example `.apple-card` inside `.fd-quiet`), give the inner one `background: none; border: 0; box-shadow: none; backdrop-filter: none; padding: 0`.
+
+- [ ] **Step 3: The Money switch**
+
+In `components/money/money-screen.tsx`, `MoneySwitch`'s root becomes `<div className="fd-tabs glass-seg" role="tablist" aria-label="Money">`.
+
+- [ ] **Step 4: Verify every screen by eye and by test**
+
+1. Repeat Task 12 Step 7's screenshots for all screens, in light and dark.
+2. Put each beside its Glass artboard. Fix spacing and radii until they match, and check that no two cards stack.
+3. Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e`
+   Expected: green, a11y included.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A app components
+git commit -m "Glass: frosted cards, segmented controls and sheets on every screen
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+```
+
+### Task 14: Today widgets: activity rings and spent this month
+
+**Files:**
+- Create: `lib/focus/widgets.ts`
+- Test: `lib/focus/widgets.test.ts`
+- Create: `components/today/today-widgets.tsx`
+- Modify: `components/today/today-screen.tsx` (render after `<FocusNote />`)
+- Modify: `app/styles/glass.css` (widget grid)
+
+**Interfaces:**
+- Consumes:
+  - `FinanceSummary['month']` (`daily: Array<{ day: number; amount: number }>`)
+  - `StepsSummary` (`latest`, `average7`)
+  - `ActivityRings({ rings, size })` from `@/components/health/activity-rings`
+  - `money(amount, currency)` from `@/lib/finance/money`
+- Produces:
+  - `recentDays(daily: Array<{ day: number; amount: number }>, today: number, count?: number): Array<{ day: number; amount: number; share: number }>`
+  - `TodayWidgets({ steps, month, openTab })`
+
+- [ ] **Step 1: Write the failing test `lib/focus/widgets.test.ts`**
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { recentDays } from '@/lib/focus/widgets';
+
+describe('recentDays', () => {
+  it('returns the last six days up to today, filling missing days with zero, scaled to the largest', () => {
+    const daily = [{ day: 24, amount: 200 }, { day: 26, amount: 800 }, { day: 29, amount: 400 }];
+    expect(recentDays(daily, 29)).toEqual([
+      { day: 24, amount: 200, share: 0.25 },
+      { day: 25, amount: 0, share: 0 },
+      { day: 26, amount: 800, share: 1 },
+      { day: 27, amount: 0, share: 0 },
+      { day: 28, amount: 0, share: 0 },
+      { day: 29, amount: 400, share: 0.5 },
+    ]);
+  });
+
+  it('never reaches before the 1st of the month', () => {
+    expect(recentDays([{ day: 2, amount: 50 }], 3).map((d) => d.day)).toEqual([1, 2, 3]);
+  });
+
+  it('is all zero shares when nothing was spent', () => {
+    expect(recentDays([], 10).every((d) => d.share === 0)).toBe(true);
+  });
+});
+```
+
+Run: `pnpm vitest run lib/focus/widgets.test.ts`
+Expected: FAIL, cannot resolve `@/lib/focus/widgets`.
+
+- [ ] **Step 2: Implement `lib/focus/widgets.ts`**
+
+```ts
+/** Today's widgets. Pure: shaping summary data the widgets draw. */
+
+/** The last `count` days of this month up to `today`, each with its share of the largest day. */
+export function recentDays(daily: Array<{ day: number; amount: number }>, today: number, count = 6) {
+  const byDay = new Map(daily.map((entry) => [entry.day, entry.amount]));
+  const first = Math.max(1, today - count + 1);
+  const days = Array.from({ length: today - first + 1 }, (_, index) => ({ day: first + index, amount: byDay.get(first + index) ?? 0 }));
+  const max = Math.max(0, ...days.map((entry) => entry.amount));
+  return days.map((entry) => ({ ...entry, share: max > 0 ? entry.amount / max : 0 }));
+}
+```
+
+Run: `pnpm vitest run lib/focus/widgets.test.ts`
+Expected: PASS.
+
+- [ ] **Step 3: Create `components/today/today-widgets.tsx`**
+
+```tsx
+'use client';
+
+import { ActivityRings } from '@/components/health/activity-rings';
+import { money } from '@/lib/finance/money';
+import type { FinanceSummary } from '@/lib/finance/types';
+import { recentDays } from '@/lib/focus/widgets';
+import type { FocusTarget } from '@/lib/focus/types';
+import type { StepsSummary } from '@/lib/health/types';
+
+const STEP_GOAL = 10_000;
+
+/** Two square widgets under the brief: today's activity and this month's spending. Each opens its tab. */
+export function TodayWidgets({ steps, month, openTab }: { steps: StepsSummary; month: FinanceSummary['month']; openTab: (target: FocusTarget) => void }) {
+  const today = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
+  const bars = month ? recentDays(month.daily, today) : [];
+  return (
+    <div className="today-widgets">
+      <button type="button" className="today-widget" onClick={() => openTab('health')}>
+        <span className="today-widget-cap">Activity</span>
+        {steps.latest ? (
+          <ActivityRings size={104} rings={[
+            { label: 'Steps', value: steps.latest.steps / STEP_GOAL, color: 'var(--series-3)', track: 'var(--fd-ring-track)' },
+            { label: '7-day average', value: (steps.average7 ?? 0) / STEP_GOAL, color: 'var(--series-1)', track: 'var(--fd-ring-track)' },
+          ]} />
+        ) : <span className="today-widget-empty">Import your steps</span>}
+      </button>
+      <button type="button" className="today-widget" onClick={() => openTab('finance')}>
+        <span className="today-widget-cap">Spent this month</span>
+        {month ? (
+          <>
+            <span className="today-widget-value">{money(month.spent, month.currency)}</span>
+            <span className="today-widget-bars" aria-hidden="true">
+              {bars.map((entry) => <i key={entry.day} className={entry.day === today ? 'now' : undefined} style={{ height: `${Math.max(8, entry.share * 100)}%` }} />)}
+            </span>
+          </>
+        ) : <span className="today-widget-empty">Add what you spend</span>}
+      </button>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Render and style**
+
+- **`today-screen.tsx`:** import `TodayWidgets` and render `<TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />` directly after `<FocusNote note={brief} />`.
+- **Append to `app/styles/glass.css`:**
+
+```css
+.today-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.today-widget { aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 6px; padding: 14px; border-radius: 26px; border: var(--glass-edge); background: var(--glass-fill); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow); color: var(--fd-ink); font: inherit; text-align: left; cursor: pointer; }
+.today-widget .activity-rings { align-self: center; }
+.today-widget-cap { font-size: 12px; font-weight: 600; color: var(--fd-soft); }
+.today-widget-value { font-family: var(--rounded); font-size: 28px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.today-widget-bars { display: flex; align-items: flex-end; gap: 3px; width: 100%; height: 34px; }
+.today-widget-bars i { flex: 1; border-radius: 3px; background: color-mix(in srgb, var(--fd-ink) 16%, transparent); }
+.today-widget-bars i.now { background: var(--fd-ink); }
+.today-widget-empty { margin: auto 0; font-size: 14px; font-weight: 600; color: var(--fd-soft); }
+```
+
+- [ ] **Step 5: Verify**
+
+Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e`
+Expected: green.
+
+Take a screenshot of Today and compare it with the Glass "Today" artboard. Both widgets must stay square and side by side at 320 px wide too; `layout.spec.ts` covers 320×568.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add -A lib components app
+git commit -m "Glass: activity and spending widgets on Today
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
