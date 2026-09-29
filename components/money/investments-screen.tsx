@@ -1,6 +1,6 @@
 'use client';
 
-import { InvestDashboard } from '@/components/invest/invest-dashboard';
+import { InvestDashboard } from '@/components/money/invest-dashboard';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 
 /** The investments view: the dashboard in its own scroll area. */

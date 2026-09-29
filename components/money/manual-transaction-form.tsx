@@ -5,7 +5,7 @@ import { Check, LoaderCircle } from 'lucide-react';
 import { addManualTransactionAction } from '@/app/finance/actions';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
 import { FieldSubHead } from '@/components/field/field';
-import { CurrencyCard } from '@/components/finance/currency-card';
+import { CurrencyCard } from '@/components/money/currency-card';
 import { safeAction } from '@/lib/client/safe-action';
 
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY'];

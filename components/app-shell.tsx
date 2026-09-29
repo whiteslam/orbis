@@ -30,7 +30,7 @@ const HealthScreen = dynamic(() => import('@/components/health/health-screen').t
 const SocialScreen = dynamic(() => import('@/components/social/social-screen').then((m) => m.SocialScreen), { loading: TabLoading });
 const ProfileScreen = dynamic(() => import('@/components/personal/profile-screen').then((m) => m.ProfileScreen), { loading: TabLoading });
 // The mic shows on every screen but is not needed to draw Today, so it follows it.
-const TalkToOrbis = dynamic(() => import('@/components/voice/talk-to-orbis').then((m) => m.TalkToOrbis));
+const TalkToOrbis = dynamic(() => import('@/components/assistant/talk-to-orbis').then((m) => m.TalkToOrbis));
 
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;

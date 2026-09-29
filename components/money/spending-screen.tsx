@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { PenLine } from 'lucide-react';
-import { CurrencyCard } from '@/components/finance/currency-card';
-import { TransactionList } from '@/components/finance/transaction-list';
+import { CurrencyCard } from '@/components/money/currency-card';
+import { TransactionList } from '@/components/money/transaction-list';
 import { FieldHead, FieldHero, FieldLabel, useScrollTop } from '@/components/field/field';
 import { PartLoading } from '@/components/shell/loading';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
 
-const ManualTransactionForm = dynamic(() => import('@/components/finance/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
-const SpendingSummary = dynamic(() => import('@/components/finance/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
+const ManualTransactionForm = dynamic(() => import('@/components/money/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
+const SpendingSummary = dynamic(() => import('@/components/money/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
 
 type FinanceView = 'main' | 'add';
 

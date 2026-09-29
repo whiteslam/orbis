@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { CalendarDays, HeartPulse, Mail, Unplug } from 'lucide-react';
 import { disconnectGmailAction } from '@/app/finance/actions';
 import { disconnectBrokerAction } from '@/app/invest/actions';
-import { BrokerConnectForm } from '@/components/invest/broker-card';
+import { BrokerConnectForm } from '@/components/money/broker-card';
 import { BROKERS, type BrokerId } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';

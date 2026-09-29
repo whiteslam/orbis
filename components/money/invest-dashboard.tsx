@@ -5,15 +5,15 @@ import { loadInvestLiveAction } from '@/app/invest/actions';
 import { analysePortfolio } from '@/lib/invest/analysis';
 import { BROKERS, brokerMeta, type BrokerId } from '@/lib/invest/brokers';
 import type { LivePortfolioData } from '@/lib/invest/types';
-import { BrokerCard, BrokerConnectScreen } from '@/components/invest/broker-card';
-import { PortfolioAi, PortfolioAiRow } from '@/components/invest/portfolio-ai';
-import { AllocationBreakdown, PortfolioHealth } from '@/components/invest/portfolio-charts';
+import { BrokerCard, BrokerConnectScreen } from '@/components/money/broker-card';
+import { PortfolioAi, PortfolioAiRow } from '@/components/money/portfolio-ai';
+import { AllocationBreakdown, PortfolioHealth } from '@/components/money/portfolio-charts';
 
 import { safeAction } from '@/lib/client/safe-action';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
 import { FieldHead, FieldHero, FieldLabel, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
-import { inr } from '@/components/invest/format';
+import { inr } from '@/components/money/format';
 
 type InvestView = { name: 'main' } | { name: 'connect'; broker: BrokerId; reconnect: boolean } | { name: 'advice' };
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Mail, PenLine, Trash2 } from 'lucide-react';
-import { categoryStyle } from '@/components/finance/category-style';
+import { categoryStyle } from '@/components/money/category-style';
 import { deleteManualTransactionAction } from '@/app/finance/actions';
 import { paymentMethodLabel } from '@/lib/finance/manual';
 import type { FinanceTransactionSummary } from '@/lib/finance/types';

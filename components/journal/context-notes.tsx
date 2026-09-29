@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addContextNoteAction, deleteContextNoteAction, loadDeletedNotesAction, loadNoteHistoryAction, updateContextNoteAction } from '@/app/personal/actions';
-import { HistoryPanel } from '@/components/personal/history-panel';
+import { HistoryPanel } from '@/components/journal/history-panel';
 import type { ContextNote } from '@/lib/memory/notes';
 import { noteRevisionLine } from '@/lib/history/describe';
 import { safeAction } from '@/lib/client/safe-action';

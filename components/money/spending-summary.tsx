@@ -1,6 +1,6 @@
 'use client';
 
-import { categoryStyle } from '@/components/finance/category-style';
+import { categoryStyle } from '@/components/money/category-style';
 import { FieldLabel } from '@/components/field/field';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';

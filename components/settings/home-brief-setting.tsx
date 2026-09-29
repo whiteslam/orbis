@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Sparkles } from 'lucide-react';
 import { setHomeBriefEnabledAction } from '@/app/home/brief-actions';
-import { AiConsent } from '@/components/personal/ai-consent';
+import { AiConsent } from '@/components/settings/ai-consent';
 import { aiAllowed } from '@/lib/ai/consent';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import { safeAction } from '@/lib/client/safe-action';

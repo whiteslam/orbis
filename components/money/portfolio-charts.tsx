@@ -1,7 +1,7 @@
 'use client';
 
 import type { AssetClass, PortfolioAnalysis, Status } from '@/lib/invest/analysis';
-import { compactInr, inr, percent } from '@/components/invest/format';
+import { compactInr, inr, percent } from '@/components/money/format';
 
 // Validated categorical palette, one fixed hue per asset class.
 const CLASS_COLOR: Record<AssetClass, string> = {

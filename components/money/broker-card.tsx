@@ -6,7 +6,7 @@ import { ExternalLink, KeyRound, LoaderCircle, RefreshCw, ShieldCheck, Unplug } 
 import { connectBrokerAction, disconnectBrokerAction } from '@/app/invest/actions';
 import type { BrokerMeta } from '@/lib/invest/brokers';
 import type { BrokerPortfolio, PriceSource } from '@/lib/invest/types';
-import { inr, signedInr } from '@/components/invest/format';
+import { inr, signedInr } from '@/components/money/format';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
