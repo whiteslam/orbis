@@ -7,6 +7,7 @@ import { SettingsButton } from '@/components/shell/settings-context';
 import { FocusNote, QuietList } from '@/components/field/field';
 import { RoutineCheck } from '@/components/today/routine-check';
 import { SetupChecklist } from '@/components/today/setup-checklist';
+import { TodayWidgets } from '@/components/today/today-widgets';
 import { WeatherCard } from '@/components/today/weather-card';
 import { ImportantMail } from '@/components/today/important-mail';
 import type { HealthPlanRecord } from '@/lib/health-docs/types';
@@ -129,6 +130,8 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       <SetupChecklist steps={setup} />
 
       <FocusNote note={brief} />
+
+      <TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />
 
       {/* The brief says what is due; this records what happened to it. */}
       {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}

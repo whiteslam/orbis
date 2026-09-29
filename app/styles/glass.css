@@ -106,3 +106,14 @@
    titles (Task 12); .fd-focus's statement heading is the other place text
    reads as a headline rather than a label, so it gets the same treatment. */
 .fd-focus h1, .fd-focus h2 { font-weight: 800; letter-spacing: -.03em; }
+
+/* Today's widgets: activity rings and this month's spending, side by side. */
+.today-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.today-widget { aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 6px; padding: 14px; border-radius: 26px; border: var(--gl-edge); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--gl-shadow); color: var(--fd-ink); font: inherit; text-align: left; cursor: pointer; }
+.today-widget .activity-rings { align-self: center; }
+.today-widget-cap { font-size: 12px; font-weight: 600; color: var(--fd-soft); }
+.today-widget-value { font-family: var(--rounded); font-size: 28px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.today-widget-bars { display: flex; align-items: flex-end; gap: 3px; width: 100%; height: 34px; }
+.today-widget-bars i { flex: 1; border-radius: 3px; background: color-mix(in srgb, var(--fd-ink) 16%, transparent); }
+.today-widget-bars i.now { background: var(--fd-ink); }
+.today-widget-empty { margin: auto 0; font-size: 14px; font-weight: 600; color: var(--fd-soft); }
