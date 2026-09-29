@@ -110,14 +110,19 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     }
   }, []);
 
-  // A hash-only link (openApp('#invest'), a bookmark, back/forward) changes the URL
-  // without a reload, so it is not seen by the mount effect above; this applies it
-  // instead. Unlike that one-time read, this always sets the tab (even back to Today)
-  // and clears Settings when the new hash doesn't ask for it, because — running after
-  // the app already booted — there is no "still today" default left to lean on.
+  // A hash-only link (openApp('#invest'), a bookmark, a PWA shortcut, or the hash
+  // being cleared) changes the URL without a reload, so it is not seen by the mount
+  // effect above; this applies it instead. Every hash this app itself writes goes
+  // through replaceState, so there is no history entry of ours for back/forward to
+  // land on — but an external link, a shortcut, or a hand-edited URL still fires
+  // this. Unlike the one-time read, this always sets the tab (even back to Today)
+  // and clears Settings when the new hash doesn't ask for it, because — running
+  // after the app already booted — there is no "still today" default left to lean
+  // on; an empty hash is treated the same way, as a request for Today.
   useEffect(() => {
     const onHashChange = () => {
-      const opening = openingFromUrl(window.location.hash, null);
+      const hash = window.location.hash;
+      const opening = hash ? openingFromUrl(hash, null) : { tab: 'today' as const };
       if (!opening) return;
       if (opening.money) setMoney(opening.money);
       setSettings(opening.settings ?? null);

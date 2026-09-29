@@ -29,34 +29,40 @@ export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = 
 export type Opening = { tab: TabId; money?: MoneyView; settings?: SettingsSection };
 
 // The part of the hash before any '/'. Old names map to where that screen lives now.
-const BY_HASH: Record<string, Opening> = {
-  today: { tab: 'today' },
-  home: { tab: 'today' },
-  money: { tab: 'money' },
-  finance: { tab: 'money', money: 'spending' },
-  invest: { tab: 'money', money: 'investments' },
-  health: { tab: 'health' },
-  journal: { tab: 'journal' },
-  social: { tab: 'social' },
-  profile: { tab: 'today', settings: 'you' },
-};
+// A Map, not a plain object: a Record is reachable through the prototype chain
+// too ('#constructor', '?tab=toString'), so a lookup by an untrusted string can
+// return Object.prototype's own methods instead of failing closed.
+const BY_HASH: Map<string, Opening> = new Map([
+  ['today', { tab: 'today' }],
+  ['home', { tab: 'today' }],
+  // Bare #money is what the PWA shortcut and a same-document hashchange land
+  // on; it must say Spending explicitly, not just "money", so switching back
+  // to it from Investments actually changes the view.
+  ['money', { tab: 'money', money: 'spending' }],
+  ['finance', { tab: 'money', money: 'spending' }],
+  ['invest', { tab: 'money', money: 'investments' }],
+  ['health', { tab: 'health' }],
+  ['journal', { tab: 'journal' }],
+  ['social', { tab: 'social' }],
+  ['profile', { tab: 'today', settings: 'you' }],
+]);
 
 // ?tab= values sent by the OAuth callbacks, old and new.
-const BY_PARAM: Record<string, Opening> = {
-  today: { tab: 'today' },
-  home: { tab: 'today' },
-  money: { tab: 'money' },
-  finance: { tab: 'money', money: 'spending' },
-  invest: { tab: 'money', money: 'investments' },
-  investments: { tab: 'money', money: 'investments' },
-  settings: { tab: 'today', settings: 'connections' },
-};
+const BY_PARAM: Map<string, Opening> = new Map([
+  ['today', { tab: 'today' }],
+  ['home', { tab: 'today' }],
+  ['money', { tab: 'money' }],
+  ['finance', { tab: 'money', money: 'spending' }],
+  ['invest', { tab: 'money', money: 'investments' }],
+  ['investments', { tab: 'money', money: 'investments' }],
+  ['settings', { tab: 'today', settings: 'connections' }],
+]);
 
 /** Where a URL asks the app to open, or null for the default. `?tab=` wins over the hash. */
 export function openingFromUrl(hash: string, tabParam: string | null): Opening | null {
-  if (tabParam) return BY_PARAM[tabParam] ?? null;
+  if (tabParam) return BY_PARAM.get(tabParam) ?? null;
   const [name, rest] = hash.replace(/^#/, '').split('/');
-  const opening = BY_HASH[name];
+  const opening = BY_HASH.get(name);
   if (!opening) return null;
   if (name === 'money' && rest === 'investments') return { tab: 'money', money: 'investments' };
   return opening;

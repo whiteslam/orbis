@@ -16,7 +16,7 @@ describe('SETTINGS_SECTIONS', () => {
 
 describe('openingFromUrl', () => {
   it('opens the current hashes', () => {
-    expect(openingFromUrl('#money', null)).toEqual({ tab: 'money' });
+    expect(openingFromUrl('#money', null)).toEqual({ tab: 'money', money: 'spending' });
     expect(openingFromUrl('#money/investments', null)).toEqual({ tab: 'money', money: 'investments' });
     expect(openingFromUrl('#journal', null)).toEqual({ tab: 'journal' });
     expect(openingFromUrl('#social/2026-09', null)).toEqual({ tab: 'social' });
@@ -43,6 +43,11 @@ describe('openingFromUrl', () => {
     expect(openingFromUrl('#nope', null)).toBeNull();
     expect(openingFromUrl('#settings-you', null)).toBeNull();
     expect(openingFromUrl('', 'javascript:alert(1)')).toBeNull();
+  });
+
+  it('never resolves through the lookup objects’ prototype chain', () => {
+    expect(openingFromUrl('#constructor', null)).toBeNull();
+    expect(openingFromUrl('', 'toString')).toBeNull();
   });
 });
 
