@@ -18,3 +18,8 @@
 .talk-mic:disabled { opacity: .7; }
 @media (prefers-reduced-motion: reduce) { .talk-mic.listening { animation: none; } }
 .keyboard-open .talk-fab { display: none; }
+.talk-sources { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 16px 8px; }
+.talk-type { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.talk-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--sys-separator); border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--sys-label); font-size: 15px; }
+.talk-type button { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-blue); color: #fff; }
+.talk-type button:disabled { opacity: .5; }

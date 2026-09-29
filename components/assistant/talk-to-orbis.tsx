@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { LoaderCircle, Mic, Square, X } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { LoaderCircle, Mic, Send, Sparkles, Square, X } from 'lucide-react';
+import { askOrbisAction } from '@/app/ask/actions';
 import { talkAvailableAction, talkToOrbisAction, type TalkResult } from '@/app/ask/talk-actions';
 import { safeAction } from '@/lib/client/safe-action';
+import { ASK_SOURCES, type AskSource } from '@/lib/ask/select';
 import { RECORDER_PREFERENCES } from '@/lib/voice/types';
 import { TALK_MAX_SECONDS, type TalkTurn } from '@/lib/voice/talk';
 
@@ -25,19 +27,28 @@ function wavUrl(base64: string) {
   return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
 }
 
+/** Outside the component so the timing loop's clock reads don't read as render impurity. */
+function now() {
+  return Date.now();
+}
+
 /**
- * Talk to Orbis: a mic on every screen. Speak in any Indian language and Orbis
- * answers from your records, out loud and in the same language.
+ * Ask Orbis: one assistant, on every screen, typed or spoken.
  *
- * The question stops on its own after a pause; tapping the mic while Orbis is
- * speaking cuts it off and starts listening again. Recordings are never kept.
+ * The panel always shows; the mic only when voice is configured, and then it
+ * answers out loud in whatever Indian language was spoken. Typed questions
+ * work the same way without it. The question stops on its own after a pause;
+ * tapping the mic while Orbis is speaking cuts it off and starts listening
+ * again. Recordings are never kept.
  */
 export function TalkToOrbis() {
-  const [available, setAvailable] = useState(false);
+  const [voice, setVoice] = useState(false);
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [sources, setSources] = useState<AskSource[]>(['journal', 'spending', 'routines', 'steps']);
+  const [draft, setDraft] = useState('');
   /** Ends the recording and discards it (panel closed, page left). */
   const stopRecording = useRef<(() => void) | null>(null);
   /** Ends the recording and sends it. */
@@ -46,10 +57,12 @@ export function TalkToOrbis() {
   // send() runs from the recorder's stop callback, which would see stale state;
   // the ref is the conversation it sends, kept in step with `turns`.
   const turnsRef = useRef<Turn[]>([]);
+  // send() also reads what to look at through this ref, kept in step with `sources`.
+  const sourcesRef = useRef(sources);
 
   useEffect(() => {
     let live = true;
-    safeAction(talkAvailableAction, () => false)().then((ok) => live && setAvailable(ok));
+    safeAction(talkAvailableAction, () => false)().then((ok) => live && setVoice(ok));
     return () => {
       live = false;
     };
@@ -104,6 +117,7 @@ export function TalkToOrbis() {
     const form = new FormData();
     form.set('audio', audio);
     form.set('history', JSON.stringify(turnsRef.current.map(({ question, answer }) => ({ question, answer }))));
+    form.set('sources', JSON.stringify(sourcesRef.current));
     const result = await safeAction(talkToOrbisAction)(form);
     if (!result.success || !result.answer) {
       setMessage(result.message || 'Orbis couldn’t answer that. Try again.');
@@ -113,6 +127,30 @@ export function TalkToOrbis() {
     turnsRef.current = [...turnsRef.current, { question: result.transcript ?? '', answer: result.answer, language: result.language }];
     setTurns(turnsRef.current);
     say(result);
+  }
+
+  async function ask(event: FormEvent) {
+    event.preventDefault();
+    const question = draft.trim();
+    if (question.length < 5 || phase === 'thinking') return;
+    silence();
+    setMessage(null);
+    setPhase('thinking');
+    const result = await safeAction(askOrbisAction)({ question, sources: sourcesRef.current, earlier: turnsRef.current.map(({ question: q, answer }) => ({ question: q, answer })) });
+    setPhase('idle');
+    if (!result.success || !result.answer) {
+      setMessage(result.message || 'Orbis couldn’t answer that. Try again.');
+      return;
+    }
+    setDraft('');
+    turnsRef.current = [...turnsRef.current, { question, answer: result.answer }];
+    setTurns(turnsRef.current);
+  }
+
+  function toggle(source: AskSource) {
+    const next = sources.includes(source) ? sources.filter((item) => item !== source) : [...sources, source];
+    sourcesRef.current = next;
+    setSources(next);
   }
 
   async function listen() {
@@ -138,7 +176,7 @@ export function TalkToOrbis() {
     analyser.fftSize = 1024;
     context.createMediaStreamSource(stream).connect(analyser);
     const samples = new Float32Array(analyser.fftSize);
-    const startedAt = Date.now();
+    const startedAt = now();
     let heardSpeech = false;
     let quietSince = 0;
     let cancelled = false;
@@ -146,14 +184,14 @@ export function TalkToOrbis() {
     const timer = window.setInterval(() => {
       analyser.getFloatTimeDomainData(samples);
       const level = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
-      const now = Date.now();
+      const at = now();
       if (level > SILENCE_LEVEL) {
         heardSpeech = true;
         quietSince = 0;
       } else if (heardSpeech) {
-        quietSince ||= now;
+        quietSince ||= at;
       }
-      if ((heardSpeech && quietSince && now - quietSince > SILENCE_MS) || now - startedAt > TALK_MAX_SECONDS * 1000) finish();
+      if ((heardSpeech && quietSince && at - quietSince > SILENCE_MS) || at - startedAt > TALK_MAX_SECONDS * 1000) finish();
     }, 100);
 
     function release() {
@@ -196,24 +234,25 @@ export function TalkToOrbis() {
     void listen();
   }
 
-  if (!available) return null;
-
-  const status = { idle: 'Tap the mic and speak', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking · tap to interrupt' }[phase];
-
   return (
     <>
       {!open ? (
-        <button type="button" className="talk-fab" onClick={() => setOpen(true)} aria-label="Talk to Orbis">
-          <Mic size={20} />
+        <button type="button" className="talk-fab" onClick={() => setOpen(true)} aria-label="Ask Orbis">
+          <Sparkles size={20} />
         </button>
       ) : (
-        <section className="talk-sheet" aria-label="Talk to Orbis">
+        <section className="talk-sheet" aria-label="Ask Orbis">
           <header className="talk-head">
-            <strong>Talk to Orbis</strong>
+            <strong>Ask Orbis</strong>
             <button type="button" onClick={close} aria-label="Close"><X size={18} /></button>
           </header>
+          <div className="fd-chips talk-sources" role="group" aria-label="What Orbis may look at">
+            {ASK_SOURCES.map((source) => (
+              <button key={source.id} type="button" aria-pressed={sources.includes(source.id)} onClick={() => toggle(source.id)} disabled={phase === 'thinking'}>{source.label}</button>
+            ))}
+          </div>
           <div className="talk-log" aria-live="polite">
-            {!turns.length && <p className="talk-hint">Ask about your spending, journal, routines or steps, in any Indian language. Recordings aren’t kept.</p>}
+            {!turns.length && <p className="talk-hint">{`Ask about your spending, journal, routines or steps, by typing${voice ? ' or speaking in any Indian language' : ''}. Recordings aren’t kept.`}</p>}
             {turns.map((turn, index) => (
               <div key={index} className="talk-turn">
                 <p className="talk-q">{turn.question}</p>
@@ -223,10 +262,15 @@ export function TalkToOrbis() {
             {message && <p className="talk-error" role="alert">{message}</p>}
           </div>
           <footer className="talk-foot">
-            <button type="button" className={`talk-mic ${phase}`} onClick={onMic} disabled={phase === 'thinking'} aria-label={phase === 'listening' ? 'Done speaking' : 'Speak'}>
-              {phase === 'thinking' ? <LoaderCircle className="workbook-spinner" size={24} /> : phase === 'listening' ? <Square size={20} /> : <Mic size={24} />}
-            </button>
-            <span className="talk-status">{status}</span>
+            {voice && (
+              <button type="button" className={`talk-mic ${phase}`} onClick={onMic} disabled={phase === 'thinking' || !sources.length} aria-label={phase === 'listening' ? 'Done speaking' : 'Speak'}>
+                {phase === 'thinking' ? <LoaderCircle className="workbook-spinner" size={24} /> : phase === 'listening' ? <Square size={20} /> : <Mic size={24} />}
+              </button>
+            )}
+            <form className="talk-type" onSubmit={ask}>
+              <input aria-label="Type a question" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={300} placeholder={phase === 'listening' ? 'Listening…' : 'Type a question'} disabled={phase === 'thinking' || phase === 'listening'} />
+              <button type="submit" aria-label="Ask" disabled={draft.trim().length < 5 || !sources.length || phase === 'thinking'}><Send size={16} /></button>
+            </form>
           </footer>
         </section>
       )}

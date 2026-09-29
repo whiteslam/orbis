@@ -1,7 +1,7 @@
 'use server';
 
 import { answerFromRecords, askBlockedMessage } from '@/lib/ask/answer';
-import type { AskSource, Citation } from '@/lib/ask/select';
+import { pickSources, type AskSource, type Citation } from '@/lib/ask/select';
 import { requireUser } from '@/lib/auth/session';
 import { speak, transcribe } from '@/lib/voice/sarvam';
 import { languageName, talkAudioProblem, trimHistory, ttsLanguage } from '@/lib/voice/talk';
@@ -54,6 +54,16 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
     earlier = [];
   }
 
+  let sources: AskSource[] = TALK_SOURCES;
+  if (form.has('sources')) {
+    try {
+      sources = pickSources(JSON.parse(String(form.get('sources'))));
+    } catch {
+      sources = [];
+    }
+    if (!sources.length) return { success: false, message: 'Choose at least one thing Orbis may look at.' };
+  }
+
   const blocked = await askBlockedMessage(userId);
   if (blocked) return { success: false, message: blocked };
 
@@ -63,7 +73,7 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
   if (transcript.length < 2) return { success: false, message: 'Orbis didn’t catch that. Try again.' };
 
   const language = ttsLanguage(heard.language);
-  const result = await answerFromRecords({ userId, question: transcript, sources: TALK_SOURCES, earlier, spokenLanguage: languageName(language) });
+  const result = await answerFromRecords({ userId, question: transcript, sources, earlier, spokenLanguage: languageName(language) });
   if (!result.success || !result.answer) return { ...result, transcript };
 
   const audio = await speak(result.answer, language, { apiKey });

@@ -17,6 +17,13 @@ export const ASK_SOURCES: Array<{ id: AskSource; label: string }> = [
   { id: 'steps', label: 'Steps' },
 ];
 
+/** The sources a question may read: known ids only, each once. Untrusted input from the browser. */
+export function pickSources(value: unknown): AskSource[] {
+  if (!Array.isArray(value)) return [];
+  const known = new Set<string>(ASK_SOURCES.map((source) => source.id));
+  return Array.from(new Set(value.filter((source): source is AskSource => typeof source === 'string' && known.has(source))));
+}
+
 export type AskJournal = { date: string; mood: number; body: string; tags: string[] };
 export type AskTransaction = { amount: number; currency: string; occurredAt: string; merchant: string | null; category: string | null };
 export type AskRoutineEvent = { date: string; title: string; status: string };

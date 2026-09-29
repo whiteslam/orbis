@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keepCitations, rankJournal, terms, weekOf, weeklyRoutines, weeklySpending, weeklySteps } from '@/lib/ask/select';
+import { keepCitations, pickSources, rankJournal, terms, weekOf, weeklyRoutines, weeklySpending, weeklySteps } from '@/lib/ask/select';
 
 describe('terms', () => {
   it('keeps content words once', () => {
@@ -69,5 +69,17 @@ describe('keepCitations', () => {
       { id: 'spending:2026-09-07', label: 'Spending, week of 7 Sept' },
     ]);
     expect(keepCitations('nope', supplied)).toEqual([]);
+  });
+});
+
+describe('pickSources', () => {
+  it('keeps known sources once, in the order given', () => {
+    expect(pickSources(['steps', 'journal', 'steps'])).toEqual(['steps', 'journal']);
+  });
+
+  it('drops anything unknown or not a string, and non-arrays', () => {
+    expect(pickSources(['journal', 'passwords', 7, null])).toEqual(['journal']);
+    expect(pickSources('journal')).toEqual([]);
+    expect(pickSources(undefined)).toEqual([]);
   });
 });
