@@ -49,14 +49,22 @@
 }
 
 /* Frosted cards: every grouped section on every screen.
-   .apple-list and .groww-card join the brief's known list: they are the same
-   "field flatten" family as .apple-card in 04-views.css (grouped surfaces that
-   used to blend flat into the ground), so they get the same glass treatment.
-   .field .apple-card / .apple-list / .groww-card repeat the selector at equal
-   specificity to 04-views.css's/06-finance.css's `.field .X` flatten rules so
-   this, loaded last, wins the cascade instead of losing on specificity. */
-.fd-focus, .fd-quiet, .apple-card, .apple-list, .groww-card, .pf-group, .pf-editor, .hl-ask, .setup-list,
-.field .apple-card, .field .apple-list, .field .groww-card {
+   .apple-list joins the brief's known list: it is the same "field flatten"
+   family as .apple-card in 04-views.css (grouped surfaces that used to blend
+   flat into the ground), so it gets the same glass treatment. .field
+   .apple-card / .apple-list repeat the selector at equal specificity to
+   04-views.css's/06-finance.css's `.field .X` flatten rules so this, loaded
+   last, wins the cascade instead of losing on specificity.
+   Fix round 1 additions: .health-source (Health's Apple Health import row),
+   .fd-option (Money's "Add manually" prompt), .fd-rates (Money's Rates to
+   INR) and .rt-check (Today's routine check-in) were still flat — they are
+   the same "standalone bordered prompt, not nested in another card" shape as
+   .apple-card, just never joined the family. .groww-card moved out of this
+   list: see the Money accounts note below, it's never a top-level section on
+   its own. */
+.fd-focus, .fd-quiet, .apple-card, .apple-list, .pf-group, .pf-editor, .hl-ask, .setup-list,
+.health-source, .fd-option, .fd-rates, .rt-check,
+.field .apple-card, .field .apple-list {
   background: var(--gl-fill);
   -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
   border: var(--gl-edge); box-shadow: var(--gl-shadow);
@@ -65,7 +73,16 @@
 .fd-quiet { margin-top: 14px; padding-top: 6px; padding-bottom: 6px; }
 .fd-quiet > h2, .pf-group > .fd-label { margin-top: 10px; }
 .fd-line { border-bottom-color: color-mix(in srgb, var(--fd-ink) 7%, transparent); }
-.fd-quiet .fd-line:last-child, .pf-group .fd-source:last-child { border-bottom: 0; }
+.fd-quiet .fd-line:last-child, .pf-group .fd-source:last-child, .pf-group .fd-line:last-child { border-bottom: 0; }
+
+/* Money's Accounts group (invest-dashboard.tsx): the label and every broker
+   row now share one glass card (reusing .pf-group, added around them there).
+   A connected broker renders the independent .groww-card instead of a plain
+   .fd-line row, and .groww-card only ever renders inside this wrapper — so
+   instead of stacking a second glass card inside the first, it flattens the
+   same way the brief's apple-card-inside-fd-quiet example does, keeping only
+   a hairline to separate it from the row above. */
+.pf-group .groww-card { margin-top: 14px; padding: 14px 0 0; background: none; border: 0; border-top: 1px solid color-mix(in srgb, var(--fd-ink) 7%, transparent); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 0; }
 
 /* Segmented controls: a glass track with a white thumb. */
 .fd-tabs.glass-seg { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 12px; padding: 4px; border-radius: 18px; border: var(--gl-edge); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }

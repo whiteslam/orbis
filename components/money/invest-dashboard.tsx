@@ -125,17 +125,19 @@ export function InvestDashboard({ savedAdvice, notice, clearNotice, switcher }: 
       {hasData && <><FieldLabel>Health of the mix</FieldLabel><PortfolioHealth analysis={analysis} /></>}
       {hasData && <><FieldLabel>Allocation</FieldLabel><AllocationBreakdown analysis={analysis} /></>}
 
-      <FieldLabel>Accounts</FieldLabel>
-      {BROKERS.map((meta) => (
-        <BrokerCard
-          key={meta.id}
-          meta={meta}
-          portfolio={portfolioOf(meta.id)}
-          isLoading={isLoading}
-          onRefresh={load}
-          onConnect={(reconnect) => setView({ name: 'connect', broker: meta.id, reconnect })}
-        />
-      ))}
+      <section className="pf-group">
+        <FieldLabel>Accounts</FieldLabel>
+        {BROKERS.map((meta) => (
+          <BrokerCard
+            key={meta.id}
+            meta={meta}
+            portfolio={portfolioOf(meta.id)}
+            isLoading={isLoading}
+            onRefresh={load}
+            onConnect={(reconnect) => setView({ name: 'connect', broker: meta.id, reconnect })}
+          />
+        ))}
+      </section>
 
       {hasData && <PortfolioAiRow advice={advice} onOpen={() => setView({ name: 'advice' })} />}
     </>
