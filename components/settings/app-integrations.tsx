@@ -62,7 +62,7 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
           status={google ? <Status state={googleNeedsReconnect ? 'warn' : 'on'}>{googleNeedsReconnect ? 'Reconnect' : 'Connected'}</Status> : <Status state="off">Not connected</Status>}
         />
         <ul className="pf-scopes">
-          <li className={google?.gmail ? 'on' : undefined}><Mail size={13} aria-hidden="true" />Gmail · important mail on Home{google && !google.gmail ? ' · not granted' : ''}</li>
+          <li className={google?.gmail ? 'on' : undefined}><Mail size={13} aria-hidden="true" />Gmail · important mail on Today{google && !google.gmail ? ' · not granted' : ''}</li>
           <li className={google?.calendar ? 'on' : undefined}><CalendarDays size={13} aria-hidden="true" />Calendar · events for your daily notifications{google && !google.calendar ? ' · not granted' : ''}</li>
         </ul>
         <div className="fd-act pf-act">

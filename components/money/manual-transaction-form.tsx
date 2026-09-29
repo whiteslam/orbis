@@ -73,7 +73,7 @@ export function ManualTransactionForm({ onClose, onSaved }: { onClose: () => voi
 
   return (
     <>
-      <FieldSubHead crumb="Expense · manual entry" title={isIncome ? 'Add income' : 'Add expense'} lead="Cash, UPI, or anything Gmail never saw." onClose={onClose} backLabel="Close manual entry" />
+      <FieldSubHead crumb="Spending · manual entry" title={isIncome ? 'Add income' : 'Add expense'} lead="Cash, UPI, or anything Gmail never saw." onClose={onClose} backLabel="Close manual entry" />
 
       <form className="fd-form" onSubmit={submit}>
         <div className="fd-seg" role="radiogroup" aria-label="Transaction type">

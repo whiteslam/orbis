@@ -114,7 +114,7 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
   return (
     <>
       <FieldSubHead
-        crumb="Invest · accounts"
+        crumb="Investments · accounts"
         title={reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}
         lead={meta.connect === 'redirect'
           ? (reconnect
@@ -124,7 +124,7 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
             ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.`
             : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings, it cannot place an order.`)}
         onBack={onBack}
-        backLabel="Back to Invest"
+        backLabel="Back to Investments"
       />
       <FieldLabel>{meta.connect === 'redirect' ? 'One step' : 'Two steps'}</FieldLabel>
       <BrokerSteps meta={meta} />
@@ -134,7 +134,7 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
         <h2>What syncs</h2>
         <div className="fd-line"><span>Holdings</span><b>{covers}</b></div>
         <div className="fd-line"><span>Prices</span><b>{meta.pricesShort}</b></div>
-        <div className="fd-line"><span>Refresh</span><b>{meta.connect === 'redirect' ? 'Daily, after you log in again' : 'When you open Invest'}</b></div>
+        <div className="fd-line"><span>Refresh</span><b>{meta.connect === 'redirect' ? 'Daily, after you log in again' : 'When you open Investments'}</b></div>
       </section>
       {meta.sessionNote && <p className="fd-note">{meta.sessionNote}</p>}
       {meta.gapNote && <p className="fd-note">{meta.gapNote}</p>}

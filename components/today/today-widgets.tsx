@@ -9,13 +9,26 @@ import type { StepsSummary } from '@/lib/health/types';
 
 const STEP_GOAL = 10_000;
 
+/** Truthful only if `latest` really is today's count — steps import can lag, so the
+ *  aria-label says which day it's reporting instead of always claiming "today". */
+function activityLabel(steps: StepsSummary, todayIso: string) {
+  if (!steps.latest) return 'Activity: import your steps';
+  const count = steps.latest.steps.toLocaleString('en-IN');
+  const when = steps.latest.date === todayIso
+    ? 'today'
+    : `on ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(steps.latest.date))}`;
+  const average = steps.average7 != null ? `, 7-day average ${Math.round(steps.average7).toLocaleString('en-IN')}` : '';
+  return `Activity: ${count} steps ${when}${average}`;
+}
+
 /** Two square widgets under the brief: today's activity and this month's spending. Each opens its tab. */
 export function TodayWidgets({ steps, month, openTab }: { steps: StepsSummary; month: FinanceSummary['month']; openTab: (target: FocusTarget) => void }) {
+  const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   const today = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
   const bars = month ? recentDays(month.daily, today) : [];
   return (
     <div className="today-widgets">
-      <button type="button" className="today-widget" onClick={() => openTab('health')} aria-label={steps.latest ? `Activity: ${steps.latest.steps.toLocaleString('en-IN')} steps today` : 'Activity: import your steps'}>
+      <button type="button" className="today-widget" onClick={() => openTab('health')} aria-label={activityLabel(steps, todayIso)}>
         <span className="today-widget-cap">Activity</span>
         {steps.latest ? (
           <ActivityRings size={104} rings={[

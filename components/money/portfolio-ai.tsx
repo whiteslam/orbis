@@ -85,7 +85,7 @@ export function PortfolioAi({ advice, setAdvice, onBack }: { advice: SavedPortfo
   if (asking || !advice) {
     return (
       <>
-        <FieldSubHead crumb="Invest · suggestions" title="Ask about your mix" lead="Orbis sends a summary of your holdings for analysis and saves the suggestions so you can read them again. Your holdings themselves are not stored." onBack={advice ? () => setAsking(false) : onBack} backLabel={advice ? 'Back to saved suggestions' : 'Back to Invest'} />
+        <FieldSubHead crumb="Investments · suggestions" title="Ask about your mix" lead="Orbis sends a summary of your holdings for analysis and saves the suggestions so you can read them again. Your holdings themselves are not stored." onBack={advice ? () => setAsking(false) : onBack} backLabel={advice ? 'Back to saved suggestions' : 'Back to Investments'} />
 
         <section className="fd-quiet">
           <h2>What will be sent</h2>
@@ -116,7 +116,7 @@ export function PortfolioAi({ advice, setAdvice, onBack }: { advice: SavedPortfo
 
   return (
     <>
-      <FieldSubHead crumb="Invest · suggestions" onBack={onBack} backLabel="Back to Invest" />
+      <FieldSubHead crumb="Investments · suggestions" onBack={onBack} backLabel="Back to Investments" />
       <section className="fd-focus fd-advice" aria-live="polite">
         <p className="fd-kicker">What Orbis sees</p>
         <h1>{headline}</h1>

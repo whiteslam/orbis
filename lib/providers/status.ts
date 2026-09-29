@@ -147,13 +147,13 @@ export async function getIntegrationStatus(userId: string, email: string | null)
   } else if (growwConfigured() && owner && email === owner) {
     integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null });
   } else {
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: 'Connect in Invest', lastSyncAt: null, usage: null });
+    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: 'Connect in Money → Investments', lastSyncAt: null, usage: null });
   }
 
   integrations.push({
     id: 'gmail',
     label: 'Gmail',
-    purpose: 'Important mail on Home · read-only',
+    purpose: 'Important mail on Today · read-only',
     state: !gmail ? 'not_configured' : gmail.status === 'connected' ? 'connected' : 'attention',
     detail: !gmail ? 'Connect in Settings → Connections' : gmail.status === 'connected' ? null : 'Reconnect in Settings → Connections',
     lastSyncAt: gmail?.last_sync_at ?? null,
