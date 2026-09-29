@@ -108,12 +108,14 @@ The user asked to upload an Excel workbook, read its data, and receive useful ad
 - [x] Ground responses in the relevant user data, require cited workbook evidence, and include caveats
 - [ ] Apply `supabase/migrations/202609240007_ai_generation_events.sql` to enable aggregate event logging
 
-### 6a. Goals and habits — In progress
+### 6a. Goals and habits — Not started
 
-- [x] Replace demo goals and habit streaks with authenticated user-owned Supabase records
-- [x] Add goal creation and progress updates
-- [x] Add habit creation and daily check-ins with streak display
-- [x] Add RLS and owner-scoped check-in records
+Not started. The goals, habits and habit_checkins tables exist with no UI; build or drop them.
+
+- [ ] Replace demo goals and habit streaks with authenticated user-owned Supabase records
+- [ ] Add goal creation and progress updates
+- [ ] Add habit creation and daily check-ins with streak display
+- [ ] Add RLS and owner-scoped check-in records
 - [ ] Apply `supabase/migrations/202609240004_goals_habits.sql` in Supabase and verify with the signed-in account
 - [ ] Apply `supabase/migrations/202609240005_orbis_memory.sql` in Supabase and verify note management
 
@@ -173,6 +175,8 @@ Ideas carried over from WBT Command HQ (Appendix B of the social planner plan).
 - [ ] Not built: "newer version waiting — take it or keep yours". Today no sync overwrites user data (Gmail sync only inserts; broker holdings are fetched live, never stored); revisit if that changes
 - [ ] Not built: archive for goals and habits (they have tables but no screens since the Atlas redesign)
 - [ ] Consider pgvector retrieval for Ask Orbis once keyword ranking proves too coarse
+
+2026-09-29: reorganised into five tabs, a Settings sheet, a global Ask Orbis and the Glass look.
 
 ## One-time external setup checklist
 

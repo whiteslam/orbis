@@ -4,21 +4,22 @@ Orbis is a private, single-user personal intelligence app: one phone-frame shell
 
 ## Features by tab
 
-- **Home** — a single daily brief (weather, money, a nudge), backed by route handlers that load in parallel so the shell renders before either is ready; a quiet row for today's routines and planned social posts.
-- **Expense** (Finance) — owner-scoped transactions, a read-only Gmail alert connection, manual transaction entry, and a deterministic parser for statement-style alerts.
-- **Health** — bounded preview and parsing of uploaded `.xlsx`/`.pdf` workbooks (uploaded directly to Supabase Storage via a signed URL, not through the app server), data-grounded AI advice with mandatory citations, a documents/plans library, and Apple Health step counts.
-- **Invest** — manual holdings plus optional Zerodha Kite Connect and Groww sync, market data from Alpha Vantage, and AI-assisted portfolio commentary.
-- **Social** — a month calendar, list and grid view of planned/posted social content, AI-drafted post copy, and a quiet Home row for what's due today.
-- **Profile** — account settings, app lock and PIN, notification and AI preferences, saved context notes, fitness persona, personal profile, routines/habits, a journal, data export, and account deletion.
+- **Today:** setup checklist, the daily brief, routine check-in, weather, important mail, and quiet rows for everything else. Two widgets show activity rings (steps and 7-day average) and this month's spending.
+- **Money:** *Spending* (manual entries and Gmail alerts, this month at a glance) and *Investments* (Zerodha and Groww holdings, portfolio charts, optional AI read).
+- **Health:** steps from an Apple Health export, plans, documents, advice, "Ask about a file", and your coaching style.
+- **Journal:** a daily entry with mood, tags and voice notes, edit history, and saved notes Orbis remembers.
+- **Social:** a month-by-month planner for your own posts.
+- **Ask Orbis:** the button on every screen. Type or talk (voice in Indian languages when `SARVAM_API_KEY` is set) about your journal, spending, routines and steps.
+- **Settings:** from the avatar on any screen. You, Connections (every link read-only), AI & privacy, Notifications, Your day, Security (lock now, change PIN), Your data (export, delete, sign out).
 
 Signed-out visitors get a separate public site: a landing page, `/privacy`, `/terms`, `/support`, `/delete-account`, an offline fallback, `robots.txt`/`sitemap.xml` and a generated share image — all reading the site name and canonical URL from `lib/site.ts`.
 
 ## Architecture
 
-- **One shell, App Router.** `components/orbis-app.tsx` renders the whole signed-in experience as a single phone-frame client component with a tab switcher (`home` / `finance` / `health` / `investment` / `social` / `personal`); only Home is in the first download, everything else is `next/dynamic`. Home's own data comes from two route handlers (`/api/home/brief`, `/api/home/portfolio`) rather than server actions, so they can be requested in parallel with a timeout instead of blocking a render.
+- **One shell, App Router.** `components/app-shell.tsx` renders the whole signed-in experience as a single phone-frame client component with a tab switcher; only Today is in the first download, everything else is `next/dynamic`. Tabs and legacy links are defined in `lib/shell/tabs.ts`. Today's own data comes from two route handlers (`/api/home/brief`, `/api/home/portfolio`) rather than server actions, so they can be requested in parallel with a timeout instead of blocking a render. The Glass look (frosted cards, soft wallpaper, Figtree font) lives in `app/styles/glass.css` and `app/styles/glass-dark.css`.
 - **Supabase for auth and storage, RLS everywhere.** Every user-owned table is row-level-secured to its owner; server code additionally narrows table grants explicitly (`202609280200_hardening.sql`) so RLS is not the only gate. Every server entry point derives the user from `supabase.auth.getClaims()` plus an app-lock check (`isAppUnlocked`) — never from a value the browser supplies.
 - **Server actions, typed results.** Mutations are `'use server'` functions that return `{ success: boolean; message: string; … }`; errors meant for the user are typed copy, everything else becomes a generic message and the real error goes to `console.error`.
-- **An AI router with sensitivity, not a hardcoded model.** `lib/ai/router.ts` reads a provider/model registry (`ai_providers`, `ai_models`) and routes `'personal'`-sensitivity requests (the brief, plans, workbook advice, portfolio suggestions) only to a provider the registry marks `may_train = false` — today, Groq. `'general'` requests may also reach OpenRouter, Gemini or Mistral. Nothing reaches any provider until the person turns AI on once in Profile → Settings (`ai_preferences.ai_enabled`, migration `202609280203_ai_consent.sql`); until then every AI feature falls back to wording Orbis wrote itself.
+- **An AI router with sensitivity, not a hardcoded model.** `lib/ai/router.ts` reads a provider/model registry (`ai_providers`, `ai_models`) and routes `'personal'`-sensitivity requests (the brief, plans, workbook advice, portfolio suggestions) only to a provider the registry marks `may_train = false` — today, Groq. `'general'` requests may also reach OpenRouter, Gemini or Mistral. Nothing reaches any provider until the person turns AI on once in Settings (`ai_preferences.ai_enabled`, migration `202609280203_ai_consent.sql`); until then every AI feature falls back to wording Orbis wrote itself.
 - **A nonce-based CSP.** `proxy.ts` (the Next.js proxy/middleware entry point) generates a fresh nonce per request, builds a strict `script-src 'self' 'nonce-…' 'strict-dynamic'` policy in `lib/security/csp.ts`, and forwards it as both a request header (so Next stamps its own scripts) and the response header. Static security headers (`Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) are set in `next.config.ts`.
 - **A PWA shell.** A service worker registers on every load in production, caches the app shell, and serves `/offline` when the network is unavailable; the manifest and icons make it installable.
 
@@ -87,7 +88,7 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 - **AI consent and data sensitivity.** AI is off by default per account; the router only ever sends personally-sensitive requests to a provider that has committed not to train on them, and never sends anything until consent is recorded.
 - **Rate limits and uploads.** Costly actions (uploads, parsing, Gmail sync) are capped per person per day/hour, checked server-side and failing closed if the limiting mechanism itself is unavailable. Large files go straight from the browser to a private Storage bucket with a one-time signed URL and a server-side claim that can only be consumed once.
 - **Provider allowlists.** The AI router, push-notification sending, and OAuth (Google, Zerodha) all validate destination hosts and callback state against a fixed allowlist rather than trusting configuration alone.
-- **Data export and deletion.** Profile → Settings offers a full JSON export of your own data (fresh auth required) and permanent account deletion (typed confirmation, fresh auth required), covering the tables listed in `lib/account/deletion-plan.ts`.
+- **Data export and deletion.** Settings offers a full JSON export of your own data (fresh auth required) and permanent account deletion (typed confirmation, fresh auth required), covering the tables listed in `lib/account/deletion-plan.ts`.
 
 ## More
 
