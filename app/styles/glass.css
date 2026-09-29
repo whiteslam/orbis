@@ -25,6 +25,18 @@
   --sys-page: var(--gl-ground);
 }
 
+/* Apple's Reduce Transparency: drop the blur, keep the layout — the glass
+   equivalent of 01-base.css's own rule for the pre-Glass tokens. --sys-surface
+   is already dark-aware (01-base.css defines it in both dark blocks), so this
+   one rule covers light and dark without a separate glass-dark.css stanza. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --gl-blur: none;
+    --gl-fill: var(--sys-surface);
+    --gl-fill-strong: var(--sys-surface);
+  }
+}
+
 .phone-screen { background: var(--gl-ground); isolation: isolate; }
 .glass-wall { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--gl-ground); }
 .glass-blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .75; }
@@ -32,8 +44,8 @@
 .glass-blob.two { width: 300px; height: 300px; right: -130px; top: 170px; background: var(--gl-blob-2); }
 .glass-blob.three { width: 360px; height: 360px; left: -60px; bottom: -150px; background: var(--gl-blob-3); }
 .glass-grain { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--gl-dot) 1px, transparent 1.3px); background-size: 14px 14px; }
-.screen-body, .settings-sheet { position: relative; z-index: 1; }
-.screen-body.field, .settings-sheet { background: transparent; }
+.screen-body { position: relative; z-index: 1; }
+.screen-body.field { background: transparent; }
 
 /* Chrome: a floating glass tab bar, and Ask Orbis as its own glass circle to the right. */
 .bottom-nav { right: 84px; z-index: 20; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }

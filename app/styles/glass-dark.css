@@ -6,6 +6,9 @@
     --gl-blob-1: #22332b; --gl-blob-2: #33291c; --gl-blob-3: #1e2635; --gl-dot: rgba(255,255,255,.05);
     --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
     --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+    /* 01-base.css's dark blocks (specificity 0,2,0) beat a plain :root, so these
+       three need restating here or the old green gradient/light surfaces win. */
+    --fd-field: var(--gl-ground); --sys-page: var(--gl-ground); --fd-card: var(--gl-fill);
   }
 }
 :root[data-theme="dark"] {
@@ -14,4 +17,5 @@
   --gl-blob-1: #22332b; --gl-blob-2: #33291c; --gl-blob-3: #1e2635; --gl-dot: rgba(255,255,255,.05);
   --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
   --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+  --fd-field: var(--gl-ground); --sys-page: var(--gl-ground); --fd-card: var(--gl-fill);
 }

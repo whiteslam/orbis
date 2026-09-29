@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
@@ -65,9 +65,31 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   clearGoogleNotice: () => void;
   data: SettingsData;
 }) {
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+
   useEffect(() => jumpTo(section), [section]);
+
+  // Move focus into the sheet on open, and give it back to whatever opened it
+  // (an avatar button, a Today card) on close — a mount/unmount effect, since
+  // the sheet only ever unmounts when Settings actually closes, not when the
+  // section it jumps to changes. preventScroll matters here: an unqualified
+  // focus() scrolls its target into view, which would fight the jumpTo(section)
+  // effect above and drag the sheet back to the top instead of the section a
+  // caller (like Today's setup checklist) asked to open.
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    headingRef.current?.focus({ preventScroll: true });
+    return () => opener?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      // Ask Orbis can be open over Settings; it owns Escape while it is, so a
+      // question in progress there isn't lost to Settings closing underneath it.
+      if (document.querySelector('.talk-sheet')) return;
+      onClose();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -78,9 +100,9 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
 
   return (
-    <section className="settings-sheet field pf-screen" role="dialog" aria-label="Settings">
+    <section className="settings-sheet field pf-screen" role="dialog" aria-modal="true" aria-label="Settings">
       <header className="settings-head">
-        <h1>Settings</h1>
+        <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
         <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
       </header>
       {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
