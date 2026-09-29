@@ -9,6 +9,7 @@ import { TabLoading } from '@/components/shell/loading';
 import { SettingsProvider } from '@/components/shell/settings-context';
 import { TodayScreen } from '@/components/today/today-screen';
 import { aiAllowed } from '@/lib/ai/consent';
+import { setupSteps } from '@/lib/focus/setup';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 import type { FinanceSummary } from '@/lib/finance/types';
@@ -152,6 +153,12 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         gmailNotice={gmailNotice}
         clearGmailNotice={() => setGmailNotice(null)}
         openTab={openTarget}
+        setup={setupSteps({
+          aiOn: aiAllowed(aiPreferences),
+          googleConnected: Boolean(appConnections.google) && appConnections.google?.status !== 'reconnect_required',
+          routineCount: routines.routines.length,
+          hasName: Boolean(personalProfile.profile?.preferredName?.trim()),
+        })}
       />
     );
     if (tab === 'money') return <MoneyScreen view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
@@ -159,7 +166,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
     return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
-  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal]);
+  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal]);
 
   return (
     <main className="stage">

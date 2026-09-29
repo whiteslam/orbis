@@ -6,6 +6,7 @@ import { PasskeyPrompt } from '@/components/security/passkey-prompt';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { FocusNote, QuietList } from '@/components/field/field';
 import { RoutineCheck } from '@/components/today/routine-check';
+import { SetupChecklist } from '@/components/today/setup-checklist';
 import { WeatherCard } from '@/components/today/weather-card';
 import { ImportantMail } from '@/components/today/important-mail';
 import type { HealthPlanRecord } from '@/lib/health-docs/types';
@@ -23,6 +24,7 @@ import { composeNote, type HomeNote } from '@/lib/home/note';
 import { trainingForToday } from '@/lib/home/training';
 import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
 import type { RoutinesSummary } from '@/lib/routines/types';
+import type { SetupStep } from '@/lib/focus/setup';
 
 // Home's background reads are route handlers, not server actions: actions run
 // one at a time, so a slow broker or model would hold up the user's next tap.
@@ -41,7 +43,7 @@ const PORTFOLIO_WAIT_MS = 8_000;
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void }) {
+export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, setup }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; setup: SetupStep[] }) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
@@ -123,6 +125,8 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       </header>
 
       <PasskeyPrompt />
+
+      <SetupChecklist steps={setup} />
 
       <FocusNote note={brief} />
 
