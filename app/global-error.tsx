@@ -16,6 +16,8 @@ import './styles/atlas-health.css';
 import './styles/atlas-profile.css';
 import './styles/atlas-social.css';
 import './styles/marketing.css';
+import './styles/glass.css';
+import './styles/glass-dark.css';
 
 // Replaces the root layout when that fails, so it brings its own document and
 // styles. No inline script: the stored theme is applied after mount instead

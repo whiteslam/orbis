@@ -1,0 +1,17 @@
+/* ─── Glass: dark ───────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-ground: #0e0f10; --glass-fill: rgba(28,30,32,.62); --glass-fill-strong: rgba(48,51,54,.9);
+    --glass-edge: 1px solid rgba(255,255,255,.08); --glass-shadow: 0 8px 28px rgba(0,0,0,.4);
+    --glass-blob-1: #22332b; --glass-blob-2: #33291c; --glass-blob-3: #1e2635; --glass-dot: rgba(255,255,255,.05);
+    --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
+    --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+  }
+}
+:root[data-theme="dark"] {
+  --glass-ground: #0e0f10; --glass-fill: rgba(28,30,32,.62); --glass-fill-strong: rgba(48,51,54,.9);
+  --glass-edge: 1px solid rgba(255,255,255,.08); --glass-shadow: 0 8px 28px rgba(0,0,0,.4);
+  --glass-blob-1: #22332b; --glass-blob-2: #33291c; --glass-blob-3: #1e2635; --glass-dot: rgba(255,255,255,.05);
+  --fd-ink: #eef0f2; --fd-soft: #a3a8b0; --fd-accent: #6fc39d; --fd-alert: #f0a07a;
+  --fd-chip: rgba(255,255,255,.07); --fd-btn: #eef0f2; --fd-btn-ink: #0e0f10; --fd-veil: rgba(14,15,16,.82);
+}

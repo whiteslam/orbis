@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
+import { Figtree } from 'next/font/google';
 import './styles/01-base.css';
 import './styles/02-home.css';
 import './styles/03-hero.css';
@@ -15,9 +16,13 @@ import './styles/atlas-profile.css';
 import './styles/atlas-social.css';
 import './styles/marketing.css';
 import './styles/settings.css';
+import './styles/glass.css';
+import './styles/glass-dark.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';
+
+const figtree = Figtree({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-figtree', display: 'swap' });
 
 const DESCRIPTION = 'One calm daily brief for your money, health and routines — read-only connections, private by default, and AI that never trains on your personal data.';
 
@@ -59,7 +64,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Set by proxy.ts; the Content-Security-Policy only runs inline scripts carrying it.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={figtree.variable} suppressHydrationWarning>
       <head>
         {/* Applies the stored appearance before first paint so the page never
             flashes the wrong theme. Inline and synchronous by necessity. */}

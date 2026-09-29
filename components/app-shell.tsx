@@ -7,6 +7,7 @@ import { BookOpen, HeartPulse, Home, Megaphone, WalletCards, type LucideIcon } f
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { TabLoading } from '@/components/shell/loading';
 import { SettingsProvider } from '@/components/shell/settings-context';
+import { Wallpaper } from '@/components/shell/wallpaper';
 import { TodayScreen } from '@/components/today/today-screen';
 import { aiAllowed } from '@/lib/ai/consent';
 import { setupSteps } from '@/lib/focus/setup';
@@ -179,6 +180,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       <div className="phone">
         <div className="phone-speaker" />
         <div className="phone-screen">
+          <Wallpaper />
           <SettingsProvider value={settingsAccess}>
             {screen}
             {settings && (
