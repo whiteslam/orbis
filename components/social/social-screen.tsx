@@ -48,9 +48,9 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
   const today = indiaToday();
 
-  function load(next: string) {
+  function load(next: string, keepNotice = false) {
     setPeriod(next);
-    setNotice(null);
+    if (!keepNotice) setNotice(null);
     setSelected(next === periodOfDate(today) ? today : null);
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${HASH_PREFIX}${next.slice(0, 7)}`);
     startLoading(async () => {
@@ -87,7 +87,7 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
         const matched = result?.platforms.flatMap((platform) => platform.matchedPostIds.length ? [`${platform.matchedPostIds.length} from ${META_LABEL[platform.platform]}`] : []) ?? [];
         if (matched.length) {
           setNotice({ text: `Marked ${matched.join(' and ')} as published.`, error: false });
-          load(period);
+          load(period, true);
         }
       })
       .catch(() => { if (current) setLive(null); });

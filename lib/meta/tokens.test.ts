@@ -40,3 +40,8 @@ test('Meta errors: a bad token means reconnect, a 4xx is Meta’s reason, a 5xx 
   assert.equal(classifyMetaError(503, {}).kind, 'unavailable');
   assert.equal(classifyMetaError(400, 'not json').kind, 'rejected');
 });
+
+test('transient Meta errors are unavailable, not a rejection', () => {
+  for (const code of [1, 2, 4, 17, 32, 341]) assert.equal(classifyMetaError(400, { error: { code, message: 'x' } }).kind, 'unavailable', `code ${code}`);
+  assert.equal(classifyMetaError(400, { error: { code: 100, message: 'x', is_transient: true } }).kind, 'unavailable');
+});

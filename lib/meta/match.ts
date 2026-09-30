@@ -11,8 +11,9 @@ export function normalizeCaption(value: string) {
   return value
     .toLowerCase()
     .replace(/https?:\/\/\S+/g, ' ')
-    .replace(/#[\p{L}\p{N}_]+/gu, ' ')
-    .replace(/\p{Extended_Pictographic}|‍|️/gu, ' ')
+    .replace(/#[\p{L}\p{M}\p{N}_]+/gu, ' ')
+    // Emoji and everything that modifies them: skin tones, flags, keycaps, joiners, variation selectors.
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|⃣|‍|️/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

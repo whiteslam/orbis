@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { checkPublishAction, startPublishAction } from '@/app/social/meta-actions';
 import { safeAction } from '@/lib/client/safe-action';
-import { postedText } from '@/lib/meta/publish-rules';
+import { sentText } from '@/lib/meta/publish-rules';
 import { META_LABEL, type MetaPlatform, type PublishResult } from '@/lib/meta/types';
 import { formatLabel, type SocialPost } from '@/lib/social/types';
 
@@ -16,6 +16,7 @@ export function PublishSheet({ post, platform, username, onClose, onPublished }:
   const [error, setError] = useState<string | null>(null);
   const started = useRef(0);
   const name = META_LABEL[platform];
+  const text = sentText(post, platform);
 
   function settle(result: PublishResult) {
     if (!result.success) {
@@ -43,7 +44,8 @@ export function PublishSheet({ post, platform, username, onClose, onPublished }:
     setError(null);
     setState('sending');
     started.current = Date.now();
-    void safeAction(startPublishAction)(post.id, platform).then(settle);
+    // updatedAt is the version shown here: the server refuses a post changed since.
+    void safeAction(startPublishAction)(post.id, platform, post.updatedAt).then(settle);
   }
 
   return (
@@ -54,7 +56,9 @@ export function PublishSheet({ post, platform, username, onClose, onPublished }:
         ? <video src={post.mediaUrl} className="so-sheet-media" muted playsInline />
         // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived Storage URL
         : <img src={post.mediaUrl} alt="" className="so-sheet-media" />)}
-      <pre className="so-sheet-text" aria-label="Text that will be posted">{postedText(post.caption, post.hashtags)}</pre>
+      {text === null
+        ? <p className="so-sheet-who">Stories carry no caption: only the picture or video goes out.</p>
+        : <pre className="so-sheet-text" aria-label="Text that will be posted">{text}</pre>}
       <p className="so-sheet-warn">This posts publicly on {name} right now. Orbis can’t delete it afterwards.</p>
       {error && <p className="so-problem" role="alert">{error}</p>}
       {state === 'processing' && <p className="so-message" role="status">Publishing… {name} is processing the video.</p>}

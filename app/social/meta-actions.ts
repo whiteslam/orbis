@@ -28,11 +28,11 @@ export async function disconnectMetaAction(platform: unknown): Promise<Result> {
 }
 
 /** Publishes a saved, ready post to one platform. Called only from the confirm sheet. */
-export async function startPublishAction(postId: unknown, platform: unknown): Promise<PublishResult> {
+export async function startPublishAction(postId: unknown, platform: unknown, confirmedAt: unknown): Promise<PublishResult> {
   const userId = (await requireUser())?.userId;
   if (!userId) return { success: false, message: SIGN_IN.message };
-  if (!isUuid(postId) || !isMetaPlatform(platform)) return { success: false, message: 'That post is invalid.' };
-  const result = await startPublish(userId, postId, platform);
+  if (!isUuid(postId) || !isMetaPlatform(platform) || typeof confirmedAt !== 'string') return { success: false, message: 'That post is invalid.' };
+  const result = await startPublish(userId, postId, platform, confirmedAt);
   if (result.success) revalidatePath('/');
   return result;
 }

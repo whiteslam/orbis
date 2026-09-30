@@ -2,8 +2,14 @@ import { postedLength } from '@/lib/social/month';
 import type { SocialPost } from '@/lib/social/types';
 import { META_LABEL, type ContainerSpec, type MetaPlatform } from '@/lib/meta/types';
 
-export type PublishablePost = Pick<SocialPost, 'status' | 'platforms' | 'format' | 'caption' | 'hashtags' | 'mediaPath' | 'mediaType'>;
-export type PublishContext = { connection: 'connected' | 'reconnect_required' | null; publication: 'processing' | 'published' | null; dirty: boolean };
+export type PublishablePost = Pick<SocialPost, 'status' | 'platforms' | 'format' | 'caption' | 'hashtags' | 'mediaPath' | 'mediaType' | 'published'>;
+export type PublishContext = {
+  connection: 'connected' | 'reconnect_required' | null;
+  publication: 'processing' | 'published' | null;
+  dirty: boolean;
+  /** The server's copy differs from the one the person confirmed. */
+  changed?: boolean;
+};
 
 const TEXT_LIMIT: Record<MetaPlatform, number> = { instagram: 2200, threads: 500 };
 const IG_HASHTAGS = 30;
@@ -24,8 +30,10 @@ export function publishProblem(post: PublishablePost, platform: MetaPlatform, co
   if (!context.connection) return `Connect ${name} in Settings first.`;
   if (context.connection === 'reconnect_required') return `Reconnect ${name} in Settings.`;
   if (context.dirty || (post.status !== 'ready' && post.status !== 'published')) return 'Save the post and mark it ready first.';
+  if (context.changed) return 'This post changed since you opened it. Close it and open it again, then publish.';
   if (!post.platforms.includes(platform)) return `Add ${name} to this post’s platforms first.`;
-  if (context.publication === 'published') return `Already published on ${name}.`;
+  // Marked published by hand on this platform: there is no publication row, but it is out.
+  if (context.publication === 'published' || post.published?.platform === platform) return `Already published on ${name}.`;
   if (context.publication === 'processing') return `Publishing on ${name} is in progress.`;
 
   if (post.format === 'story' && platform === 'threads') return 'Threads has no Stories.';
@@ -45,6 +53,12 @@ export function publishProblem(post: PublishablePost, platform: MetaPlatform, co
   if (length > TEXT_LIMIT[platform]) return `The text is ${length.toLocaleString('en-IN')} characters; ${name} allows ${TEXT_LIMIT[platform].toLocaleString('en-IN')}.`;
   if (platform === 'instagram' && post.hashtags.length > IG_HASHTAGS) return `Instagram allows ${IG_HASHTAGS} hashtags; this post has ${post.hashtags.length}.`;
   return null;
+}
+
+/** The words that actually go out, for the confirm sheet: Instagram Stories carry no caption. */
+export function sentText(post: PublishablePost, platform: MetaPlatform) {
+  if (post.format === 'story' && platform === 'instagram') return null;
+  return postedText(post.caption, post.hashtags);
 }
 
 /** What to ask Meta to make. Call only after publishProblem returned null. */

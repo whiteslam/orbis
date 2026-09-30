@@ -51,3 +51,10 @@ test('only candidates for this platform that are not yet published there', () =>
   assert.equal(matchPosts('instagram', [planned({ status: 'draft' })], [live()]).length, 0);
   assert.equal(matchPosts('instagram', [planned({ status: 'published', publishedOn: ['threads'] })], [live()]).length, 1);
 });
+
+test('skin tones, flags, keycaps and Indic hashtags are ignored too', () => {
+  assert.equal(normalizeCaption('Hello 👍🏽 world'), 'hello world');
+  assert.equal(normalizeCaption('Proud 🇮🇳 moment'), 'proud moment');
+  assert.equal(normalizeCaption('1️⃣ first'), '1 first');
+  assert.equal(normalizeCaption('नमस्ते दुनिया #नमस्ते'), 'नमस्ते दुनिया');
+});

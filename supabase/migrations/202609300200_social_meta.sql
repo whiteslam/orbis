@@ -32,9 +32,14 @@ create table if not exists public.social_publications (
   user_id uuid not null references auth.users (id) on delete cascade,
   post_id uuid not null references public.social_posts (id) on delete cascade,
   platform text not null check (platform in ('instagram', 'threads')),
-  status text not null check (status in ('processing', 'published')),
+  -- dismissed: the person said "not published" after a match or a publish; kept so
+  -- the matcher does not mark it again, and cleared when they publish it anew.
+  status text not null check (status in ('processing', 'published', 'dismissed')),
   source text not null check (source in ('orbis', 'matched')),
   container_id text check (container_id is null or char_length(container_id) between 1 and 64),
+  -- Set just before the publish call. Once set, the claim is never dropped on an
+  -- unclear outcome: the post may already be live.
+  publish_sent_at timestamptz,
   external_id text check (external_id is null or char_length(external_id) between 1 and 64),
   permalink text check (permalink is null or permalink ~* '^https://'),
   published_at timestamptz,

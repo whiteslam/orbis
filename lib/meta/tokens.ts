@@ -1,6 +1,7 @@
 import type { MetaPlatform } from '@/lib/meta/types';
 
 const REFRESH_WITHIN_MS = 7 * 86_400_000;
+const TRANSIENT_CODES = [1, 2, 4, 17, 32, 341];
 const record = (value: unknown): Record<string, unknown> | null => (value && typeof value === 'object' ? value as Record<string, unknown> : null);
 const text = (value: unknown) => (typeof value === 'string' && value.length > 0 ? value : null);
 
@@ -45,6 +46,7 @@ export function needsRefresh(expiresAt: string, now: Date) {
 export function classifyMetaError(status: number, json: unknown): { kind: 'auth' | 'rejected' | 'unavailable'; message: string } {
   const error = record(record(json)?.error);
   if (error?.code === 190 || error?.code === 102 || status === 401) return { kind: 'auth', message: 'The connection needs to be renewed.' };
-  if (status >= 500 || status === 429) return { kind: 'unavailable', message: 'Meta isn’t responding right now.' };
+  // Meta's own transient codes (unknown error, service, rate limits) come back as 4xx.
+  if (status >= 500 || status === 429 || TRANSIENT_CODES.includes(error?.code as number) || error?.is_transient === true) return { kind: 'unavailable', message: 'Meta isn’t responding right now.' };
   return { kind: 'rejected', message: text(error?.error_user_msg) ?? text(error?.message) ?? 'Meta refused the request.' };
 }

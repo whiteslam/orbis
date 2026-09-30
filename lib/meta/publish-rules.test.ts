@@ -1,10 +1,10 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { containerSpec, postedText, publishProblem, type PublishablePost } from './publish-rules.ts';
+import { containerSpec, postedText, publishProblem, sentText, type PublishablePost } from './publish-rules.ts';
 
 const post = (extra: Partial<PublishablePost> = {}): PublishablePost => ({
   status: 'ready', platforms: ['instagram', 'threads'], format: 'post', caption: 'Hello there', hashtags: ['one', 'two'],
-  mediaPath: 'u/p/photo.jpg', mediaType: 'image', ...extra,
+  mediaPath: 'u/p/photo.jpg', mediaType: 'image', published: null, ...extra,
 });
 const ok = { connection: 'connected' as const, publication: null, dirty: false };
 
@@ -70,4 +70,20 @@ test('the container each format becomes', () => {
   assert.equal(containerSpec(post({ format: 'story' }), 'instagram', 'u').kind, 'story_image');
   assert.equal(containerSpec(post({ format: 'story', mediaPath: 'a.mp4', mediaType: 'video' }), 'instagram', 'u').kind, 'story_video');
   assert.deepEqual(containerSpec(post({ mediaPath: null, mediaType: null }), 'threads', null), { kind: 'text', text: 'Hello there\n\n#one #two' });
+});
+
+test('a post already marked published on this platform by hand is not published again', () => {
+  const byHand = post({ status: 'published', published: { at: '2026-09-20T10:00:00Z', platform: 'instagram', link: null } });
+  assert.equal(publishProblem(byHand, 'instagram', ok), 'Already published on Instagram.');
+  assert.equal(publishProblem(byHand, 'threads', ok), null);
+});
+
+test('a post changed since the sheet opened is refused', () => {
+  assert.equal(publishProblem(post(), 'instagram', { ...ok, changed: true }), 'This post changed since you opened it. Close it and open it again, then publish.');
+});
+
+test('the text shown is the text sent: Instagram stories carry none', () => {
+  assert.equal(sentText(post({ format: 'story' }), 'instagram'), null);
+  assert.equal(sentText(post(), 'instagram'), 'Hello there\n\n#one #two');
+  assert.equal(sentText(post(), 'threads'), 'Hello there\n\n#one #two');
 });
