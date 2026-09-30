@@ -98,30 +98,44 @@ create table if not exists public.social_publications (
 - **Export and deletion.** Add `social_publications` to `EXPORT_TABLES`. `social_connections` is **not** exported, because it holds tokens, like `gmail_connections`. Both cascade on account deletion.
 - **Rate limit.** Publishing uses the existing `consume_rate_limit` function (`202609280201_rate_limits.sql`) with bucket `social_publish_instagram` or `social_publish_threads` (bucket names must match `^[a-z_]{2,30}$`), 10 per day.
 
-## Meta API mapping
+## Meta API mapping (verified against Meta's docs on 2026-09-30)
 
-| Step | Instagram (`graph.instagram.com`) | Threads (`graph.threads.net`) |
+| Step | Instagram (`graph.instagram.com`, pinned `v25.0`) | Threads (`graph.threads.com`, pinned `v1.0`) |
 |---|---|---|
-| Authorize | `https://www.instagram.com/oauth/authorize` with scopes `instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights` | `https://threads.net/oauth/authorize` with scopes `threads_basic,threads_content_publish,threads_manage_insights` |
-| Code → short token | `POST https://api.instagram.com/oauth/access_token` | `POST https://graph.threads.net/oauth/access_token` |
-| Short → 60-day token | `GET /access_token?grant_type=ig_exchange_token` | `GET /access_token?grant_type=th_exchange_token` |
-| Refresh | `GET /refresh_access_token?grant_type=ig_refresh_token` | `GET /refresh_access_token?grant_type=th_refresh_token` |
-| Me | `GET /me?fields=user_id,username` | `GET /me?fields=id,username` |
-| Month's posts | `GET /me/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url&since&until&limit=50` | `GET /me/threads?fields=id,text,media_type,permalink,timestamp&since&until&limit=50` |
-| Stats | `GET /{id}/insights?metric=reach,views,likes,comments,saved,shares` | `GET /{id}/insights?metric=views,likes,replies,reposts,quotes,shares` |
-| Create container | `POST /me/media` with `image_url` / `video_url`, `media_type` (`REELS`, `STORIES`), `caption` | `POST /me/threads` with `media_type` (`TEXT`, `IMAGE`, `VIDEO`), `text`, `image_url` / `video_url` |
-| Container status | `GET /{container}?fields=status_code` (`FINISHED`, `IN_PROGRESS`, `ERROR`, `EXPIRED`) | `GET /{container}?fields=status,error_message` |
-| Publish | `POST /me/media_publish?creation_id=` | `POST /me/threads_publish?creation_id=` |
-| Permalink | `GET /{media}?fields=permalink,timestamp` | `GET /{thread}?fields=permalink,timestamp` |
+| Authorize | `https://www.instagram.com/oauth/authorize` with `client_id, redirect_uri, response_type=code, scope, state` and scopes `instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights` | `https://threads.com/oauth/authorize` with the same params and scopes `threads_basic,threads_content_publish,threads_manage_insights` |
+| Code → short token | `POST https://api.instagram.com/oauth/access_token` (form: `client_id, client_secret, grant_type=authorization_code, redirect_uri, code`) | `POST https://graph.threads.com/oauth/access_token` (same form) |
+| Short → 60-day token | `GET https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret&access_token` | `GET https://graph.threads.com/access_token?grant_type=th_exchange_token&client_secret&access_token` |
+| Refresh (token ≥ 24 h old, unexpired) | `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token` | `GET https://graph.threads.com/refresh_access_token?grant_type=th_refresh_token&access_token` |
+| Me | `GET /me?fields=user_id,username`, where **`user_id`** is the account ID used below | `GET /me?fields=id,username` |
+| Month's posts | `GET /{user_id}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,thumbnail_url&since&until&limit=50` | `GET /{id}/threads?fields=id,text,media_type,permalink,timestamp&since&until&limit=50` |
+| Stats | `GET /{media}/insights?metric=…`: `FEED`/`REELS`: `reach,views,likes,comments,saved,shares`; `STORY`: `reach,views,shares,replies` | `GET /{media}/insights?metric=views,likes,replies,reposts,quotes,shares` |
+| Create container | `POST /{user_id}/media`: photo `image_url, caption`; video post or reel `media_type=REELS, video_url, caption, share_to_feed=true`; story `media_type=STORIES` with `image_url` or `video_url` | `POST /{id}/threads`: `media_type` `TEXT` / `IMAGE` / `VIDEO`, `text`, `image_url` / `video_url` |
+| Container status | `GET /{container}?fields=status_code` (`FINISHED`, `IN_PROGRESS`, `ERROR`, `EXPIRED`, `PUBLISHED`) | `GET /{container}?fields=status,error_message` (same values) |
+| Publish | `POST /{user_id}/media_publish?creation_id=` | `POST /{id}/threads_publish?creation_id=` (Meta suggests about 30 s after creating; Orbis waits for `FINISHED`) |
+| Permalink | `GET /{media}?fields=permalink,timestamp` | `GET /{media}?fields=permalink,timestamp` |
 
-The API version is one constant per platform in `requests.ts`. The implementation plan verifies every path, field and metric above against Meta's current documentation before coding. Metric names do change: `impressions` was retired for `views`. Any metric Meta rejects is dropped from the request, not treated as a failure.
+Notes from verification:
+
+- **Strip the code suffix.** The authorization code arrives with a trailing `#_`, which must be removed before exchanging it.
+- **Token response shape.** Instagram's short-token response may be flat, or wrapped as `{ data: [ … ] }`. Parse both.
+- **Account IDs.** Account IDs in token responses are JSON numbers above 2^53. Never take them from there; take them from `/me`, where they are strings.
+- **Stats must match the post type.** Asking Instagram for a metric that doesn't apply to a media's `media_product_type` fails the whole insights call. The metric set is therefore chosen per type. If a media's stats call still fails, only that post shows no stats.
+- **Instagram video.** A single video goes out as `REELS` with `share_to_feed=true`. There is no plain `VIDEO` post type.
+- **Media format limits.** Instagram images must be JPEG. Threads images may be JPEG or PNG, up to 8 MB.
+- **Time range.** `since` / `until` are sent as Unix seconds.
+- **Hosts.** Threads is reachable on `graph.threads.com` or `graph.threads.net`. The host is one constant.
+- **Publishing limits.** Meta's own limits are 50–100 a day on Instagram and 250 on Threads. Orbis's cap of 10 a day sits well under both.
+- **Errors.**
+  - Meta error `9004` (subcode `2207052`) means Meta could not fetch the media URL.
+  - `9007` means the container is not ready yet.
+  - `190` means the token is invalid.
 
 ## Publish rules (`publishProblem`)
 
 The checks run in this order. The first failure is the reason shown.
 
 1. The platform is not connected, or needs reconnecting → "Connect Instagram in Settings first." / "Reconnect Instagram in Settings."
-2. The post is not saved, or not `ready` → "Save the post and mark it ready first."
+2. The post is not saved, or is neither `ready` nor `published` → "Save the post and mark it ready first." `published` is allowed so a post already out on one platform can go to the other.
 3. The post does not list this platform → "Add Instagram to this post's platforms first."
 4. A publication already exists for this post and platform → "Already published on Instagram." / "Publishing on Instagram is in progress."
 5. Format against media:
