@@ -13,6 +13,9 @@ type State =
   | { status: 'needs-city' }
   | { status: 'error'; message: string };
 
+// Below this, a chance of rain is not worth a word.
+const RAIN_WORTH_SAYING = 60;
+
 // Home remounts on every tab switch; reuse the last result for 10 minutes.
 let lastResult: { at: number; state: State; weather: BriefWeather | null } | null = null;
 const CLIENT_TTL_MS = 10 * 60 * 1000;
@@ -91,23 +94,21 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (
   }
 
   const { weather, place } = state;
-  // A forecast always names the hour it is about. A bare "100% chance of rain"
-  // next to a dry window is what made this line untrustworthy.
+  // Rain is only mentioned when it is happening or likely. "Mostly dry, 10% at
+  // most" on every clear day was noise, and a forecast always names its hour.
   const peak = weather.rain.peak;
   const rain = weather.rainingNow
-    ? peak && peak.probability >= 40 ? `raining, ${peak.probability}% again by ${peak.hour}` : 'raining now'
-    : peak && peak.probability >= 50
-      ? `${peak.probability}% rain around ${peak.hour}`
-      : peak && peak.probability > 0
-        ? `mostly dry, ${peak.probability}% at most`
-        : 'no rain in the next 12 hours';
+    ? 'raining now'
+    : peak && peak.probability >= RAIN_WORTH_SAYING
+      ? `rain likely around ${peak.hour}`
+      : null;
   return (
-    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}, ${rain}`}>
+    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}${rain ? `, ${rain}` : ''}`}>
       <b>{weather.temperature}°</b>
       <div>
         {/* Two short lines with room between them, rather than one dense run of
             middots: the condition and what to expect, then where and how it feels. */}
-        <p>{weather.condition}, {rain}</p>
+        <p>{weather.condition}{rain && `, ${rain}`}</p>
         <p className="fd-weather-meta">
           <span>Feels {weather.feelsLike}°</span>
           <span>{weather.humidity}% humidity</span>

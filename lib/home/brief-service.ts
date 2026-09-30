@@ -46,8 +46,9 @@ function readWeather(value: unknown): WeatherInput {
     feelsLike: typeof feelsLike === 'number' && Number.isFinite(feelsLike) ? clampTemp(feelsLike) : clampTemp(temperature),
     condition: typeof condition === 'string' ? condition.slice(0, 40) : '',
     rainingNow: rainingNow === true,
-    // The hour is what makes a forecast quotable; a probability without one is dropped.
-    rainPeak: peak && typeof peak.probability === 'number' && Number.isFinite(peak.probability) && typeof peak.hour === 'string'
+    // The hour is what makes a forecast quotable; a probability without one is
+    // dropped, and so is an unlikely one: the model mentions whatever it is given.
+    rainPeak: peak && typeof peak.probability === 'number' && Number.isFinite(peak.probability) && peak.probability >= 60 && typeof peak.hour === 'string'
       ? { probability: Math.round(Math.max(0, Math.min(100, peak.probability))), hour: peak.hour.slice(0, 12) }
       : null,
   };

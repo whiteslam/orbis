@@ -80,7 +80,7 @@ test('weather leads, and a forecast is never called the weather right now', () =
   assert.ok(!/right now/.test(forecast.caption));
 });
 
-test('spending is reported with its pace and its biggest category', () => {
+test('spending is one amount and where most of it went, not a table of figures', () => {
   const note = settled({
     finance: finance({
       monthlyExpenses: [{ currency: 'INR', amount: 24_000 }],
@@ -88,8 +88,8 @@ test('spending is reported with its pace and its biggest category', () => {
     } as Partial<FinanceSummary>),
   });
   assert.match(text(note), /₹24,000/);
-  assert.match(text(note), /₹1,000 a day/);
-  assert.match(text(note), /mostly on food/);
+  assert.match(text(note), /most(ly| of it) on food/);
+  assert.ok((text(note).match(/₹/g) ?? []).length === 1, 'one figure, not three');
 });
 
 test('the portfolio line quotes a day only when it covers the portfolio', () => {
@@ -196,9 +196,14 @@ test('two subjects at most, whatever else is true', () => {
   assert.deepEqual(everything.sources, ['open-meteo', 'orbis']);
 });
 
+test('a quiet sky says nothing, and rain that is unlikely is never mentioned', () => {
+  assert.ok(!/rain|weather|clear|cloud/i.test(text(settled({ weather: weather() }))), 'an ordinary day has no weather sentence');
+  assert.ok(!/rain/i.test(text(settled({ weather: weather({ rain: { soon: 10, peak: { probability: 40, hour: '9 pm' } } }) }))), '40% is not news');
+});
+
 test('the weather is one sentence, with no follow-on forecast', () => {
   const note = settled({ weather: raining });
-  assert.equal(note.caption.split(/(?<=[.?])\s/)[0], 'Rain showers out there right now, 26°.');
+  assert.match(note.caption.split(/(?<=[.?])\s/)[0], /right now/);
   assert.ok(!/gap to wait out|still 90%/.test(note.caption));
 });
 
@@ -218,21 +223,21 @@ test('what is due leads the caption, ahead of weather and money', () => {
     finance: finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }),
   });
   assert.equal(note.id, 'routine-first');
-  assert.match(note.caption.split(/(?<=[.?])\s/)[0], /^Gym is now, at 7 pm\./);
+  assert.match(note.caption.split(/(?<=[.?])\s/)[0], /^It’s time for Gym\./);
 });
 
 test('the wording follows the clock, not just the schedule', () => {
-  assert.match(settled({ routine: due({ minutesAway: 120 }) }).caption, /^Gym is next, at 7 pm\./);
-  assert.match(settled({ routine: due({ minutesAway: 25 }) }).caption, /^Gym is in 25 minutes, at 7 pm\./);
-  assert.match(settled({ routine: due({ minutesAway: -70 }) }).caption, /^Gym was 1 hour ago, at 7 pm\./);
+  assert.match(settled({ routine: due({ minutesAway: 120 }) }).caption, /(You’ve got Gym|Gym is next), at 7 pm\.|You’ve got Gym at 7 pm\./);
+  assert.match(settled({ routine: due({ minutesAway: 25 }) }).caption, /^Gym starts in 25 minutes/);
+  assert.match(settled({ routine: due({ minutesAway: -70 }) }).caption, /^Gym was 1 hour ago; did it happen\?/);
 });
 
 test('routines that went by unanswered are mentioned, then stop being counted individually', () => {
   const one = settled({ routine: due(), missed: [due({ routine: { ...due().routine, id: 'lunch', title: 'Lunch', kind: 'meal' } })] });
-  assert.match(one.caption, /Lunch went by unanswered/);
+  assert.match(one.caption, /Lunch slipped by without a check-in/);
 
   const many = settled({ routine: due(), missed: [due(), due(), due()] });
-  assert.match(many.caption, /3 earlier ones went by unanswered/);
+  assert.match(many.caption, /3 earlier ones slipped by without a check-in/);
 });
 
 test('a scheduled workout silences the plan’s own gym sentence', () => {
@@ -241,6 +246,6 @@ test('a scheduled workout silences the plan’s own gym sentence', () => {
 
   // A meal routine does not cover the gym, so the plan still speaks.
   const meal = settled({ routine: due({ routine: { ...due().routine, kind: 'meal', title: 'Dinner' } }), training: training() });
-  assert.match(meal.caption, /Dinner is now/);
+  assert.match(meal.caption, /It’s time for Dinner/);
   assert.match(meal.caption, /still on today’s card|Gym today/);
 });

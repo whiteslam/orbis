@@ -82,37 +82,35 @@ function greet(hour: number, name: string | null, seed: number) {
 }
 
 /**
- * The weather, in a sentence.
+ * The weather, in a sentence, but only when it changes the day.
  *
- * Raining and forecast to rain are different claims and a forecast names its
- * hour — the same rule the card version had to learn.
+ * A clear evening or a 10% chance of rain is not news, and saying so every
+ * time is what made the note read like a bulletin. Raining and forecast to rain
+ * are different claims, and a forecast names its hour.
  */
 function weatherLine(weather: BriefWeather, when: PartOfDay, seed: number): string | null {
-  const temp = `${weather.temperature}°`;
-  const feels = weather.feelsLike !== weather.temperature ? ` and feeling like ${weather.feelsLike}°` : '';
   const peak = weather.rain.peak;
+  const late = when === 'evening' || when === 'night' || when === 'early';
 
   if (weather.rainingNow) {
-    return `${weather.condition} out there right now, ${temp}${feels}.`;
+    return pick([
+      `It’s raining out right now, so take an umbrella if you’re heading anywhere.`,
+      `${weather.condition} right now, so maybe hold off on going out for a bit.`,
+    ], seed);
   }
-  if (peak && peak.probability >= 60) {
-    return when === 'evening' || when === 'night'
-      ? `Rain’s likely around ${peak.hour}, at ${peak.probability}%, so plan the morning around it.`
+  if (peak && peak.probability >= 70) {
+    return late
+      ? `Looks like rain around ${peak.hour}, so keep an umbrella by the door.`
       : pick([
-        `Rain’s likely around ${peak.hour}, at ${peak.probability}%, so move anything outdoors earlier.`,
-        `Looks like rain around ${peak.hour}, at ${peak.probability}%, so keep an umbrella handy.`,
+        `Rain’s likely around ${peak.hour}, so get anything outdoors done before then.`,
+        `Looks like rain around ${peak.hour}, so keep an umbrella handy.`,
       ], seed);
   }
-  if (weather.temperature >= 36) {
-    return `It’s a hot one, ${temp}${feels}, so go easy in the afternoon sun.`;
+  if (weather.feelsLike >= 38) {
+    return late ? `Still ${weather.feelsLike}° out, so keep the water close.` : `It feels like ${weather.feelsLike}° out, so go easy in the afternoon sun.`;
   }
   if (weather.temperature <= 12) {
-    return pick([`Chilly at ${temp}, so layer up.`, `It’s ${temp} out, so grab something warm.`], seed);
-  }
-  if (weather.weatherCode <= 1 && (!peak || peak.probability < 20)) {
-    return when === 'evening' || when === 'night'
-      ? `Clear out at ${temp}, so a settled night.`
-      : pick([`Clear skies and ${temp}, a good day to get out for a bit.`, `${temp} and clear outside, so a nice day for a walk.`], seed);
+    return pick([`It’s cold out, ${weather.temperature}°, so grab something warm.`, `Only ${weather.temperature}° out, so layer up.`], seed);
   }
   return null;
 }
@@ -123,25 +121,26 @@ function weatherLine(weather: BriefWeather, when: PartOfDay, seed: number): stri
  * Only one reading of the month makes the caption: two sentences total is the
  * whole budget.
  */
-function financeLine(finance: FinanceSummary, day: number, seed: number): string | null {
-  if (finance.loadError) return 'I can’t reach your finance data at the moment, so spending is stale.';
+function financeLine(finance: FinanceSummary, seed: number): string | null {
+  if (finance.loadError) return 'I can’t reach your spending right now, so the numbers may be out of date.';
 
   const spend = finance.monthlyExpenses.length === 1 ? finance.monthlyExpenses[0] : null;
   if (spend && spend.amount > 0) {
-    const perDay = spend.amount / Math.max(day, 1);
     const totals = new Map<string, number>();
     for (const transaction of finance.transactions) {
       if (transaction.direction !== 'expense' || !transaction.category) continue;
       totals.set(transaction.category, (totals.get(transaction.category) ?? 0) + transaction.amount);
     }
     const top = Array.from(totals).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-    const mostly = top ? `, mostly on ${top.toLowerCase()}` : '';
-    return pick([
-      `You’ve spent ${money(spend.amount, spend.currency)} so far this month, roughly ${money(perDay, spend.currency)} a day${mostly}.`,
-      `Spending’s at ${money(spend.amount, spend.currency)} this month, about ${money(perDay, spend.currency)} a day${mostly}.`,
-    ], seed, 2);
+    const amount = money(spend.amount, spend.currency);
+    return top
+      ? pick([
+        `You’ve spent ${amount} this month, most of it on ${top.toLowerCase()}.`,
+        `${amount} gone this month so far, mostly on ${top.toLowerCase()}.`,
+      ], seed, 2)
+      : `You’ve spent ${amount} this month so far.`;
   }
-  if (finance.monthlyExpenses.length > 1) return 'Your spending this month spans a few currencies, so the whole picture is over in Finance.';
+  if (finance.monthlyExpenses.length > 1) return 'Your spending this month is in a few currencies, so the full picture is in Money.';
   return null;
 }
 
@@ -154,19 +153,20 @@ function financeLine(finance: FinanceSummary, day: number, seed: number): string
  * question the brief exists to answer. The weather is context; a 7 pm workout
  * at 6:52 pm is the point.
  */
-function routineLine(current: RoutineToday, missed: RoutineToday[]): string {
+function routineLine(current: RoutineToday, missed: RoutineToday[], seed: number): string {
   const { routine, minutesAway } = current;
   const at = clockLabel(routine.atTime);
   const when = relativeWhen(minutesAway);
   const behind = missed.length === 1
-    ? ` ${missed[0].routine.title} went by unanswered.`
+    ? ` ${missed[0].routine.title} slipped by without a check-in.`
     : missed.length > 1
-      ? ` ${missed.length} earlier ones went by unanswered.`
+      ? ` ${missed.length} earlier ones slipped by without a check-in.`
       : '';
 
-  if (minutesAway > 45) return `${routine.title} is next, at ${at}.${behind}`;
-  if (minutesAway >= -10) return `${routine.title} is ${when === 'now' ? 'now' : `${when}`}, at ${at}.${behind}`;
-  return `${routine.title} was ${when}, at ${at}.${behind}`;
+  if (minutesAway > 45) return `${pick([`You’ve got ${routine.title} at ${at}.`, `${routine.title} is next, at ${at}.`], seed, 7)}${behind}`;
+  if (minutesAway > 10) return `${routine.title} starts ${when}, so start wrapping up.${behind}`;
+  if (minutesAway >= -10) return `It’s time for ${routine.title}.${behind}`;
+  return `${routine.title} was ${when}; did it happen?${behind}`;
 }
 
 function trainingLine(training: BriefTraining, when: PartOfDay, seed: number): string | null {
@@ -199,8 +199,8 @@ function portfolioLine(portfolio: BriefPortfolio, seed: number): string | null {
     // difference between a true number and a wrong one, not a detail.
     const partial = day.coverage < 0.99 ? `, going on the ${Math.round(day.coverage * 100)}% of it that’s priced live` : '';
     return pick([
-      `Your portfolio’s ${day.value >= 0 ? 'up' : 'down'} ${money(Math.abs(day.value))} today${partial}, ${Math.abs(day.percent).toFixed(1)}%.`,
-      `Investments are ${day.value >= 0 ? 'up' : 'down'} ${Math.abs(day.percent).toFixed(1)}% on the day${partial}.`,
+      `Your portfolio’s ${day.value >= 0 ? 'up' : 'down'} ${money(Math.abs(day.value))} today${partial}.`,
+      `Investments are ${day.value >= 0 ? 'up' : 'down'} ${Math.abs(day.percent).toFixed(1)}% today${partial}.`,
     ], seed, 3);
   }
   return `Your portfolio sits at ${money(portfolio.total)} across ${count(portfolio.holdingCount, 'holding')}.`;
@@ -244,7 +244,7 @@ export function composeNote(input: NoteInput): HomeNote {
   // so the credits below list what the caption kept, not what it considered.
   const candidates: Array<{ text: string; from: SourceId }> = [];
 
-  const scheduled = input.routine ? routineLine(input.routine, input.missed ?? []) : null;
+  const scheduled = input.routine ? routineLine(input.routine, input.missed ?? [], seed) : null;
   if (scheduled) candidates.push({ text: scheduled, from: 'orbis' });
 
   const sky = input.weather ? weatherLine(input.weather, when, seed) : null;
@@ -256,7 +256,7 @@ export function composeNote(input: NoteInput): HomeNote {
   const gym = !covered && input.training ? trainingLine(input.training, when, seed) : null;
   if (gym) candidates.push({ text: gym, from: 'orbis' });
 
-  const cash = financeLine(input.finance, today.day, seed);
+  const cash = financeLine(input.finance, seed);
   if (cash) candidates.push({ text: cash, from: 'orbis' });
 
   const investing = input.portfolio ? portfolioLine(input.portfolio, seed) : null;
@@ -271,7 +271,7 @@ export function composeNote(input: NoteInput): HomeNote {
       greeting: greet(today.hour, firstName, seed),
       time: clock(now),
       when,
-      caption: 'Nothing needs you right now, nothing waiting in Finance or Health. I’ll say something when that changes.',
+      caption: 'Nothing needs you right now. I’ll let you know when something does.',
       sources: ['orbis'],
     };
   }
