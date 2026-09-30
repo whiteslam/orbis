@@ -70,21 +70,21 @@ All thresholds are constants beside the check, so they can be tuned in one place
 | `money.logging_gap` | No manual expense for ≥ 4 days, when the person logged on ≥ 60% of days in the previous 30 | normal | `open_spending_entry` |
 | `routine.slipping` | An active routine has no `done` event on any of its last 3 scheduled days (days in its `days` array, before today, on or after its `created_at`) | urgent | `adjust_routine` |
 | `health.steps_down` | 7-day average steps ≤ 0.7× the average of the 28 days before those 7 | normal | `open_steps` |
-| `health.plan_idle` | The person's newest health plan is ≥ 14 days old | normal | `open_health_plan` |
+| `health.plan_finished` | The person's newest health plan ended (created + `durationWeeks`) ≥ 3 days ago | normal | `open_health_plan` |
 
-Money checks read `transactions` where `direction = 'expense'`. Spending is manual-only in the UI today, and the checks do not filter on `source`.
+Money checks read `transactions` where `direction = 'expense'`, in the person's most-used currency over the window (the rest are ignored, as the Spending charts do). Spending is manual-only in the UI today, and the checks do not filter on `source`.
 
 ## Actions (closed set)
 
 | Action | Payload | Opens |
 |---|---|---|
 | `open_spending_entry` | `{ category?: string }` | Money → Spending with the add form open and prefilled |
-| `review_category` | `{ category: string, month: 'YYYY-MM' }` | Money → Spending filtered to that category and month |
+| `review_category` | `{ category: string }` | Money → Spending, with that category's row in "Where it went" highlighted and scrolled into view |
 | `adjust_routine` | `{ routineId: string }` | Settings → Your day, scrolled to that routine |
-| `open_health_plan` | `{ planId: string }` | Health, that plan open |
+| `open_health_plan` | `{ planId: string }` | Health → Plans, that plan open (where "build a new one" is one tap away) |
 | `open_steps` | `{}` | Health, steps view |
 
-An action only navigates. The person still presses Save. Following an action marks the heads-up `done`. Each action needs a deep-link target; where a screen does not yet accept one (the prefilled spending form, the category filter, scrolling to a routine), Phase 1 adds it.
+An action only navigates. The person still presses Save. Following an action marks the heads-up `done`. Each action needs a deep-link target; where a screen does not yet accept one (the prefilled spending form, the highlighted category, opening a routine for editing), Phase 1 adds it.
 
 ## Data
 
@@ -133,8 +133,8 @@ Dedupe keys include the period they are about (the month, the week, or the routi
 
 1. **Scheduler.** pg_cron calls `/api/headsups/scan` every 15 minutes, next to the dispatch job. The setup SQL goes in `docs/phase-1-owner-actions.md` alongside the existing job.
 2. **Who is due.** Each person whose local time is at or after 06:00 and whose `last_scan_date` is before today. Timezone comes from `notification_preferences.timezone`, defaulting to `Asia/Kolkata` as `dueSlots` does. People are claimed by conditionally updating `last_scan_date`, so two overlapping runs cannot scan the same person.
-3. **Scan one person.** Load 90 days of expenses, active routines and 14 days of routine events, 35 days of steps, and the newest health plan. Run the checks, skipping any kind in `disabled_kinds`. A check that throws is logged with `console.error` and skipped; the rest still run.
-4. **Word new findings.** Only findings that are new or have come back get worded; the rest keep their wording. `word.ts` calls `routeJson` with `sensitivity: 'personal'`, `feature: 'headsups'`, low temperature and a 10 s timeout. The prompt contains the kind, the evidence object and the fallback wording, nothing else. The output is validated to `{ title ≤ 80, body ≤ 300, actionLabel ≤ 40 }`, and anything invalid falls back. At most 10 AI-worded findings per person per day, counted from `ai_generation_events`; beyond that, fallback wording.
+3. **Scan one person.** Load 125 days of expenses (the three months before this one, plus the 90-day median window), active routines and 14 days of routine events, 35 days of steps, and the newest health plan. Run the checks, skipping any kind in `disabled_kinds`. A check that throws is logged with `console.error` and skipped; the rest still run.
+4. **Word new findings.** Only findings that are new or have come back get worded; the rest keep their wording. `word.ts` calls `routeJson` with `sensitivity: 'personal'`, `feature: 'headsups'`, low temperature and a 10 s timeout. The prompt contains the kind, the evidence object and the fallback wording, nothing else. The output is validated to `{ title ≤ 80, body ≤ 300, actionLabel ≤ 40 }`, and anything invalid falls back. At most 10 AI-worded findings per person per day, counted from that person's `headsups` rows with `worded_by = 'ai'` created in the last 24 hours; beyond that, fallback wording.
 5. **Push.** This is a separate pass on every run, after scanning, over all urgent heads-ups that are `new`, not snoozed and have `pushed_at` null, so one held back overnight is sent the next morning. For each, `push-rules.ts` decides:
    - notifications must be enabled and the person must have a push subscription
    - fewer than 2 `'headsup'` rows in `notification_log` for today's local date
@@ -186,17 +186,16 @@ Dedupe keys include the period they are about (the month, the week, or the routi
   - the prompt contains only the kind, the evidence and the fallback
   - invalid or too-long output falls back
   - null from the router falls back
-- **Scan** (with the Supabase client mocked):
+- **Scan.** The decisions live in a pure `plan.ts` (which people are due, what each finding does to the existing row, what gets pruned), so they are tested without a database:
   - `last_scan_date` claim
   - upsert behaviour for each status
   - 30-day dismissal hold
   - 60-day prune
   - one throwing check does not stop the others
-- **E2E** (Playwright, with a seeded heads-up):
+- **E2E** (Playwright; `/api/home/headsups` is answered by `page.route` with one heads-up, since the suite runs against a real account):
   - it appears on Today
-  - Snooze hides it
   - the primary action opens the prefilled spending form
-  - Settings can turn its kind off
+  - Settings → AI & privacy lists the heads-up switches
 
 ## Phase 2 (separate spec, outline only)
 
