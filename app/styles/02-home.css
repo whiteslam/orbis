@@ -2,7 +2,9 @@
    One decision on one lifted surface; everything else is a hairline row.
    Nothing here gets a border, a fill and a shadow at once. */
 .screen-body.field {
-  --screen-pad-top: max(34px, calc(22px + var(--safe-top)));
+  /* env() directly as well as --safe-top: the var is 0 outside the phone
+     layout, but a wide touch device (an iPad PWA) still has a top inset here. */
+  --screen-pad-top: max(34px, calc(22px + env(safe-area-inset-top, 0px)), calc(22px + var(--safe-top)));
   background: var(--fd-field);
   color: var(--fd-ink);
   padding-top: var(--screen-pad-top);

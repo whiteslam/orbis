@@ -65,27 +65,28 @@ test('iPhone: the Ask panel and its input sit above the nav and below the notch'
   await context.close();
 });
 
-test('iPhone: the New post action bar rests directly on the nav', async ({ browser, userA }) => {
-  const { context, page } = await openPhone(browser, userA, IPHONE);
-  await openTab(page, 'Social');
-  await page.locator('.so-new summary').click();
-  await page.locator('.so-new-menu').getByRole('button', { name: 'Post', exact: true }).click();
-  await expect(page.locator('.so-bar')).toBeVisible();
-  const top = await navTop(page);
-  const bar = await box(page, '.so-bar');
-  expect(bar.top).toBeGreaterThanOrEqual(0);
-  expect(bar.bottom).toBeLessThanOrEqual(top + 1);
-  // Not floating mid-form with fields showing between it and the nav.
-  expect(bar.bottom).toBeGreaterThanOrEqual(top - 16);
+for (const viewport of [IPHONE, SMALL]) {
+  test(`iPhone insets at ${viewport.width}x${viewport.height}: the New post action bar rests directly on the nav`, async ({ browser, userA }) => {
+    const { context, page } = await openPhone(browser, userA, viewport);
+    await openTab(page, 'Social');
+    await page.locator('.so-new summary').click();
+    await page.locator('.so-new-menu').getByRole('button', { name: 'Post', exact: true }).click();
+    await expect(page.locator('.so-bar')).toBeVisible();
+    const top = await navTop(page);
+    const bar = await box(page, '.so-bar');
+    expect(bar.top).toBeGreaterThanOrEqual(0);
+    // Rests on the nav: not floating mid-form with fields showing between the two.
+    expect(Math.abs(top - bar.bottom)).toBeLessThanOrEqual(2);
 
-  // At the end of the form nothing is left under the nav.
-  await page.locator('.screen-body').evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  const chips = await box(page, '.so-drawer .fd-chips');
-  expect(chips.bottom).toBeLessThanOrEqual(top);
-  const lastInForm = await box(page, '.so-drawer form > :last-child');
-  expect(lastInForm.bottom).toBeLessThanOrEqual(top);
-  await context.close();
-});
+    // At the end of the form nothing is left under the nav.
+    await page.locator('.screen-body').evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    const chips = await box(page, '.so-drawer .fd-chips');
+    expect(chips.bottom).toBeLessThanOrEqual(top);
+    const lastInForm = await box(page, '.so-drawer form > :last-child');
+    expect(lastInForm.bottom).toBeLessThanOrEqual(top);
+    await context.close();
+  });
+}
 
 test('iPhone: Security buttons and Sign out stay on one line', async ({ browser, userA }) => {
   const { context, page } = await openPhone(browser, userA, IPHONE);
