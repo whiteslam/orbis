@@ -8,7 +8,7 @@ Orbis is a private, single-user personal intelligence app: one phone-frame shell
 - **Money:** *Spending* (what you add manually, this month at a glance) and *Investments* (Zerodha and Groww holdings, portfolio charts, optional AI read).
 - **Health:** steps from an Apple Health export, plans, documents, advice, "Ask about a file", and your coaching style.
 - **Journal:** a daily entry with mood, tags and voice notes, edit history, and saved notes Orbis remembers.
-- **Social:** a month-by-month planner for your own posts.
+- **Social:** a month-by-month planner for your own posts; with Instagram and Threads connected, live stats, published posts marked automatically, and publishing when you confirm.
 - **Ask Orbis:** the button on every screen. Type or talk (voice in Indian languages when `SARVAM_API_KEY` is set) about your journal, spending, routines and steps.
 - **Settings:** from the avatar on any screen. You, Connections (every link read-only), AI & privacy, Notifications, Your day, Security (lock now, change PIN), Your data (export, delete, sign out).
 

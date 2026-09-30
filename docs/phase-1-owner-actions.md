@@ -49,3 +49,13 @@ Steps only the project owner can do — Vercel and Supabase dashboard settings, 
 
 1. Apply `supabase/migrations/202609300100_headsups.sql` before deploying the heads-ups code (Today reads an empty list until it exists).
 2. After the deploy, run `supabase/cron/headsups_schedule.sql` in the SQL editor. It reuses the `orbis_cron_secret` vault secret; change the URL if the production domain differs.
+
+## Instagram and Threads (2026-09-30)
+
+1. Reset the App secret and the Threads app secret in the Meta dashboard (the old ones were exposed in a screenshot).
+2. Instagram → API setup with Instagram login: add redirect URLs `https://<site>/auth/meta/instagram/callback` and `http://localhost:3000/auth/meta/instagram/callback`; copy the Instagram app ID and secret into `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET`.
+3. Threads: add redirect URLs `…/auth/meta/threads/callback`; copy into `THREADS_APP_ID` / `THREADS_APP_SECRET`.
+4. App roles: add your accounts as Instagram tester and Threads tester, and accept both invites in the apps.
+5. Instagram must be a Professional (Creator or Business) account.
+6. App settings → Basic: privacy policy `https://<site>/privacy`, data deletion `https://<site>/delete-account`.
+7. Apply `supabase/migrations/202609300200_social_meta.sql`, set the four variables in Vercel, deploy, then Settings → Connections → Connect.

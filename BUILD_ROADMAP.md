@@ -139,6 +139,8 @@ A private, month-by-month planner for the user's own social posts, ported from W
 - [x] Home quiet row ("Social today") and one morning notification line when posts are due
 - [ ] Apply `supabase/migrations/202609280001_social_planner.sql` (or re-run `supabase/pending.sql`)
 - [ ] Verify with the signed-in account: create a post, try Mark ready on a reel without media, add one, mark ready, edit the caption (drops to draft), mark ready again, mark published with a link, check History, delete, and confirm the history survives
+- [x] Instagram and Threads: connect, live stats, auto-mark published, confirmed publish
+- [ ] Apply 202609300200_social_meta.sql and the Meta app setup in docs/phase-1-owner-actions.md
 
 ### 7. Daily Orbis Brief — Core experience complete
 
