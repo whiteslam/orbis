@@ -83,6 +83,9 @@
   border-radius: 26px; padding: 16px 18px;
 }
 .fd-quiet { margin-top: 14px; padding-top: 6px; padding-bottom: 6px; }
+/* Stacked sections (Settings is one after another) sit apart as separate cards
+   rather than touching edge to edge, where their shadows ran into each other. */
+.pf-group + .pf-group { margin-top: 14px; }
 .fd-quiet > h2, .pf-group > .fd-label { margin-top: 10px; }
 .fd-line { border-bottom-color: color-mix(in srgb, var(--fd-ink) 7%, transparent); }
 .fd-quiet .fd-line:last-child, .pf-group .fd-source:last-child, .pf-group .fd-line:last-child { border-bottom: 0; }

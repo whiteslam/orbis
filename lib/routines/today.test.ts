@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { currentRoutine, localParts, missedRoutines, relativeWhen, routinesToday, settledToday } from './today.ts';
+import { canAnswer, currentRoutine, localParts, missedRoutines, relativeWhen, routinesToday, settledToday } from './today.ts';
 import type { Routine, RoutineEvent, RoutinesSummary } from './types.ts';
 
 // Thursday 24 September 2026. IST is UTC+5:30, so 13:30Z is 7:00 pm.
@@ -44,6 +44,14 @@ test('a routine is current from 45 minutes before until 90 after', () => {
 
   assert.ok(currentRoutine(routinesToday(summary([routine()]), at('14:50'))), '8:20 pm is still inside the grace');
   assert.equal(currentRoutine(routinesToday(summary([routine()]), at('15:30'))), null, 'past 9 pm it is missed, not current');
+});
+
+test('a routine can only be answered once it is due', () => {
+  // 1:50 pm: the 7 pm session is the brief's "next", but not something you could have done yet.
+  assert.equal(canAnswer(currentRoutine(routinesToday(summary([routine()]), at('08:20')))!), false);
+  assert.equal(canAnswer(currentRoutine(routinesToday(summary([routine()]), at('12:50')))!), false, '40 minutes out is still ahead');
+  assert.equal(canAnswer(currentRoutine(routinesToday(summary([routine()]), at('13:20')))!), true, '10 minutes out counts as now');
+  assert.equal(canAnswer(currentRoutine(routinesToday(summary([routine()]), at('14:50')))!), true, 'and it stays answerable through the grace');
 });
 
 test('an answered routine stops being the headline', () => {

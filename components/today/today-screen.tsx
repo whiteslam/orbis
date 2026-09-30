@@ -24,7 +24,7 @@ import { indiaToday } from '@/lib/social/month';
 import type { SocialPost } from '@/lib/social/types';
 import { composeNote, type HomeNote } from '@/lib/home/note';
 import { trainingForToday } from '@/lib/home/training';
-import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
+import { canAnswer, currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SetupStep } from '@/lib/focus/setup';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -140,7 +140,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
       {/* The brief says what is due; this records what happened to it. */}
       {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
-      {current && <RoutineCheck current={current} />}
+      {current && canAnswer(current) && <RoutineCheck current={current} />}
 
       <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
 
