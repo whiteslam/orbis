@@ -147,6 +147,15 @@ A private, month-by-month planner for the user's own social posts, ported from W
 - [x] Keep workbook observations out of the Home brief unless a future explicit save/share feature is designed
 - [ ] Optional AI-written daily brief is a future enhancement; the current brief is deterministic and data-grounded
 
+### 7a. Proactive heads-ups — Code complete; database setup pending
+
+- [x] Daily scan (`/api/headsups/scan`, pg_cron every 15 minutes): deterministic checks for Money (big spend, category running hot, logging gap) and Routines & health (routine slipping, steps down, plan finished)
+- [x] Heads-ups card on Today with one prepared step, Snooze and Dismiss; urgent ones push (at most 2 a day, 07:00–22:00)
+- [x] AI only words a heads-up, from its numbers alone, through the router (`personal`); Orbis's own wording otherwise
+- [x] Settings → AI & privacy: one switch per check, and Clear all
+- [ ] Apply `202609300100_headsups.sql`, then run `supabase/cron/headsups_schedule.sql` after deploy
+- [ ] Phase 2: Mail (needs a reply) and Investments (concentration, big moves)
+
 ### 8. GitHub and Vercel deployment — Production deployed; integration setup pending
 
 - [x] Initialize the project Git repository and create a clean `main` history
