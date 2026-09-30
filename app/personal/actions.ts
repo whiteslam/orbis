@@ -75,7 +75,9 @@ export async function saveFitnessPersonaAction(personaInput: string) {
   if (typeof personaInput !== 'string') return { success: false, message: 'Enter your persona before saving.' };
   const persona = personaInput.trim();
   if (!persona) return { success: false, message: 'Enter your persona before saving.' };
-  if (persona.length > 3000) return { success: false, message: 'Keep your persona under 3,000 characters.' };
+  // No length limit. Write as much as you want about how Orbis should coach you;
+  // the only ceiling left is the 4 MB server action body in next.config.ts, which
+  // no amount of typing reaches.
 
   const { error } = await auth.supabase.from('user_fitness_personas').upsert(
     { user_id: auth.userId, persona, updated_at: new Date().toISOString() },

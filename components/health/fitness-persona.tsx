@@ -79,8 +79,9 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
       event.preventDefault();
       startTransition(async () => show(await safeAction(saveFitnessPersonaAction)(draft)));
     }}>
-      <label className="fd-field wide" htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} maxLength={3000} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
-      <p className="fd-count">{draft.length.toLocaleString('en-IN')} / 3,000</p>
+      <label className="fd-field wide" htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
+      {/* A count, not a budget: there is no limit to count down to any more. */}
+      <p className="fd-count">{draft.length.toLocaleString('en-IN')} character{draft.length === 1 ? '' : 's'}</p>
       <div className="fd-act">
         <button type="submit" disabled={blocked}>{pending ? 'Saving…' : persona ? 'Save changes' : 'Save coaching style'}</button>
         <button className="ghost" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
