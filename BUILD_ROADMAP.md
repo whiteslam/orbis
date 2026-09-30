@@ -187,6 +187,19 @@ Ideas carried over from WBT Command HQ (Appendix B of the social planner plan).
 
 2026-09-29: reorganised into five tabs, a Settings sheet, a global Ask Orbis and the Glass look.
 
+### 10. Arcs and the night builder — Designed, not started
+
+Design, system design and architecture: `docs/superpowers/specs/2026-10-01-arcs-and-night-builder-design.md`. The person starts an arc (e.g. a Winter Arc), Orbis designs a plan, shifts the whole app around it and keeps correcting the plan from real data; a night builder works 02:00–05:00 with Pause/Stop controls and a morning report.
+
+- [ ] Answer the five open questions in the spec (one arc or several, how far the shift goes, Level 2 approval, single owner or multi-user, where the builder runs)
+- [ ] Stage 1: arc core (tables, block registry, rules-only templates, Today arc header)
+- [ ] Stage 2: the shift (arc themes, tab emphasis, arc voice)
+- [ ] Stage 3: AI arc design through Ask Orbis
+- [ ] Stage 4: self-healing reviews, adjustments inbox, undo, recap
+- [ ] Stage 5: night builder Level 1 (controls, 02:00–05:00 runs, morning report)
+- [ ] Stage 6: tracker and program blocks
+- [ ] Stage 7: night builder Level 2 (branch, tests, preview, approval)
+
 ## One-time external setup checklist
 
 1. In Supabase **SQL Editor**, run migrations `202609240001` through `202609240009` in filename order.
