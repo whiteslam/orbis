@@ -18,6 +18,7 @@ import './styles/marketing.css';
 import './styles/settings.css';
 import './styles/glass.css';
 import './styles/glass-dark.css';
+import './styles/headsups.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';

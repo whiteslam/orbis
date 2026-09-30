@@ -159,6 +159,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         gmailNotice={gmailNotice}
         clearGmailNotice={() => setGmailNotice(null)}
         openTab={openTarget}
+        openHeadsup={() => {}}
         setup={setupSteps({
           aiOn: aiAllowed(aiPreferences),
           googleConnected: Boolean(appConnections.google) && appConnections.google?.status !== 'reconnect_required',

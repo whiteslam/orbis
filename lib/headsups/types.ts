@@ -89,3 +89,5 @@ export function parseAction(value: unknown): HeadsupAction | null {
       return null;
   }
 }
+
+export type HeadsupsResponse = { state: 'ready' | 'setup'; headsups: Headsup[]; disabledKinds: HeadsupKind[]; offerOff: HeadsupKind[] };
