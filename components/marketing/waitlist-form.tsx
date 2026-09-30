@@ -1,13 +1,22 @@
 'use client';
 
 import { useState, useTransition, type FormEvent } from 'react';
+import { ArrowRight, Check } from 'lucide-react';
 import { joinWaitlistAction } from '@/app/waitlist/actions';
 
+/**
+ * The only thing a stranger can do here. One field, one button, and a place in
+ * the queue once it goes through.
+ *
+ * `joined` holds the address rather than a boolean so the confirmation can
+ * repeat it back — the one place an email appears on a public page, and it is
+ * the visitor's own, typed a second earlier.
+ */
 export function WaitlistForm() {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [joined, setJoined] = useState<string | null>(null);
+  const [joined, setJoined] = useState<{ email: string; position: number | null } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -15,35 +24,33 @@ export function WaitlistForm() {
     setError(null);
     startTransition(async () => {
       const result = await joinWaitlistAction({ email, website });
-      if (result.ok) setJoined(email.trim());
+      if (result.ok) setJoined({ email: email.trim(), position: result.position });
       else setError(result.message);
     });
   }
 
   if (joined) {
     return (
-      <section className="mkt-waitlist" aria-live="polite">
-        <h1>You’re on the list.</h1>
-        <p className="mkt-hero-sub">
-          We’ll email <strong>{joined}</strong> when your invite is ready.
+      <div className="wl-done" aria-live="polite">
+        <span className="wl-done-mark" aria-hidden="true"><Check size={18} strokeWidth={2.4} /></span>
+        <h2>You’re on the list.</h2>
+        <p>
+          {joined.position
+            ? <>You’re number <strong>{joined.position}</strong>. We’ll email <strong>{joined.email}</strong> when your invite is ready.</>
+            : <>We’ll email <strong>{joined.email}</strong> when your invite is ready.</>}
         </p>
-        <button type="button" className="mkt-text-button" onClick={() => { setJoined(null); setEmail(''); }}>
+        <button type="button" className="wl-text-button" onClick={() => { setJoined(null); setEmail(''); }}>
           Use a different email
         </button>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="mkt-waitlist">
-      <h1>Join the waitlist.</h1>
-      <p className="mkt-hero-sub">
-        Orbis is opening in small batches. Leave your email and we’ll send your invite when it’s your turn.
-      </p>
-      <form className="mkt-waitlist-form" onSubmit={submit} noValidate>
-        <label htmlFor="waitlist-email">Email</label>
+    <form className="wl-form" onSubmit={submit} noValidate>
+      <label className="wl-field">
+        <span>Email</span>
         <input
-          id="waitlist-email"
           type="email"
           inputMode="email"
           autoComplete="email"
@@ -53,18 +60,19 @@ export function WaitlistForm() {
           value={email}
           onChange={(event) => { setEmail(event.target.value); setError(null); }}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'waitlist-error' : undefined}
+          aria-describedby={error ? 'wl-error' : undefined}
         />
-        <div className="mkt-honeypot" aria-hidden="true">
-          <label htmlFor="waitlist-website">Website</label>
-          <input id="waitlist-website" type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
-        </div>
-        {error ? <p id="waitlist-error" className="mkt-error" role="alert">{error}</p> : null}
-        <button type="submit" className="mkt-submit" disabled={pending}>
-          {pending ? 'Joining…' : 'Join the waitlist'}
-        </button>
-        <p className="mkt-fineprint">One email when your invite is ready. Nothing else.</p>
-      </form>
-    </section>
+      </label>
+      {/* Bots fill this in; people never see it. */}
+      <div className="wl-honeypot" aria-hidden="true">
+        <label htmlFor="wl-website">Website</label>
+        <input id="wl-website" type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+      </div>
+      {error ? <p id="wl-error" className="wl-error" role="alert">{error}</p> : null}
+      <button type="submit" className="wl-submit" disabled={pending}>
+        {pending ? 'Joining…' : <>Join the waitlist <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" /></>}
+      </button>
+      <p className="wl-fineprint">One email when your invite is ready. Nothing else, ever.</p>
+    </form>
   );
 }

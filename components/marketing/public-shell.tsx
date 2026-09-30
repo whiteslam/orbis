@@ -3,19 +3,22 @@ import Link from 'next/link';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SITE_NAME } from '@/lib/site';
 
-// The shared frame for every signed-out page: landing, privacy, terms,
-// support, delete-account, and (Task 10) the offline page. Full-bleed on
-// the Field ground rather than the phone-frame shell, since there is no
-// account yet to frame.
+// The shared frame for the signed-out pages that are not the front door:
+// privacy, terms, support, delete-account and offline. Full-bleed on the Field
+// ground rather than the phone-frame shell, since there is no account yet to
+// frame, and with no sign-in button: nothing a stranger fetches should point at
+// the way in.
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <div className="mkt-shell">
       <header className="mkt-header">
-        <Link href="/" className="mkt-brand">
+        {/* A plain anchor, not <Link>: reaching Orbis from here depends on the
+            proxy seeing a real navigation. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/" className="mkt-brand">
           <OrbisMark size={30} />
           <strong>{SITE_NAME}</strong>
-        </Link>
-        <Link href="/login" className="mkt-signin">Sign in</Link>
+        </a>
       </header>
       <main className="mkt-main">{children}</main>
       <footer className="mkt-footer">

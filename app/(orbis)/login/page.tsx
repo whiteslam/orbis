@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { accessRestricted } from '@/lib/security/access';
+import { signupsOpen } from '@/lib/security/access';
 import { AuthForm } from '@/components/auth/auth-form';
 import { AuthShell } from '@/components/auth/auth-shell';
 
@@ -33,7 +33,7 @@ export default async function LoginPage({
     >
       {linkError && <p className="auth-feedback error" role="alert">That link has expired or was already used. Request a fresh password recovery email.</p>}
       {privateError && <p className="auth-feedback error" role="alert">Orbis is private right now and not accepting sign-ins.</p>}
-      <AuthForm initialMessage={initialMessage} signupOpen={!accessRestricted()} />
+      <AuthForm initialMessage={initialMessage} signupOpen={signupsOpen()} />
     </AuthShell>
   );
 }

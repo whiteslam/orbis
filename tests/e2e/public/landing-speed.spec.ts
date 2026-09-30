@@ -1,16 +1,15 @@
 import { gzipSync } from 'node:zlib';
 import { expect, test } from '@playwright/test';
 
-// "/" is now the public landing page (Task 6) rather than a redirect to
-// /login, so this is what a stranger's first open costs: the landing page
-// itself and the JS it downloads. The signed-in shell cannot be measured
+// "/" is the public waitlist, so this is what a stranger's first open costs:
+// that page and the JS it downloads. The signed-in shell cannot be measured
 // here without creating users.
 const JS_BUDGET_BYTES = 250 * 1024;
 
-test('a signed-out open of / renders the landing page within the JS budget', async ({ page, request }) => {
+test('a signed-out open of / renders the waitlist within the JS budget', async ({ page, request }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('link', { name: 'Sign in' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /join the waitlist/i })).toBeVisible();
   await page.waitForLoadState('networkidle');
   const scripts = await page.evaluate(() => [...new Set(performance.getEntriesByType('resource')
     .map((entry) => entry.name)

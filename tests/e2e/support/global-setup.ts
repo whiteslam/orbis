@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { chromium, type FullConfig } from '@playwright/test';
 import { AUTH_DIR, TEST_PIN, USERS_FILE, supabaseAdmin, type TestUsers } from './env';
+import { APP_PATH } from './fixtures';
 
 // Creates two throwaway users (A and B) and saves a signed-in browser state for each.
 export default async function globalSetup(config: FullConfig) {
@@ -27,7 +28,8 @@ export default async function globalSetup(config: FullConfig) {
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password', { exact: true }).fill(user.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
-    await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 });
+    // Sign-in lands on '/', which hands a session straight over to the app.
+    await page.waitForURL((url) => url.pathname === APP_PATH, { timeout: 30_000 });
     // New accounts must choose a device PIN before Orbis opens.
     await page.getByLabel('Choose a PIN').fill(TEST_PIN);
     await page.getByLabel('Enter it again').fill(TEST_PIN);

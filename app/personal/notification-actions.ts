@@ -37,7 +37,7 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
 
   const { error } = await auth.supabase.from('notification_preferences').upsert(row, { onConflict: 'user_id' });
   if (error) return { success: false, message: isMissingTable(error) ? setupMessage : 'Settings could not be saved. Try again.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: input.enabled ? 'Notification settings saved.' : 'Notifications are off.' };
 }
 
@@ -77,7 +77,7 @@ export async function subscribePushAction(input: { endpoint: string; p256dh: str
     user_agent: typeof input.userAgent === 'string' ? input.userAgent.slice(0, 300) : null,
   });
   if (error) return { success: false, message: error.code === '23505' ? 'This device is registered to another Orbis account.' : 'This device could not be registered.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Notifications enabled on this device.' };
 }
 
@@ -124,6 +124,6 @@ export async function unsubscribePushAction(endpoint: string) {
   if (typeof endpoint !== 'string' || endpoint.length > 1000) return { success: false, message: 'This device is invalid.' };
   const { error } = await auth.supabase.from('push_subscriptions').delete().eq('user_id', auth.userId).eq('endpoint', endpoint);
   if (error) return { success: false, message: 'This device could not be turned off.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Notifications turned off on this device.' };
 }

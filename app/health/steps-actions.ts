@@ -51,13 +51,13 @@ export async function importAppleHealthStepsAction(input: unknown) {
     const rows = days.slice(i, i + CHUNK).map((day) => ({ user_id: auth.userId, date: day.date, steps: day.steps, source: SOURCE, import_batch_id: batch.id, updated_at: updatedAt }));
     const { error } = await auth.supabase.from('health_daily_steps').upsert(rows, { onConflict: 'user_id,date,source' });
     if (error) {
-      revalidatePath('/');
+      revalidatePath('/active');
       console.error('Saving imported steps failed', error);
       return { success: false, message: isMissingTable(error) ? STEPS_UNAVAILABLE : 'Some step data could not be saved. Import the file again to finish.', dayCount: i };
     }
   }
 
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: `${days.length.toLocaleString('en-IN')} days of steps imported.`, dayCount: days.length };
 }
 
@@ -67,6 +67,6 @@ export async function deleteHealthStepsAction() {
   const steps = await auth.supabase.from('health_daily_steps').delete().eq('user_id', auth.userId);
   const batches = steps.error ? null : await auth.supabase.from('health_import_batches').delete().eq('user_id', auth.userId);
   if (steps.error || batches?.error) return { success: false, message: 'Step data could not be deleted. Please try again.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Your step data has been deleted.' };
 }

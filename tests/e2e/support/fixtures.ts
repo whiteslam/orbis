@@ -3,6 +3,44 @@ import { readUsers, TEST_PIN, type TestUser } from './env';
 
 export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social';
 
+/** Where the app lives. Not '/': that is the public waitlist, which bounces a signed-in visitor here. */
+export const APP_PATH = '/active';
+
+/** Rewrites an app-relative path written as '/', '/#tab' or '/?query' onto APP_PATH. */
+function appPath(path: string) {
+  if (path === '/') return APP_PATH;
+  if (path.startsWith('/#') || path.startsWith('/?')) return APP_PATH + path.slice(1);
+  return path;
+}
+
+/**
+ * Which account this browser context holds, read from its Supabase session
+ * cookie.
+ *
+ * It used to be read off the lock screen, which named the signed-in address.
+ * That line is gone: naming the account on the one authenticated page a
+ * passer-by can reach was a real leak, so the test now looks where a test may
+ * legitimately look — the cookie it was handed — rather than relying on the app
+ * to print a secret.
+ */
+async function signedInEmail(page: Page): Promise<string | null> {
+  try {
+    const parts = (await page.context().cookies())
+      .filter((cookie) => /^sb-.+-auth-token(\.\d+)?$/.test(cookie.name))
+      // Chunked cookies are numbered, so sort numerically before joining.
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+    if (!parts.length) return null;
+    let raw = decodeURIComponent(parts.map((cookie) => cookie.value).join(''));
+    if (raw.startsWith('base64-')) raw = Buffer.from(raw.slice('base64-'.length), 'base64').toString('utf8');
+    const token = (JSON.parse(raw) as { access_token?: unknown }).access_token;
+    if (typeof token !== 'string') return null;
+    const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8')) as { email?: unknown };
+    return typeof claims.email === 'string' ? claims.email.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Opens Orbis as a signed-in user, clearing the app lock if it is showing.
  *
@@ -12,8 +50,8 @@ export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social';
  * active: this handles both, because only handling the PIN meant the back half
  * of the suite failed on a screen it could not read.
  */
-export async function openApp(page: Page, path = '/') {
-  await page.goto(path);
+export async function openApp(page: Page, path = APP_PATH) {
+  await page.goto(appPath(path));
   const nav = page.getByRole('navigation');
   const pin = page.getByLabel('Enter your PIN');
   const password = page.getByLabel('Password', { exact: true });
@@ -22,11 +60,10 @@ export async function openApp(page: Page, path = '/') {
   if (await pin.isVisible()) {
     await pin.fill(TEST_PIN);
   } else if (await password.isVisible()) {
-    // The screen names who is signed in, which is how we know whose password to use.
-    const signedInAs = await page.getByText(/@example\.com/).first().innerText();
+    const email = await signedInEmail(page);
     const users = readUsers();
-    const user = [users.a, users.b].find((candidate) => signedInAs.includes(candidate.email));
-    if (!user) throw new Error(`Locked as an unknown user: ${signedInAs}`);
+    const user = [users.a, users.b].find((candidate) => candidate.email.toLowerCase() === email);
+    if (!user) throw new Error(`Locked as an unknown user: ${email ?? 'no session cookie'}`);
     await password.fill(user.password);
     await page.getByRole('button', { name: 'Unlock' }).click();
   }

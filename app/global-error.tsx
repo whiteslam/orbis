@@ -1,28 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
-import { BoundaryScreen } from '@/components/field/boundary';
+import { PublicBoundary } from '@/components/marketing/public-boundary';
 import './styles/01-base.css';
-import './styles/02-home.css';
-import './styles/03-hero.css';
-import './styles/04-views.css';
-import './styles/05-profile.css';
-import './styles/06-finance.css';
-import './styles/07-auth.css';
-import './styles/08-month.css';
-import './styles/09-boundaries.css';
-import './styles/10-assistant.css';
-import './styles/atlas-health.css';
-import './styles/atlas-profile.css';
-import './styles/atlas-social.css';
 import './styles/marketing.css';
-import './styles/glass.css';
-import './styles/glass-dark.css';
 
 // Replaces the root layout when that fails, so it brings its own document and
-// styles. No inline script: the stored theme is applied after mount instead
-// (the Content-Security-Policy only runs scripts carrying the layout's nonce,
-// which this page doesn't have). Until then it follows the system setting.
+// styles. Two stylesheets only: it is reached from public and private pages
+// alike, and the app's sheets name the services Orbis connects to, which is not
+// something an error page should hand to a stranger. No inline script either —
+// the stored theme is applied after mount instead, because the
+// Content-Security-Policy only runs scripts carrying the layout's nonce and this
+// page has no layout. Until then it follows the system setting.
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);
@@ -30,10 +19,10 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
 
   useEffect(() => {
     try {
-      const theme = localStorage.getItem('orbis-theme');
-      if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme;
+      const stored = localStorage.getItem('orbis-theme');
+      if (stored === 'dark' || stored === 'light') document.documentElement.dataset.theme = stored;
     } catch {
-      // Storage can be unavailable; the system theme stands.
+      // A blocked or empty localStorage just means the system setting stands.
     }
   }, []);
 
@@ -41,14 +30,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
     <html lang="en" suppressHydrationWarning>
       <body>
         <title>Something went wrong — Orbis</title>
-        <BoundaryScreen
-          onRetry={retry}
-          home={
-            // A full page load rather than a client navigation: the app's own layout is what failed.
-            // eslint-disable-next-line @next/next/no-html-link-for-pages
-            <a className="fd-button ghost" href="/">Go to Home</a>
-          }
-        />
+        <PublicBoundary onRetry={retry} />
       </body>
     </html>
   );

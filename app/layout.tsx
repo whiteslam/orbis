@@ -1,24 +1,15 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Figtree } from 'next/font/google';
+// Only the stylesheets the public pages use. The app's own live in
+// app/(orbis)/layout.tsx, because a stylesheet is a description: the app's
+// sheets carry selectors like .groww-card, .gmail-review-merchant and
+// .journal-row, and loading them here meant anyone could open the Network tab
+// on the waitlist and read off every service Orbis connects to. It also cost a
+// stranger 153 KB of CSS for a page with one form on it.
 import './styles/01-base.css';
-import './styles/02-home.css';
-import './styles/03-hero.css';
-import './styles/04-views.css';
-import './styles/05-profile.css';
-import './styles/06-finance.css';
-import './styles/07-auth.css';
-import './styles/08-month.css';
 import './styles/09-boundaries.css';
-import './styles/10-assistant.css';
-import './styles/atlas-health.css';
-import './styles/atlas-profile.css';
-import './styles/atlas-social.css';
 import './styles/marketing.css';
-import './styles/settings.css';
-import './styles/glass.css';
-import './styles/glass-dark.css';
-import './styles/headsups.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';

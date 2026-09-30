@@ -37,7 +37,7 @@ export async function uploadVoiceNoteAction(form: FormData) {
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'Your voice note could not be saved.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Voice note saved.' };
 }
 
@@ -58,6 +58,6 @@ export async function deleteVoiceNoteAction(id: string) {
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That voice note could not be deleted.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Voice note deleted.' };
 }

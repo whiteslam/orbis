@@ -5,6 +5,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 // headers that reach the rendering server (the CSP nonce travels this way). They are
 // merged into a fresh copy each time a response is built so a refreshed cookie header
 // is never lost.
+//
+// The verified claims come back with the response, because the proxy has to know
+// whether this request holds a session before deciding where it goes: a signed-out
+// request for the app is turned away here rather than by the page, so nothing is
+// rendered for it at all.
 export async function updateSession(request: NextRequest, forwardHeaders: Record<string, string> = {}) {
   const next = () => {
     const headers = new Headers(request.headers);
@@ -38,6 +43,6 @@ export async function updateSession(request: NextRequest, forwardHeaders: Record
     },
   );
 
-  await supabase.auth.getClaims();
-  return response;
+  const { data, error } = await supabase.auth.getClaims();
+  return { response, claims: error ? null : data?.claims ?? null };
 }

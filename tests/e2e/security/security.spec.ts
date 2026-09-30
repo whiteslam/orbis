@@ -57,3 +57,18 @@ test('user-supplied text is rendered as text, not HTML', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
   expect(await page.locator('img[src="x"]').count()).toBe(0);
 });
+
+test('the lock screen names nobody', async ({ browser, userB }) => {
+  // The one authenticated page a passer-by reaches on an unattended phone. It
+  // used to print "Signed in as <address>", which handed them the account.
+  const context = await browser.newContext({ storageState: userB.storageState });
+  const page = await context.newPage();
+  await openApp(page);
+  await openSettings(page);
+  await page.getByRole('button', { name: 'Lock now' }).click();
+  await expect(page.getByRole('heading', { name: /Orbis is locked/i })).toBeVisible({ timeout: 20_000 });
+  const html = await page.content();
+  expect(html.includes(userB.email), 'lock screen names the account').toBe(false);
+  expect(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(html), 'lock screen shows an address').toBe(false);
+  await context.close();
+});

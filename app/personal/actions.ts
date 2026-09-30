@@ -23,7 +23,7 @@ export async function addContextNoteAction(noteInput: string) {
   if (!note) return { success: false, message: 'Enter a note.' };
   const { error } = await auth.supabase.from('user_context_notes').insert({ user_id: auth.userId, note });
   if (error) return { success: false, message: 'Note could not be saved. Check that the Orbis Memory migration is applied.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Note saved.' };
 }
 
@@ -33,7 +33,7 @@ export async function deleteContextNoteAction(id: string) {
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return { success: false, message: 'This note is invalid.' };
   const { data, error } = await auth.supabase.from('user_context_notes').delete().eq('id', id).eq('user_id', auth.userId).select('id').maybeSingle();
   if (error || !data) return { success: false, message: 'Note could not be removed.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Note removed.' };
 }
 
@@ -46,7 +46,7 @@ export async function updateContextNoteAction(id: string, noteInput: string) {
   if (!note) return { success: false, message: 'Enter a note, or delete it instead.' };
   const { data, error } = await auth.supabase.from('user_context_notes').update({ note, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', auth.userId).select('id').maybeSingle();
   if (error || !data) return { success: false, message: 'Note could not be saved.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Note updated.' };
 }
 
@@ -82,7 +82,7 @@ export async function saveFitnessPersonaAction(personaInput: string) {
     { onConflict: 'user_id' },
   );
   if (error) return { success: false, message: 'Persona could not be saved. Apply the Fitness Persona migration in Supabase.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Fitness persona saved privately to your account.' };
 }
 
@@ -92,7 +92,7 @@ export async function deleteFitnessPersonaAction() {
 
   const { error } = await auth.supabase.from('user_fitness_personas').delete().eq('user_id', auth.userId);
   if (error) return { success: false, message: 'Persona could not be removed.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Saved persona removed. The starter draft remains available to edit.' };
 }
 
@@ -122,7 +122,7 @@ export async function savePersonalProfileAction(value: unknown) {
     { onConflict: 'user_id' },
   );
   if (error) return { success: false, message: 'Profile could not be saved. Apply the Personal Profile migration in Supabase.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Profile saved privately to your account.' };
 }
 
@@ -132,7 +132,7 @@ export async function deletePersonalProfileAction() {
 
   const { error } = await auth.supabase.from('user_personal_profiles').delete().eq('user_id', auth.userId);
   if (error) return { success: false, message: 'Profile could not be removed.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Personal profile removed.' };
 }
 
@@ -151,7 +151,7 @@ export async function saveHomeCityAction(cityInput: string) {
 
   const { error } = await auth.supabase.from('user_locations').upsert({ user_id: auth.userId, city: match.city, latitude: match.latitude, longitude: match.longitude, updated_at: new Date().toISOString() });
   if (error) return { success: false, message: 'Your city could not be saved. Apply the api_cache migration in Supabase and try again.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: `Saved ${match.city} as your home city.` };
 }
 
@@ -160,6 +160,6 @@ export async function clearHomeCityAction() {
   if (!auth) return { success: false, message: 'Sign in again to update your city.' };
   const { error } = await auth.supabase.from('user_locations').delete().eq('user_id', auth.userId);
   if (error) return { success: false, message: 'Your city could not be removed.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Home city removed.' };
 }

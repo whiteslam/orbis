@@ -56,6 +56,6 @@ export async function purgeSocialHistoryAction(): Promise<AccountActionState> {
   } catch (error) {
     return { success: false, message: userMessage(error, 'Your post history couldn’t be cleared. Try again in a moment.') };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Your social post history has been deleted. Your posts themselves are unchanged.' };
 }

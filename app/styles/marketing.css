@@ -1,4 +1,4 @@
-/* ─── Public pages: landing, privacy, terms, support, delete-account ───
+/* ─── Public pages: privacy, terms, support, delete-account, offline ───
    Sits on the same Field ground as auth (--fd-*), full-bleed rather than
    the phone-frame shell: a stranger reads these before there is any
    account to frame. */
@@ -7,8 +7,6 @@
 .mkt-brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .mkt-brand .orbis-mark { border-radius: 11px; }
 .mkt-brand strong { font-size: 18px; font-weight: 700; letter-spacing: -.04em; }
-.mkt-signin { min-height: 40px; display: inline-flex; align-items: center; padding: 0 18px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 13px; font-weight: 650; text-decoration: none; }
-.mkt-signin:hover { opacity: .88; }
 .mkt-main { flex: 1 0 auto; width: 100%; max-width: 720px; margin: 0 auto; padding: 12px 20px 64px; }
 .mkt-footer { border-top: 1px solid var(--fd-rule); padding: 22px max(20px, env(safe-area-inset-left, 0px)) max(28px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
 .mkt-footer-inner { max-width: 920px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
@@ -16,30 +14,6 @@
 .mkt-footer-links a { color: var(--fd-soft); font-size: 12.5px; font-weight: 600; text-decoration: none; }
 .mkt-footer-links a:hover { color: var(--fd-ink); text-decoration: underline; }
 .mkt-footer-copy { margin: 0; color: var(--fd-faint); font-size: 11.5px; }
-
-/* Landing */
-.mkt-hero { padding: 32px 0 8px; }
-.mkt-eyebrow { margin: 0; color: var(--fd-accent); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-.mkt-hero h1 { margin: 12px 0 0; font-size: clamp(30px, 6vw, 44px); font-weight: 700; letter-spacing: -.035em; line-height: 1.12; text-wrap: balance; }
-.mkt-hero-sub { margin: 14px 0 0; max-width: 52ch; color: var(--fd-soft); font-size: 15px; line-height: 1.65; }
-.mkt-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
-.mkt-cta a { min-height: 46px; display: inline-flex; align-items: center; padding: 0 22px; border-radius: var(--r-pill); font-size: 14px; font-weight: 650; text-decoration: none; }
-.mkt-cta a.primary { border: 0; background: var(--fd-btn); color: var(--fd-btn-ink); }
-.mkt-cta a.primary:hover { opacity: .88; }
-.mkt-cta a.ghost { border: 0; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); }
-.mkt-cta a.ghost:hover { color: var(--fd-accent); }
-
-.mkt-features { display: grid; gap: 14px; margin-top: 48px; }
-.mkt-feature { display: flex; gap: 14px; padding: 18px; border-radius: var(--r-xl); background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
-.mkt-feature-icon { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px; background: var(--fd-chip); color: var(--fd-accent); }
-.mkt-feature h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; }
-.mkt-feature p { margin: 5px 0 0; color: var(--fd-soft); font-size: 13px; line-height: 1.6; }
-
-.mkt-privacy { margin-top: 48px; padding: 22px; border-radius: var(--r-xl); background: var(--fd-wash); }
-.mkt-privacy h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
-.mkt-privacy p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.65; }
-.mkt-privacy p:first-of-type { margin-top: 12px; }
-.mkt-privacy a { color: var(--fd-accent); font-weight: 600; }
 
 /* Legal pages */
 .mkt-legal-head { padding-top: 20px; }
@@ -60,36 +34,68 @@
   .mkt-features { grid-template-columns: 1fr; }
 }
 
-/* Landing: simple list and note */
-.mkt-cta a.link { padding: 0 6px; background: none; color: var(--fd-accent); font-weight: 600; }
-.mkt-cta a.link:hover { color: var(--fd-ink); }
-.mkt-list { margin-top: 56px; border-top: 1px solid var(--fd-rule); }
-.mkt-list-item { padding: 20px 0; border-bottom: 1px solid var(--fd-rule); }
-.mkt-list-item h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; }
-.mkt-list-item p { margin: 6px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
-.mkt-note { margin-top: 48px; }
-.mkt-note h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; }
-.mkt-note p { margin: 6px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
-.mkt-note a { color: var(--fd-accent); font-weight: 600; }
+/* ─── Waitlist ───────────────────────────────────────────────────────────
+   The front door, and the only page a stranger sees. Its own frame rather
+   than .mkt-shell: no way in, so no header button and no footer link to
+   one. Field ground throughout, rows on the ground instead of cards. */
+.wl-shell { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--fd-field); color: var(--fd-ink); }
+.wl-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 640px; margin: 0 auto; padding: max(22px, env(safe-area-inset-top, 0px)) 24px 0; }
+.wl-brand { display: flex; align-items: center; gap: 10px; }
+.wl-brand .orbis-mark { border-radius: 10px; }
+.wl-brand strong { font-size: 17px; font-weight: 700; letter-spacing: -.04em; }
+.wl-badge { padding: 5px 11px; border-radius: var(--r-pill); background: var(--fd-chip); color: var(--fd-soft); font-size: 10.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
+.wl-main { flex: 1 0 auto; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 24px 72px; }
 
-/* Waitlist */
-.mkt-waitlist { max-width: 440px; padding: 40px 0 8px; }
-.mkt-waitlist h1 { margin: 0; font-size: clamp(30px, 6vw, 40px); font-weight: 700; letter-spacing: -.035em; line-height: 1.12; }
-.mkt-waitlist strong { color: var(--fd-ink); font-weight: 600; }
-.mkt-waitlist-form { display: flex; flex-direction: column; margin-top: 32px; }
-.mkt-waitlist-form > label { color: var(--fd-faint); font-size: 12px; font-weight: 600; }
-.mkt-waitlist-form input { box-sizing: border-box; width: 100%; min-height: 50px; margin-top: 7px; padding: 0 16px; border: 1px solid var(--fd-rule); border-radius: 13px; background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 15px; outline: none; }
-.mkt-waitlist-form input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
-.mkt-error { margin: 8px 0 0; color: var(--fd-alert); font-size: 12.5px; }
-.mkt-submit { min-height: 50px; margin-top: 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
-.mkt-submit:hover { opacity: .88; }
-.mkt-submit:disabled { opacity: .6; cursor: default; }
-.mkt-fineprint { margin: 14px 0 0; color: var(--fd-faint); font-size: 12px; line-height: 1.55; }
-.mkt-text-button { min-height: 44px; margin-top: 16px; padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.mkt-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.wl-hero { padding: 56px 0 0; }
+.wl-hero h1 { margin: 0; max-width: 20ch; font-size: clamp(32px, 7.4vw, 50px); font-weight: 700; letter-spacing: -.04em; line-height: 1.08; text-wrap: balance; }
+.wl-lede { margin: 20px 0 0; max-width: 46ch; color: var(--fd-soft); font-size: 15.5px; line-height: 1.68; }
 
-@media (max-width: 480px) {
-  .mkt-cta { flex-direction: column; align-items: stretch; }
-  .mkt-cta a { justify-content: center; }
-  .mkt-cta a.primary { min-height: 50px; font-size: 15px; }
+/* One field and one button, stacked on the ground. */
+.wl-form { display: flex; flex-direction: column; margin-top: 34px; }
+.wl-field { display: flex; flex-direction: column; gap: 8px; }
+.wl-field > span { color: var(--fd-faint); font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.wl-field input { box-sizing: border-box; width: 100%; min-height: 52px; padding: 0 17px; border: 0; border-radius: 14px; background: var(--fd-surface); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 16px; outline: none; }
+.wl-field input::placeholder { color: var(--fd-faint); }
+.wl-field input:focus-visible { box-shadow: inset 0 0 0 1px var(--fd-accent), 0 0 0 3px var(--fd-wash); }
+.wl-error { margin: 9px 0 0; color: var(--fd-alert); font-size: 12.5px; }
+.wl-submit { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.wl-submit:hover { opacity: .88; }
+.wl-submit:disabled { opacity: .55; cursor: default; }
+.wl-fineprint { margin: 15px 0 0; color: var(--fd-faint); font-size: 12.5px; line-height: 1.6; }
+.wl-fineprint strong { color: var(--fd-soft); font-weight: 650; }
+.wl-joined { margin: 10px 0 0; color: var(--fd-soft); font-size: 12.5px; }
+.wl-joined strong { color: var(--fd-ink); font-weight: 650; }
+.wl-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+.wl-done { margin-top: 34px; }
+.wl-done-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--fd-chip); color: var(--fd-accent); }
+.wl-done h2 { margin: 16px 0 0; font-size: clamp(22px, 4.6vw, 28px); font-weight: 700; letter-spacing: -.03em; }
+.wl-done p { margin: 10px 0 0; max-width: 44ch; color: var(--fd-soft); font-size: 14.5px; line-height: 1.65; }
+.wl-done strong { color: var(--fd-ink); font-weight: 650; }
+.wl-text-button { min-height: 44px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+
+.wl-boundary-act { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 26px; }
+.wl-boundary-act .wl-submit { min-width: 150px; margin-top: 0; padding: 0 22px; }
+.wl-boundary-act .wl-text-button { margin-top: 0; }
+.wl-loading { margin: 64px 0 0; color: var(--fd-faint); font-size: 13.5px; }
+
+.wl-what { margin-top: 64px; border-top: 1px solid var(--fd-rule); }
+.wl-row { padding: 22px 0; border-bottom: 1px solid var(--fd-rule); }
+.wl-row h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.012em; }
+.wl-row p { margin: 7px 0 0; max-width: 54ch; color: var(--fd-soft); font-size: 13.5px; line-height: 1.65; }
+
+.wl-note { margin-top: 44px; }
+.wl-note h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.012em; }
+.wl-note p { margin: 8px 0 0; max-width: 54ch; color: var(--fd-soft); font-size: 13.5px; line-height: 1.65; }
+.wl-note a { color: var(--fd-accent); font-weight: 650; }
+
+.wl-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 24px max(26px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fd-rule); }
+.wl-footer ul { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; }
+.wl-footer a { color: var(--fd-soft); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.wl-footer a:hover { color: var(--fd-ink); text-decoration: underline; }
+.wl-footer p { margin: 0; color: var(--fd-faint); font-size: 11.5px; }
+
+@media (max-width: 420px) {
+  .wl-hero { padding-top: 40px; }
+  .wl-main, .wl-header, .wl-footer { padding-left: 20px; padding-right: 20px; }
 }

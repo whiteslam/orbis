@@ -35,7 +35,7 @@ export async function saveRoutineAction(input: { id?: string; title: string; kin
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That routine could not be saved.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: input.id ? 'Routine updated.' : `${title} added.` };
 }
 
@@ -48,7 +48,7 @@ export async function archiveRoutineAction(id: string, archived: boolean) {
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That routine could not be changed.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: archived ? 'Archived. It is off your day, and you can restore it any time.' : 'Restored to your day.' };
 }
 
@@ -61,7 +61,7 @@ export async function deleteRoutineAction(id: string) {
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That routine could not be removed.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Deleted for good. What you already logged against it is kept.' };
 }
 
@@ -80,7 +80,7 @@ export async function answerRoutineAction(input: { routineId: string; title: str
 
   if (input.status === null) {
     await clearRoutineEvent(userId, input.routineId);
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Cleared.' };
   }
   if (!['done', 'skipped', 'other'].includes(input.status ?? '')) return { success: false, message: 'Choose done, skipped, or something else.' };
@@ -93,7 +93,7 @@ export async function answerRoutineAction(input: { routineId: string; title: str
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That could not be saved.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return {
     success: true,
     message: status === 'done' ? 'Logged.' : status === 'skipped' ? 'Noted.' : 'Logged what you did instead.',

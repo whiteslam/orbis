@@ -41,7 +41,7 @@ export async function saveJournalEntryAction(input: { date: string; mood: number
     const missing = ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '');
     return { success: false, message: missing ? 'Apply the profile/journal migration in Supabase to start journaling.' : 'Your entry could not be saved. Try again.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Journal saved.' };
 }
 
@@ -51,7 +51,7 @@ export async function deleteJournalEntryAction(date: string) {
   if (!validDate(date)) return { success: false, message: 'This entry is invalid.' };
   const { error } = await auth.supabase.from('journal_entries').delete().eq('user_id', auth.userId).eq('entry_date', date);
   if (error) return { success: false, message: 'The entry could not be deleted.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Entry deleted.' };
 }
 

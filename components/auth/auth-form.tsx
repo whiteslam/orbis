@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { UserKey } from 'lucide-react';
 import { signIn, signUp, type AuthActionState } from '@/app/auth/actions';
 import { confirmUnlockAction } from '@/app/security/actions';
@@ -23,7 +22,6 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
   const [state, setState] = useState<AuthActionState>({ ...initialState, message: initialMessage ?? null });
   const [isPending, startTransition] = useTransition();
   const isSignup = mode === 'signup';
-  const router = useRouter();
   const [canUsePasskey, setCanUsePasskey] = useState(false);
   const autofill = useRef<AbortController | null>(null);
 
@@ -39,9 +37,10 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
       setState({ error: result.message, message: null });
       return;
     }
-    router.replace('/');
-    router.refresh();
-  }, [router]);
+    // A full load, not router.replace: the proxy is what turns '/' into the app
+    // for a signed-in visitor, and it can only do that for a real navigation.
+    window.location.replace('/');
+  }, []);
 
   // Passkey support can only be read client-side; the server render assumes it is unavailable.
   // eslint-disable-next-line react-hooks/set-state-in-effect

@@ -17,6 +17,6 @@ export async function deleteSavedAiResultAction(id: unknown): Promise<Result> {
   const { userId } = session;
 
   if (!(await deleteAiResult(userId, id))) return { success: false, message: 'That saved result could not be deleted. Try again.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, data: null };
 }

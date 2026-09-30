@@ -35,5 +35,24 @@ export function accessAllowed(email: string | null | undefined) {
   return Boolean(address) && allowed.includes(address as string);
 }
 
+/**
+ * Whether anyone may create an account here.
+ *
+ * Deliberately the opposite way round from the allowlist. An empty
+ * ORBIS_ALLOWED_EMAILS has to mean "sign-in is open", because that is how the
+ * test suite signs in as throwaway users; but letting it also mean "anyone may
+ * create an account" made a forgotten environment variable the only thing
+ * between a stranger and a new account on a personal installation. So sign-up
+ * stays shut unless it is opened on purpose, with ORBIS_OPEN_SIGNUPS=true, and
+ * an allowlist shuts it regardless: adding yourself to the list is not a
+ * self-service action.
+ */
+export function signupsOpen() {
+  return !accessRestricted() && process.env.ORBIS_OPEN_SIGNUPS?.trim().toLowerCase() === 'true';
+}
+
 /** What someone turned away is told. It does not hint at who is on the list. */
 export const ACCESS_DENIED_MESSAGE = 'Orbis is private right now and not accepting sign-ins.';
+
+/** The same, for someone trying to create an account. */
+export const SIGNUP_CLOSED_MESSAGE = 'Orbis is private right now and not accepting new accounts.';

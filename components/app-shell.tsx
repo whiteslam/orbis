@@ -21,6 +21,9 @@ import type { ContextNote } from '@/lib/memory/notes';
 import type { NotificationSettings } from '@/lib/notifications/preferences';
 import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { AppConnections, Integration } from '@/lib/providers/status';
+import type { SocialConnectionStatus } from '@/lib/social/connections';
+
+type SettingsSocial = { ready: boolean; items: SocialConnectionStatus[]; configured: Record<string, boolean> };
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -42,7 +45,7 @@ const STALE_AFTER_HIDDEN_MS = 60_000;
 
 const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone };
 
-export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string } }) {
+export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>('today');
   const [money, setMoney] = useState<MoneyView>('spending');
@@ -213,7 +216,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 openHealth={() => { setSettings(null); setTab('health'); }}
                 googleNotice={gmailNotice}
                 clearGoogleNotice={() => setGmailNotice(null)}
-                data={{ personalProfile, notificationSettings, aiPreferences, routines, appConnections, homeLocation, integrations, stepsSummary }}
+                data={{ personalProfile, notificationSettings, aiPreferences, routines, appConnections, socialConnections, homeLocation, integrations, stepsSummary }}
               />
             )}
             <TalkToOrbis />

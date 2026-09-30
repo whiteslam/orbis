@@ -20,7 +20,7 @@ export async function disconnectGmailAction(): Promise<FinanceActionState> {
 
   try {
     const result = await disconnectGmail(userId);
-    revalidatePath('/');
+    revalidatePath('/active');
     return {
       success: true,
       revocationFailed: !result.revoked,
@@ -29,7 +29,7 @@ export async function disconnectGmailAction(): Promise<FinanceActionState> {
         : 'Gmail was removed from Orbis. Google could not confirm token revocation, so you can also remove Orbis in your Google account security settings.',
     };
   } catch {
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: false, message: 'Gmail could not be disconnected. Please try again.' };
   }
 }
@@ -98,7 +98,7 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
         return { success: false, message: 'The transaction could not be saved. Try again in a moment.' };
       }
       console.error('transactions has no payment_method/note columns; saved without them', error);
-      revalidatePath('/');
+      revalidatePath('/active');
       return {
         success: true,
         message: paymentMethod || note
@@ -108,7 +108,7 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
     }
     if (error) return { success: false, message: 'The transaction could not be saved. Please try again.' };
 
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: direction === 'expense' ? 'Expense saved.' : 'Income saved.' };
   } catch {
     return { success: false, message: 'The transaction could not be saved. Please refresh Finance and try again.' };
@@ -132,7 +132,7 @@ export async function deleteManualTransactionAction(transactionId: string): Prom
       .maybeSingle();
     if (error || !data) return { success: false, message: 'This transaction could not be deleted. Refresh Finance and try again.' };
 
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Transaction deleted.' };
   } catch {
     return { success: false, message: 'This transaction could not be deleted. Please try again.' };
@@ -169,7 +169,7 @@ export async function saveIncomePlanAction(input: { id?: string; label: string; 
   if (error) {
     return { success: false, message: isMissingTable(error) ? 'Apply the income plan migration in Supabase, then try again.' : 'That could not be saved. Try again.' };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: input.id ? 'Updated.' : `${label} saved.` };
 }
 
@@ -180,6 +180,6 @@ export async function deleteIncomePlanAction(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('income_plan').delete().eq('id', id).eq('user_id', userId);
   if (error) return { success: false, message: 'That could not be removed.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: 'Removed. What you already recorded is kept.' };
 }

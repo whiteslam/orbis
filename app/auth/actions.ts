@@ -6,7 +6,7 @@ import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/securi
 import { canChangePassword, MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { passwordMatches } from '@/lib/security/verify-password';
-import { ACCESS_DENIED_MESSAGE, accessAllowed, accessRestricted } from '@/lib/security/access';
+import { ACCESS_DENIED_MESSAGE, SIGNUP_CLOSED_MESSAGE, accessAllowed, signupsOpen } from '@/lib/security/access';
 
 export type AuthActionState = {
   error: string | null;
@@ -34,10 +34,9 @@ function siteUrl() {
 }
 
 export async function signUp(formData: FormData): Promise<AuthActionState> {
-  // While the installation is restricted there is no such thing as a new
-  // account: the list is the list, and adding yourself to it is not a
-  // self-service action.
-  if (accessRestricted()) return { error: ACCESS_DENIED_MESSAGE, message: null };
+  // Sign-up is shut unless it was opened on purpose. Restricted or not, there is
+  // no such thing here as a self-service new account: the list is the list.
+  if (!signupsOpen()) return { error: SIGNUP_CLOSED_MESSAGE, message: null };
   const email = readEmail(formData);
   const password = String(formData.get('password') ?? '');
   const confirmPassword = String(formData.get('confirmPassword') ?? '');
@@ -54,14 +53,14 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
     email,
     password,
     options: {
-      emailRedirectTo: `${baseUrl}/auth/callback?next=/`,
+      emailRedirectTo: `${baseUrl}/auth/callback?next=/active`,
     },
   });
 
   if (error) return { error: 'We could not create your account. Check your details and try again.', message: null };
   if (data.session) {
     await unlockForSession(supabase, data.session.access_token);
-    redirect('/');
+    redirect('/active');
   }
 
   return {
@@ -94,7 +93,7 @@ export async function signIn(formData: FormData): Promise<AuthActionState> {
   }
 
   if (data.session) await unlockForSession(supabase, data.session.access_token);
-  redirect('/');
+  redirect('/active');
 }
 
 export async function signOut(): Promise<void> {

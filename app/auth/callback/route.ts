@@ -3,12 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 import { unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { accessAllowed } from '@/lib/security/access';
 
-const allowedDestinations = new Set(['/', '/reset-password']);
+const allowedDestinations = new Set(['/active', '/reset-password']);
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') ?? '/';
+  const next = url.searchParams.get('next') ?? '/active';
 
   if (!code) {
     return NextResponse.redirect(new URL('/login?error=link-expired', request.url));
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=private', request.url));
   }
 
-  const destination = allowedDestinations.has(next) ? next : '/';
-  if (destination === '/' && data.session) {
+  const destination = allowedDestinations.has(next) ? next : '/active';
+  if (destination === '/active' && data.session) {
     // A confirmed email link is a fresh sign-in, so open Orbis unlocked.
     const { data: fresh } = await supabase.auth.getClaims(data.session.access_token);
     await unlockWithFreshAuth(fresh?.claims);

@@ -1,6 +1,6 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pushTopic } from './topic.ts';
+import { test } from 'vitest';
+import { pushTopic } from './topic';
 
 // Apple Web Push validates the Topic header as base64url and answers 400
 // BadWebPushTopic otherwise. A base64 string can never be one character longer

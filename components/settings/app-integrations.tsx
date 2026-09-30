@@ -98,7 +98,9 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
             {(!linked || linked.source === 'account') && (
               <div className="fd-act pf-act">
                 {meta.connect === 'redirect'
-                  ? (!setup && <a className="fd-button" href={meta.connectPath ?? '/'}>{expired ? `Reconnect ${meta.name}` : linked ? `Refresh ${meta.name}` : `Connect ${meta.name}`}</a>)
+                  ? (setup
+                    ? <span className="fd-note tight">{setup}</span>
+                    : <a className="fd-button" href={meta.connectPath ?? '/'}>{expired ? `Reconnect ${meta.name}` : linked ? `Refresh ${meta.name}` : `Connect ${meta.name}`}</a>)
                   : (<>
                     {!linked && !formOpen && <button type="button" onClick={() => setOpenForm(meta.id)}>Connect {meta.name}</button>}
                     {!linked && formOpen && <button className="fd-link" type="button" onClick={() => setOpenForm(null)}>Cancel</button>}

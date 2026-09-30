@@ -14,12 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#f2f2f7',
     theme_color: '#f2f2f7',
     categories: ['finance', 'health', 'productivity', 'lifestyle'],
-    shortcuts: [
-      { name: 'Money', url: '/#money' },
-      { name: 'Health', url: '/#health' },
-      { name: 'Journal', url: '/#journal' },
-      { name: 'Social', url: '/#social' },
-    ],
+    // No tab shortcuts: this file is public, and each one would have carried the
+    // app's own address. start_url stays '/', which redirects whoever is signed
+    // in, so the installed app still opens straight into Orbis.
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

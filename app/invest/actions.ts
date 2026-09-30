@@ -70,7 +70,7 @@ export async function connectBrokerAction(input: { broker: string; apiKey: strin
     if (error instanceof GrowwError) return { success: false, message: error.message };
     return { success: false, message: userMessage(error, `${meta.name} could not be reached. Try again shortly.`) };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: `${meta.name} connected. Syncing your holdings…` };
 }
 
@@ -84,6 +84,6 @@ export async function disconnectBrokerAction(broker: string) {
   } catch (error) {
     return { success: false, message: userMessage(error, `${meta.name} could not be disconnected. Try again.`) };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: `${meta.name} disconnected. Your saved key and secret were deleted from Orbis.` };
 }

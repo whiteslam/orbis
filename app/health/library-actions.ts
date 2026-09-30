@@ -60,7 +60,7 @@ export async function setHealthDocumentAlwaysAction(input: unknown): Promise<Res
   } catch (error) {
     return { success: false, message: userMessage(error, 'That change could not be saved. Try again.') };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, data: null, message: always ? 'Orbis will read this in every plan.' : 'Removed from every plan.' };
 }
 
@@ -137,7 +137,7 @@ export async function uploadHealthDocumentAction(input: { path: string; name: st
     try {
       const kind = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'xlsx';
       const saved = await storeHealthDocument(auth.userId, { file, fileName: parsed.preview.fileName, kind, preview: parsed.preview, textLines: parsed.textLines });
-      revalidatePath('/');
+      revalidatePath('/active');
       return {
         success: true,
         data: { id: saved.id, chunkCount: saved.chunkCount },
@@ -164,7 +164,7 @@ export async function deleteHealthDocumentAction(id: string): Promise<Result<nul
   } catch (error) {
     return { success: false, message: userMessage(error, 'The document could not be deleted.') };
   }
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, data: null, message: 'Document and its search index deleted.' };
 }
 
@@ -228,7 +228,7 @@ export async function generateHealthPlanAction(input: { answers: PlanAnswer[] })
       console.error('Saving a health plan failed', error);
       return { success: false, message: 'Your plan was created but couldn’t be saved. Try again in a moment.' };
     }
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, data: { id: data.id, plan: result.plan } };
   } catch {
     return { success: false, message: 'Orbis couldn’t generate your plan. Try again shortly.' };
@@ -241,6 +241,6 @@ export async function deleteHealthPlanAction(id: string): Promise<Result<null>> 
   if (!isUuid(id)) return { success: false, message: 'This plan is invalid.' };
   const { error } = await auth.supabase.from('health_plans').delete().eq('id', id).eq('user_id', auth.userId);
   if (error) return { success: false, message: 'The plan could not be deleted.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, data: null, message: 'Plan deleted.' };
 }

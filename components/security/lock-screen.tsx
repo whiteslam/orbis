@@ -15,7 +15,7 @@ import { safeAction } from '@/lib/client/safe-action';
 type Method = 'pin' | 'password';
 
 // Unlock with the device PIN or a passkey, or with the account password as the fallback.
-export function LockScreen({ email, pinStatus }: { email: string | null; pinStatus: PinStatus }) {
+export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
   const router = useRouter();
   const [pinLocked, setPinLocked] = useState(pinStatus === 'locked');
   const [method, setMethod] = useState<Method>(pinStatus === 'active' ? 'pin' : 'password');
@@ -94,7 +94,11 @@ export function LockScreen({ email, pinStatus }: { email: string | null; pinStat
       <div className="lock-heading">
         <div className="lock-icon"><LockKeyhole size={22} strokeWidth={1.8} aria-hidden="true" /></div>
         <h1>Orbis is locked</h1>
-        <p>Your personal data is protected.{email ? <><br />Signed in as <strong>{email}</strong></> : null}</p>
+        {/* No address here. The lock screen is the one authenticated page a
+            passer-by can reach on an unattended phone, and naming who is
+            signed in hands them the account to attack. Anyone who owns the
+            device already knows whose it is. */}
+        <p>Enter your PIN or password to continue.</p>
       </div>
 
       {method === 'pin' ? (

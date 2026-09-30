@@ -13,7 +13,7 @@ export async function setHomeBriefEnabledAction(enabled: unknown) {
   if (typeof enabled !== 'boolean') return { success: false, message: 'That setting could not be saved.' };
   const result = await setHomeBriefEnabled(auth.userId, enabled);
   if (!result.ok) return { success: false, message: result.message };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: enabled ? 'Orbis will write your brief from now on.' : 'The brief is back to Orbis’s own wording. Nothing is sent for it.' };
 }
 
@@ -24,6 +24,6 @@ export async function setAiEnabledAction(enabled: unknown) {
   if (typeof enabled !== 'boolean') return { success: false, message: 'That setting could not be saved.' };
   const result = await setAiEnabled(auth.userId, enabled);
   if (!result.ok) return { success: false, message: result.message };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: enabled ? 'AI features are on.' : 'AI features are off. Nothing more is sent to an AI provider.' };
 }

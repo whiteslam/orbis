@@ -18,6 +18,8 @@ import type { StepsSummary } from '@/lib/health/types';
 import type { NotificationSettings as NotificationSettingsData } from '@/lib/notifications/preferences';
 import type { HomeLocation, PersonalProfileSummary } from '@/lib/personal/repository';
 import type { AppConnections, Integration } from '@/lib/providers/status';
+import { SocialConnections } from '@/components/settings/social-connections';
+import type { SocialConnectionStatus } from '@/lib/social/connections';
 import type { RoutinesSummary } from '@/lib/routines/types';
 
 export const GOOGLE_NOTICE: Record<string, { text: string; success: boolean }> = {
@@ -33,6 +35,7 @@ export type SettingsData = {
   aiPreferences: AiPreferences;
   routines: RoutinesSummary;
   appConnections: AppConnections;
+  socialConnections: { ready: boolean; items: SocialConnectionStatus[]; configured: Record<string, boolean> };
   homeLocation: HomeLocation;
   integrations: Integration[];
   stepsSummary: StepsSummary;
@@ -126,6 +129,7 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
           </div>
         )}
         <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
+        <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
         <p className="fd-note tight">Services Orbis uses for weather, rates, prices and AI.</p>
         <Integrations items={dataServices} heading={false} />
       </Group>

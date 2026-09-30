@@ -1,0 +1,8 @@
+<!-- Google's four-colour G, drawn from its published geometry. Replace with an
+     official asset if you have licensed one. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Google">
+  <path d="M22.5 12.23c0-.78-.07-1.53-.2-2.25H12v4.26h5.88a5.03 5.03 0 0 1-2.18 3.3v2.75h3.53c2.06-1.9 3.27-4.7 3.27-8.06Z" fill="#4285F4"/>
+  <path d="M12 23c2.95 0 5.43-.98 7.23-2.65l-3.53-2.74c-.98.66-2.23 1.05-3.7 1.05-2.85 0-5.26-1.92-6.12-4.5H2.22v2.83A11 11 0 0 0 12 23Z" fill="#34A853"/>
+  <path d="M5.88 14.16a6.6 6.6 0 0 1 0-4.32V7.01H2.22a11 11 0 0 0 0 9.98l3.66-2.83Z" fill="#FBBC05"/>
+  <path d="M12 5.38c1.6 0 3.05.55 4.19 1.64l3.13-3.13C17.43 2.12 14.95 1 12 1a11 11 0 0 0-9.78 6.01l3.66 2.83C6.74 7.3 9.15 5.38 12 5.38Z" fill="#EA4335"/>
+</svg>

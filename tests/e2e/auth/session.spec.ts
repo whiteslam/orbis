@@ -15,19 +15,26 @@ test('sign out returns to login and protects home again', async ({ browser, user
   await openSettings(page);
   await page.getByRole('button', { name: /sign out/i }).last().click();
   await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
-  // Signed out, '/' is the public landing page rather than the app.
+  // Signed out, '/' is the public waitlist rather than the app.
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('a[href="/login"]').first()).toBeVisible();
   await expect(page.getByRole('navigation').getByRole('button', { name: 'Money', exact: true })).toHaveCount(0);
   await context.close();
 });
 
-base('signed-out home shows the landing page with a way to sign in', async ({ page }) => {
+base('signed-out home is the waitlist, and offers no way in', async ({ page }) => {
   await page.goto('/');
-  await base.expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await base.expect(page.locator('a[href="/login"]').first()).toBeVisible();
+  await base.expect(page.getByRole('heading', { level: 1 })).toContainText(/one calm page/i);
+  await base.expect(page.getByLabel('Email')).toBeVisible();
+  // The front door names neither the app's route nor the sign-in page: someone
+  // reading the source finds a waitlist and nothing else.
+  await base.expect(page.locator('a[href="/login"]')).toHaveCount(0);
   await base.expect(page.getByRole('navigation').getByRole('button', { name: 'Money', exact: true })).toHaveCount(0);
+});
+
+base('the app route sends a signed-out visitor to sign in', async ({ page }) => {
+  await page.goto('/active');
+  await base.expect(page).toHaveURL(/\/login/);
 });
 
 base('invalid credentials show an error and stay on login', async ({ page }) => {

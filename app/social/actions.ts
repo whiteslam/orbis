@@ -76,7 +76,7 @@ export async function savePostAction(input: {
     const post = input.id
       ? await updatePost(userId, input.id, clean.value)
       : await insertPost(userId, { ...clean.value, id: input.clientId }, 'created');
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: input.id ? 'Saved.' : 'Post added.', post };
   } catch (error) {
     return failure(error, 'That post could not be saved.');
@@ -94,7 +94,7 @@ export async function setPostStatusAction(id: string, status: 'idea' | 'draft' |
     if (!current) return { success: false, message: 'That post no longer exists.' };
     if (current.status === 'published') return { success: false, message: 'This post is published. Mark it as not published first.' };
     const post = await setStatus(userId, id, status);
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: status === 'ready' ? 'Ready to post.' : status === 'idea' ? 'Kept as an idea.' : 'Back to draft.', post };
   } catch (error) {
     return failure(error, 'That post could not be updated.');
@@ -112,13 +112,13 @@ export async function markPublishedAction(id: string, publish: { platform: strin
       if (!current) return { success: false, message: 'That post no longer exists.' };
       if (current.status !== 'published') return { success: true, message: 'Not published.', post: current };
       const post = await setStatus(userId, id, 'ready');
-      revalidatePath('/');
+      revalidatePath('/active');
       return { success: true, message: 'Marked as not published. It is ready again.', post };
     }
     const clean = cleanPublish(publish);
     if (!clean.ok) return { success: false, message: clean.message };
     const post = await setStatus(userId, id, 'published', clean.value);
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Marked as published.', post };
   } catch (error) {
     return failure(error, 'That post could not be updated.');
@@ -159,7 +159,7 @@ export async function duplicatePostAction(id: string): Promise<Result> {
       mediaPath,
       mediaType: mediaPath ? original.mediaType : null,
     });
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: original.mediaPath && !mediaPath ? 'Copied, without the picture or video.' : 'Copied as a draft.', post };
   } catch (error) {
     return failure(error, 'That post could not be copied.');
@@ -177,7 +177,7 @@ export async function movePostAction(id: string, period: string): Promise<Result
     if (!current) return { success: false, message: 'That post no longer exists.' };
     if (current.period === period) return { success: true, message: 'It is already in that month.', post: current };
     const post = await updatePost(userId, id, { period, plannedFor: null }, 'moved');
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Moved. Pick a day for it in its new month.', post };
   } catch (error) {
     return failure(error, 'That post could not be moved.');
@@ -190,7 +190,7 @@ export async function deletePostAction(id: string): Promise<Result> {
   if (!isUuid(id)) return INVALID;
   try {
     await deletePost(userId, id);
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Post deleted. Its history is kept.' };
   } catch (error) {
     return failure(error, 'That post could not be deleted.');
@@ -237,7 +237,7 @@ export async function attachMediaAction(postId: string, path: string, type: 'ima
     if (!before) return { success: false, message: 'That post no longer exists.' };
     const post = await updatePost(userId, postId, { mediaPath: path, mediaType });
     if (before.mediaPath && before.mediaPath !== path) await removeMediaFiles([before.mediaPath]);
-    revalidatePath('/');
+    revalidatePath('/active');
     return {
       success: true,
       message: before.status === 'ready' && post.status === 'draft' ? 'Added. The post is back to draft until you mark it ready again.' : 'Added.',
@@ -259,7 +259,7 @@ export async function removeMediaAction(postId: string): Promise<Result> {
     if (!before.mediaPath) return { success: true, message: 'Nothing to remove.', post: before };
     const post = await updatePost(userId, postId, { mediaPath: null, mediaType: null });
     await removeMediaFiles([before.mediaPath]);
-    revalidatePath('/');
+    revalidatePath('/active');
     return { success: true, message: 'Removed.', post };
   } catch (error) {
     return failure(error, 'That file could not be removed.');
@@ -356,7 +356,7 @@ export async function draftMonthWithAiAction(input: {
     }
   }
   if (!posts.length) return { success: false, message: 'The drafts could not be saved. Try again.' };
-  revalidatePath('/');
+  revalidatePath('/active');
   return { success: true, message: `${posts.length} ${posts.length === 1 ? 'draft' : 'drafts'} added. Edit them before marking ready.`, posts };
 }
 

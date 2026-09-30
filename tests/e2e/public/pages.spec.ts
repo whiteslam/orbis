@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-for (const [path, heading] of [['/', /daily brief/i], ['/privacy', /privacy/i], ['/terms', /terms/i], ['/support', /support/i], ['/delete-account', /delete/i]] as const) {
+for (const [path, heading] of [['/', /one calm page/i], ['/privacy', /privacy/i], ['/terms', /terms/i], ['/support', /support/i], ['/delete-account', /delete/i]] as const) {
   test(`${path} renders for signed-out visitors`, async ({ page }) => {
-    // The landing page carries its own CSP obligations (Task 2's headers spec only covers /login):
+    // The waitlist carries its own CSP obligations (Task 2's headers spec only covers /login):
     // no inline script runs without the request's nonce, so no violation should ever be logged.
     const violations: string[] = [];
     if (path === '/') page.on('console', (message) => { if (/Content Security Policy|CSP/i.test(message.text())) violations.push(message.text()); });

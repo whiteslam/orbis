@@ -1,15 +1,7 @@
-// Shown while a screen's server work is still running: the Field ground with a
-// few quiet placeholder rows, so the page never flashes blank.
+import { PublicLoading } from '@/components/marketing/public-boundary';
+
+// The waiting state for the public pages. The app's own is in
+// app/(orbis)/loading.tsx, styled by the app's stylesheets.
 export default function Loading() {
-  return (
-    <main className="screen-body field fd-boundary" aria-busy="true">
-      <p className="fd-empty" role="status">Loading…</p>
-      <div className="fd-skeleton" aria-hidden="true">
-        <span className="wide" />
-        <span />
-        <span />
-        <span className="short" />
-      </div>
-    </main>
-  );
+  return <PublicLoading />;
 }
