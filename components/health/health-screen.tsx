@@ -12,6 +12,7 @@ import type { LibraryState } from '@/lib/health-docs/repository';
 import type { StepsSummary } from '@/lib/health/types';
 import type { SavedWorkbookAdvice } from '@/lib/ai/saved';
 import type { FitnessPersonaSummary } from '@/lib/personal/repository';
+import type { HeadsupAction } from '@/lib/headsups/types';
 
 const StepsCard = dynamic(() => import('@/components/health/steps-card').then((m) => m.StepsCard), { loading: PartLoading });
 const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').then((m) => m.PlanBuilder), { loading: PartLoading });
@@ -37,8 +38,9 @@ type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' } | { name: 'plans'
 // Main shows the first few documents; the Documents view has the rest.
 const HEALTH_DOCS_ON_MAIN = 3;
 
-export function HealthScreen({ stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
-  const [view, setView] = useState<HealthView>({ name: 'main' });
+export function HealthScreen({ intent = null, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { intent?: HeadsupAction | null; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+  // A heads-up about a finished plan opens that plan; the steps one lands on main, where steps come first.
+  const [view, setView] = useState<HealthView>(() => intent?.type === 'open_health_plan' ? { name: 'plans', planId: intent.planId } : { name: 'main' });
   // Advice lives here rather than in the Ask view, so a fresh answer survives
   // going back to the tab — the server copy only arrives on the next load.
   const [advice, setAdvice] = useState<ShownAdvice | null>(() => adviceFromSaved(savedWorkbookAdvice));

@@ -23,6 +23,7 @@ import type { FitnessPersonaSummary, HomeLocation, PersonalProfileSummary } from
 import type { AppConnections, Integration } from '@/lib/providers/status';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SocialMonth } from '@/lib/social/repository';
+import type { HeadsupAction } from '@/lib/headsups/types';
 import { hashFor, openingFromUrl, TABS, type MoneyView, type SettingsSection, type TabId } from '@/lib/shell/tabs';
 import type { FocusTarget } from '@/lib/focus/types';
 
@@ -49,6 +50,8 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   const [zerodhaNotice, setZerodhaNotice] = useState<string | null>(null);
   // Which Settings section is open, or null. Task 6 renders the sheet.
   const [settings, setSettings] = useState<SettingsSection | null>(null);
+  // The step a heads-up prepared. Screens read it once, as they mount from that tap.
+  const [intent, setIntent] = useState<HeadsupAction | null>(null);
   const settingsAccess = useMemo(() => ({
     open: (section: SettingsSection = 'you') => setSettings(section),
     initial: personalProfile.profile?.preferredName?.trim().charAt(0).toLocaleUpperCase() || null,
@@ -56,6 +59,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
 
   // Today's cards and quiet rows name where they lead in the older vocabulary.
   const openTarget = (target: FocusTarget) => {
+    setIntent(null);
     setSettings(null);
     if (target === 'personal') return setSettings('you');
     if (target === 'finance' || target === 'invest') {
@@ -63,6 +67,18 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       return setTab('money');
     }
     setTab(target);
+  };
+
+  // A heads-up's prepared step: open the screen it belongs to, ready to go.
+  const openHeadsup = (action: HeadsupAction) => {
+    setIntent(action);
+    if (action.type === 'adjust_routine') return setSettings('day');
+    setSettings(null);
+    if (action.type === 'open_spending_entry' || action.type === 'review_category') {
+      setMoney('spending');
+      return setTab('money');
+    }
+    setTab('health');
   };
 
   // The brief is only true for as long as its data is. Opening the app already
@@ -159,7 +175,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         gmailNotice={gmailNotice}
         clearGmailNotice={() => setGmailNotice(null)}
         openTab={openTarget}
-        openHeadsup={() => {}}
+        openHeadsup={openHeadsup}
         setup={setupSteps({
           aiOn: aiAllowed(aiPreferences),
           googleConnected: Boolean(appConnections.google) && appConnections.google?.status !== 'reconnect_required',
@@ -168,12 +184,12 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         })}
       />
     );
-    if (tab === 'money') return <MoneyScreen view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
-    if (tab === 'health') return <HealthScreen stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
+    if (tab === 'money') return <MoneyScreen intent={intent} view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
+    if (tab === 'health') return <HealthScreen intent={intent} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
     return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
-  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal]);
+  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
 
   return (
     <main className="stage">
@@ -192,7 +208,8 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
             {settings && (
               <SettingsSheet
                 section={settings}
-                onClose={() => setSettings(null)}
+                onClose={() => { setSettings(null); setIntent(null); }}
+                editRoutineId={intent?.type === 'adjust_routine' ? intent.routineId : null}
                 openHealth={() => { setSettings(null); setTab('health'); }}
                 googleNotice={gmailNotice}
                 clearGoogleNotice={() => setGmailNotice(null)}
@@ -204,7 +221,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
               {TABS.map(({ id, label }) => {
                 const Icon = ICONS[id];
                 return (
-                  <button key={id} onClick={() => { setTab(id); setSettings(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
+                  <button key={id} onClick={() => { setTab(id); setSettings(null); setIntent(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
                     <Icon size={17} /><span>{label}</span>
                   </button>
                 );

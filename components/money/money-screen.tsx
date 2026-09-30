@@ -5,6 +5,7 @@ import { TabLoading } from '@/components/shell/loading';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { MoneyView } from '@/lib/shell/tabs';
+import type { HeadsupAction } from '@/lib/headsups/types';
 
 const SpendingScreen = dynamic(() => import('@/components/money/spending-screen').then((m) => m.SpendingScreen), { loading: TabLoading });
 const InvestmentsScreen = dynamic(() => import('@/components/money/investments-screen').then((m) => m.InvestmentsScreen), { loading: TabLoading });
@@ -19,7 +20,8 @@ export function MoneySwitch({ view, onView }: { view: MoneyView; onView: (view: 
   );
 }
 
-export function MoneyScreen({ view, onView, summary, savedPortfolioAdvice, brokerNotice, clearBrokerNotice }: {
+export function MoneyScreen({ intent = null, view, onView, summary, savedPortfolioAdvice, brokerNotice, clearBrokerNotice }: {
+  intent?: HeadsupAction | null;
   view: MoneyView;
   onView: (view: MoneyView) => void;
   summary: FinanceSummary;
@@ -29,6 +31,6 @@ export function MoneyScreen({ view, onView, summary, savedPortfolioAdvice, broke
 }) {
   const switcher = <MoneySwitch view={view} onView={onView} />;
   return view === 'spending'
-    ? <SpendingScreen summary={summary} switcher={switcher} />
+    ? <SpendingScreen summary={summary} switcher={switcher} intent={intent} />
     : <InvestmentsScreen savedAdvice={savedPortfolioAdvice} notice={brokerNotice} clearNotice={clearBrokerNotice} switcher={switcher} />;
 }

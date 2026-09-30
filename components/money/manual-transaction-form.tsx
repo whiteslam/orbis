@@ -26,11 +26,11 @@ function nowInIndia() {
 }
 
 /** The manual entry view. `onClose` leaves it; `onSaved` leaves it after a save, with the result to show. */
-export function ManualTransactionForm({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
+export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { onClose: () => void; onSaved: (message: string) => void; initialCategory?: string }) {
   const [direction, setDirection] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('INR');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(() => initialCategory && (EXPENSE_CATEGORIES as readonly string[]).includes(initialCategory) ? initialCategory : '');
   const [merchant, setMerchant] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [date, setDate] = useState(() => nowInIndia().date);

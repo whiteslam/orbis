@@ -57,7 +57,9 @@ function Group({ id, note, children }: { id: SettingsSection; note?: string; chi
  * Everything you configure, in one place, opened from the avatar on any tab.
  * It sits above the bottom nav, so tapping a tab is always a way out.
  */
-export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data }: {
+export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: {
+  /** A routine to open for editing, when a heads-up asked to adjust it. */
+  editRoutineId?: string | null;
   section: SettingsSection;
   onClose: () => void;
   openHealth: () => void;
@@ -136,7 +138,7 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
       </Group>
 
       <Group id="day" note="The times your day already has. Today leads with whatever is due, and records what you say happened to it.">
-        <RoutineSettings summary={data.routines} />
+        <RoutineSettings summary={data.routines} editId={editRoutineId} />
       </Group>
 
       <Group id="security">

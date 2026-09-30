@@ -16,10 +16,12 @@ const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days
  * the brief needs to know when to ask about something, not to become a
  * calendar with its own opinions about your week.
  */
-export function RoutineSettings({ summary }: { summary: RoutinesSummary }) {
-  const [draft, setDraft] = useState(blank);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+export function RoutineSettings({ summary, editId = null }: { summary: RoutinesSummary; editId?: string | null }) {
+  // A heads-up about a slipping routine opens it straight into editing.
+  const target = editId ? summary.routines.find((routine) => routine.id === editId) : undefined;
+  const [draft, setDraft] = useState(() => target ? { title: target.title, kind: target.kind, atTime: target.atTime, days: target.days } : blank);
+  const [editing, setEditing] = useState<string | null>(target?.id ?? null);
+  const [open, setOpen] = useState(Boolean(target));
   const [showArchived, setShowArchived] = useState(false);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();

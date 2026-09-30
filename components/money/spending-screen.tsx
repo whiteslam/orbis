@@ -9,14 +9,18 @@ import { FieldHead, FieldHero, FieldLabel, useScrollTop } from '@/components/fie
 import { PartLoading } from '@/components/shell/loading';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
+import type { HeadsupAction } from '@/lib/headsups/types';
 
 const ManualTransactionForm = dynamic(() => import('@/components/money/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
 const SpendingSummary = dynamic(() => import('@/components/money/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
 
 type FinanceView = 'main' | 'add';
 
-export function SpendingScreen({ summary, switcher }: { summary: FinanceSummary; switcher?: ReactNode }) {
-  const [view, setView] = useState<FinanceView>('main');
+export function SpendingScreen({ summary, switcher, intent = null }: { summary: FinanceSummary; switcher?: ReactNode; intent?: HeadsupAction | null }) {
+  // A heads-up can open this ready to add a spend, or pointing at one category.
+  const [view, setView] = useState<FinanceView>(() => intent?.type === 'open_spending_entry' ? 'add' : 'main');
+  const prefill = intent?.type === 'open_spending_entry' ? intent.category : undefined;
+  const highlight = intent?.type === 'review_category' ? intent.category : null;
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
   const top = useScrollTop(view);
 
@@ -40,7 +44,7 @@ export function SpendingScreen({ summary, switcher }: { summary: FinanceSummary;
   if (view === 'add') return (
     <div className="screen-body field">
       <span ref={top} hidden />
-      <ManualTransactionForm onClose={() => setView('main')} onSaved={saved} />
+      <ManualTransactionForm onClose={() => setView('main')} onSaved={saved} initialCategory={prefill} />
     </div>
   );
 
@@ -89,7 +93,7 @@ export function SpendingScreen({ summary, switcher }: { summary: FinanceSummary;
       {notices}
 
       {summary.month && ready && (
-        <SpendingSummary month={summary.month} />
+        <SpendingSummary month={summary.month} highlight={highlight} />
       )}
 
       <FieldLabel>Latest</FieldLabel>

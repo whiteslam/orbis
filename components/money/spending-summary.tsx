@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { categoryStyle } from '@/components/money/category-style';
 import { FieldLabel } from '@/components/field/field';
 import { money } from '@/lib/finance/money';
@@ -22,7 +23,10 @@ const SHOWN_CATEGORIES = 5;
  * month, then one hairline row per category with its share drawn inline, so
  * every amount is legible at once without touching anything.
  */
-export function SpendingSummary({ month }: { month: Month }) {
+export function SpendingSummary({ month, highlight = null }: { month: Month; highlight?: string | null }) {
+  // A heads-up about one category brings its row into view.
+  const focusRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { focusRef.current?.scrollIntoView({ block: 'center' }); }, []);
   const monthName = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' });
   const shortMonth = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
   const net = month.received - month.spent;
@@ -38,8 +42,9 @@ export function SpendingSummary({ month }: { month: Month }) {
 
   // Bars are sized against the busiest day so the shape of the month reads;
   // rows are sized against the biggest category for the same reason.
-  const shown = month.categories.slice(0, SHOWN_CATEGORIES);
-  const rest = month.categories.slice(SHOWN_CATEGORIES);
+  // The highlighted category is always shown, even when it is not in the top five.
+  const shown = [...month.categories.slice(0, SHOWN_CATEGORIES), ...month.categories.slice(SHOWN_CATEGORIES).filter((item) => item.category === highlight)];
+  const rest = month.categories.slice(SHOWN_CATEGORIES).filter((item) => item.category !== highlight);
   const restTotal = rest.reduce((sum, item) => sum + item.amount, 0);
   const largest = month.categories[0]?.amount ?? 1;
 
@@ -60,7 +65,7 @@ export function SpendingSummary({ month }: { month: Month }) {
 
       <FieldLabel>Where it went</FieldLabel>
       {shown.map((item) => (
-        <div className="fd-cat" key={item.category}>
+        <div className={item.category === highlight ? 'fd-cat is-focus' : 'fd-cat'} key={item.category} ref={item.category === highlight ? focusRef : undefined}>
           <i className="fd-cat-dot" style={{ background: categoryStyle(item.category).color }} aria-hidden="true" />
           <span className="fd-cat-name">{item.category}</span>
           <span className="fd-cat-bar" aria-hidden="true">
