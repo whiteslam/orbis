@@ -10,6 +10,7 @@ import {
   deletePostAction,
   duplicatePostAction,
   loadPostHistoryAction,
+  loadSocialMonthAction,
   markPublishedAction,
   movePostAction,
   removeMediaAction,
@@ -33,6 +34,10 @@ import {
 } from '@/lib/social/types';
 import { createClient } from '@/lib/supabase/client';
 import { safeAction } from '@/lib/client/safe-action';
+import { PublishSheet } from '@/components/social/publish-sheet';
+import { PostStatsLine } from '@/components/social/live-stats';
+import { publishProblem } from '@/lib/meta/publish-rules';
+import { META_LABEL, type MetaPlatform, type SocialLive } from '@/lib/meta/types';
 
 type Form = {
   title: string;
@@ -115,7 +120,7 @@ function HistoryList({ history }: { history: SocialRevision[] }) {
  * Each write disables only the button that was pressed. The server makes every
  * status change conditional on what it read, so two taps cannot corrupt a post.
  */
-export function PostDrawer({ period, post, initialDate, initialFormat = 'post', onClose, onChanged, onRemoved }: {
+export function PostDrawer({ period, post, initialDate, initialFormat = 'post', onClose, onChanged, onRemoved, live = null }: {
   period: string;
   post: SocialPost | null;
   initialDate: string | null;
@@ -124,6 +129,8 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   /** A post was created or changed (it may now belong to another month). */
   onChanged: (post: SocialPost) => void;
   onRemoved: (id: string) => void;
+  /** Instagram and Threads for this month, when connected: stats and what can be published. */
+  live?: SocialLive | null;
 }) {
   const [saved, setSaved] = useState<SocialPost | null>(post);
   const [form, setForm] = useState<Form>(() => (post ? formOf(post, null) : { ...formOf(null, initialDate), format: initialFormat }));
@@ -134,12 +141,16 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<{ platform: string; link: string } | null>(null);
+  // Which platform's confirm sheet is open.
+  const [sheet, setSheet] = useState<MetaPlatform | null>(null);
   const [history, setHistory] = useState<SocialRevision[] | null>(null);
   const [moveTo, setMoveTo] = useState('');
   const [, startTransition] = useTransition();
   const fileId = useId();
 
   const locked = saved?.status === 'published';
+  // A platform whose stats could not be read still shows its button, with the reason.
+  const connected = (live?.platforms ?? []).filter((platform) => platform.state !== 'unavailable');
   const postPeriod = saved?.period ?? period;
   const lastDay = `${postPeriod.slice(0, 8)}${String(daysInMonth(postPeriod)).padStart(2, '0')}`;
   const dirty = !saved || JSON.stringify(formOf(saved, null)) !== JSON.stringify(form);
@@ -342,6 +353,7 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
               {' '}Mark it as not published to change it.
             </p>
           )}
+          {locked && saved && <PostStatsLine post={saved} live={live} />}
 
           <div className="fd-seg" role="radiogroup" aria-label="Format">
             {SOCIAL_FORMATS.map((format) => (
@@ -447,6 +459,25 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
             </div>
           )}
 
+          {sheet && saved && (
+            <PublishSheet
+              post={saved}
+              platform={sheet}
+              username={connected.find((item) => item.platform === sheet)?.username ?? ''}
+              onClose={() => setSheet(null)}
+              onPublished={(text) => {
+                setSheet(null);
+                // The post changed on the server (now published); take its fresh copy the way every other action does.
+                void safeAction(loadSocialMonthAction, (message) => ({ success: false, message, posts: [], databaseReady: true, loadError: true }))(saved.period)
+                  .then((month) => {
+                    const fresh = month.posts.find((item) => item.id === saved.id);
+                    if (fresh) accept(fresh, text);
+                    else setMessage({ text, error: false });
+                  });
+              }}
+            />
+          )}
+
           <div className="so-bar">
             <div className="fd-act">
               {!locked && <button type="submit" disabled={busy === 'save' || (!dirty && Boolean(saved))}>{label('save', saved ? 'Save' : 'Add post', 'Saving…')}</button>}
@@ -456,6 +487,17 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
               {saved?.status === 'ready' && !publishing && (
                 <button type="button" className="ghost" onClick={() => setPublishing({ platform: saved.platforms[0] ?? 'instagram', link: '' })}>Mark published</button>
               )}
+              {saved && (saved.status === 'ready' || saved.status === 'published') && connected.filter((platform) => saved.platforms.includes(platform.platform)).map((platform) => {
+                const already = Object.values(platform.publications).includes(saved.id);
+                const reason = publishProblem(saved, platform.platform, { connection: platform.state === 'reconnect' ? 'reconnect_required' : 'connected', publication: already ? 'published' : null, dirty });
+                if (already) return null;
+                return (
+                  <span key={platform.platform} className="so-publish-to">
+                    <button type="button" className="ghost" disabled={Boolean(reason) || sheet !== null} title={reason ?? undefined} onClick={() => setSheet(platform.platform)}>Publish to {META_LABEL[platform.platform]}</button>
+                    {reason && <small className="so-publish-why">{reason}</small>}
+                  </span>
+                );
+              })}
               {saved?.status === 'ready' && (
                 <button type="button" className="fd-link" disabled={busy === 'draft'} onClick={() => setDraftStatus('draft')}>{label('draft', 'Back to draft', 'Saving…')}</button>
               )}

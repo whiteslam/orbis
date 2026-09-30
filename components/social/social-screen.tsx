@@ -12,6 +12,8 @@ import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shif
 import { SOCIAL_FORMATS, type SocialFormat, type SocialPost } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
+import { MonthLive } from '@/components/social/live-stats';
+import { META_LABEL, type SocialLive } from '@/lib/meta/types';
 
 type View = 'calendar' | 'list' | 'grid';
 type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
@@ -40,6 +42,8 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [selected, setSelected] = useState<string | null>(() => indiaToday());
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  // Instagram and Threads for this month: stats, and posts marked published on the way.
+  const [live, setLive] = useState<SocialLive | null>(null);
   const [isLoading, startLoading] = useTransition();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
   const today = indiaToday();
@@ -71,6 +75,27 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
+  // Asked for alongside the month's posts, and again when the month changes. A
+  // slow or failed read leaves the planner exactly as it is.
+  useEffect(() => {
+    let current = true;
+    void fetch(`/api/social/live?period=${period}`, { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() as Promise<SocialLive> : null))
+      .then((result) => {
+        if (!current) return;
+        setLive(result);
+        const matched = result?.platforms.flatMap((platform) => platform.matchedPostIds.length ? [`${platform.matchedPostIds.length} from ${META_LABEL[platform.platform]}`] : []) ?? [];
+        if (matched.length) {
+          setNotice({ text: `Marked ${matched.join(' and ')} as published.`, error: false });
+          load(period);
+        }
+      })
+      .catch(() => { if (current) setLive(null); });
+    return () => { current = false; };
+    // load is stable enough here: it only reads the period passed to it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
   /** A post was created or changed: show it here, or drop it if it now belongs to another month. */
   function upsert(post: SocialPost) {
     setMonth((current) => {
@@ -93,6 +118,7 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
         onClose={() => setScreen({ name: 'main' })}
         onChanged={upsert}
         onRemoved={removePost}
+        live={live}
       />
     </div>
   );
@@ -131,6 +157,8 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
         <button type="button" className="fd-round" aria-label="Next month" disabled={isLoading} onClick={() => load(shiftMonth(period, 1))}><ChevronRight size={16} strokeWidth={2.2} aria-hidden="true" /></button>
       </div>
 
+      <MonthLive live={live} />
+
       {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
       {month.databaseReady && month.loadError && !isLoading && (
         <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
@@ -167,14 +195,14 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
               {view === 'calendar' && (
                 <SocialCalendar period={period} posts={posts} today={today} selected={selected} onSelect={setSelected} onOpen={openPost} onNew={(date) => newPost(date)} />
               )}
-              {view === 'list' && <SocialList posts={posts} onOpen={openPost} />}
+              {view === 'list' && <SocialList posts={posts} onOpen={openPost} live={live} />}
               {view === 'grid' && <SocialGrid posts={posts} onOpen={openPost} />}
             </>
           )}
         </>
       )}
 
-      <p className="fd-note">Orbis never posts for you. Plan here, publish in the app, then record where it went out.</p>
+      <p className="fd-note">Plan here. Publish from Orbis to Instagram or Threads when you confirm, or record where a post went out.</p>
     </div>
   );
 }

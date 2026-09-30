@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Film, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { StatusChip } from '@/components/social/status-chip';
 import { formatLabel, type SocialPost, type SocialStatus } from '@/lib/social/types';
+import { PostStatsLine } from '@/components/social/live-stats';
+import type { SocialLive } from '@/lib/meta/types';
 
 export function dayLabel(date: string) {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -31,13 +33,14 @@ function PostMeta({ post, withDate }: { post: SocialPost; withDate: boolean }) {
   );
 }
 
-export function PostRow({ post, onOpen, withDate = false }: { post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean }) {
+export function PostRow({ post, onOpen, withDate = false, live = null }: { post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean; live?: SocialLive | null }) {
   return (
     <button type="button" className="so-row" onClick={() => onOpen(post)}>
       <PostThumb post={post} />
       <span className="so-row-text">
         <strong>{post.title}</strong>
         <small><PostMeta post={post} withDate={withDate} /></small>
+        <PostStatsLine post={post} live={live} />
       </span>
     </button>
   );
@@ -47,7 +50,7 @@ const STATUS_ORDER: Record<SocialStatus, number> = { idea: 0, draft: 1, ready: 2
 type Sort = 'date' | 'status' | 'format';
 
 /** Rows, sortable. Undated posts sort last by date. */
-export function SocialList({ posts, onOpen }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void }) {
+export function SocialList({ posts, onOpen, live = null }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void; live?: SocialLive | null }) {
   const [sort, setSort] = useState<Sort>('date');
   const byDate = (left: SocialPost, right: SocialPost) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999');
   const sorted = [...posts].sort((left, right) => {
@@ -64,7 +67,7 @@ export function SocialList({ posts, onOpen }: { posts: SocialPost[]; onOpen: (po
           <option value="format">Format</option>
         </select>
       </label>
-      <div>{sorted.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}</div>
+      <div>{sorted.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate live={live} />)}</div>
     </>
   );
 }
