@@ -238,7 +238,7 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
  * WBT needed approval first, and unpublishing returns the post to ready.
  * Asking for the status a post already has is a no-op, so a double tap is harmless.
  */
-export async function setStatus(userId: string, id: string, status: SocialStatus, published?: { platform: string; link: string | null }) {
+export async function setStatus(userId: string, id: string, status: SocialStatus, published?: { platform: string; link: string | null; at?: string }) {
   const supabase = await createClient();
   const before = await mustRead(supabase, userId, id);
   if (before.status === status) return (await withMedia(supabase, [before]))[0];
@@ -248,7 +248,7 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
   if (status === 'published') {
     if (before.status !== 'ready') throw new SocialError('Mark the post ready before recording where it went out.');
     if (!published) throw new SocialError('Choose where it was published.');
-    row = { status, published_at: new Date().toISOString(), published_platform: published.platform, published_link: published.link };
+    row = { status, published_at: published.at ?? new Date().toISOString(), published_platform: published.platform, published_link: published.link };
     action = 'published';
   } else if (before.status === 'published') {
     if (status !== 'ready') throw new SocialError('Mark it as not published first.');
@@ -289,6 +289,14 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
   const after = toPost(data);
   await record(supabase, userId, after, action, before, after);
   return (await withMedia(supabase, [after]))[0];
+}
+
+/** A post already published on one platform went out on another: history only, the post's own fields keep the first. */
+export async function recordPublishedElsewhere(userId: string, id: string, platform: string) {
+  const supabase = await createClient();
+  const post = await readPost(supabase, userId, id);
+  if (!post) return;
+  await record(supabase, userId, { ...post, published: post.published ? { ...post.published, platform } : null }, 'published', null, post);
 }
 
 export async function deletePost(userId: string, id: string) {

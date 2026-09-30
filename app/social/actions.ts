@@ -26,6 +26,7 @@ import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { deletePostPublications } from '@/lib/meta/publications';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
@@ -112,8 +113,9 @@ export async function markPublishedAction(id: string, publish: { platform: strin
       if (!current) return { success: false, message: 'That post no longer exists.' };
       if (current.status !== 'published') return { success: true, message: 'Not published.', post: current };
       const post = await setStatus(userId, id, 'ready');
+      await deletePostPublications(userId, id);
       revalidatePath('/');
-      return { success: true, message: 'Marked as not published. It is ready again.', post };
+      return { success: true, message: 'Marked as not published. It is ready again. Nothing was removed from Instagram or Threads.', post };
     }
     const clean = cleanPublish(publish);
     if (!clean.ok) return { success: false, message: clean.message };
