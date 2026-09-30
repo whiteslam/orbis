@@ -15,3 +15,10 @@ test('password checks allow five tries in fifteen minutes', () => {
   assert.deepEqual(limitFor('password'), { limit: 5, windowSeconds: 900 });
   assert.equal(rateLimitMessage('password'), 'Too many password attempts. Try again in 15 minutes.');
 });
+
+test('publishing to Instagram or Threads is capped at ten a day each', () => {
+  assert.deepEqual(limitFor('social_publish_instagram'), { limit: 10, windowSeconds: 86_400 });
+  assert.deepEqual(limitFor('social_publish_threads'), { limit: 10, windowSeconds: 86_400 });
+  assert.match(rateLimitMessage('social_publish_instagram'), /Instagram.*tomorrow/i);
+  assert.match(rateLimitMessage('social_publish_threads'), /Threads.*tomorrow/i);
+});

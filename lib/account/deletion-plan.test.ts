@@ -94,3 +94,9 @@ test('the export includes heads-ups and their settings', () => {
   assert.equal(byTable.get('headsups')?.key, 'id');
   assert.equal(byTable.get('headsup_preferences')?.key, 'user_id');
 });
+
+test('the export includes publications but never the Meta tokens', () => {
+  const tables = EXPORT_TABLES.map((entry) => entry.table);
+  assert.ok(tables.includes('social_publications'));
+  assert.ok(!tables.includes('social_connections'));
+});
