@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { HeartPulse, Sparkles, Wallet } from 'lucide-react';
 import { PublicShell } from '@/components/marketing/public-shell';
 
 // The signed-out home page: what Orbis is, in plain words, before anyone
@@ -8,52 +7,37 @@ export function Landing() {
   return (
     <PublicShell>
       <section className="mkt-hero">
-        <p className="mkt-eyebrow">Orbis</p>
         <h1>One calm daily brief for your money, health and routines.</h1>
         <p className="mkt-hero-sub">
           Orbis pulls your finances, health and daily habits into one quiet page you check once a day
           — instead of five apps you keep checking all day.
         </p>
         <div className="mkt-cta">
-          <Link href="/login" className="primary">Sign in</Link>
-          <Link href="/login" className="ghost">Create account</Link>
+          <Link href="/login" className="primary">Create account</Link>
+          <Link href="/waitlist" className="link">or join the waitlist</Link>
         </div>
       </section>
 
-      <div className="mkt-features">
-        <article className="mkt-feature">
-          <div className="mkt-feature-icon"><Sparkles size={19} aria-hidden="true" /></div>
-          <div>
-            <h2>One daily brief</h2>
-            <p>A single page each morning: what changed in your money, your health and your routines, with nothing to dig for.</p>
-          </div>
+      <div className="mkt-list">
+        <article className="mkt-list-item">
+          <h2>One daily brief</h2>
+          <p>What changed in your money, health and routines — nothing to dig for.</p>
         </article>
-        <article className="mkt-feature">
-          <div className="mkt-feature-icon"><Wallet size={19} aria-hidden="true" /></div>
-          <div>
-            <h2>Money, in one place</h2>
-            <p>Spending you log and your broker holdings, brought together without giving up access to move money.</p>
-          </div>
+        <article className="mkt-list-item">
+          <h2>Money, in one place</h2>
+          <p>Spending and broker holdings together, without access to move money.</p>
         </article>
-        <article className="mkt-feature">
-          <div className="mkt-feature-icon"><HeartPulse size={19} aria-hidden="true" /></div>
-          <div>
-            <h2>Health &amp; routines</h2>
-            <p>Steps, health documents, journal entries and the daily habits you want to keep, tracked without turning into another chore.</p>
-          </div>
+        <article className="mkt-list-item">
+          <h2>Health &amp; routines</h2>
+          <p>Steps, journal and daily habits, tracked without becoming a chore.</p>
         </article>
       </div>
 
-      <section className="mkt-privacy" aria-labelledby="mkt-privacy-heading">
+      <section className="mkt-note" aria-labelledby="mkt-privacy-heading">
         <h2 id="mkt-privacy-heading">AI never trains on your data</h2>
         <p>
-          When Orbis calls an AI model on your behalf, it routes personal requests only to providers whose models are
-          not used for training. General, non-personal requests may use a wider set of providers, but anything that
-          touches your finances, health or notes always stays on the no-training path.
-        </p>
-        <p>
-          Read the full picture in the <Link href="/privacy">Privacy Policy</Link>, including which processors we use
-          and how to delete your account.
+          Anything touching your finances, health or notes only goes to providers whose models aren’t trained on it.{' '}
+          <Link href="/privacy">Privacy Policy</Link>
         </p>
       </section>
     </PublicShell>

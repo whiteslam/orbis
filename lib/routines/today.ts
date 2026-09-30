@@ -65,6 +65,18 @@ export function currentRoutine(today: RoutineToday[]): RoutineToday | null {
   return upcoming ?? null;
 }
 
+/**
+ * Whether it makes sense to ask "did you do it?" yet.
+ *
+ * currentRoutine also returns the next routine hours ahead, so the brief can
+ * say "Gym is next, at 7 pm". Asking done-or-skipped about that at 2 pm is
+ * nonsense, so the check-in waits until the routine is due: within the same
+ * ten minutes relativeWhen already calls "now".
+ */
+export function canAnswer(item: RoutineToday) {
+  return item.minutesAway <= 10;
+}
+
 /** Routines whose time has passed with nothing said about them. */
 export function missedRoutines(today: RoutineToday[]): RoutineToday[] {
   return today.filter((item) => item.event === null && item.minutesAway < -GRACE_MINUTES);

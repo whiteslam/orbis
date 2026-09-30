@@ -59,3 +59,37 @@
   .mkt-header { padding-top: max(16px, env(safe-area-inset-top, 0px)); }
   .mkt-features { grid-template-columns: 1fr; }
 }
+
+/* Landing: simple list and note */
+.mkt-cta a.link { padding: 0 6px; background: none; color: var(--fd-accent); font-weight: 600; }
+.mkt-cta a.link:hover { color: var(--fd-ink); }
+.mkt-list { margin-top: 56px; border-top: 1px solid var(--fd-rule); }
+.mkt-list-item { padding: 20px 0; border-bottom: 1px solid var(--fd-rule); }
+.mkt-list-item h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; }
+.mkt-list-item p { margin: 6px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.mkt-note { margin-top: 48px; }
+.mkt-note h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; }
+.mkt-note p { margin: 6px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.mkt-note a { color: var(--fd-accent); font-weight: 600; }
+
+/* Waitlist */
+.mkt-waitlist { max-width: 440px; padding: 40px 0 8px; }
+.mkt-waitlist h1 { margin: 0; font-size: clamp(30px, 6vw, 40px); font-weight: 700; letter-spacing: -.035em; line-height: 1.12; }
+.mkt-waitlist strong { color: var(--fd-ink); font-weight: 600; }
+.mkt-waitlist-form { display: flex; flex-direction: column; margin-top: 32px; }
+.mkt-waitlist-form > label { color: var(--fd-faint); font-size: 12px; font-weight: 600; }
+.mkt-waitlist-form input { box-sizing: border-box; width: 100%; min-height: 50px; margin-top: 7px; padding: 0 16px; border: 1px solid var(--fd-rule); border-radius: 13px; background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 15px; outline: none; }
+.mkt-waitlist-form input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.mkt-error { margin: 8px 0 0; color: var(--fd-alert); font-size: 12.5px; }
+.mkt-submit { min-height: 50px; margin-top: 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.mkt-submit:hover { opacity: .88; }
+.mkt-submit:disabled { opacity: .6; cursor: default; }
+.mkt-fineprint { margin: 14px 0 0; color: var(--fd-faint); font-size: 12px; line-height: 1.55; }
+.mkt-text-button { min-height: 44px; margin-top: 16px; padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.mkt-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+@media (max-width: 480px) {
+  .mkt-cta { flex-direction: column; align-items: stretch; }
+  .mkt-cta a { justify-content: center; }
+  .mkt-cta a.primary { min-height: 50px; font-size: 15px; }
+}
