@@ -4,7 +4,7 @@
 export const SITE_NAME = 'Orbis';
 
 // The date the legal pages were last reviewed. Bump it whenever their text changes.
-export const LEGAL_UPDATED = '2026-09-28';
+export const LEGAL_UPDATED = '2026-09-30';
 
 const FALLBACK_SITE_URL = 'https://orbis-starter.vercel.app';
 

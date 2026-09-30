@@ -33,6 +33,7 @@ export default function PrivacyPage() {
           <li>Your account email address</li>
           <li>The sender, subject, date and Gmail’s short preview of mail Gmail marks as important, read live from a connected Gmail account to show on Today and not stored (read-only — Orbis never sends, edits or deletes anything in Gmail)</li>
           <li>Holdings from a connected broker account (Zerodha or Groww), read-only</li>
+          <li>Instagram and Threads access tokens, encrypted, readable only by Orbis&apos;s server, deleted when you disconnect or delete your account</li>
           <li>Step counts synced from your device</li>
           <li>Health documents you upload for a preview and AI-grounded observations</li>
           <li>Journal entries, notes, voice notes and the routines you set up</li>
@@ -48,6 +49,7 @@ export default function PrivacyPage() {
           <li><strong>Vercel</strong> — hosts and runs the application</li>
           <li><strong>Google</strong> — Gmail (read-only, important mail on Today) and Calendar, only if you connect them</li>
           <li><strong>Zerodha</strong> and <strong>Groww</strong> — read-only broker holdings, only if you connect them</li>
+          <li><strong>Instagram and Threads (Meta)</strong> — only if you connect them: Orbis reads your own posts and their stats, and sends a post only when you press Publish and confirm, with a link to that one file that stops working after an hour</li>
           <li><strong>Groq, Google Gemini, Mistral and OpenRouter</strong> — the AI providers behind Orbis&apos;s AI features, chosen automatically by a router (see below)</li>
           <li><strong>Open-Meteo</strong> — weather for your approximate location</li>
           <li><strong>Alpha Vantage, AMFI and Frankfurter</strong> — stock, fund and currency price data</li>

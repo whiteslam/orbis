@@ -9,6 +9,9 @@ import type { ProviderId } from '@/lib/providers/core';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { CONNECTION_UNAVAILABLE } from '@/lib/errors';
+import { listConnections } from '@/lib/meta/connection';
+import { metaConfigured } from '@/lib/meta/config';
+import type { ConnectionSummary, MetaPlatform } from '@/lib/meta/types';
 
 export type IntegrationState = 'connected' | 'idle' | 'not_configured' | 'attention' | 'degraded';
 
@@ -59,11 +62,13 @@ export type AppConnections = {
    */
   brokers: Partial<Record<BrokerId, BrokerConnectionStatus>>;
   brokerSetupMessages: Partial<Record<BrokerId, string>>;
+  /** Instagram and Threads: which are linked (never a token), and which the server has keys for. */
+  meta: { connections: ConnectionSummary[]; configured: Record<MetaPlatform, boolean> };
 };
 
 // Account-level connections the user links themselves (Settings → Connections).
 export async function getAppConnections(userId: string, email: string | null): Promise<AppConnections> {
-  const result: AppConnections = { google: null, brokers: {}, brokerSetupMessages: {} };
+  const result: AppConnections = { google: null, brokers: {}, brokerSetupMessages: {}, meta: { connections: [], configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } } };
   try {
     const admin = createAdminClient();
     const [google, groww, zerodha] = await Promise.all([
@@ -71,6 +76,7 @@ export async function getAppConnections(userId: string, email: string | null): P
       admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
       admin.from('zerodha_connections').select('status,last_sync_at,expires_at').eq('user_id', userId).maybeSingle(),
     ]);
+    result.meta.connections = await listConnections(userId);
     if (google.data) {
       const scopes: string[] = Array.isArray(google.data.granted_scopes) ? google.data.granted_scopes : [];
       result.google = {

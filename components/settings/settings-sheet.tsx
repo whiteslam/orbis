@@ -25,6 +25,16 @@ export const GOOGLE_NOTICE: Record<string, { text: string; success: boolean }> =
   cancelled: { text: 'Google connection was cancelled.', success: false },
   'setup-error': { text: 'Google sign-in isn’t set up on the server yet.', success: false },
   error: { text: 'Google could not be connected. Try again.', success: false },
+  'instagram-connected': { text: 'Instagram connected.', success: true },
+  'instagram-cancelled': { text: 'Instagram connection was cancelled.', success: false },
+  'instagram-not-configured': { text: 'Instagram isn’t set up on the server yet.', success: false },
+  'instagram-rejected': { text: 'Instagram refused the connection. Check the account is Professional and added as a tester.', success: false },
+  'instagram-failed': { text: 'Instagram could not be connected. Try again.', success: false },
+  'threads-connected': { text: 'Threads connected.', success: true },
+  'threads-cancelled': { text: 'Threads connection was cancelled.', success: false },
+  'threads-not-configured': { text: 'Threads isn’t set up on the server yet.', success: false },
+  'threads-rejected': { text: 'Threads refused the connection. Check the account is added as a Threads tester.', success: false },
+  'threads-failed': { text: 'Threads could not be connected. Try again.', success: false },
 };
 
 export type SettingsData = {
@@ -118,7 +128,7 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
         {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
       </Group>
 
-      <Group id="connections" note="Everything Orbis reads from. Every connection is read-only, and you can disconnect at any time.">
+      <Group id="connections" note="Everything Orbis reads from is read-only. Instagram and Threads can also publish a post, only when you press Publish and confirm. Disconnect at any time.">
         {notice && (
           <div className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`} role="status">
             <span>{notice.text}</span>

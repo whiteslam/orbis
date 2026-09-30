@@ -105,7 +105,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   useEffect(() => {
     const url = new URL(window.location.href);
     const opening = openingFromUrl(url.hash, url.searchParams.get('tab'));
-    const notice = url.searchParams.get('gmail');
+    const notice = url.searchParams.get('gmail') ?? url.searchParams.get('meta');
     const brokerNotice = url.searchParams.get('zerodha');
     // One-time read of the URL a link arrived with, not a value the render depends on.
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -118,9 +118,10 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (notice) setGmailNotice(notice);
     if (brokerNotice) setZerodhaNotice(brokerNotice);
     /* eslint-enable react-hooks/set-state-in-effect */
-    if (url.searchParams.has('tab') || notice || brokerNotice) {
+    if (url.searchParams.has('tab') || url.searchParams.has('meta') || notice || brokerNotice) {
       url.searchParams.delete('tab');
       url.searchParams.delete('gmail');
+      url.searchParams.delete('meta');
       url.searchParams.delete('zerodha');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     }

@@ -10,6 +10,8 @@ import { BROKERS, type BrokerId } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
 import { safeAction } from '@/lib/client/safe-action';
+import { disconnectMetaAction } from '@/app/social/meta-actions';
+import { META_LABEL, META_PLATFORMS } from '@/lib/meta/types';
 
 function when(value: string | null) {
   if (!value) return null;
@@ -21,11 +23,11 @@ function Status({ state, children }: { state: 'on' | 'off' | 'warn'; children: R
 }
 
 /** One app: a tile, its name and what it reads, and where the connection stands. */
-function AppHead({ tile, name, detail, status }: { tile: React.ReactNode; name: string; detail: string; status: React.ReactNode }) {
+function AppHead({ tile, name, detail, status, badge = 'Read-only' }: { tile: React.ReactNode; name: string; detail: string; status: React.ReactNode; badge?: string }) {
   return (
     <div className="pf-app-head">
       <span className="fd-tile pf-tile" aria-hidden="true">{tile}</span>
-      <div><strong><span>{name}</span><span className="pf-readonly">Read-only</span></strong><small>{detail}</small></div>
+      <div><strong><span>{name}</span><span className="pf-readonly">{badge}</span></strong><small>{detail}</small></div>
       {status}
     </div>
   );
@@ -71,6 +73,31 @@ export function AppIntegrations({ connections, stepsSummary, openHealth }: { con
           {google && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading your important mail and Calendar.', safeAction(disconnectGmailAction))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
         </div>
       </article>
+
+      {META_PLATFORMS.map((platform) => {
+  const linked = connections.meta.connections.find((item) => item.platform === platform) ?? null;
+  const expired = linked?.status === 'reconnect_required';
+  const configured = connections.meta.configured[platform];
+  const name = META_LABEL[platform];
+  return (
+    <article className="pf-app" key={platform}>
+      <AppHead
+        tile={<b>{platform === 'instagram' ? 'IG' : '@'}</b>}
+        name={name}
+        badge="Publishes only when you confirm"
+        detail={linked ? `@${linked.username} · posts and stats for Social` : 'Your posts and their stats in Social, and publishing when you confirm'}
+        status={linked ? <Status state={expired ? 'warn' : 'on'}>{expired ? 'Reconnect' : 'Connected'}</Status> : <Status state="off">{configured ? 'Not connected' : 'Not set up'}</Status>}
+      />
+      {!configured && <p className="fd-note tight">Not set up on the server yet.</p>}
+      {configured && (
+        <div className="fd-act pf-act">
+          {(!linked || expired) && <a className="fd-button" href={`/auth/meta/${platform}/start`}>{expired ? `Reconnect ${name}` : `Connect ${name}`}</a>}
+          {linked && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run(`Disconnect ${name}? Orbis will stop showing its stats and can’t publish there.`, () => safeAction(disconnectMetaAction)(platform))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
+        </div>
+      )}
+    </article>
+  );
+})}
 
       {/* Every broker in the registry, so adding one is a registry entry and not
           another block here. A redirect broker (Kite) has no form to open: it
