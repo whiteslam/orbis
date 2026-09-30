@@ -2,7 +2,7 @@
    One decision on one lifted surface; everything else is a hairline row.
    Nothing here gets a border, a fill and a shadow at once. */
 .screen-body.field {
-  --screen-pad-top: max(34px, calc(22px + env(safe-area-inset-top, 0px)));
+  --screen-pad-top: max(34px, calc(22px + var(--safe-top)));
   background: var(--fd-field);
   color: var(--fd-ink);
   padding-top: var(--screen-pad-top);

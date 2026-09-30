@@ -294,10 +294,31 @@ button { font: inherit; }
 .phone::after { content: ''; position: absolute; inset: 5px; border-radius: 43px; border: 1px solid rgba(255,255,255,.18); pointer-events: none; }
 .phone-speaker { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; border-radius: var(--r-xl); background: #090d11; z-index: 10; box-shadow: inset 0 0 0 1px #222; }
 .phone-screen { height: 100%; overflow: hidden; overflow: clip; border-radius: 40px; background: var(--sys-page); position: relative; }
-.screen-body { --screen-pad-top: 48px; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: var(--screen-pad-top) 16px 94px; scrollbar-width: none; }
+.screen-body { --screen-pad-top: 48px; --screen-pad-bottom: calc(var(--nav-clear) + 12px); height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: var(--screen-pad-top) 16px var(--screen-pad-bottom); scrollbar-width: none; }
 .screen-body::-webkit-scrollbar { display: none; }
 .topbar, .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
 .avatar { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-label); color: var(--sys-bg); font-size: 13px; cursor: pointer; }
 .icon-btn { position: relative; width: 34px; height: 34px; border: 0; background: var(--sys-surface); border-radius: var(--r-md); display: grid; place-items: center; box-shadow: var(--e2); color: var(--ink); }
 .eyebrow, .page-head small { text-transform: uppercase; font-size: 10px !important; letter-spacing: .12em; font-weight: 800; color: var(--accent) !important; }
+
+/* ─── Screen geometry ─────────────────────────────────────────────────
+   The floating tab bar and everything that has to keep clear of it or of
+   the notch read these, so the numbers live in one place. The safe-area
+   insets only apply to the full-screen phone layout (the media query below);
+   inside the desktop phone frame they stay 0, which reduces every rule to
+   the frame's own values. --nav-clear is the space from the screen's bottom
+   edge that content must leave for the tab bar, with a 10px breath above it. */
+:root {
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  --nav-h: 62px;
+  --nav-gap: 10px;
+  --nav-clear: calc(var(--nav-gap) + var(--safe-bottom) + var(--nav-h) + 10px);
+}
+@media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

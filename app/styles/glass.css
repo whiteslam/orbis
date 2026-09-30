@@ -50,14 +50,14 @@
 /* Chrome: a floating glass tab bar, and Ask Orbis as its own glass circle to the right. */
 .bottom-nav { right: 84px; z-index: 20; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
 .bottom-nav button.active { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
-.talk-fab { right: 16px; bottom: 10px; width: 62px; height: 62px; background: var(--gl-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
+.talk-fab { right: 16px; bottom: calc(var(--nav-gap) + var(--safe-bottom)); width: 62px; height: 62px; background: var(--gl-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
 .avatar, .field .avatar { background: var(--gl-fill); color: var(--fd-ink); border: var(--gl-edge); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); font-weight: 700; }
 .fd-head h1 { font-weight: 800; letter-spacing: -.035em; }
 
 /* Phones in portrait, and touch devices in landscape (short screens): leave room for the Ask circle. */
 @media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
   .bottom-nav { right: calc(84px + env(safe-area-inset-right, 0px)); }
-  .talk-fab { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .talk-fab { right: calc(16px + env(safe-area-inset-right, 0px)); }
 }
 
 /* Frosted cards: every grouped section on every screen.

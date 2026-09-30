@@ -280,7 +280,7 @@
 .empty-state p { color: var(--muted); font-size: 11px; }
 /* Floating glass capsule: detached from the edges so the page scrolls
    under it and the blur has something to refract. */
-.bottom-nav { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 62px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; border-radius: var(--r-pill); border: var(--glass-hairline); background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-chrome-blur); backdrop-filter: var(--glass-chrome-blur); box-shadow: var(--e2), var(--glass-edge); padding: 4px 6px; }
+.bottom-nav { position: absolute; left: 10px; right: 10px; bottom: calc(var(--nav-gap) + var(--safe-bottom)); height: var(--nav-h); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; border-radius: var(--r-pill); border: var(--glass-hairline); background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-chrome-blur); backdrop-filter: var(--glass-chrome-blur); box-shadow: var(--e2), var(--glass-edge); padding: 4px 6px; }
 .bottom-nav button { min-height: 44px; height: 100%; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--sys-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 0; min-width: 0; transition: background .18s ease, color .18s ease; }
 .bottom-nav button span { font-size: 8px; letter-spacing: -.02em; }
 .bottom-nav button.active { background: var(--sys-surface); color: var(--sys-label); font-weight: 800; box-shadow: var(--e1); }

@@ -49,7 +49,7 @@ export function SecuritySettings() {
     <div className="pf-security">
       <div className="fd-source">
         <div><strong>Lock Orbis now</strong><p>Your PIN, password or passkey opens it again.</p></div>
-        <button type="button" onClick={lockNow} disabled={isPending}>Lock now</button>
+        <button type="button" className="fd-button ghost" onClick={lockNow} disabled={isPending}>Lock now</button>
       </div>
       {changing ? (
         <form className="fd-source" onSubmit={(event) => { event.preventDefault(); savePin(); }}>
@@ -67,7 +67,7 @@ export function SecuritySettings() {
       ) : (
         <div className="fd-source">
           <div><strong>Device PIN</strong><p>Opens Orbis on this device without your password.</p></div>
-          <button type="button" onClick={() => setChanging(true)}>Change PIN</button>
+          <button type="button" className="fd-button ghost" onClick={() => setChanging(true)}>Change PIN</button>
         </div>
       )}
       {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}

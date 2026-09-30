@@ -80,7 +80,7 @@
 .lock-signout { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 12px; }
 .auth-foot > .lock-signout:first-child { margin-top: 0; }
 /* Keyboard open: pin the column to the top of the visible area so the field sits right above the keyboard. */
-.keyboard-open .auth-stage { padding-top: max(12px, env(safe-area-inset-top, 0px)); }
+.keyboard-open .auth-stage { padding-top: max(12px, var(--safe-top)); }
 .keyboard-open .auth-card { margin-top: 0; padding-top: 8px; min-height: 0; }
 .keyboard-open .auth-card .auth-brand { margin-bottom: 16px; }
 .keyboard-open .auth-foot { display: none; }
@@ -109,22 +109,22 @@
   .phone::after, .phone-speaker { display: none; }
   .phone-screen { border-radius: 0; }
   .screen-body {
-    --screen-pad-top: calc(22px + env(safe-area-inset-top, 0px));
-    --fd-tabs-top: env(safe-area-inset-top, 0px);
+    /* The bottom padding (--screen-pad-bottom, 01-base.css) already follows --nav-clear. */
+    --screen-pad-top: calc(22px + var(--safe-top));
+    --fd-tabs-top: var(--safe-top);
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
   }
+  /* Height and bottom (above the home indicator) come from --nav-h / --nav-gap / --safe-bottom in 06-finance.css. */
   .bottom-nav {
     left: max(10px, env(safe-area-inset-left, 0px));
     right: max(10px, env(safe-area-inset-right, 0px));
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
-  .auth-stage { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .auth-stage { padding: max(16px, var(--safe-top)) max(16px, env(safe-area-inset-right, 0px)) max(16px, var(--safe-bottom)) max(16px, env(safe-area-inset-left, 0px)); }
 }
 /* While the on-screen keyboard is open, give the form the room the bottom nav was using. */
 .keyboard-open .bottom-nav { display: none; }
-.keyboard-open .screen-body { padding-bottom: 24px; }
+.keyboard-open .screen-body { --screen-pad-bottom: 24px; }
 @media (pointer: coarse) {
   /* iOS zooms into any field under 16px and stays zoomed; 16px on touch devices prevents it. */
   input, select, textarea { font-size: 16px !important; }

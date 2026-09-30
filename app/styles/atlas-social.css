@@ -111,9 +111,14 @@
 .so-problem { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--fd-alert-wash); color: var(--fd-alert); font-size: 12.5px; line-height: 1.5; }
 .so-message { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--fd-soft); }
 .so-message.error { color: var(--fd-alert); }
-/* Sticks just above the floating tab bar (62px, 10px off the bottom); with the keyboard open the bar is gone, so it drops to the edge. */
-.keyboard-open .so-bar { bottom: 0; }
-.so-bar { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px -16px 0; padding: 12px 16px 14px; background: var(--fd-veil); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%); border-top: 1px solid var(--fd-rule); }
+/* Rests on the floating tab bar's top edge, so no form shows between the
+   two. A sticky inset is measured from the scroller's content box, i.e.
+   inside .screen-body's bottom padding (--screen-pad-bottom), so that padding
+   is taken back out: the old flat 80px landed the bar a whole padding (94px
+   plus the home indicator) higher, mid-form with fields showing beneath it.
+   With the keyboard open the tab bar is gone, so it drops to the edge. */
+.keyboard-open .so-bar { bottom: calc(0px - var(--screen-pad-bottom)); }
+.so-bar { position: sticky; bottom: calc(var(--nav-gap) + var(--safe-bottom) + var(--nav-h) - var(--screen-pad-bottom)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px -16px 0; padding: 12px 16px 14px; background: var(--fd-veil); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%); border-top: 1px solid var(--fd-rule); }
 .so-bar .fd-act { margin-top: 0; flex-wrap: wrap; gap: 10px; }
 .so-more-menu { margin-top: 18px; }
 .so-more-menu summary { color: var(--fd-accent); font-size: 12.5px; font-weight: 650; cursor: pointer; list-style: none; }

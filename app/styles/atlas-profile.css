@@ -167,7 +167,12 @@
 .pf-service-state small { color: var(--fd-faint); font-size: 11px; line-height: 1.4; }
 
 /* Account */
-.pf-account .auth-signout { flex: none; font-size: 12.5px; }
+/* The sign-out <form> is the flex item, so it is what must not shrink. */
+.pf-account > form { flex: none; }
+.pf-account .auth-signout { font-size: 12.5px; white-space: nowrap; }
+
+/* Security: "Lock now" / "Change PIN" keep their pill on one line beside the text. */
+.pf-security .fd-source > .fd-button { flex: none; white-space: nowrap; }
 
 /* Edit history: what changed and when, with a way back. */
 .hs-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
