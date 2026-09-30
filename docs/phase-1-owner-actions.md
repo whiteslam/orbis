@@ -44,3 +44,8 @@ Steps only the project owner can do — Vercel and Supabase dashboard settings, 
 ## Ongoing
 
 11. **`pnpm test:e2e` creates real user accounts in whatever Supabase project your environment points at.** Point it at a separate, disposable Supabase project — never at production — before running it.
+
+## Heads-ups (2026-09-30)
+
+1. Apply `supabase/migrations/202609300100_headsups.sql` before deploying the heads-ups code (Today reads an empty list until it exists).
+2. After the deploy, run `supabase/cron/headsups_schedule.sql` in the SQL editor. It reuses the `orbis_cron_secret` vault secret; change the URL if the production domain differs.

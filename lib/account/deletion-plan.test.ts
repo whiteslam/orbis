@@ -88,3 +88,9 @@ test('a refused export or deletion says what to do, and a signed-out export is a
   assert.equal(refusalStatus('rate-limited'), 429);
   for (const reason of ['unlock', 'password', 'wrong-password'] as const) assert.equal(refusalStatus(reason), 403);
 });
+
+test('the export includes heads-ups and their settings', () => {
+  const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
+  assert.equal(byTable.get('headsups')?.key, 'id');
+  assert.equal(byTable.get('headsup_preferences')?.key, 'user_id');
+});

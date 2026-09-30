@@ -24,7 +24,7 @@ export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-m
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
 
 // One row per person, keyed by user_id; every other table has its own id.
-const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences']);
+const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences']);
 
 /**
  * The person's own content, read through their own session so row-level
@@ -62,6 +62,8 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'journal_entry_revisions',
   'context_note_revisions',
   'journal_voice_notes',
+  'headsups',
+  'headsup_preferences',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */
