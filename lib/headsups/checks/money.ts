@@ -12,6 +12,8 @@ const HOT_MULTIPLE = 1.3;
 const HOT_FROM_DAY = 10;
 const GAP_DAYS = 4;
 const GAP_HABIT_SHARE = 0.6;
+// Past a month, logging has stopped rather than lapsed; Orbis stops asking.
+const GAP_MAX_DAYS = 30;
 
 /** The Spending charts show one currency; the checks compare within it too. */
 function inMainCurrency(expenses: Expense[]) {
@@ -102,7 +104,7 @@ export function loggingGap({ today, expenses }: MoneyInput): Finding[] {
   const days = [...new Set(expenses.map((expense) => expense.localDate))].sort();
   const last = days[days.length - 1];
   const quiet = daysBetween(last, today);
-  if (quiet < GAP_DAYS) return [];
+  if (quiet < GAP_DAYS || quiet > GAP_MAX_DAYS) return [];
   const windowStart = addDays(last, -29);
   const logged = days.filter((day) => day >= windowStart && day <= last).length;
   if (logged < 30 * GAP_HABIT_SHARE) return [];

@@ -50,3 +50,13 @@ export function runChecks(checks: Array<{ kind: HeadsupKind; run: () => Finding[
 export function pruneBefore(now: Date) {
   return new Date(now.getTime() - KEEP_DAYS * DAY_MS).toISOString();
 }
+
+/**
+ * Open heads-ups (new or seen) that a check which ran cleanly no longer finds:
+ * the routine was archived, the steps recovered. They are withdrawn rather than
+ * left on Today until someone dismisses something that is no longer true.
+ */
+export function staleIds(open: Array<{ id: string; kind: HeadsupKind; dedupeKey: string }>, findings: Finding[], ranKinds: HeadsupKind[]) {
+  const found = new Set(findings.map((finding) => finding.dedupeKey));
+  return open.filter((row) => ranKinds.includes(row.kind) && !found.has(row.dedupeKey)).map((row) => row.id);
+}

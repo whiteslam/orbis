@@ -13,7 +13,7 @@ export function HeadsupSettings() {
 
   useEffect(() => {
     let live = true;
-    void fetch('/api/home/headsups', { cache: 'no-store' })
+    void fetch('/api/home/headsups?prefs=1', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() as Promise<HeadsupsResponse> : null))
       .then((result) => { if (live) setDisabled(result?.state === 'ready' ? result.disabledKinds : []); })
       .catch(() => { if (live) setDisabled([]); });

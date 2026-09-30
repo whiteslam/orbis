@@ -23,7 +23,8 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   try {
     const scan = await scanDue(admin, now, deadline);
-    const push = await pushWaiting(admin, now, deadline);
+    // Pushes need a few seconds each; with less left, the next run sends them.
+    const push = deadline - Date.now() > 5_000 ? await pushWaiting(admin, now, deadline) : { sent: 0, held: 0 };
     return Response.json({ ...scan, ...push });
   } catch (error) {
     console.error('Heads-up scan failed', error);

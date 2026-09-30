@@ -1,7 +1,12 @@
 import { addDays, weekday } from '@/lib/headsups/dates';
+import { clampWording } from '@/lib/headsups/prompt';
 import type { Finding } from '@/lib/headsups/types';
 
-export type RoutineRow = { id: string; title: string; days: number[]; active: boolean; archivedAt: string | null; createdDate: string };
+export type RoutineRow = {
+  id: string; title: string; days: number[]; active: boolean; archivedAt: string | null; createdDate: string;
+  /** The last day it was done, however long ago: events are only loaded for LOOK_BACK_DAYS. */
+  lastDoneDate: string | null;
+};
 export type RoutineEventRow = { routineId: string | null; localDate: string; status: 'done' | 'skipped' | 'other' };
 
 const MISSED_IN_A_ROW = 3;
@@ -26,18 +31,19 @@ export function routineSlipping({ today, routines, events }: { today: string; ro
     const doneDates = events.filter((event) => event.routineId === routine.id && event.status === 'done').map((event) => event.localDate).sort();
     if (scheduled.some((date) => doneDates.includes(date))) return [];
     // Keyed on the last time it was done, so one slump is one heads-up however long it lasts.
-    const lastDone = doneDates[doneDates.length - 1] ?? 'never';
+    const latest = [routine.lastDoneDate, doneDates[doneDates.length - 1]].filter((date): date is string => Boolean(date)).sort();
+    const lastDone = latest[latest.length - 1] ?? 'never';
     return [{
       kind: 'routine.slipping',
       dedupeKey: `routine.slipping:${routine.id}:since:${lastDone}`,
       urgency: 'urgent',
       evidence: { routine: routine.title, missedInARow: MISSED_IN_A_ROW },
       action: { type: 'adjust_routine', routineId: routine.id },
-      fallback: {
+      fallback: clampWording({
         title: `${routine.title} hasn’t happened lately`,
         body: `The last ${MISSED_IN_A_ROW} times it was due, it wasn’t marked done. A different time or fewer days might suit it better.`,
         actionLabel: 'Adjust it',
-      },
+      }),
     } satisfies Finding];
   });
 }

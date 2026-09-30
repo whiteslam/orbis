@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { parseWording, wordingPrompt } from './prompt.ts';
+import { clampWording, parseWording, wordingPrompt } from './prompt.ts';
 import type { Finding } from './types.ts';
 
 const finding: Finding = {
@@ -31,4 +31,13 @@ test('junk falls back', () => {
   assert.equal(parseWording(JSON.stringify({ title: 't', body: 'b'.repeat(301), actionLabel: 'a' })), null, 'body too long');
   assert.equal(parseWording(JSON.stringify({ title: 't', body: 'b', actionLabel: 'a'.repeat(41) })), null, 'label too long');
   assert.equal(parseWording(JSON.stringify({ title: '  ', body: 'b', actionLabel: 'a' })), null, 'blank title');
+});
+
+test('wording that is too long is cut to the limits, with an ellipsis', () => {
+  const clamped = clampWording({ title: 't'.repeat(90), body: 'b'.repeat(310), actionLabel: 'a'.repeat(45) });
+  assert.equal(clamped.title.length, 80);
+  assert.equal(clamped.body.length, 300);
+  assert.equal(clamped.actionLabel.length, 40);
+  assert.ok(clamped.title.endsWith('…'));
+  assert.deepEqual(clampWording({ title: 'ok', body: 'fine', actionLabel: 'go' }), { title: 'ok', body: 'fine', actionLabel: 'go' });
 });

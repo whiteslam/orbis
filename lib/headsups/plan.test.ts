@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { dueForScan, localNow, mergeAction, pruneBefore, runChecks } from './plan.ts';
+import { dueForScan, localNow, mergeAction, pruneBefore, runChecks, staleIds } from './plan.ts';
 import type { Finding } from './types.ts';
 
 // 00:30 UTC = 06:00 IST.
@@ -46,4 +46,15 @@ test('one check throwing does not stop the rest, and disabled kinds never run', 
 
 test('rows older than 60 days are pruned', () => {
   assert.equal(pruneBefore(at('2026-09-30T06:00:00Z')), '2026-08-01T06:00:00.000Z');
+});
+
+test('open heads-ups a check no longer finds are withdrawn, but only for checks that ran cleanly', () => {
+  const open = [
+    { id: '1', kind: 'routine.slipping' as const, dedupeKey: 'routine.slipping:r1:since:never' },
+    { id: '2', kind: 'health.steps_down' as const, dedupeKey: 'health.steps_down:2026-09-28' },
+    { id: '3', kind: 'money.big_spend' as const, dedupeKey: 'money.big_spend:e1' },
+  ];
+  // Steps are still down; the routine was archived; the money check threw this time.
+  const stale = staleIds(open, [finding('health.steps_down')].map((item) => ({ ...item, dedupeKey: 'health.steps_down:2026-09-28' })), ['routine.slipping', 'health.steps_down']);
+  assert.deepEqual(stale, ['1']);
 });

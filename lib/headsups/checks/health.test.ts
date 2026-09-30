@@ -44,3 +44,14 @@ test('plan finished: three days after its last day', () => {
 test('plan finished: no plan, nothing to say', () => {
   assert.equal(planFinished({ today: TODAY, plan: null }).length, 0);
 });
+
+test('plan finished: stops after two weeks, so an old plan is not raised forever', () => {
+  // Last day 25 September; the window runs to 9 October.
+  assert.equal(planFinished({ today: '2026-10-09', plan }).length, 1);
+  assert.equal(planFinished({ today: '2026-10-10', plan }).length, 0);
+});
+
+test('plan finished: an 80-character plan title still fits the title limit', () => {
+  const [finding] = planFinished({ today: '2026-09-28', plan: { ...plan, title: 'y'.repeat(80) } });
+  assert.ok(finding.fallback.title.length <= 80, `title is ${finding.fallback.title.length} characters`);
+});

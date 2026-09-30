@@ -92,3 +92,8 @@ test('logging gap: someone who rarely logs is not nagged', () => {
 test('money checks: nothing at all is nothing to say', () => {
   assert.deepEqual([...bigSpend({ today: TODAY, expenses: [] }), ...categoryHot({ today: TODAY, expenses: [] }), ...loggingGap({ today: TODAY, expenses: [] })], []);
 });
+
+test('logging gap: someone who stopped a month ago is not reminded forever', () => {
+  assert.equal(loggingGap({ today: addDays('2026-09-25', 30), expenses: habitual }).length, 1);
+  assert.equal(loggingGap({ today: addDays('2026-09-25', 31), expenses: habitual }).length, 0);
+});

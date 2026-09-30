@@ -5,7 +5,7 @@ import { routineSlipping, type RoutineEventRow, type RoutineRow } from './routin
 // Wednesday 30 September 2026.
 const TODAY = '2026-09-30';
 const gym = (extra: Partial<RoutineRow> = {}): RoutineRow => ({
-  id: 'r1', title: 'Gym', days: [1, 3, 5], active: true, archivedAt: null, createdDate: '2026-08-01', ...extra,
+  id: 'r1', title: 'Gym', days: [1, 3, 5], active: true, archivedAt: null, createdDate: '2026-08-01', lastDoneDate: null, ...extra,
 });
 const done = (localDate: string): RoutineEventRow => ({ routineId: 'r1', localDate, status: 'done' });
 
@@ -41,4 +41,17 @@ test('slipping: the key stays the same while it keeps slipping', () => {
   const later = routineSlipping({ today: '2026-10-02', routines: [gym()], events: [] })[0].dedupeKey;
   assert.equal(first, later);
   assert.equal(first, 'routine.slipping:r1:since:never');
+});
+
+test('slipping: the key stays put when the last done is older than the event window', () => {
+  const old = gym({ lastDoneDate: '2026-09-10' });
+  const first = routineSlipping({ today: TODAY, routines: [old], events: [] })[0].dedupeKey;
+  const later = routineSlipping({ today: '2026-10-02', routines: [old], events: [] })[0].dedupeKey;
+  assert.equal(first, 'routine.slipping:r1:since:2026-09-10');
+  assert.equal(later, first);
+});
+
+test('slipping: a 60-character routine name still fits the title limit', () => {
+  const [finding] = routineSlipping({ today: TODAY, routines: [gym({ title: 'x'.repeat(60) })], events: [] });
+  assert.ok(finding.fallback.title.length <= 80, `title is ${finding.fallback.title.length} characters`);
 });

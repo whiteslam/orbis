@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { isHeadsupKind, parseAction, type Headsup, type HeadsupKind, type HeadsupsResponse } from '@/lib/headsups/types';
 
 const LIST_LIMIT = 20;
-const OFFER_OFF_AFTER = 3;
+// Dismissals already stored when the next one is made: the offer comes with the third.
+const OFFER_OFF_AFTER = 2;
 const OFFER_WINDOW_MS = 30 * 86_400_000;
 
 /**
@@ -47,4 +48,15 @@ export async function listHeadsups(userId: string): Promise<HeadsupsResponse> {
   for (const row of dismissed.data ?? []) counts.set(row.kind, (counts.get(row.kind) ?? 0) + 1);
   const offerOff = [...counts].filter(([kind, count]) => count >= OFFER_OFF_AFTER && isHeadsupKind(kind) && !disabledKinds.includes(kind)).map(([kind]) => kind as HeadsupKind);
   return { state: 'ready', headsups, disabledKinds, offerOff };
+}
+
+/**
+ * Only which checks are off, for Settings. Unlike listHeadsups it marks nothing
+ * seen: opening Settings must not count as having seen a heads-up, or an urgent
+ * one would never be pushed.
+ */
+export async function getHeadsupPrefs(userId: string): Promise<HeadsupsResponse> {
+  const { data, error } = await createAdminClient().from('headsup_preferences').select('disabled_kinds').eq('user_id', userId).maybeSingle();
+  if (error) return { state: ['PGRST205', 'PGRST204', '42P01'].includes(error.code ?? '') ? 'setup' : 'ready', headsups: [], disabledKinds: [], offerOff: [] };
+  return { state: 'ready', headsups: [], disabledKinds: ((data?.disabled_kinds ?? []) as string[]).filter(isHeadsupKind), offerOff: [] };
 }

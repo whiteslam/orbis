@@ -42,3 +42,16 @@ export function parseWording(text: string): Wording | null {
   const actionLabel = field(record.actionLabel, LABEL_MAX);
   return title && body && actionLabel ? { title, body, actionLabel } : null;
 }
+
+function clamp(value: string, max: number) {
+  return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`.slice(0, max);
+}
+
+/**
+ * Orbis's own wording, cut to the column limits. A routine or plan name can be
+ * long enough to push a template over them, and a row that fails its CHECK is
+ * a heads-up that silently never appears.
+ */
+export function clampWording(wording: Wording): Wording {
+  return { title: clamp(wording.title, TITLE_MAX), body: clamp(wording.body, BODY_MAX), actionLabel: clamp(wording.actionLabel, LABEL_MAX) };
+}

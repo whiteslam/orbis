@@ -13,7 +13,7 @@ const HEADSUP = {
 };
 
 test('a heads-up shows on Today and its step opens a prefilled spending form', async ({ page }) => {
-  await page.route('**/api/home/headsups', (route) => route.fulfill({ json: { state: 'ready', headsups: [HEADSUP], disabledKinds: [], offerOff: [] } }));
+  await page.route('**/api/home/headsups*', (route) => route.fulfill({ json: { state: 'ready', headsups: [HEADSUP], disabledKinds: [], offerOff: [] } }));
   await openApp(page);
   const card = page.getByRole('region', { name: 'Heads-ups' });
   await expect(card.getByText('Nothing logged for 5 days')).toBeVisible();
@@ -23,7 +23,7 @@ test('a heads-up shows on Today and its step opens a prefilled spending form', a
 });
 
 test('Settings lists the heads-up checks', async ({ page }) => {
-  await page.route('**/api/home/headsups', (route) => route.fulfill({ json: { state: 'ready', headsups: [], disabledKinds: ['money.logging_gap'], offerOff: [] } }));
+  await page.route('**/api/home/headsups*', (route) => route.fulfill({ json: { state: 'ready', headsups: [], disabledKinds: ['money.logging_gap'], offerOff: [] } }));
   await openApp(page);
   await openSettings(page);
   await expect(page.getByRole('switch', { name: 'Days with no spending logged' })).not.toBeChecked();

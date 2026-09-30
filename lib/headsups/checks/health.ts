@@ -1,4 +1,5 @@
 import { addDays, mondayOf } from '@/lib/headsups/dates';
+import { clampWording } from '@/lib/headsups/prompt';
 import type { Finding } from '@/lib/headsups/types';
 
 export type StepDay = { date: string; steps: number };
@@ -8,6 +9,8 @@ const DROP_SHARE = 0.7;
 const MIN_RECENT_DAYS = 5;
 const MIN_BEFORE_DAYS = 14;
 const PLAN_GRACE_DAYS = 3;
+// A plan that ended longer ago than this is old news, not a heads-up.
+const PLAN_WINDOW_DAYS = 14;
 
 const average = (days: StepDay[]) => days.reduce((sum, day) => sum + day.steps, 0) / days.length;
 
@@ -36,17 +39,17 @@ export function stepsDown({ today, steps }: { today: string; steps: StepDay[] })
 export function planFinished({ today, plan }: { today: string; plan: PlanRow | null }): Finding[] {
   if (!plan) return [];
   const ends = addDays(plan.createdDate, Math.max(1, plan.durationWeeks) * 7 - 1);
-  if (today < addDays(ends, PLAN_GRACE_DAYS)) return [];
+  if (today < addDays(ends, PLAN_GRACE_DAYS) || today > addDays(ends, PLAN_WINDOW_DAYS)) return [];
   return [{
     kind: 'health.plan_finished',
     dedupeKey: `health.plan_finished:${plan.id}`,
     urgency: 'normal',
     evidence: { plan: plan.title, weeks: plan.durationWeeks },
     action: { type: 'open_health_plan', planId: plan.id },
-    fallback: {
+    fallback: clampWording({
       title: `${plan.title} has finished`,
       body: `Your ${plan.durationWeeks}-week plan is done. Want to build what comes next?`,
       actionLabel: 'Open plans',
-    },
+    }),
   }];
 }
