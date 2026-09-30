@@ -18,8 +18,8 @@ export async function listHeadsups(userId: string): Promise<HeadsupsResponse> {
   const empty: HeadsupsResponse = { state: 'ready', headsups: [], disabledKinds: [], offerOff: [] };
   const prefsInsert = await admin.from('headsup_preferences').upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
   if (prefsInsert.error) {
-    // 42P01: the migration is not applied yet. Today simply has no card.
-    if (prefsInsert.error.code === '42P01') return { ...empty, state: 'setup' };
+    // The migration is not applied yet (the same codes lib/routines/repository.ts treats as a missing table). Today simply has no card.
+    if (['PGRST205', 'PGRST204', '42P01'].includes(prefsInsert.error.code ?? '')) return { ...empty, state: 'setup' };
     console.error('Heads-up preferences could not be created', prefsInsert.error);
     return empty;
   }

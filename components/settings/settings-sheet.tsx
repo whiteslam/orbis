@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
 import { AppIntegrations } from '@/components/settings/app-integrations';
+import { HeadsupSettings } from '@/components/settings/headsup-settings';
 import { HomeBriefSetting } from '@/components/settings/home-brief-setting';
 import { HomeCityEditor, Integrations } from '@/components/settings/integrations';
 import { NotificationSettings } from '@/components/settings/notification-settings';
@@ -131,6 +132,8 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
 
       <Group id="ai" note="One switch for every AI feature. Nothing is sent to an AI provider until it is on.">
         <HomeBriefSetting preferences={data.aiPreferences} />
+        <h3 className="fd-label">Heads-ups</h3>
+        <HeadsupSettings />
       </Group>
 
       <Group id="notifications">
