@@ -9,8 +9,36 @@ const emptySummary: FinanceSummary = {
   loadError: false,
   transactions: [],
   monthlyExpenses: [],
+  incomePlan: [],
+  incomePlanReady: false,
   month: null,
 };
+
+/**
+ * What the user expects to earn. Missing until the income plan migration is
+ * applied, which the screen reports rather than failing over.
+ */
+async function loadIncomePlan(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data, error } = await supabase
+    .from('income_plan')
+    .select('id,label,amount,currency,pay_day,category,active')
+    .eq('user_id', userId)
+    .order('amount', { ascending: false })
+    .limit(10);
+  if (error) return { ready: false, entries: [] as FinanceSummary['incomePlan'] };
+  return {
+    ready: true,
+    entries: (data ?? []).map((row) => ({
+      id: String(row.id),
+      label: String(row.label),
+      amount: Number(row.amount),
+      currency: String(row.currency),
+      payDay: Number(row.pay_day),
+      category: String(row.category),
+      active: row.active !== false,
+    })),
+  };
+}
 
 const transactionColumns = 'id, amount, currency, direction, merchant, category, occurred_at, source';
 
@@ -50,7 +78,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
   const month = Number(monthParts.find((part) => part.type === 'month')?.value);
   const start = new Date(Date.UTC(year, month - 1, 1) - 330 * 60 * 1000);
 
-  const [transactionsResult, expensesResult] = await Promise.all([
+  const [transactionsResult, expensesResult, plan] = await Promise.all([
     loadRecentTransactions(supabase, userId),
     supabase
       .from('transactions')
@@ -58,6 +86,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
       .eq('user_id', userId)
       .gte('occurred_at', start.toISOString())
       .lt('occurred_at', now.toISOString()),
+    loadIncomePlan(supabase, userId),
   ]);
 
   if (transactionsResult.error || expensesResult.error) {
@@ -75,6 +104,8 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
   return {
     databaseReady: true,
     loadError: false,
+    incomePlan: plan.entries,
+    incomePlanReady: plan.ready,
     transactions: (transactionsResult.data ?? []).map((transaction) => ({
       id: transaction.id,
       amount: Number(transaction.amount),
@@ -98,12 +129,17 @@ function monthBreakdown(rows: Array<{ amount: number; currency: string; directio
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const daily = Array.from({ length: daysInMonth }, (_, index) => ({ day: index + 1, amount: 0 }));
   const categories = new Map<string, number>();
+  // Income carried a category all along and nothing ever read it, so "where did
+  // the money come from" had an answer stored and no way to see it.
+  const incomeCategories = new Map<string, number>();
   let spent = 0;
   let received = 0;
   for (const row of rows) {
     if (row.currency !== currency) continue;
     if (row.direction === 'income') {
       received += row.amount;
+      const source = row.category || 'Other';
+      incomeCategories.set(source, (incomeCategories.get(source) ?? 0) + row.amount);
       continue;
     }
     spent += row.amount;
@@ -119,6 +155,7 @@ function monthBreakdown(rows: Array<{ amount: number; currency: string; directio
     spent,
     received,
     categories: [...categories].map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
+    incomeCategories: [...incomeCategories].map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
     daily,
   };
 }

@@ -5,6 +5,7 @@ import { disconnectGmail } from '@/lib/gmail/connection';
 import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
 import { createClient } from '@/lib/supabase/server';
+import { isMissingTable } from '@/lib/supabase/errors';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
 
 export type FinanceActionState = {
@@ -136,4 +137,49 @@ export async function deleteManualTransactionAction(transactionId: string): Prom
   } catch {
     return { success: false, message: 'This transaction could not be deleted. Please try again.' };
   }
+}
+
+/**
+ * Sets or clears what you expect to earn.
+ *
+ * One entry per stream, so a salary plus a retainer is two. Clearing is
+ * deleting: an income plan is a statement about now, not a history.
+ */
+export async function saveIncomePlanAction(input: { id?: string; label: string; amount: string; currency: string; payDay: number; category: string }) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, message: 'Sign in again to save this.' };
+  if (!input || typeof input !== 'object') return { success: false, message: 'Enter the details.' };
+  const supabase = await createClient();
+
+  const label = typeof input.label === 'string' ? input.label.trim().slice(0, 60) : '';
+  if (!label) return { success: false, message: 'Give it a name, like Salary.' };
+  if (typeof input.amount !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(input.amount)) return { success: false, message: 'Enter the amount you expect.' };
+  const amount = Number(input.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000) return { success: false, message: 'Enter a realistic amount.' };
+  const currency = typeof input.currency === 'string' ? input.currency.trim().toUpperCase() : 'INR';
+  if (!/^[A-Z]{3}$/.test(currency)) return { success: false, message: 'Use a three-letter currency code.' };
+  const payDay = Number(input.payDay);
+  if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return { success: false, message: 'Choose the day it usually arrives.' };
+  const category = typeof input.category === 'string' && (INCOME_CATEGORIES as readonly string[]).includes(input.category) ? input.category : 'Salary';
+
+  const row = { user_id: userId, label, amount, currency, pay_day: payDay, category };
+  const { error } = input.id
+    ? await supabase.from('income_plan').update(row).eq('id', input.id).eq('user_id', userId)
+    : await supabase.from('income_plan').insert(row);
+  if (error) {
+    return { success: false, message: isMissingTable(error) ? 'Apply the income plan migration in Supabase, then try again.' : 'That could not be saved. Try again.' };
+  }
+  revalidatePath('/');
+  return { success: true, message: input.id ? 'Updated.' : `${label} saved.` };
+}
+
+export async function deleteIncomePlanAction(id: string) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, message: 'Sign in again to remove this.' };
+  if (!isUuid(id)) return { success: false, message: 'That entry is invalid.' };
+  const supabase = await createClient();
+  const { error } = await supabase.from('income_plan').delete().eq('id', id).eq('user_id', userId);
+  if (error) return { success: false, message: 'That could not be removed.' };
+  revalidatePath('/');
+  return { success: true, message: 'Removed. What you already recorded is kept.' };
 }

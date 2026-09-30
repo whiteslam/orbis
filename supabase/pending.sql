@@ -1458,6 +1458,169 @@ create policy "Users manage their own social media files" on storage.objects
 
 
 -- ══════════════════════════════════════════════════════════════
+-- 202609280200_hardening.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Phase 1 hardening: push endpoints may only point at real push services, the
+-- app writes subscriptions itself, and grants say exactly what each role may do.
+--
+-- On Supabase, `authenticated` (and `anon`) start with ALL privileges on public
+-- tables, so a narrow `grant` on its own changes nothing: RLS was the only gate.
+-- Each table below is revoked in full and then granted exactly what the app
+-- uses. Safe to run more than once.
+
+-- Push subscriptions ----------------------------------------------------------
+-- The same host list as lib/notifications/push-endpoint.ts. `not valid` keeps any
+-- existing rows (the sender skips them in code); every new write is checked.
+alter table public.push_subscriptions drop constraint if exists push_subscriptions_endpoint_host;
+alter table public.push_subscriptions add constraint push_subscriptions_endpoint_host check (
+  endpoint ~ '^https://(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)/'
+) not valid;
+
+-- Browsers read and remove their own devices; subscribing goes through the
+-- server action (service role), which checks the endpoint and the device cap.
+revoke all on public.push_subscriptions from public, anon, authenticated;
+grant select, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to service_role;
+
+-- Notification inbox ----------------------------------------------------------
+-- Users read their notifications and may only set read_at; sending is server-only.
+-- Revoking table-level UPDATE also drops the column grant, so read_at is granted again.
+revoke all on public.notification_log from public, anon, authenticated;
+grant select on public.notification_log to authenticated;
+grant update (read_at) on public.notification_log to authenticated;
+grant select, insert, update, delete on public.notification_log to service_role;
+
+-- Health documents and plans --------------------------------------------------
+-- Users see their documents, and see and delete their plans. Uploads, indexing,
+-- document deletion and chunk access all run on the server with the service role.
+revoke all on public.health_documents, public.health_document_chunks, public.health_plans from public, anon, authenticated;
+grant select on public.health_documents to authenticated;
+grant select, delete on public.health_plans to authenticated;
+grant select, insert, update, delete on public.health_documents, public.health_document_chunks, public.health_plans to service_role;
+
+-- Saved AI results ------------------------------------------------------------
+-- Users read and delete their saved results; the server writes them.
+revoke all on public.ai_results from public, anon, authenticated;
+grant select, delete on public.ai_results to authenticated;
+grant select, insert, update, delete on public.ai_results to service_role;
+
+-- PIN attempts ------------------------------------------------------------------
+-- SECURITY DEFINER with an empty search_path: the body is fully schema-qualified.
+alter function public.consume_app_pin_attempt(uuid) set search_path = '';
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280201_rate_limits.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Per-person rate limits for costly actions (uploads, file parsing, Gmail sync)
+-- and a private staging bucket that large uploads go to straight from the browser.
+-- Safe to run more than once.
+
+create table if not exists public.rate_limit_buckets (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  bucket text not null check (bucket ~ '^[a-z_]{2,30}$'),
+  window_start timestamptz not null,
+  used integer not null default 0 check (used >= 0),
+  primary key (user_id, bucket, window_start)
+);
+alter table public.rate_limit_buckets enable row level security;
+revoke all on public.rate_limit_buckets from public, anon, authenticated;
+grant select, insert, update, delete on public.rate_limit_buckets to service_role;
+
+-- Counts one use and says whether it was within the limit. The insert and the
+-- conditional increment are one statement, so concurrent calls cannot overshoot.
+create or replace function public.consume_rate_limit(p_user_id uuid, p_bucket text, p_limit integer, p_window_seconds integer)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare
+  v_window timestamptz := pg_catalog.to_timestamp(pg_catalog.floor(extract(epoch from pg_catalog.now()) / p_window_seconds) * p_window_seconds);
+  v_used integer;
+begin
+  if p_limit < 1 or p_window_seconds < 1 then return false; end if;
+  insert into public.rate_limit_buckets (user_id, bucket, window_start, used)
+  values (p_user_id, p_bucket, v_window, 1)
+  on conflict (user_id, bucket, window_start)
+  do update set used = public.rate_limit_buckets.used + 1
+    where public.rate_limit_buckets.used < p_limit
+  returning used into v_used;
+  return v_used is not null;
+end; $$;
+revoke all on function public.consume_rate_limit(uuid, text, integer, integer) from public, anon, authenticated;
+grant execute on function public.consume_rate_limit(uuid, text, integer, integer) to service_role;
+
+-- Staging for workbooks and health documents. The browser uploads here with a
+-- one-time signed token; the server reads the file and deletes it. No user policy.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('workbook-uploads', 'workbook-uploads', false, 104857600,
+  array['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/pdf'])
+on conflict (id) do nothing;
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280202_staged_upload_claims.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Each staged upload path may be read and processed once. The primary key makes
+-- the claim atomic: of any number of concurrent requests for one path, exactly
+-- one insert succeeds. Rows outlive the staged file on purpose, so a signed
+-- upload token reused to put a new file at the same path can't be processed
+-- again. Safe to run more than once.
+
+create table if not exists public.staged_upload_claims (
+  path text primary key check (char_length(path) between 1 and 200),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  claimed_at timestamptz not null default pg_catalog.now()
+);
+create index if not exists staged_upload_claims_user_claimed on public.staged_upload_claims (user_id, claimed_at);
+alter table public.staged_upload_claims enable row level security;
+revoke all on public.staged_upload_claims from public, anon, authenticated;
+grant select, insert, delete on public.staged_upload_claims to service_role;
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609280203_ai_consent.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: one switch for every AI feature, and a record of when it was agreed to.
+--
+-- Until now each AI feature asked on its own (the Home brief had a toggle, the
+-- advice buttons a checkbox), and the notification writer asked nobody. App
+-- store rules want one clear disclosure of what goes to which AI provider, and
+-- consent before anything is sent. The router reads these two columns before
+-- it chooses a model, so every feature, including the push notification, is
+-- covered by the same answer.
+--
+-- Off by default. Existing rows stay off: the owner turns AI on once, which is
+-- the consent this records. ai_consented_at is stamped the first time AI is
+-- turned on and kept after it is turned off, as the record that it was agreed.
+--
+-- ai_preferences keeps the grants and RLS it was created with in
+-- 202609240022_home_brief_ai.sql: the signed-in user reads and writes only
+-- their own row. service_role is granted explicitly because the router reads
+-- consent with the admin client.
+
+alter table public.ai_preferences
+  add column if not exists ai_enabled boolean not null default false,
+  add column if not exists ai_consented_at timestamptz;
+
+alter table public.ai_preferences enable row level security;
+revoke all on public.ai_preferences from public, anon;
+grant select, insert, update, delete on public.ai_preferences to authenticated;
+grant select, insert, update, delete on public.ai_preferences to service_role;
+
+drop policy if exists "Users manage their own AI preferences" on public.ai_preferences;
+create policy "Users manage their own AI preferences" on public.ai_preferences
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+
+
+-- ══════════════════════════════════════════════════════════════
 -- 202609280300_edit_history.sql
 -- ══════════════════════════════════════════════════════════════
 
@@ -1708,3 +1871,178 @@ $$;
 
 revoke all on function public.consume_ask_orbis_request(uuid, integer) from public, anon, authenticated;
 grant execute on function public.consume_ask_orbis_request(uuid, integer) to service_role;
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609290100_waitlist.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Signed-out waitlist for early access. Written only by the server (service role);
+-- no anon or user access. Safe to run more than once.
+
+create table if not exists public.waitlist (
+  id bigint generated always as identity primary key,
+  email text not null unique check (char_length(email) between 3 and 254 and email = lower(email)),
+  created_at timestamptz not null default now(),
+  invited_at timestamptz
+);
+alter table public.waitlist enable row level security;
+revoke all on public.waitlist from public, anon, authenticated;
+grant select, insert, update, delete on public.waitlist to service_role;
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202609300100_headsups.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: heads-ups, the things Orbis notices without being asked.
+--
+-- A scan (app/api/headsups/scan) writes rows with the service role; the owner
+-- can read them and change only what they did about one (status, snooze).
+-- Safe to run more than once.
+
+create table if not exists public.headsups (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  kind text not null check (char_length(kind) between 1 and 60),
+  dedupe_key text not null check (char_length(dedupe_key) between 1 and 200),
+  urgency text not null check (urgency in ('normal', 'urgent')),
+  evidence jsonb not null default '{}'::jsonb,
+  title text not null check (char_length(title) between 1 and 80),
+  body text not null check (char_length(body) between 1 and 300),
+  action jsonb not null,
+  action_label text not null check (char_length(action_label) between 1 and 40),
+  worded_by text not null check (worded_by in ('ai', 'rules')),
+  status text not null default 'new' check (status in ('new', 'seen', 'done', 'dismissed')),
+  snoozed_until timestamptz,
+  pushed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, dedupe_key)
+);
+
+create index if not exists headsups_user_status_idx on public.headsups (user_id, status, created_at desc);
+create index if not exists headsups_push_idx on public.headsups (created_at) where urgency = 'urgent' and pushed_at is null;
+
+drop trigger if exists headsups_set_updated_at on public.headsups;
+create trigger headsups_set_updated_at
+  before update on public.headsups
+  for each row execute function public.set_updated_at();
+
+alter table public.headsups enable row level security;
+revoke all on public.headsups from public, anon, authenticated;
+grant select on public.headsups to authenticated;
+grant update (status, snoozed_until) on public.headsups to authenticated;
+grant select, insert, update, delete on public.headsups to service_role;
+
+drop policy if exists "Users read their own heads-ups" on public.headsups;
+create policy "Users read their own heads-ups" on public.headsups
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users update their own heads-ups" on public.headsups;
+create policy "Users update their own heads-ups" on public.headsups
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- One row per person: which kinds they turned off, and the day they were last
+-- scanned. The row is created the first time Today asks for heads-ups, so the
+-- scan only ever visits people who use Orbis.
+create table if not exists public.headsup_preferences (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  disabled_kinds text[] not null default '{}',
+  last_scan_date date,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists headsup_preferences_set_updated_at on public.headsup_preferences;
+create trigger headsup_preferences_set_updated_at
+  before update on public.headsup_preferences
+  for each row execute function public.set_updated_at();
+
+alter table public.headsup_preferences enable row level security;
+revoke all on public.headsup_preferences from public, anon, authenticated;
+grant select on public.headsup_preferences to authenticated;
+grant update (disabled_kinds) on public.headsup_preferences to authenticated;
+grant select, insert, update, delete on public.headsup_preferences to service_role;
+
+drop policy if exists "Users read their own heads-up settings" on public.headsup_preferences;
+create policy "Users read their own heads-up settings" on public.headsup_preferences
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users update their own heads-up settings" on public.headsup_preferences;
+create policy "Users update their own heads-up settings" on public.headsup_preferences
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- Heads-up pushes are logged beside the daily slots. Several a day are allowed
+-- (the cap lives in code), and headsups.pushed_at is what makes each one once-only.
+alter table public.notification_log drop constraint if exists notification_log_slot_check;
+alter table public.notification_log
+  add constraint notification_log_slot_check
+  check (slot in ('morning', 'lunch', 'evening', 'night', 'test', 'headsup'));
+
+drop index if exists public.notification_log_one_per_slot_day;
+create unique index if not exists notification_log_one_per_slot_day
+  on public.notification_log (user_id, slot, local_date) where slot not in ('test', 'headsup');
+
+
+
+-- ══════════════════════════════════════════════════════════════
+-- 202610010026_income_plan.sql
+-- ══════════════════════════════════════════════════════════════
+
+-- Orbis: what you expect to earn, so the app can tell salary from extra money.
+--
+-- Income was already recordable: a transaction with direction 'income' and a
+-- category such as Salary or Freelance. Two things were missing.
+--
+-- First, nothing knew what a normal month looks like. Without an expected
+-- salary the app cannot say "it has not landed yet", cannot separate a regular
+-- wage from a one-off, and cannot measure what was kept rather than only what
+-- was spent.
+--
+-- Second, the category on an income row was written and never read: the month
+-- breakdown accumulated categories for expenses only, so "where did the extra
+-- money come from" had an answer stored and no way to see it. That half is
+-- fixed in code; this table is the other half.
+--
+-- One row per expected income stream. Most people have one. Someone with a
+-- salary and a steady retainer has two.
+
+create table if not exists public.income_plan (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  label text not null check (char_length(btrim(label)) between 1 and 60),
+  amount numeric(14, 2) not null check (amount > 0),
+  currency text not null default 'INR' check (currency ~ '^[A-Z]{3}$'),
+  -- Day of the month it usually arrives. 31 lands on the last day of shorter months.
+  pay_day smallint not null default 1 check (pay_day between 1 and 31),
+  -- Which income category counts as this stream, so arrivals can be matched.
+  category text not null default 'Salary' check (char_length(category) between 1 and 40),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists income_plan_user_idx on public.income_plan (user_id) where active;
+
+drop trigger if exists income_plan_set_updated_at on public.income_plan;
+create trigger income_plan_set_updated_at
+  before update on public.income_plan
+  for each row execute function public.set_updated_at();
+
+alter table public.income_plan enable row level security;
+revoke all on public.income_plan from public, anon;
+grant select, insert, update, delete on public.income_plan to authenticated;
+
+drop policy if exists "Users manage their own income plan" on public.income_plan;
+create policy "Users manage their own income plan" on public.income_plan
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);

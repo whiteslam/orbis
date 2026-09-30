@@ -13,7 +13,7 @@ const finance = (overrides: Partial<FinanceSummary> = {}): FinanceSummary => ({
   databaseReady: true,
   loadError: false,
   transactions: [],
-  monthlyExpenses: [],
+  monthlyExpenses: [], incomePlan: [], incomePlanReady: true,
   month: null,
   ...overrides,
 });
@@ -24,7 +24,7 @@ const month = (overrides: Partial<NonNullable<FinanceSummary['month']>> = {}) =>
   month: 9,
   spent: 24_000,
   received: 0,
-  categories: [{ category: 'Food', amount: 9_000 }, { category: 'Transport', amount: 4_000 }],
+  incomeCategories: [], categories: [{ category: 'Food', amount: 9_000 }, { category: 'Transport', amount: 4_000 }],
   daily: [],
   ...overrides,
 });

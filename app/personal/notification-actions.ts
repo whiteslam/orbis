@@ -105,6 +105,16 @@ export async function sendTestNotificationAction() {
   if (result.status !== 'sent') return { success: false, message: 'Orbis had nothing to send right now. Try again later.' };
   if (result.devices === 0) return { success: false, message: 'No device is registered. Tap Enable on your phone first.' };
   if (result.sent === 0) return { success: false, message: 'The push service rejected this device. Turn notifications off and on again here.' };
+  // Saying only how many succeeded is how a real fault stayed invisible: two of
+  // three devices were being rejected on every send and the message still read
+  // as a success. A partial delivery now says so.
+  const missed = result.devices - result.sent;
+  if (missed > 0) {
+    return {
+      success: true,
+      message: `Sent “${result.title}” to ${result.sent} of ${result.devices} devices. ${missed === 1 ? 'One device' : `${missed} devices`} did not accept it; turn notifications off and on there.`,
+    };
+  }
   return { success: true, message: `Sent “${result.title}” to ${result.sent} device${result.sent === 1 ? '' : 's'}.` };
 }
 

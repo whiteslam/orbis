@@ -6,6 +6,7 @@ import { PenLine } from 'lucide-react';
 import { CurrencyCard } from '@/components/money/currency-card';
 import { TransactionList } from '@/components/money/transaction-list';
 import { FieldHead, FieldHero, FieldLabel, useScrollTop } from '@/components/field/field';
+import { MoneyIn } from '@/components/money/money-in';
 import { PartLoading } from '@/components/shell/loading';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
@@ -95,6 +96,8 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
       {summary.month && ready && (
         <SpendingSummary month={summary.month} highlight={highlight} />
       )}
+
+      {ready && <MoneyIn summary={summary} />}
 
       <FieldLabel>Latest</FieldLabel>
       {summary.transactions.length ? (

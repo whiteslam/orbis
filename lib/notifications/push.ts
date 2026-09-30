@@ -1,6 +1,7 @@
 import 'server-only';
 
 import webpush from 'web-push';
+import { pushTopic } from '@/lib/notifications/topic';
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 
@@ -53,7 +54,7 @@ export async function pushToUser(admin: Admin, userId: string, payload: PushPayl
       await webpush.sendNotification(
         { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } },
         JSON.stringify(payload),
-        { TTL: 60 * 60, urgency: 'normal', topic: payload.tag.slice(0, 32), timeout: PUSH_TIMEOUT_MS },
+        { TTL: 60 * 60, urgency: 'normal', topic: pushTopic(payload.tag), timeout: PUSH_TIMEOUT_MS },
       );
       sent += 1;
     } catch (pushError) {

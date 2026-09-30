@@ -11,11 +11,27 @@ export type FinanceTransactionSummary = {
   note: string | null;
 };
 
+/** An expected income stream: a salary, a retainer, anything that recurs. */
+export type IncomePlanEntry = {
+  id: string;
+  label: string;
+  amount: number;
+  currency: string;
+  /** Day of the month it usually arrives. */
+  payDay: number;
+  /** The income category that counts as this stream arriving. */
+  category: string;
+  active: boolean;
+};
+
 export type FinanceSummary = {
   databaseReady: boolean;
   loadError: boolean;
   transactions: FinanceTransactionSummary[];
   monthlyExpenses: Array<{ currency: string; amount: number }>;
+  /** What you expect to earn. Empty until it is set up. */
+  incomePlan: IncomePlanEntry[];
+  incomePlanReady: boolean;
   month: null | {
     currency: string;
     year: number;
@@ -23,6 +39,8 @@ export type FinanceSummary = {
     spent: number;
     received: number;
     categories: Array<{ category: string; amount: number }>;
+    /** Income by source: Salary, Freelance, Refund and so on. */
+    incomeCategories: Array<{ category: string; amount: number }>;
     daily: Array<{ day: number; amount: number }>;
   };
 };
