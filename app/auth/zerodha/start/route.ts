@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthenticatedUserId } from '@/lib/auth/session';
+import { browserHost, canonicalStartUrl } from '@/lib/security/canonical-host';
 import { OAUTH_STATE_MAX_AGE_SEC, signState } from '@/lib/security/oauth-state';
+import { getSiteUrl } from '@/lib/site-url';
 import { envZerodhaCredentials, zerodhaLoginUrl, zerodhaStateCookieName } from '@/lib/invest/zerodha';
 
 /**
@@ -14,6 +16,16 @@ import { envZerodhaCredentials, zerodhaLoginUrl, zerodhaStateCookieName } from '
  * in a cookie; the callback refuses any return that doesn't carry both.
  */
 export async function GET(request: NextRequest) {
+  // Kite returns to the redirect URL registered on the app, which should be on the site URL.
+  let site: string | null = null;
+  try {
+    site = getSiteUrl();
+  } catch {
+    // No site URL configured: stay on whatever host this is.
+  }
+  const canonical = site ? canonicalStartUrl(request.url, site, browserHost(request.headers)) : null;
+  if (canonical) return NextResponse.redirect(canonical);
+
   const userId = await getAuthenticatedUserId();
   if (!userId) {
     return NextResponse.redirect(new URL('/login', request.url));

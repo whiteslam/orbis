@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   exchangeGoogleCode,
   getGoogleAccount,
+  GoogleOAuthError,
   gmailStateCookieName,
   googleReturnCookieName,
   saveGmailConnection,
@@ -35,8 +36,12 @@ export async function GET(request: NextRequest) {
     return redirect('error');
   }
 
+  // Signed out here, a missing cookie or a stale state all mean this round trip
+  // can't be trusted: more than ten minutes passed, or it started on another
+  // address or in another browser. Starting again fixes each of them.
   if (!currentUserId || !verifySignedGmailState(stateCookie, returnedState, currentUserId)) {
-    return redirect('error');
+    console.error('Gmail callback rejected', { signedIn: Boolean(currentUserId), stateCookie: Boolean(stateCookie), returnedState: Boolean(returnedState) });
+    return redirect('expired');
   }
 
   const providerError = request.nextUrl.searchParams.get('error');
@@ -50,7 +55,9 @@ export async function GET(request: NextRequest) {
     const account = await getGoogleAccount(token.access_token);
     await saveGmailConnection(currentUserId, account, token.refresh_token, (token.scope ?? '').split(/\s+/).filter(Boolean));
     return redirect('connected');
-  } catch {
-    return redirect('error');
+  } catch (error) {
+    console.error('Finishing the Gmail connection failed', error);
+    // invalid_grant here means the one-time code was already used or went stale.
+    return redirect(error instanceof GoogleOAuthError && error.reconnectRequired ? 'expired' : 'error');
   }
 }

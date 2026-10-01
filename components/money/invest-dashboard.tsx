@@ -30,6 +30,7 @@ const ZERODHA_NOTICE: Record<string, string> = {
   connected: 'Zerodha connected. Holdings are loading below.',
   cancelled: 'Zerodha login was cancelled.',
   rejected: 'Zerodha didn’t accept that login. Try connecting again.',
+  expired: 'That Zerodha login took too long or started on a different address. Connect again from here.',
   'not-configured': 'Zerodha can’t be connected on this server yet.',
   failed: 'Zerodha could not be connected. Try again.',
 };

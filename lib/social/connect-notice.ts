@@ -9,7 +9,7 @@
 export type SocialConnectNotice = { tone: 'success' | 'error' | 'info'; text: string };
 
 const NAMES = { instagram: 'Instagram', threads: 'Threads' } as const;
-const KEYS = { instagram: 'META_APP_ID and META_APP_SECRET', threads: 'THREADS_APP_ID and THREADS_APP_SECRET' } as const;
+const KEYS = { instagram: 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET', threads: 'THREADS_APP_ID and THREADS_APP_SECRET' } as const;
 const WHY_MAX = 160;
 
 export function socialConnectNotice(code: string | null, why: string | null): SocialConnectNotice | null {

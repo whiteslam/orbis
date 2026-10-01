@@ -26,6 +26,7 @@ export const GOOGLE_NOTICE: Record<string, { text: string; success: boolean }> =
   connected: { text: 'Google connected.', success: true },
   cancelled: { text: 'Google connection was cancelled.', success: false },
   'setup-error': { text: 'Google sign-in isn’t set up on the server yet.', success: false },
+  expired: { text: 'That Google sign-in took too long or started on a different address. Connect again from here.', success: false },
   error: { text: 'Google could not be connected. Try again.', success: false },
 };
 

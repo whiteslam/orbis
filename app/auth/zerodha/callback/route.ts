@@ -35,8 +35,10 @@ export async function GET(request: NextRequest) {
   // The user can decline at Zerodha, which comes back without a token.
   if (status === 'error' || !requestToken) return back('cancelled');
 
+  // Usually more than ten minutes at Zerodha, or a start on another address.
   if (!verifyState(request.cookies.get(zerodhaStateCookieName)?.value, url.searchParams.get('state'), userId, 'zerodha')) {
-    return back('failed');
+    console.error('Zerodha callback rejected', { stateCookie: request.cookies.has(zerodhaStateCookieName), returnedState: url.searchParams.has('state') });
+    return back('expired');
   }
 
   const credentials = envZerodhaCredentials();

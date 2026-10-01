@@ -147,7 +147,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
       {gmailNotice && (
         <div className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`} role="status">
-          <span>{gmailNotice === 'connected' ? 'Gmail connected.' : gmailNotice === 'cancelled' ? 'Gmail connection was cancelled.' : gmailNotice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : 'Gmail could not be connected. Try again.'}</span>
+          <span>{gmailNotice === 'connected' ? 'Gmail connected.' : gmailNotice === 'cancelled' ? 'Gmail connection was cancelled.' : gmailNotice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : gmailNotice === 'expired' ? 'That Google sign-in took too long or started on a different address. Connect again from here.' :'Gmail could not be connected. Try again.'}</span>
           <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
         </div>
       )}

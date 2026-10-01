@@ -55,7 +55,7 @@ export function SocialConnections({ connections, ready, configured }: { connecti
             {!ready && <p className="fd-note tight">Apply the social connections migration in Supabase to link these.</p>}
             {ready && !isConfigured && (
               <p className="fd-note tight">
-                Not configured on this server. {platform.id === 'instagram' ? 'Set META_APP_ID and META_APP_SECRET.' : 'Set THREADS_APP_ID and THREADS_APP_SECRET.'}
+                Not configured on this server. {platform.id === 'instagram' ? 'Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.' : 'Set THREADS_APP_ID and THREADS_APP_SECRET.'}
               </p>
             )}
             {expired && <p className="fd-note tight">The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.</p>}

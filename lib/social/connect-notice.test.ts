@@ -13,7 +13,7 @@ test('on http, it explains that Meta needs an HTTPS address instead of silently 
   assert.match(notice!.text, /Instagram/);
 });
 test('missing keys name the settings to add', () => {
-  assert.match(socialConnectNotice('instagram-not-configured', null)!.text, /META_APP_ID and META_APP_SECRET/);
+  assert.match(socialConnectNotice('instagram-not-configured', null)!.text, /INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET/);
   assert.match(socialConnectNotice('threads-not-configured', null)!.text, /THREADS_APP_ID and THREADS_APP_SECRET/);
 });
 test('a failure passes on Meta’s own reason when there is one', () => {
