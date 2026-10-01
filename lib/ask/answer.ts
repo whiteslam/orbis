@@ -5,6 +5,7 @@ import { askPayload, askSystem } from '@/lib/ask/prompt';
 import { keepCitations, type AskSource, type Citation } from '@/lib/ask/select';
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
+import { needsReasoning } from '@/lib/ai/jev';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { TalkTurn } from '@/lib/voice/talk';
@@ -46,6 +47,10 @@ export async function answerFromRecords(input: {
   const blocked = await askBlockedMessage(userId);
   if (blocked) return { success: false, message: blocked };
 
+  const feature = input.spokenLanguage ? 'talk_orbis' : 'ask_orbis';
+  // Jev reads only the question, while the records load, so it adds no wait:
+  // whether this needs reasoning decides if Claude or a free model goes first.
+  const reasoning = needsReasoning(userId, question, feature).catch(() => undefined);
   let context: Awaited<ReturnType<typeof buildAskContext>>;
   try {
     context = await buildAskContext(userId, question, sources);
@@ -66,16 +71,22 @@ export async function answerFromRecords(input: {
   }
 
   const system = askSystem({ spokenLanguage: input.spokenLanguage });
-  const result = await routeJson({ userId, feature: input.spokenLanguage ? 'talk_orbis' : 'ask_orbis', sensitivity: 'personal', system, user, maxTokens: 700, temperature: 0.2, timeoutMs: 25_000 });
+  const result = await routeJson({ userId, feature, sensitivity: 'personal', system, user, maxTokens: 700, temperature: 0.2, timeoutMs: 25_000, accept: (text) => readAnswer(text) !== null, escalate: await reasoning });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 
+  const parsed = readAnswer(result.text);
+  if (!parsed) return { success: false, message: 'Orbis couldn’t form an answer. Try rewording the question.' };
+  return { success: true, message: '', answer: parsed.answer, citations: keepCitations(parsed.citations, context.citations) };
+}
+
+/** The answer and its claimed citations, or null when the reply has no answer in it. */
+function readAnswer(text: string): { answer: string; citations: unknown } | null {
   let parsed: { answer?: unknown; citations?: unknown };
   try {
-    parsed = JSON.parse(result.text);
+    parsed = JSON.parse(text);
   } catch {
-    return { success: false, message: 'Orbis couldn’t form an answer. Try rewording the question.' };
+    return null;
   }
-  const answer = typeof parsed.answer === 'string' ? parsed.answer.trim().slice(0, 1200) : '';
-  if (!answer) return { success: false, message: 'Orbis couldn’t form an answer. Try rewording the question.' };
-  return { success: true, message: '', answer, citations: keepCitations(parsed.citations, context.citations) };
+  const answer = typeof parsed?.answer === 'string' ? parsed.answer.trim().slice(0, 1200) : '';
+  return answer ? { answer, citations: parsed.citations } : null;
 }

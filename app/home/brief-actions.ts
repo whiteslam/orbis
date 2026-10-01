@@ -3,6 +3,8 @@
 import { requireUser } from '@/lib/auth/session';
 import { revalidatePath } from 'next/cache';
 import { setAiEnabled, setHomeBriefEnabled } from '@/lib/ai/preferences';
+import { getAiUsage } from '@/lib/ai/usage-store';
+import type { UsageSummary } from '@/lib/ai/usage';
 
 // Home reads the brief itself from GET /api/home/brief (lib/home/brief-service.ts);
 // only the setting is changed through an action.
@@ -26,4 +28,11 @@ export async function setAiEnabledAction(enabled: unknown) {
   if (!result.ok) return { success: false, message: result.message };
   revalidatePath('/active');
   return { success: true, message: enabled ? 'AI features are on.' : 'AI features are off. Nothing more is sent to an AI provider.' };
+}
+
+/** This month's AI use for the settings panel: the viewer's own calls, and the month's bill against the budget. */
+export async function aiUsageAction(): Promise<UsageSummary | null> {
+  const auth = await requireUser();
+  if (!auth) return null;
+  return getAiUsage(auth.userId);
 }

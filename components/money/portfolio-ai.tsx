@@ -96,7 +96,7 @@ export function PortfolioAi({ advice, setAdvice, onBack }: { advice: SavedPortfo
 
         <label className="fd-consent">
           <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} />
-          <span>I understand a summary of my holdings will be sent to OpenRouter for analysis.</span>
+          <span>I understand a summary of my holdings will be sent to an AI provider that does not train on it (Groq, or Claude by Anthropic) for analysis.</span>
         </label>
 
         <div className="fd-act">

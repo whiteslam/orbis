@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { dueSlots, localClock, type SlotPreferences } from './schedule.ts';
+import { dueSlots, localClock, wordedByAi, type SlotPreferences } from './schedule.ts';
 
 const prefs = (overrides: Partial<SlotPreferences> = {}): SlotPreferences => ({
   enabled: true,
@@ -50,4 +50,9 @@ test('database time values with seconds are accepted, and the local date is retu
 
 test('an unknown timezone falls back to India time instead of throwing', () => {
   assert.deepEqual(dueSlots(prefs({ timezone: 'Mars/Olympus' }), ist('14:10')).slots, ['lunch']);
+});
+
+test('a test send is worded by Orbis, so it can be sent any number of times without spending AI', () => {
+  assert.equal(wordedByAi('test'), false);
+  for (const slot of ['morning', 'lunch', 'evening', 'night'] as const) assert.equal(wordedByAi(slot), true);
 });

@@ -48,7 +48,7 @@ export default function PrivacyPage() {
           <li><strong>Vercel</strong> — hosts and runs the application</li>
           <li><strong>Google</strong> — Gmail (read-only, important mail on Today) and Calendar, only if you connect them</li>
           <li><strong>Zerodha</strong> and <strong>Groww</strong> — read-only broker holdings, only if you connect them</li>
-          <li><strong>Groq, Google Gemini, Mistral and OpenRouter</strong> — the AI providers behind Orbis&apos;s AI features, chosen automatically by a router (see below)</li>
+          <li><strong>Groq, Google Gemini, Mistral, OpenRouter, Anthropic and TypeSafe</strong> — the AI providers behind Orbis&apos;s AI features, chosen automatically by a router (see below)</li>
           <li><strong>Open-Meteo</strong> — weather for your approximate location</li>
           <li><strong>Alpha Vantage, AMFI and Frankfurter</strong> — stock, fund and currency price data</li>
         </ul>

@@ -31,6 +31,7 @@ export async function writeBrief(userId: string, snapshot: unknown, surface: Bri
     user: `Write ${surface === 'push' ? "today's notification" : "today's note"} from this snapshot.\n${JSON.stringify(snapshot)}`,
     maxTokens: surface === 'push' ? 400 : 600,
     timeoutMs: surface === 'push' ? 12_000 : 20_000,
+    accept: (text) => parseBrief(text, surface) !== null,
   });
   if (!result) return null;
 

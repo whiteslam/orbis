@@ -81,9 +81,9 @@ export async function subscribePushAction(input: { endpoint: string; p256dh: str
   return { success: true, message: 'Notifications enabled on this device.' };
 }
 
-const TEST_LIMIT_PER_DAY = 5;
-
-// Sends a real notification now, written for the part of the day it is, so the user can check their phone.
+// Sends a real notification now, for the part of the day it is, so the user can check their phone.
+// It is worded by Orbis rather than a model (lib/notifications/schedule.ts wordedByAi), so it costs
+// nothing and has no daily cap; the button is disabled while a send is in flight.
 export async function sendTestNotificationAction() {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to send a test.' };
@@ -93,10 +93,6 @@ export async function sendTestNotificationAction() {
   const timeZone = prefs?.timezone || 'Asia/Kolkata';
   const now = new Date();
   const clock = localClock(now, timeZone);
-
-  const since = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
-  const { count } = await admin.from('notification_log').select('id', { count: 'exact', head: true }).eq('user_id', auth.userId).eq('slot', 'test').gte('created_at', since);
-  if ((count ?? 0) >= TEST_LIMIT_PER_DAY) return { success: false, message: `You can send ${TEST_LIMIT_PER_DAY} test notifications a day. Try again tomorrow.` };
 
   const hour = clock.minutes / 60;
   const messageSlot = hour < 11 ? 'morning' : hour < 17 ? 'lunch' : hour < 21 ? 'evening' : 'night';

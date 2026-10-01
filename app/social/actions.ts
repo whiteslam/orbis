@@ -341,6 +341,7 @@ export async function draftMonthWithAiAction(input: {
     maxTokens: draftMaxTokens(input.count),
     temperature: 0.7,
     timeoutMs: 30_000,
+    accept: (text) => parseAiDraft(text, { period: input.period, count: input.count, formats }).length > 0,
   });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 

@@ -223,7 +223,7 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
 
           <label className="fd-consent hl-consent">
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} disabled={isPending} />
-            <span>I understand {disclosure} will be sent to OpenRouter for advice. The original file is not sent, and the advice is saved to my account so I can read it again.</span>
+            <span>I understand {disclosure} will be sent to an AI provider that does not train on it (Groq, or Claude by Anthropic) for advice. The original file is not sent, and the advice is saved to my account so I can read it again.</span>
           </label>
 
           <div className="fd-act">

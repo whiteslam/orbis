@@ -32,7 +32,7 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * stored credentials (gmail_connections, groww_connections, zerodha_connections,
  * user_app_pins, push_subscriptions), and service internals that are not
  * content (gmail_sync_messages, health_document_chunks, rate_limit_buckets,
- * staged_upload_claims, workbook_ai_usage, social_ai_usage, ask_orbis_usage,
+ * staged_upload_claims, workbook_ai_usage, ai_feature_usage, social_ai_usage, ask_orbis_usage,
  * ai_generation_events). Shared tables with no user_id (api_*, ai_providers,
  * ai_models) hold nothing personal.
  */

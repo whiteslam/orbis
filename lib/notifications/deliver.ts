@@ -2,9 +2,9 @@ import 'server-only';
 
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationContext } from '@/lib/notifications/context';
-import { composeNotification } from '@/lib/notifications/compose';
+import { composeNotification, ruleNotification } from '@/lib/notifications/compose';
 import { pushToUser } from '@/lib/notifications/push';
-import type { Slot } from '@/lib/notifications/schedule';
+import { wordedByAi, type Slot } from '@/lib/notifications/schedule';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -14,7 +14,7 @@ export type DeliveryResult =
   | { status: 'failed'; reason: string };
 
 // Claims the (user, slot, date) row first so a slot is delivered at most once, then writes and pushes it.
-// A test send uses slot 'test' (no uniqueness) but writes the message for `messageSlot`.
+// A test send uses slot 'test' (no uniqueness) and Orbis's own wording for `messageSlot`, so it spends no AI.
 export async function deliverSlot(admin: Admin, input: { userId: string; slot: Slot | 'test'; messageSlot: Slot; localDate: string; timeZone: string; now: Date }): Promise<DeliveryResult> {
   const { data: claim, error: claimError } = await admin
     .from('notification_log')
@@ -29,7 +29,7 @@ export async function deliverSlot(admin: Admin, input: { userId: string; slot: S
 
   try {
     const context = await buildNotificationContext(admin, input.userId, input.messageSlot, input.now, input.timeZone);
-    const message = await composeNotification(input.userId, context);
+    const message = wordedByAi(input.slot) ? await composeNotification(input.userId, context) : ruleNotification(context);
     if ('skip' in message) {
       await admin.from('notification_log').update({ status: 'skipped' }).eq('id', claim.id);
       return { status: 'skipped' };

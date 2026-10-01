@@ -42,3 +42,12 @@ export function dueSlots(prefs: SlotPreferences, now: Date): { date: string; slo
   });
   return { date: clock.date, slots };
 }
+
+/**
+ * Whether a send is written by a model. A test only checks that the phone
+ * receives notifications, so it uses Orbis's own wording: no tokens, no daily
+ * cap, however many times the button is pressed.
+ */
+export function wordedByAi(slot: Slot | 'test') {
+  return slot !== 'test';
+}

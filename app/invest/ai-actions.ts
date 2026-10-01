@@ -9,6 +9,7 @@ import { analysePortfolio } from '@/lib/invest/analysis';
 import { brokerMeta } from '@/lib/invest/brokers';
 import { loadLivePortfolio } from '@/lib/invest/live';
 import type { PortfolioAdvice } from '@/lib/invest/types';
+import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { claimsEmail, signedInSession } from '@/lib/auth/session';
 import { APP_LOCK_MESSAGE, isAppUnlocked } from '@/lib/security/app-lock';
@@ -92,15 +93,12 @@ export async function generatePortfolioAdviceAction(value: unknown): Promise<Adv
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
-    const { data: allowed, error } = await admin.rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_AI_LIMIT });
-    if (error) {
-      console.error('consume_workbook_ai_request failed', error);
-      return { success: false, message: 'Suggestions aren’t available right now. Try again later.' };
-    }
-    if (!allowed) return { success: false, message: `You have reached today’s limit of ${DAILY_AI_LIMIT} AI requests. Try again tomorrow.` };
   } catch {
     return { success: false, message: 'AI usage limits are not available right now. Try again later.' };
   }
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'portfolio_advice', DAILY_AI_LIMIT);
+  if (credit === 'error') return { success: false, message: 'Suggestions aren’t available right now. Try again later.' };
+  if (credit === 'limit') return { success: false, message: `You have reached today’s limit of ${DAILY_AI_LIMIT} portfolio suggestions. Try again tomorrow.` };
 
   // Holdings are personal, so this goes through the router, which will only
   // hand them to a provider whose registry row says it will not train on them.
@@ -112,6 +110,7 @@ export async function generatePortfolioAdviceAction(value: unknown): Promise<Adv
     temperature: 0.2,
     maxTokens: 1_200,
     system: PORTFOLIO_SYSTEM,
+    accept: (text) => parsePortfolioAdvice(text) !== null,
     user: `Review this portfolio snapshot and suggest next steps.\n${payload}`,
   });
   if (!result) return { success: false, message: NO_PROVIDER_MESSAGE };

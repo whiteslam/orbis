@@ -12,13 +12,16 @@ import { getPersonalProfile } from '@/lib/personal/repository';
 import { getRoutinesSummary } from '@/lib/routines/repository';
 import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
 import { clockLabel } from '@/lib/routines/types';
+import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-// The brief regenerates on a data change, not on every visit, so this ceiling is
-// only reached by a genuinely busy day. It is separate from the workbook and
-// portfolio budget: a background brief must never eat a request the user wanted
-// to spend on asking a question.
-const DAILY_BRIEF_LIMIT = 12;
+// The brief regenerates on a data change, not on every visit; a saved brief
+// for the same snapshot costs nothing. Four written briefs a day keeps it to
+// about ₹0.36 even when every one falls through to Claude. After the fourth,
+// Home shows Orbis's own wording, which is always accurate, until tomorrow
+// (India time). It has its own counter (lib/ai/quota.ts): a background brief
+// must never eat a request the user wanted to spend on asking a question.
+const DAILY_BRIEF_LIMIT = 4;
 
 export type BriefResult =
   | { state: 'ok'; caption: string; generatedAt: string; fresh: boolean }
@@ -107,15 +110,12 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
-    const { data: allowed, error } = await admin.rpc('consume_workbook_ai_request', { p_user_id: userId, p_daily_limit: DAILY_BRIEF_LIMIT });
-    if (error) {
-      console.error('consume_workbook_ai_request failed for the brief', error);
-      return { state: 'error', message: 'The brief can’t be written right now.' };
-    }
-    if (!allowed) return { state: 'error', message: 'Today’s AI requests are used up. The brief will write itself again tomorrow.' };
   } catch {
     return { state: 'error', message: 'AI usage limits are not available right now.' };
   }
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'home_brief', DAILY_BRIEF_LIMIT);
+  if (credit === 'error') return { state: 'error', message: 'The brief can’t be written right now.' };
+  if (credit === 'limit') return { state: 'error', message: 'Today’s AI requests are used up. The brief will write itself again tomorrow.' };
 
   // The same writer serves the push notification, and it routes through the
   // registry, so a snapshot of someone's spending only ever reaches a provider

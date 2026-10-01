@@ -65,6 +65,8 @@ export async function generatePlanQuestions(userId: string, context: Awaited<Ret
     temperature: 0.3,
     maxTokens: 2_400,
     timeoutMs: 45_000,
+    // Short of the minimum, fallback questions fill the gap; a reply with no questions at all is not worth keeping.
+    accept: (reply) => Array.isArray((JSON.parse(reply) as { questions?: unknown })?.questions),
     system: `You are Orbis, a careful health and fitness coach preparing a personalised plan. ${UNTRUSTED} Read the context and ask the user between ${MIN_QUESTIONS} and 12 short questions whose answers you still need to write a safe, realistic plan covering workouts, nutrition, weekly targets, and sleep/recovery. Do not ask about facts already clear from the context; refer to specific numbers from their documents when useful (e.g. "Your average is 6,200 steps — what daily target feels doable?"). Always cover: injuries or conditions, available days and time, equipment, diet style, and sleep. Prefer quick-pick options (3–6 short options) over free text. Return only JSON: {"questions": [{"id": "q1", "question": string, "why": string (one short line), "kind": "single" | "multi" | "text" | "number", "options": string[], "unit": string | null}]}.`,
     user: JSON.stringify(context),
   });
@@ -192,6 +194,7 @@ export async function generateHealthPlan(userId: string, context: Awaited<Return
     temperature: 0.3,
     maxTokens: 6_000,
     timeoutMs: 55_000,
+    accept: (reply) => sanitizePlan(JSON.parse(reply), 8) !== null,
     system: `You are Orbis, a careful health and fitness coach. ${UNTRUSTED} Write a personalised, safe, realistic plan from the user's answers and context. Use numbers from their documents and steps where relevant, and cite the passage refs you used (e.g. "doc_2: resting heart rate 72") in sources. Respect injuries and conditions; if something needs a doctor, say so in cautions. Keep progressions gradual. Nutrition is general guidance, not a medical diet. Return only JSON with exactly these keys:
 {"title": string, "summary": string (3-4 sentences), "durationWeeks": number (4-12),
  "workout": {"overview": string, "week": [ {"day": "Mon".."Sun", "focus": string, "rest": boolean, "durationMinutes": number, "exercises": [{"name": string, "sets": string|null, "reps": string|null, "duration": string|null, "notes": string|null}]} ] (all 7 days), "progression": string},

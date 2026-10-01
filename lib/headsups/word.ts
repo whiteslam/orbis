@@ -14,7 +14,7 @@ const TIMEOUT_MS = 10_000;
 export async function wordFinding(userId: string, finding: Finding, aiBudgetLeft: boolean): Promise<Wording & { wordedBy: 'ai' | 'rules' }> {
   if (!aiBudgetLeft) return { ...finding.fallback, wordedBy: 'rules' };
   const { system, user } = wordingPrompt(finding);
-  const result = await routeJson({ userId, feature: 'headsups', sensitivity: 'personal', system, user, maxTokens: 300, temperature: 0.3, timeoutMs: TIMEOUT_MS });
+  const result = await routeJson({ userId, feature: 'headsups', sensitivity: 'personal', system, user, maxTokens: 300, temperature: 0.3, timeoutMs: TIMEOUT_MS, accept: (text) => parseWording(text) !== null });
   const wording = result ? parseWording(result.text) : null;
   return wording ? { ...wording, wordedBy: 'ai' } : { ...finding.fallback, wordedBy: 'rules' };
 }
