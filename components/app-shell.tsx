@@ -29,6 +29,7 @@ import type { SocialMonth } from '@/lib/social/repository';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import { hashFor, openingFromUrl, TABS, type MoneyView, type SettingsSection, type TabId } from '@/lib/shell/tabs';
 import type { FocusTarget } from '@/lib/focus/types';
+import { socialConnectNotice, type SocialConnectNotice } from '@/lib/social/connect-notice';
 
 // Today is what opens, so it is the only screen in the first download. Every
 // other tab loads the first time it is opened.
@@ -51,6 +52,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   const [money, setMoney] = useState<MoneyView>('spending');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
   const [zerodhaNotice, setZerodhaNotice] = useState<string | null>(null);
+  const [socialNotice, setSocialNotice] = useState<SocialConnectNotice | null>(null);
   // Which Settings section is open, or null. Task 6 renders the sheet.
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   // The step a heads-up prepared. Screens read it once, as they mount from that tap.
@@ -110,6 +112,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     const opening = openingFromUrl(url.hash, url.searchParams.get('tab'));
     const notice = url.searchParams.get('gmail');
     const brokerNotice = url.searchParams.get('zerodha');
+    const socialResult = url.searchParams.get('social');
     // One-time read of the URL a link arrived with, not a value the render depends on.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (opening?.money) setMoney(opening.money);
@@ -120,11 +123,14 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     }
     if (notice) setGmailNotice(notice);
     if (brokerNotice) setZerodhaNotice(brokerNotice);
+    if (socialResult) setSocialNotice(socialConnectNotice(socialResult, url.searchParams.get('why')));
     /* eslint-enable react-hooks/set-state-in-effect */
-    if (url.searchParams.has('tab') || notice || brokerNotice) {
+    if (url.searchParams.has('tab') || notice || brokerNotice || socialResult) {
       url.searchParams.delete('tab');
       url.searchParams.delete('gmail');
       url.searchParams.delete('zerodha');
+      url.searchParams.delete('social');
+      url.searchParams.delete('why');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     }
   }, []);
@@ -190,9 +196,9 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (tab === 'money') return <MoneyScreen intent={intent} view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
     if (tab === 'health') return <HealthScreen intent={intent} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
-    return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} />;
+    return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} connectNotice={socialNotice} clearConnectNotice={() => setSocialNotice(null)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
-  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
+  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
 
   return (
     <main className="stage">

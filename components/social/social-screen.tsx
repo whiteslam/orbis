@@ -12,6 +12,7 @@ import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shif
 import { SOCIAL_FORMATS, type SocialFormat, type SocialPost } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
+import type { SocialConnectNotice } from '@/lib/social/connect-notice';
 
 type View = 'calendar' | 'list' | 'grid';
 type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
@@ -33,7 +34,7 @@ function periodFromHash() {
  * The server hands over the current month; other months load on demand. The
  * month lives in the URL hash, so a reload stays where it was.
  */
-export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & { period: string }; hasProfile: boolean }) {
+export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: { initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }) {
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
   const [view, setView] = useState<View>('calendar');
@@ -121,6 +122,13 @@ export function SocialScreen({ initial, hasProfile }: { initial: SocialMonth & {
     <div className="screen-body field">
       <span ref={top} hidden />
       <FieldHead title="Social" subtitle="Your own posts, planned month by month" />
+
+      {connectNotice && (
+        <div className={`finance-notice ${connectNotice.tone === 'success' ? 'success' : connectNotice.tone === 'error' ? 'error' : ''}`} role="status">
+          <span>{connectNotice.text}</span>
+          <button type="button" onClick={clearConnectNotice} aria-label="Dismiss message">×</button>
+        </div>
+      )}
 
       <div className="so-month">
         <button type="button" className="fd-round" aria-label="Previous month" disabled={isLoading} onClick={() => load(shiftMonth(period, -1))}><ChevronLeft size={16} strokeWidth={2.2} aria-hidden="true" /></button>
