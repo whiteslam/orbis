@@ -50,16 +50,18 @@ export const socialRedirectUri = (platform: SocialPlatformId, siteUrl: string) =
  *
  * Both scopes named here need Meta App Review before they work for anyone but
  * the app's own testers, which is worth knowing before wondering why a live
- * account cannot connect.
+ * account cannot connect. The insights scopes feed the Social tab's numbers;
+ * each one also has to be added to the app in the Meta dashboard, or Meta
+ * refuses the whole login as "Invalid Scopes".
  */
 export function socialLoginUrl(platform: SocialPlatformId, siteUrl: string, state: string) {
   const { id } = credentials(platform);
   const redirect = encodeURIComponent(socialRedirectUri(platform, siteUrl));
   if (platform === 'threads') {
-    const scope = encodeURIComponent('threads_basic,threads_content_publish');
+    const scope = encodeURIComponent('threads_basic,threads_content_publish,threads_manage_insights');
     return `https://threads.net/oauth/authorize?client_id=${id}&redirect_uri=${redirect}&scope=${scope}&response_type=code&state=${state}`;
   }
-  const scope = encodeURIComponent('instagram_business_basic,instagram_business_content_publish');
+  const scope = encodeURIComponent('instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights');
   return `https://www.instagram.com/oauth/authorize?client_id=${id}&redirect_uri=${redirect}&scope=${scope}&response_type=code&state=${state}`;
 }
 

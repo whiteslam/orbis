@@ -7,6 +7,7 @@ import { SocialCalendar } from '@/components/social/social-calendar';
 import { SocialGrid, SocialList } from '@/components/social/social-list';
 import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
+import { SocialInsights } from '@/components/social/social-insights';
 import { loadSocialMonthAction } from '@/app/social/actions';
 import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
 import { SOCIAL_FORMATS, type SocialFormat, type SocialPost } from '@/lib/social/types';
@@ -181,6 +182,8 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
           )}
         </>
       )}
+
+      <SocialInsights />
 
       <p className="fd-note">Orbis never posts for you. Plan here, publish in the app, then record where it went out.</p>
     </div>

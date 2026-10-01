@@ -141,3 +141,26 @@
 .so-diff ins { color: var(--so-ready); text-decoration: none; }
 .so-row-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .so-empty { margin-top: 18px; }
+
+/* Insights: live numbers from the connected accounts, below the planner. */
+.so-insights { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--fd-rule); }
+.so-insights-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.so-insights-head .fd-label { margin: 0; }
+.so-insights-head .fd-link { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; }
+.so-spin { animation: so-spin .9s linear infinite; }
+@keyframes so-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .so-spin { animation: none; } }
+.so-insight-card { margin-top: 12px; padding: 14px; border-radius: 16px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.so-insight-top { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.so-insight-top .fd-two { flex: 1; min-width: 0; }
+.so-followers { flex: none; color: var(--fd-faint); font-size: 12px; white-space: nowrap; }
+.so-followers b { color: var(--fd-ink); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.so-window { margin: 14px 0 8px; color: var(--fd-faint); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.so-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 0; }
+.so-stats div { min-width: 0; padding: 10px 11px; border-radius: 12px; background: var(--fd-wash); }
+.so-stats dt { overflow: hidden; color: var(--fd-faint); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.so-stats dd { margin: 3px 0 0; color: var(--fd-ink); font-size: 19px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.so-insight-posts { margin: 10px 0 0; padding: 0; list-style: none; }
+.so-insight-posts li:last-child .so-row { border-bottom: 0; }
+.so-insight-posts a.so-row { text-decoration: none; }
+.so-out { flex: none; color: var(--fd-faint); }
