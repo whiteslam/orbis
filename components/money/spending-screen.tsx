@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { PenLine } from 'lucide-react';
+import { PenLine, Plus } from 'lucide-react';
 import { CurrencyCard } from '@/components/money/currency-card';
 import { TransactionList } from '@/components/money/transaction-list';
 import { FieldHead, FieldHero, FieldLabel, useScrollTop } from '@/components/field/field';
@@ -17,12 +17,19 @@ const SpendingSummary = dynamic(() => import('@/components/money/spending-summar
 
 type FinanceView = 'main' | 'add';
 
+// The list sits at the foot of the tab and opens short; the rest is one tap away.
+const TRANSACTIONS_SHOWN = 3;
+
 export function SpendingScreen({ summary, switcher, intent = null }: { summary: FinanceSummary; switcher?: ReactNode; intent?: HeadsupAction | null }) {
   // A heads-up can open this ready to add a spend, or pointing at one category.
   const [view, setView] = useState<FinanceView>(() => intent?.type === 'open_spending_entry' ? 'add' : 'main');
   const prefill = intent?.type === 'open_spending_entry' ? intent.category : undefined;
   const highlight = intent?.type === 'review_category' ? intent.category : null;
   const [actionMessage, setActionMessage] = useState<{ text: string; success: boolean } | null>(null);
+  // What you earn stays covered until you ask for it, and is covered again the
+  // next time the app opens: the phone is often in view of someone else.
+  const [incomeShown, setIncomeShown] = useState(false);
+  const [allTransactions, setAllTransactions] = useState(false);
   const top = useScrollTop(view);
 
   // Atlas opens on the month's figure. The pace beside it is a rate, not a
@@ -79,29 +86,48 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
     <div className="screen-body field">
       <span ref={top} hidden />
       <FieldHead title="Money" />{switcher}
-      {monthReady && month && month.spent > 0 && (
-        <FieldHero
-          value={money(month.spent, month.currency)}
-          label={`spent in ${monthName}`}
-          delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
-        />
-      )}
-      {/* Manual entry is the only way in, so it stays under the title as a plain row. */}
-      <div className="fd-act">
-        {ready && <button type="button" onClick={() => setView('add')}>Add manually</button>}
+      {/* Manual entry is the only way in, so it stays at the top — as a small
+          button beside the month's total rather than a row of its own. */}
+      <div className="mn-top">
+        {monthReady && month && month.spent > 0 && (
+          <FieldHero
+            value={money(month.spent, month.currency)}
+            label={`spent in ${monthName}`}
+            delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
+          />
+        )}
+        {ready && <button className="mn-add" type="button" onClick={() => setView('add')} aria-label="Add manually"><Plus size={14} strokeWidth={2.4} aria-hidden="true" />Add</button>}
       </div>
 
       {notices}
 
+      {/* The tab reads top to bottom as: the month, what came in, rates, then
+          the transactions themselves. Each is one card, as on Health; the two
+          reference blocks at the foot open on demand so they cost a line each. */}
       {summary.month && ready && (
-        <SpendingSummary month={summary.month} highlight={highlight} />
+        <section className="mn-card" aria-label={`Spending in ${monthName}`}>
+          <SpendingSummary month={summary.month} highlight={highlight} incomeShown={incomeShown} />
+        </section>
       )}
 
-      {ready && <MoneyIn summary={summary} />}
+      {ready && (
+        <section className="mn-card" aria-label="Money in">
+          <MoneyIn summary={summary} shown={incomeShown} onShown={setIncomeShown} />
+        </section>
+      )}
 
-      <FieldLabel>Latest</FieldLabel>
+      <CurrencyCard />
+
+      <div className="fd-label-row">
+        <FieldLabel>Latest{summary.transactions.length ? ` · ${summary.transactions.length}` : ''}</FieldLabel>
+        {summary.transactions.length > TRANSACTIONS_SHOWN && (
+          <button className="fd-link" type="button" aria-expanded={allTransactions} onClick={() => setAllTransactions(!allTransactions)}>
+            {allTransactions ? 'Show less' : `Show all ${summary.transactions.length}`}
+          </button>
+        )}
+      </div>
       {summary.transactions.length ? (
-        <TransactionList transactions={summary.transactions} />
+        <TransactionList transactions={allTransactions ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} />
       ) : (
         <p className="fd-empty">
           {!summary.databaseReady
@@ -111,8 +137,6 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
               : 'Nothing saved yet.'}
         </p>
       )}
-
-      <CurrencyCard />
     </div>
   );
 }

@@ -83,7 +83,7 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   const due = routinesToday(routines, new Date());
   const current = currentRoutine(due);
 
-  const snapshot = briefSnapshot({
+  const full = briefSnapshot({
     finance,
     documentCount: library.documents.length,
     name: profile.profile?.preferredName ?? null,
@@ -99,6 +99,10 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
     missedCount: missedRoutines(due).length,
     weather: readWeather(input.weather),
   });
+  // The month's spending already has its own tile right under the note, so the
+  // note is never handed the figures: the same number twice on Home is noise.
+  // The push notification has no tile beside it and keeps them.
+  const snapshot = { ...full, finance: { available: full.finance.available, spentThisMonth: null, perDay: null, topCategory: null } };
   const fingerprint = snapshotFingerprint(snapshot);
 
   // A brief already written about these exact numbers is still true.

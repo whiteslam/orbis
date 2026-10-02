@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronRight, Clock, Mail, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
 import { useSettings } from '@/components/shell/settings-context';
 import type { SetupStep } from '@/lib/focus/setup';
 
 const HIDDEN_KEY = 'orbis.setupChecklist.hidden';
+
+const ICONS: Record<SetupStep['id'], LucideIcon> = { name: UserRound, ai: Sparkles, google: Mail, day: Clock };
 
 function readHidden() {
   try {
@@ -34,16 +37,21 @@ export function SetupChecklist({ steps }: { steps: SetupStep[] }) {
     }
   }
 
+  // One line, however many steps are left: the next step, a count, and a way
+  // out. Finishing a step brings the next one up, so the list never needs room.
+  const next = steps[0];
+  const Icon = ICONS[next.id];
   return (
-    <section className="fd-quiet setup-list" aria-label="Set up Orbis">
-      <h2>Set up Orbis</h2>
-      {steps.map((step) => (
-        <button key={step.id} className="fd-line" type="button" onClick={() => settings.open(step.section)}>
-          <span>{step.label}</span>
-          <b className="fd-yes">Open</b>
-        </button>
-      ))}
-      <div className="fd-act"><button type="button" onClick={hide}>Hide</button></div>
+    <section className="setup-list" aria-label="Set up Orbis">
+      <button className="setup-row" type="button" onClick={() => settings.open(next.section)}>
+        <span className="fd-tile" aria-hidden="true"><Icon size={15} strokeWidth={1.9} /></span>
+        <span className="setup-row-label">
+          {next.label}
+          <small>Set up Orbis · {steps.length === 1 ? 'last step' : `${steps.length} steps left`}</small>
+        </span>
+        <ChevronRight size={15} strokeWidth={2.2} aria-hidden="true" />
+      </button>
+      <button className="fd-round" type="button" onClick={hide} aria-label="Hide setup" title="Hide"><X size={14} strokeWidth={2.2} aria-hidden="true" /></button>
     </section>
   );
 }

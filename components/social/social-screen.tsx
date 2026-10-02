@@ -1,24 +1,24 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
-import { FieldHead, useScrollTop } from '@/components/field/field';
+import { Plus, Sparkles } from 'lucide-react';
+import { FieldHead, FieldLabel, useScrollTop } from '@/components/field/field';
 import { SocialCalendar } from '@/components/social/social-calendar';
-import { SocialGrid, SocialList } from '@/components/social/social-list';
+import { SocialGrid, SocialList, type SocialSort } from '@/components/social/social-list';
 import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
 import { loadSocialMonthAction } from '@/app/social/actions';
-import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
+import { PERIOD_PATTERN, indiaToday, monthName, periodOfDate } from '@/lib/social/month';
 import { SOCIAL_FORMATS, type SocialFormat, type SocialPost } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
 import type { SocialConnectNotice } from '@/lib/social/connect-notice';
 
-type View = 'calendar' | 'list' | 'grid';
+type View = 'list' | 'grid';
 type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
 
-const VIEWS: Array<[View, string]> = [['calendar', 'Calendar'], ['list', 'List'], ['grid', 'Grid']];
+const VIEWS: Array<[View, string]> = [['list', 'List'], ['grid', 'Grid']];
 const HASH_PREFIX = '#social/';
 
 /** '#social/2026-09' → '2026-09-01', or null. */
@@ -38,7 +38,8 @@ function periodFromHash() {
 export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: { initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }) {
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
-  const [view, setView] = useState<View>('calendar');
+  const [view, setView] = useState<View>('list');
+  const [sort, setSort] = useState<SocialSort>('date');
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [selected, setSelected] = useState<string | null>(() => indiaToday());
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
@@ -122,7 +123,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   return (
     <div className="screen-body field">
       <span ref={top} hidden />
-      <FieldHead title="Social" subtitle="Your own posts, planned month by month" />
+      <FieldHead title="Social" subtitle="Your own posts, planned for the month" />
 
       {connectNotice && (
         <div className={`finance-notice ${connectNotice.tone === 'success' ? 'success' : connectNotice.tone === 'error' ? 'error' : ''}`} role="status">
@@ -131,14 +132,26 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
         </div>
       )}
 
-      <div className="so-month">
-        <button type="button" className="fd-round" aria-label="Previous month" disabled={isLoading} onClick={() => load(shiftMonth(period, -1))}><ChevronLeft size={16} strokeWidth={2.2} aria-hidden="true" /></button>
-        <div style={{ textAlign: 'center' }}>
-          <h2 aria-live="polite">{monthName(period)}</h2>
-          <p className="so-summary">{isLoading ? 'Loading…' : ready ? monthSummary(posts) : ' '}</p>
+      {/* The two ways to add a post, side by side under the title. */}
+      {ready && (
+        <div className="so-actions">
+          <button type="button" className="so-action" onClick={() => setScreen({ name: 'ai' })}>
+            <span className="so-action-icon" aria-hidden="true"><Sparkles size={16} strokeWidth={2} /></span>
+            <span className="so-action-text"><b>Draft with AI</b><small>Orbis writes a few</small></span>
+          </button>
+          <details className="so-new">
+            <summary className="so-action primary">
+              <span className="so-action-icon" aria-hidden="true"><Plus size={17} strokeWidth={2.4} /></span>
+              <span className="so-action-text"><b>New</b><small>Post, reel or story</small></span>
+            </summary>
+            <div className="so-new-menu">
+              {SOCIAL_FORMATS.map((format) => (
+                <button key={format.id} type="button" onClick={() => newPost(selected && periodOfDate(selected) === period ? selected : null, format.id)}>{format.label}</button>
+              ))}
+            </div>
+          </details>
         </div>
-        <button type="button" className="fd-round" aria-label="Next month" disabled={isLoading} onClick={() => load(shiftMonth(period, 1))}><ChevronRight size={16} strokeWidth={2.2} aria-hidden="true" /></button>
-      </div>
+      )}
 
       {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
       {month.databaseReady && month.loadError && !isLoading && (
@@ -147,18 +160,6 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
 
       {ready && (
         <>
-          <div className="fd-act">
-            <details className="so-new">
-              <summary className="fd-button"><Plus size={14} aria-hidden="true" />New</summary>
-              <div className="so-new-menu">
-                {SOCIAL_FORMATS.map((format) => (
-                  <button key={format.id} type="button" onClick={() => newPost(selected && periodOfDate(selected) === period ? selected : null, format.id)}>{format.label}</button>
-                ))}
-              </div>
-            </details>
-            <button type="button" className="ghost" onClick={() => setScreen({ name: 'ai' })}><Sparkles size={14} aria-hidden="true" />Draft with AI</button>
-          </div>
-
           {notice && <p className={`so-message${notice.error ? ' error' : ''}`} role="status">{notice.text}</p>}
 
           {!posts.length && !isLoading ? (
@@ -168,16 +169,31 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
             </section>
           ) : (
             <>
-              <div className="fd-seg so-views" role="radiogroup" aria-label="View">
-                {VIEWS.map(([id, label]) => (
-                  <button key={id} type="button" role="radio" aria-checked={view === id} onClick={() => setView(id)}>{label}</button>
-                ))}
-              </div>
-              {view === 'calendar' && (
-                <SocialCalendar period={period} posts={posts} today={today} selected={selected} onSelect={setSelected} onOpen={openPost} onNew={(date) => newPost(date)} />
-              )}
-              {view === 'list' && <SocialList posts={posts} onOpen={openPost} />}
-              {view === 'grid' && <SocialGrid posts={posts} onOpen={openPost} />}
+              {/* The calendar is one card, a week tall until asked for the month;
+                  every post of the month is the card under it, as rows or tiles. */}
+              <SocialCalendar period={period} posts={posts} today={today} selected={selected} onSelect={setSelected} onOpen={openPost} onNew={(date) => newPost(date)} />
+              <section className="mn-card" aria-label="Posts this month">
+                {/* One header line: the count on the left; the order and the
+                    view on the right, the same height, on the same baseline. */}
+                <div className="fd-label-row so-posts-head">
+                  <FieldLabel>Posts · {posts.length}</FieldLabel>
+                  <div className="so-posts-tools">
+                    {view === 'list' && (
+                      <select className="so-sort-pick" aria-label="Sort by" value={sort} onChange={(event) => setSort(event.currentTarget.value as SocialSort)}>
+                        <option value="date">By date</option>
+                        <option value="status">By status</option>
+                        <option value="format">By format</option>
+                      </select>
+                    )}
+                    <div className="so-mini" role="radiogroup" aria-label="View">
+                      {VIEWS.map(([id, label]) => (
+                        <button key={id} type="button" role="radio" aria-checked={view === id} onClick={() => setView(id)}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {view === 'list' ? <SocialList posts={posts} onOpen={openPost} sort={sort} /> : <SocialGrid posts={posts} onOpen={openPost} />}
+              </section>
             </>
           )}
         </>

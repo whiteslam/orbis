@@ -44,6 +44,9 @@
 }
 .fd-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
 .fd-date { margin: 0; color: var(--fd-faint); font-size: 12px; }
+/* The Orbis logo beside the date, at the top of every tab. */
+.fd-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.fd-brand .orbis-mark { border-radius: 7px; box-shadow: 0 2px 6px rgba(20,32,110,.18); }
 .fd-top-actions { display: flex; align-items: center; gap: 6px; }
 .field .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--fd-chip); box-shadow: none; color: var(--fd-soft); }
 .field .avatar { width: 32px; height: 32px; background: var(--fd-btn); color: var(--fd-btn-ink); }

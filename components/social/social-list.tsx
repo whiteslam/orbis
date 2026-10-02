@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Film, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { StatusChip } from '@/components/social/status-chip';
 import { formatLabel, type SocialPost, type SocialStatus } from '@/lib/social/types';
@@ -44,29 +43,17 @@ export function PostRow({ post, onOpen, withDate = false }: { post: SocialPost; 
 }
 
 const STATUS_ORDER: Record<SocialStatus, number> = { idea: 0, draft: 1, ready: 2, published: 3 };
-type Sort = 'date' | 'status' | 'format';
+export type SocialSort = 'date' | 'status' | 'format';
 
-/** Rows, sortable. Undated posts sort last by date. */
-export function SocialList({ posts, onOpen }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void }) {
-  const [sort, setSort] = useState<Sort>('date');
+/** Rows in the chosen order. Undated posts sort last by date. The order is picked in the card's header. */
+export function SocialList({ posts, onOpen, sort = 'date' }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort }) {
   const byDate = (left: SocialPost, right: SocialPost) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999');
   const sorted = [...posts].sort((left, right) => {
     if (sort === 'status') return STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || byDate(left, right);
     if (sort === 'format') return left.format.localeCompare(right.format) || byDate(left, right);
     return byDate(left, right);
   });
-  return (
-    <>
-      <label className="so-sort">Sort by
-        <select value={sort} onChange={(event) => setSort(event.currentTarget.value as Sort)}>
-          <option value="date">Date</option>
-          <option value="status">Status</option>
-          <option value="format">Format</option>
-        </select>
-      </label>
-      <div>{sorted.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}</div>
-    </>
-  );
+  return <div className="so-rows">{sorted.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}</div>;
 }
 
 export function SocialGrid({ posts, onOpen }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void }) {

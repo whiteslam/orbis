@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Check, LoaderCircle } from 'lucide-react';
 import { addManualTransactionAction } from '@/app/finance/actions';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS, isInvestmentCategory } from '@/lib/finance/manual';
 import { FieldSubHead } from '@/components/field/field';
 import { CurrencyCard } from '@/components/money/currency-card';
 import { safeAction } from '@/lib/client/safe-action';
@@ -27,10 +27,11 @@ function nowInIndia() {
 
 /** The manual entry view. `onClose` leaves it; `onSaved` leaves it after a save, with the result to show. */
 export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { onClose: () => void; onSaved: (message: string) => void; initialCategory?: string }) {
-  const [direction, setDirection] = useState<'expense' | 'income'>('expense');
+  type Kind = 'expense' | 'income' | 'investment';
+  const [direction, setDirection] = useState<Kind>(() => isInvestmentCategory(initialCategory) ? 'investment' : 'expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('INR');
-  const [category, setCategory] = useState(() => initialCategory && (EXPENSE_CATEGORIES as readonly string[]).includes(initialCategory) ? initialCategory : '');
+  const [category, setCategory] = useState(() => initialCategory && ([...EXPENSE_CATEGORIES, ...INVESTMENT_CATEGORIES] as readonly string[]).includes(initialCategory) ? initialCategory : '');
   const [merchant, setMerchant] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [date, setDate] = useState(() => nowInIndia().date);
@@ -39,11 +40,13 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const categories: readonly string[] = direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const categories: readonly string[] = direction === 'investment' ? INVESTMENT_CATEGORIES : direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const today = nowInIndia().date;
   const isIncome = direction === 'income';
+  const isInvestment = direction === 'investment';
+  const noun = isIncome ? 'income' : isInvestment ? 'investment' : 'expense';
 
-  function changeDirection(next: 'expense' | 'income') {
+  function changeDirection(next: Kind) {
     setDirection(next);
     setCategory('');
   }
@@ -73,13 +76,13 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
 
   return (
     <>
-      <FieldSubHead crumb="Spending · manual entry" title={isIncome ? 'Add income' : 'Add expense'} lead="Cash, UPI, or anything Gmail never saw." onClose={onClose} backLabel="Close manual entry" />
+      <FieldSubHead crumb="Spending · manual entry" title={`Add ${noun}`} lead="Cash, UPI, or anything Gmail never saw." onClose={onClose} backLabel="Close manual entry" />
 
       <form className="fd-form" onSubmit={submit}>
         <div className="fd-seg" role="radiogroup" aria-label="Transaction type">
-          {(['expense', 'income'] as const).map((value) => (
+          {(['expense', 'income', 'investment'] as const).map((value) => (
             <button key={value} type="button" role="radio" aria-checked={direction === value} onClick={() => changeDirection(value)} disabled={isPending}>
-              {value === 'expense' ? 'Expense' : 'Income'}
+              {value === 'expense' ? 'Expense' : value === 'income' ? 'Income' : 'Investment'}
             </button>
           ))}
         </div>
@@ -101,8 +104,10 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
           </div>
         </fieldset>
 
-        <label className="fd-field wide">{isIncome ? 'Received from' : 'Paid to'}
-          <input maxLength={100} value={merchant} onChange={(event) => setMerchant(event.currentTarget.value)} disabled={isPending} placeholder={isIncome ? 'Employer, client, or person (optional)' : 'Merchant, shop, or person (optional)'} />
+        {isInvestment && <p className="fd-hint">Kept out of what you spent, and listed under Investments.</p>}
+
+        <label className="fd-field wide">{isIncome ? 'Received from' : isInvestment ? 'Invested with' : 'Paid to'}
+          <input maxLength={100} value={merchant} onChange={(event) => setMerchant(event.currentTarget.value)} disabled={isPending} placeholder={isIncome ? 'Employer, client, or person (optional)' : isInvestment ? 'Bank, fund house, or broker (optional)' : 'Merchant, shop, or person (optional)'} />
         </label>
         <div className="fd-grid">
           <label className="fd-field">Date<input type="date" required max={today} min="2000-01-01" value={date} onChange={(event) => setDate(event.currentTarget.value)} disabled={isPending} /></label>
@@ -126,7 +131,7 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
         {message && <p className="fd-msg bad" role="alert">{message}</p>}
         <div className="fd-act">
           <button type="submit" disabled={isPending || !amount || !date}>
-            {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" />Saving…</> : <><Check size={14} strokeWidth={2.4} aria-hidden="true" />{isIncome ? 'Save income' : 'Save expense'}</>}
+            {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" />Saving…</> : <><Check size={14} strokeWidth={2.4} aria-hidden="true" />{`Save ${noun}`}</>}
           </button>
           <button className="ghost" type="button" onClick={onClose} disabled={isPending}>Cancel</button>
         </div>

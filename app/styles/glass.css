@@ -132,3 +132,128 @@
 .today-widget-bars i { flex: 1; border-radius: 3px; background: color-mix(in srgb, var(--fd-ink) 16%, transparent); }
 .today-widget-bars i.now { background: var(--fd-ink); }
 .today-widget-empty { margin: auto 0; font-size: 14px; font-weight: 600; color: var(--fd-soft); }
+/* What the widgets say under their picture: a number, then one or two quiet lines. */
+.today-widget-foot { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
+.today-widget-value.small { font-size: 21px; line-height: 1.15; }
+.today-widget-value small { font-family: var(--font-text); font-size: 11.5px; font-weight: 600; letter-spacing: 0; color: var(--fd-soft); }
+.today-widget-sub { overflow: hidden; font-size: 11.5px; line-height: 1.35; color: var(--fd-soft); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.today-widget-bars i.none { height: 8%; opacity: .45; }
+/* Today's setup reminder: one line — the next step, how many are left, and a close. */
+.setup-list { display: flex; align-items: center; gap: 6px; margin: 12px 0 16px; padding: 7px 8px 7px 10px; border-radius: 20px; }
+.setup-row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0; border: 0; background: none; font: inherit; color: var(--fd-faint); text-align: left; cursor: pointer; }
+.setup-row .fd-tile { width: 30px; height: 30px; border-radius: 10px; }
+.setup-row-label { flex: 1; min-width: 0; overflow: hidden; color: var(--fd-ink); font-size: 13px; font-weight: 600; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.setup-row-label small { display: block; overflow: hidden; color: var(--fd-faint); font-size: 10.5px; font-weight: 500; text-overflow: ellipsis; }
+.setup-row svg:last-child { flex: none; }
+.setup-row:active { opacity: .8; }
+.setup-list .fd-round { width: 28px; height: 28px; }
+/* Money: the month and money-in are one card each, as Health's sections are. */
+.mn-card { margin-top: 14px; padding: 16px 18px; border-radius: 26px; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
+.mn-card > :first-child, .mn-card > .fd-label-row:first-child .fd-label { margin-top: 0; }
+.mn-card > .fd-bars:first-child { margin-top: 2px; }
+/* Lists inside the card are rows of it, not cards of their own. */
+.mn-card .fd-quiet { margin-top: 6px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-card .fd-act { margin-top: 14px; }
+/* The row above already ends in a hairline; a second one under it read as a double rule. */
+.mn-card .fd-cat + .fd-pair, .mn-card .fd-empty + .fd-pair { margin-top: 0; border-top: 0; }
+/* Rates: one line until opened. */
+.fd-rates { margin-top: 14px; padding: 4px 18px; }
+.fd-rates-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.fd-rates-head .fd-label { margin: 0; }
+.fd-rates-peek { display: inline-flex; align-items: center; gap: 6px; color: var(--fd-ink); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.fd-rates-peek svg { color: var(--fd-faint); transition: transform .15s ease; }
+.fd-rates-head[aria-expanded="true"] .fd-rates-peek svg { transform: rotate(180deg); }
+.fd-rates .fd-rates-src { margin-top: 0; }
+.fd-rates .fd-rates-grid { margin-bottom: 12px; }
+/* Social: a month bar with the add actions, a week-tall calendar card, then the month's posts. */
+.so-bar-month { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.so-bar-month > div { min-width: 0; text-align: center; }
+.so-bar-month h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.02em; color: var(--fd-ink); white-space: nowrap; }
+.so-bar-month .so-summary { margin: 1px 0 0; font-size: 11px; white-space: nowrap; }
+.so-bar-month .fd-round { width: 28px; height: 28px; }
+.so-nav-row { display: flex; justify-content: center; margin-top: 14px; }
+/* The two add actions: equal tiles, each an icon, a name and what it does. */
+.so-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.so-action { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 10px 12px; border: var(--gl-edge); border-radius: 20px; background: var(--gl-fill); box-shadow: var(--gl-shadow); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); color: var(--fd-ink); font: inherit; text-align: left; cursor: pointer; }
+.so-action-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-accent); }
+.so-action.primary .so-action-icon { background: var(--fd-accent); box-shadow: none; color: var(--gl-ground); }
+.so-action-text { min-width: 0; }
+.so-action-text b { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.so-action-text small { display: block; margin-top: 1px; overflow: hidden; color: var(--fd-faint); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.so-actions .so-new-menu { left: auto; right: 0; }
+.so-calcard .so-cal { margin-top: 4px; }
+.so-calcard .so-day { min-height: 42px; padding: 4px 2px; background: none; }
+.so-calcard .so-group { margin-top: 12px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--fd-ink) 7%, transparent); }
+.so-calcard .so-row:last-of-type { border-bottom: 0; }
+.so-calcard .so-add-day { margin-top: 6px; min-height: 32px; }
+.so-mini { display: inline-flex; padding: 2px; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.so-mini button { min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.so-mini button[aria-checked="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 1px 4px rgba(17,19,21,.10); }
+.so-posts-head { min-height: 32px; }
+.so-posts-tools { display: flex; align-items: center; gap: 6px; }
+.so-sort-pick { height: 32px; padding: 0 8px 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.so-mini { height: 32px; align-items: center; }
+/* Rows line up with the card's own edge: the thumbnail starts where the label does. */
+.mn-card .so-rows { margin-top: 6px; }
+.mn-card .so-row { padding-left: 0; padding-right: 0; }
+.mn-card .so-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+.mn-card .so-grid { margin-top: 10px; }
+/* ─── Ask Orbis: the whole screen, on the app's own wallpaper at dusk ───
+   It used to be a sheet over the lower part of whatever tab was open. Now it
+   takes the screen. The ground is the same one every tab stands on — the
+   --gl-ground colour, the dotted grain and the soft top-left blob — and the
+   only addition is a low sun: a warm glow resting on the bottom edge with a
+   little dusk beside it. So it reads as the same room in evening light, not
+   as a different app. */
+:root {
+  --talk-sun: rgba(238,166,112,.50);
+  --talk-dusk: rgba(206,160,186,.30);
+  --talk-sky:
+    radial-gradient(circle, var(--gl-dot) 1px, transparent 1.3px) 0 0 / 14px 14px,
+    radial-gradient(110% 40% at 50% 106%, var(--talk-sun), transparent 72%),
+    radial-gradient(70% 30% at 96% 80%, var(--talk-dusk), transparent 70%),
+    radial-gradient(75% 34% at 0% 0%, var(--gl-blob-1), transparent 72%),
+    var(--gl-ground);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --talk-sun: rgba(206,124,78,.46); --talk-dusk: rgba(116,70,108,.26); }
+}
+:root[data-theme="dark"] { --talk-sun: rgba(206,124,78,.46); --talk-dusk: rgba(116,70,108,.26); }
+@media (prefers-reduced-transparency: reduce) { :root { --talk-sun: transparent; --talk-dusk: transparent; } }
+.talk-sheet { inset: 0; z-index: 30; max-height: none; padding: calc(var(--safe-top) + 6px) 0 var(--safe-bottom); border: 0; border-radius: 0; background: var(--talk-sky); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; color: var(--fd-ink); }
+@media (min-width: 721px) and (pointer: fine), (min-width: 721px) and (min-height: 541px) { .talk-sheet { padding-top: 40px; } }
+.talk-head { padding: 12px 18px 6px; }
+.talk-head strong { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.talk-head button { width: 36px; height: 36px; margin: 0; background: var(--gl-fill); border: var(--gl-edge); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); cursor: pointer; }
+.talk-log { padding: 8px 18px 12px; gap: 16px; }
+.talk-intro { margin: auto 0; padding-bottom: 8%; }
+.talk-intro h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.035em; line-height: 1.12; color: var(--fd-ink); text-wrap: balance; }
+.talk-intro .talk-hint { margin: 10px 0 0; max-width: 30ch; color: var(--fd-soft); font-size: 14px; line-height: 1.55; }
+.talk-q { background: var(--gl-fill-strong); border: var(--gl-edge); color: var(--fd-ink); }
+.talk-a { font-size: 16px; line-height: 1.55; color: var(--fd-ink); }
+.talk-error { color: var(--fd-alert); }
+.talk-sources-wrap { padding: 0 16px 10px; }
+.talk-sources-label { margin: 0 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-soft); }
+.talk-sheet .talk-sources { gap: 7px; padding: 0; }
+.talk-sheet .talk-sources button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px 0 11px; border-radius: var(--r-pill); border: var(--gl-edge); background: var(--gl-fill); box-shadow: none; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); color: var(--fd-soft); font-size: 12.5px; font-weight: 600; opacity: .72; }
+.talk-sheet .talk-sources button svg { color: var(--fd-faint); }
+.talk-sheet .talk-sources button[aria-pressed="true"] { background: var(--gl-fill-strong); border-color: color-mix(in srgb, var(--fd-accent) 45%, transparent); color: var(--fd-ink); font-weight: 650; opacity: 1; }
+.talk-sheet .talk-sources button[aria-pressed="true"] svg { color: var(--fd-accent); }
+.talk-foot { padding: 6px 16px 16px; border-top: 0; }
+.talk-type input { height: 48px; padding: 0 16px; border: var(--gl-edge); background: var(--gl-fill-strong); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+.talk-type input::placeholder { color: var(--fd-soft); }
+.talk-type button { width: 48px; height: 48px; background: var(--fd-btn); color: var(--fd-btn-ink); cursor: pointer; }
+.talk-mic { width: 48px; height: 48px; color: var(--fd-btn-ink); box-shadow: none; }
+/* Home: the weather is a card like its neighbours, not a loose line between them. */
+.fd-weather { margin-top: 12px; padding: 14px 18px; border-radius: 26px; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
+.fd-weather b { min-width: 58px; font-size: 32px; font-weight: 700; }
+/* The one-line states (loading, not connected) line up with the cards' text edge. */
+.screen-body > .fd-weather-quiet { margin-top: 14px; padding: 0 4px; }
+/* The brief leads the page, so it gets a little air above the first card. */
+.fd-note-brief { margin: 4px 0 16px; padding: 0 2px; }
+.fd-note-brief + .rt-check { margin-top: 0; }
+.screen-body > .setup-list { margin: 14px 0 0; }
+/* Home: Gmail's connect / reconnect prompt is a card of the setup-strip family. */
+a.setup-row { text-decoration: none; }
+.fd-mail-connect { margin: 12px 0 0; padding-right: 14px; }
+.fd-mail-connect .setup-row svg:last-child { color: var(--fd-faint); }

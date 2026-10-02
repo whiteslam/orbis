@@ -69,6 +69,7 @@ export function composeFinanceRows({ summary, now = new Date() }: { summary: Fin
     { label: 'Daily average', value: month && month.spent > 0 && totals ? money(month.spent / totals.days, month.currency) : 'No data', empty: !month || month.spent === 0, target: null },
     { label: 'Largest category', value: top ? `${top.category} · ${money(top.amount, month?.currency ?? 'INR')}` : 'No data', empty: !top, target: null },
     { label: 'Received this month', value: month && month.received > 0 ? money(month.received, month.currency) : 'None', empty: !month || month.received === 0, target: null },
+    { label: 'Invested this month', value: month && month.invested > 0 ? money(month.invested, month.currency) : 'None', empty: !month || !(month.invested > 0), target: null },
     { label: 'Saved transactions', value: summary.transactions.length ? count(summary.transactions.length, 'transaction') : 'None yet', empty: summary.transactions.length === 0, target: null },
   ];
 }

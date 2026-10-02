@@ -30,6 +30,26 @@ export const INCOME_CATEGORIES = [
   'Other',
 ] as const;
 
+/**
+ * Money moved into an investment. Stored as an expense row (it did leave the
+ * account) but kept out of "spent": it is saved, not gone, and it is listed
+ * again under Investments as an entry of your own.
+ */
+export const INVESTMENT_CATEGORIES = [
+  'SIP / Mutual fund',
+  'Stocks',
+  'FD',
+  'RD',
+  'PPF / EPF',
+  'NPS',
+  'Gold',
+  'Other investment',
+] as const;
+
+export function isInvestmentCategory(category: string | null | undefined) {
+  return Boolean(category) && (INVESTMENT_CATEGORIES as readonly string[]).includes(category as string);
+}
+
 export const PAYMENT_METHODS = [
   ['upi', 'UPI'],
   ['debit_card', 'Debit card'],

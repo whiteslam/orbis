@@ -1,7 +1,9 @@
 import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
-import type { FinanceSummary } from '@/lib/finance/types';
+import type { FinanceSummary, OwnInvestments } from '@/lib/finance/types';
+import { INVESTMENT_CATEGORIES, isInvestmentCategory } from '@/lib/finance/manual';
+import { monthBreakdown, summariseOwnInvestments } from '@/lib/finance/breakdown';
 import { isMissingTable } from '@/lib/supabase/errors';
 
 const emptySummary: FinanceSummary = {
@@ -11,6 +13,7 @@ const emptySummary: FinanceSummary = {
   monthlyExpenses: [],
   incomePlan: [],
   incomePlanReady: false,
+  ownInvestments: { currency: 'INR', total: 0, categories: [] },
   month: null,
 };
 
@@ -38,6 +41,23 @@ async function loadIncomePlan(supabase: Awaited<ReturnType<typeof createClient>>
       active: row.active !== false,
     })),
   };
+}
+
+/**
+ * Every investment entry ever recorded, summed by category. One currency, the
+ * one most was invested in, like the month breakdown.
+ */
+export async function loadOwnInvestments(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<OwnInvestments> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('amount, currency, category, occurred_at')
+    .eq('user_id', userId)
+    .eq('direction', 'expense')
+    .in('category', [...INVESTMENT_CATEGORIES])
+    .order('occurred_at', { ascending: false })
+    .limit(2000);
+  if (error || !data) return emptySummary.ownInvestments;
+  return summariseOwnInvestments(data.map((row) => ({ ...row, amount: Number(row.amount) })));
 }
 
 const transactionColumns = 'id, amount, currency, direction, merchant, category, occurred_at, source';
@@ -78,7 +98,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
   const month = Number(monthParts.find((part) => part.type === 'month')?.value);
   const start = new Date(Date.UTC(year, month - 1, 1) - 330 * 60 * 1000);
 
-  const [transactionsResult, expensesResult, plan] = await Promise.all([
+  const [transactionsResult, expensesResult, plan, ownInvestments] = await Promise.all([
     loadRecentTransactions(supabase, userId),
     supabase
       .from('transactions')
@@ -87,6 +107,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
       .gte('occurred_at', start.toISOString())
       .lt('occurred_at', now.toISOString()),
     loadIncomePlan(supabase, userId),
+    loadOwnInvestments(supabase, userId),
   ]);
 
   if (transactionsResult.error || expensesResult.error) {
@@ -98,7 +119,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
   const monthRows = (expensesResult.data ?? []).map((row) => ({ ...row, amount: Number(row.amount) }));
   const totals = new Map<string, number>();
   for (const transaction of monthRows) {
-    if (transaction.direction === 'expense') totals.set(transaction.currency, (totals.get(transaction.currency) ?? 0) + transaction.amount);
+    if (transaction.direction === 'expense' && !isInvestmentCategory(transaction.category)) totals.set(transaction.currency, (totals.get(transaction.currency) ?? 0) + transaction.amount);
   }
 
   return {
@@ -106,6 +127,7 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
     loadError: false,
     incomePlan: plan.entries,
     incomePlanReady: plan.ready,
+    ownInvestments,
     transactions: (transactionsResult.data ?? []).map((transaction) => ({
       id: transaction.id,
       amount: Number(transaction.amount),
@@ -120,42 +142,5 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
     })),
     monthlyExpenses: Array.from(totals, ([currency, amount]) => ({ currency, amount })),
     month: monthBreakdown(monthRows, totals, year, month),
-  };
-}
-
-// Charts show one currency: whichever had the most spending this month (INR when there is none).
-function monthBreakdown(rows: Array<{ amount: number; currency: string; direction: string; category: string | null; occurred_at: string }>, totals: Map<string, number>, year: number, month: number): FinanceSummary['month'] {
-  const currency = [...totals].sort((a, b) => b[1] - a[1])[0]?.[0] ?? rows[0]?.currency ?? 'INR';
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const daily = Array.from({ length: daysInMonth }, (_, index) => ({ day: index + 1, amount: 0 }));
-  const categories = new Map<string, number>();
-  // Income carried a category all along and nothing ever read it, so "where did
-  // the money come from" had an answer stored and no way to see it.
-  const incomeCategories = new Map<string, number>();
-  let spent = 0;
-  let received = 0;
-  for (const row of rows) {
-    if (row.currency !== currency) continue;
-    if (row.direction === 'income') {
-      received += row.amount;
-      const source = row.category || 'Other';
-      incomeCategories.set(source, (incomeCategories.get(source) ?? 0) + row.amount);
-      continue;
-    }
-    spent += row.amount;
-    const category = row.category || 'Other';
-    categories.set(category, (categories.get(category) ?? 0) + row.amount);
-    const day = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date(row.occurred_at)));
-    if (daily[day - 1]) daily[day - 1].amount += row.amount;
-  }
-  return {
-    currency,
-    year,
-    month,
-    spent,
-    received,
-    categories: [...categories].map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
-    incomeCategories: [...incomeCategories].map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
-    daily,
   };
 }

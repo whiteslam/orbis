@@ -116,31 +116,14 @@ function weatherLine(weather: BriefWeather, when: PartOfDay, seed: number): stri
 }
 
 /**
- * The one thing about money worth a sentence right now.
+ * Money, in the brief, only when something is wrong with it.
  *
- * Only one reading of the month makes the caption: two sentences total is the
- * whole budget.
+ * The month's total sits in the "Spent this month" tile just below the brief,
+ * so repeating it here put the same figure on Home twice. The note says only
+ * what the tile cannot: that the numbers could not be read.
  */
-function financeLine(finance: FinanceSummary, seed: number): string | null {
+function financeLine(finance: FinanceSummary): string | null {
   if (finance.loadError) return 'I can’t reach your spending right now, so the numbers may be out of date.';
-
-  const spend = finance.monthlyExpenses.length === 1 ? finance.monthlyExpenses[0] : null;
-  if (spend && spend.amount > 0) {
-    const totals = new Map<string, number>();
-    for (const transaction of finance.transactions) {
-      if (transaction.direction !== 'expense' || !transaction.category) continue;
-      totals.set(transaction.category, (totals.get(transaction.category) ?? 0) + transaction.amount);
-    }
-    const top = Array.from(totals).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-    const amount = money(spend.amount, spend.currency);
-    return top
-      ? pick([
-        `You’ve spent ${amount} this month, most of it on ${top.toLowerCase()}.`,
-        `${amount} gone this month so far, mostly on ${top.toLowerCase()}.`,
-      ], seed, 2)
-      : `You’ve spent ${amount} this month so far.`;
-  }
-  if (finance.monthlyExpenses.length > 1) return 'Your spending this month is in a few currencies, so the full picture is in Money.';
   return null;
 }
 
@@ -256,7 +239,7 @@ export function composeNote(input: NoteInput): HomeNote {
   const gym = !covered && input.training ? trainingLine(input.training, when, seed) : null;
   if (gym) candidates.push({ text: gym, from: 'orbis' });
 
-  const cash = financeLine(input.finance, seed);
+  const cash = financeLine(input.finance);
   if (cash) candidates.push({ text: cash, from: 'orbis' });
 
   const investing = input.portfolio ? portfolioLine(input.portfolio, seed) : null;

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { isInvestmentCategory } from '@/lib/finance/manual';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { localClock, type Slot } from '@/lib/notifications/schedule';
 import { socialReminder } from '@/lib/social/month';
@@ -38,7 +39,7 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
     admin.from('user_fitness_personas').select('persona').eq('user_id', userId).maybeSingle(),
     admin.from('routines').select('id,title,at_time,days').eq('user_id', userId).eq('active', true).order('at_time').limit(20),
     admin.from('routine_events').select('routine_id,status,note').eq('user_id', userId).eq('local_date', localDate).limit(20),
-    admin.from('transactions').select('amount,currency,occurred_at').eq('user_id', userId).eq('direction', 'expense').gte('occurred_at', `${shift(localDate, -32)}T00:00:00Z`).limit(500),
+    admin.from('transactions').select('amount,currency,occurred_at,category').eq('user_id', userId).eq('direction', 'expense').gte('occurred_at', `${shift(localDate, -32)}T00:00:00Z`).limit(500),
     admin.from('health_daily_steps').select('steps').eq('user_id', userId).eq('date', localDate).maybeSingle(),
   ]);
 
@@ -48,7 +49,8 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
   const weekday = new Date(`${localDate}T12:00:00Z`).getUTCDay();
   const monthPrefix = localDate.slice(0, 7);
   let spending: NotificationContext['spending'] = null;
-  const expenses = transactions.data ?? [];
+  // Money moved into an FD or a SIP is saved, not spent.
+  const expenses = (transactions.data ?? []).filter((row) => !isInvestmentCategory(row.category));
   if (expenses.length) {
     // Report the most common currency only, so amounts are never mixed.
     const counts = new Map<string, number>();

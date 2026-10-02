@@ -23,7 +23,7 @@ const SHOWN_CATEGORIES = 5;
  * month, then one hairline row per category with its share drawn inline, so
  * every amount is legible at once without touching anything.
  */
-export function SpendingSummary({ month, highlight = null }: { month: Month; highlight?: string | null }) {
+export function SpendingSummary({ month, highlight = null, incomeShown = true }: { month: Month; highlight?: string | null; incomeShown?: boolean }) {
   // A heads-up about one category brings its row into view.
   const focusRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { focusRef.current?.scrollIntoView({ block: 'center' }); }, []);
@@ -81,7 +81,7 @@ export function SpendingSummary({ month, highlight = null }: { month: Month; hig
       <div className="fd-pair">
         <div>
           <span>Received</span>
-          <b className="up">{money(month.received, month.currency)}</b>
+          <b className="up">{incomeShown ? money(month.received, month.currency) : '••••'}</b>
         </div>
         <div>
           <span>Net</span>

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { isInvestmentCategory } from '@/lib/finance/manual';
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { bigSpend, categoryHot, loggingGap, type Expense } from '@/lib/headsups/checks/money';
 import { routineSlipping, type RoutineEventRow, type RoutineRow } from '@/lib/headsups/checks/routines';
@@ -40,7 +41,7 @@ async function loadInput(admin: Admin, userId: string, today: string) {
   for (const row of lastDone.data ?? []) if (row.routine_id && !lastDoneBy.has(row.routine_id)) lastDoneBy.set(row.routine_id, row.local_date);
   const newest = plans.data?.[0];
   return {
-    expenses: (expenses.data ?? []).map((row): Expense => ({ id: row.id, amount: Number(row.amount), currency: row.currency, category: row.category, merchant: row.merchant, localDate: indiaDate(row.occurred_at) })),
+    expenses: (expenses.data ?? []).filter((row) => !isInvestmentCategory(row.category)).map((row): Expense => ({ id: row.id, amount: Number(row.amount), currency: row.currency, category: row.category, merchant: row.merchant, localDate: indiaDate(row.occurred_at) })),
     routines: (routines.data ?? []).map((row): RoutineRow => ({ id: row.id, title: row.title, days: row.days, active: row.active, archivedAt: row.archived_at, createdDate: indiaDate(row.created_at), lastDoneDate: lastDoneBy.get(row.id) ?? null })),
     events: (events.data ?? []).map((row): RoutineEventRow => ({ routineId: row.routine_id, localDate: row.local_date, status: row.status })),
     steps: (steps.data ?? []).map((row): StepDay => ({ date: row.date, steps: row.steps })),

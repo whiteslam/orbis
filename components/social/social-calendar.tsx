@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { FieldLabel } from '@/components/field/field';
 import { PostRow, dayLabel } from '@/components/social/social-list';
@@ -23,16 +24,25 @@ export function SocialCalendar({ period, posts, today, selected, onSelect, onOpe
   onOpen: (post: SocialPost) => void;
   onNew: (date: string | null) => void;
 }) {
-  const { byDay, undated } = placePosts(posts);
+  const { byDay } = placePosts(posts);
   const weeks = monthGrid(period);
   const chosen = selected && selected.startsWith(period.slice(0, 8)) ? selected : null;
   const dayPosts = chosen ? byDay.get(chosen) ?? [] : [];
+  // A week tall until the month is asked for: the week of the chosen day, or of
+  // today, or the month's first week when neither falls in it.
+  const [expanded, setExpanded] = useState(false);
+  const anchor = chosen ?? (today.startsWith(period.slice(0, 8)) ? today : null);
+  const shownWeeks = expanded ? weeks : [(anchor && weeks.find((week) => week.some((day) => day.date === anchor))) || weeks[0]];
 
   return (
-    <>
+    <section className="mn-card so-calcard" aria-label="Calendar">
+      <div className="fd-label-row">
+        <FieldLabel>{new Date(`${period}T00:00:00Z`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}</FieldLabel>
+        <button type="button" className="fd-link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show week' : 'Show month'}</button>
+      </div>
       <div className="so-cal">
         <div className="so-cal-head" aria-hidden="true">{WEEKDAYS.map((day, index) => <span key={index}>{day}</span>)}</div>
-        {weeks.map((week) => (
+        {shownWeeks.map((week) => (
           <div className="so-cal-week" key={week[0].date}>
             {week.map(({ date, inMonth }) => {
               const onDay = byDay.get(date) ?? [];
@@ -59,27 +69,23 @@ export function SocialCalendar({ period, posts, today, selected, onSelect, onOpe
             })}
           </div>
         ))}
-        <p className="so-legend">
-          {SOCIAL_FORMATS.map((format) => <span key={format.id}><i className={`so-dot so-fmt-${format.id}`} />{format.label}</span>)}
-          <span><i className="so-dot so-fmt-post draft" />Not ready yet</span>
-        </p>
+        {expanded && (
+          <p className="so-legend">
+            {SOCIAL_FORMATS.map((format) => <span key={format.id}><i className={`so-dot so-fmt-${format.id}`} />{format.label}</span>)}
+            <span><i className="so-dot so-fmt-post draft" />Not ready yet</span>
+          </p>
+        )}
       </div>
 
+      {/* The chosen day. Posts without a day are in the Posts card below, marked "No date". */}
       {chosen && (
-        <section className="so-group" aria-live="polite">
+        <div className="so-group" aria-live="polite">
           <FieldLabel>{dayLabel(chosen)}</FieldLabel>
           {dayPosts.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} />)}
           {!dayPosts.length && <p className="fd-empty">Nothing planned for this day.</p>}
           <button type="button" className="so-add-day" onClick={() => onNew(chosen)}><Plus size={14} aria-hidden="true" />New post on {dayLabel(chosen)}</button>
-        </section>
+        </div>
       )}
-
-      {undated.length > 0 && (
-        <section className="so-group">
-          <FieldLabel>No date yet ({undated.length})</FieldLabel>
-          {undated.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} />)}
-        </section>
-      )}
-    </>
+    </section>
   );
 }

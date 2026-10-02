@@ -12,6 +12,7 @@
 import { createHash } from 'node:crypto';
 import { count, istParts, money } from '@/lib/focus/types';
 import type { FinanceSummary } from '@/lib/finance/types';
+import { isInvestmentCategory } from '@/lib/finance/manual';
 
 export type BriefRoutine = { title: string; kind: string; at: string; minutesAway: number; answered: string | null };
 export type BriefWeatherFacts = { temperature: number; feelsLike: number; condition: string; rainingNow: boolean; rainPeak: { probability: number; hour: string } | null };
@@ -62,7 +63,7 @@ export function briefSnapshot(input: {
     const totals = new Map<string, number>();
     for (const transaction of input.finance.transactions) {
       const when = istParts(new Date(transaction.occurredAt));
-      if (transaction.direction !== 'expense' || !transaction.category || when.year !== today.year || when.month !== today.month) continue;
+      if (transaction.direction !== 'expense' || !transaction.category || isInvestmentCategory(transaction.category) || when.year !== today.year || when.month !== today.month) continue;
       totals.set(transaction.category, (totals.get(transaction.category) ?? 0) + transaction.amount);
     }
     return Array.from(totals).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;

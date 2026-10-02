@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { deleteIncomePlanAction, saveIncomePlanAction } from '@/app/finance/actions';
 import { INCOME_CATEGORIES } from '@/lib/finance/manual';
 import type { FinanceSummary } from '@/lib/finance/types';
@@ -31,9 +31,12 @@ const ordinal = (day: number) => {
  * salary you expect and the extra money you did not, and which of those sources
  * each pound came from.
  */
-export function MoneyIn({ summary }: { summary: FinanceSummary }) {
+export function MoneyIn({ summary, shown, onShown }: { summary: FinanceSummary; shown: boolean; onShown: (next: boolean) => void }) {
   const month = summary.month;
   const [open, setOpen] = useState(false);
+  // What you earn stays covered until you ask for it (the screen owns the
+  // switch, so Received above follows it too).
+  const amount = (value: number, code: string) => (shown ? money(value, code) : '••••');
   const [draft, setDraft] = useState({ label: 'Salary', amount: '', currency: 'INR', payDay: 1, category: 'Salary' });
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -65,7 +68,12 @@ export function MoneyIn({ summary }: { summary: FinanceSummary }) {
 
   return (
     <>
-      <FieldLabel>Money in</FieldLabel>
+      <div className="fd-label-row">
+        <FieldLabel>Money in</FieldLabel>
+        <button className="fd-link" type="button" aria-pressed={shown} onClick={() => onShown(!shown)}>
+          {shown ? <EyeOff size={13} aria-hidden="true" /> : <Eye size={13} aria-hidden="true" />} {shown ? 'Hide amounts' : 'Show amounts'}
+        </button>
+      </div>
 
       {plan.length > 0 ? (
         <section className="fd-quiet">
@@ -75,9 +83,9 @@ export function MoneyIn({ summary }: { summary: FinanceSummary }) {
               <div className="fd-line" key={entry.id}>
                 <span className="fd-two">
                   {entry.label}
-                  <small>{money(entry.amount, entry.currency)} · usually the {ordinal(entry.payDay)}</small>
+                  <small>{amount(entry.amount, entry.currency)} · usually the {ordinal(entry.payDay)}</small>
                 </span>
-                <b className={arrived > 0 ? 'up' : 'empty'}>{arrived > 0 ? money(arrived, currency) : 'not yet'}</b>
+                <b className={arrived > 0 ? 'up' : 'empty'}>{arrived > 0 ? amount(arrived, currency) : 'not yet'}</b>
               </div>
             );
           })}
@@ -88,25 +96,24 @@ export function MoneyIn({ summary }: { summary: FinanceSummary }) {
 
       {extra.length > 0 && (
         <>
-          <p className="fd-label">Extra money · {money(extraTotal, currency)}</p>
+          <p className="fd-label">Extra money · {amount(extraTotal, currency)}</p>
           <section className="fd-quiet">
             {extra.map((source) => (
               <div className="fd-line" key={source.category}>
                 <span>{source.category}</span>
-                <b className="up">{money(source.amount, currency)}</b>
+                <b className="up">{amount(source.amount, currency)}</b>
               </div>
             ))}
           </section>
         </>
       )}
 
-      {month && (plan.length > 0 || sources.length > 0) && (
+      {/* Only with a plan: without one this pair was this month's received and
+          spent again, which the card above already states. */}
+      {month && plan.length > 0 && (
         <div className="fd-pair">
-          <div><span>In this month</span><b className="up">{money(month.received, currency)}</b></div>
-          <div>
-            <span>{plan.length ? 'Against expected' : 'Out this month'}</span>
-            <b>{plan.length ? money(expectedTotal, currency) : money(month.spent, currency)}</b>
-          </div>
+          <div><span>In this month</span><b className="up">{amount(month.received, currency)}</b></div>
+          <div><span>Against expected</span><b>{amount(expectedTotal, currency)}</b></div>
         </div>
       )}
       {plan.length > 0 && receivedExpected === 0 && (

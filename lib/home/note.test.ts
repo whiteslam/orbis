@@ -80,16 +80,15 @@ test('weather leads, and a forecast is never called the weather right now', () =
   assert.ok(!/right now/.test(forecast.caption));
 });
 
-test('spending is one amount and where most of it went, not a table of figures', () => {
+test('spending stays in its tile on Home and is never repeated in the note', () => {
   const note = settled({
     finance: finance({
       monthlyExpenses: [{ currency: 'INR', amount: 24_000 }],
       transactions: [{ id: '1', direction: 'expense', category: 'Food', amount: 9_000, occurredAt: '2026-09-20T00:00:00Z' }],
     } as Partial<FinanceSummary>),
   });
-  assert.match(text(note), /₹24,000/);
-  assert.match(text(note), /most(ly| of it) on food/);
-  assert.ok((text(note).match(/₹/g) ?? []).length === 1, 'one figure, not three');
+  assert.ok(!/₹24,000|spent/i.test(text(note)), text(note));
+  assert.match(text(settled({ finance: finance({ loadError: true }) })), /can’t reach your spending/);
 });
 
 test('the portfolio line quotes a day only when it covers the portfolio', () => {
@@ -124,7 +123,7 @@ test('the note lists the services behind it, once, with no duplicates', () => {
     portfolio: portfolio({ day: { value: 4_820, percent: 1.01, coverage: 1 } }),
   });
   // Two subjects ship, so two services are credited, not every one consulted.
-  assert.deepEqual(note.sources, ['open-meteo', 'orbis']);
+  assert.deepEqual(note.sources, ['open-meteo', 'groww']);
   assert.equal(new Set(note.sources).size, note.sources.length);
 });
 

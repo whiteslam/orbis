@@ -9,6 +9,7 @@ import { needsReasoning } from '@/lib/ai/jev';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { TalkTurn } from '@/lib/voice/talk';
+import type { AskAbout } from '@/lib/ask/about';
 
 export const DAILY_ASK_LIMIT = 20;
 const MAX_INPUT_BYTES = 60_000;
@@ -42,6 +43,8 @@ export async function answerFromRecords(input: {
   sources: AskSource[];
   earlier?: TalkTurn[];
   spokenLanguage?: string;
+  /** A headline, market reading or holding the question is about. */
+  about?: AskAbout | null;
 }): Promise<AskResult> {
   const { userId, question, sources } = input;
   const blocked = await askBlockedMessage(userId);
@@ -57,9 +60,10 @@ export async function answerFromRecords(input: {
   } catch {
     return { success: false, message: 'Your records could not be loaded. Try again.' };
   }
-  if (!context.used.length) return { success: false, message: 'There is nothing in the last six months of what you chose to look at yet.' };
+  // A question about a headline can be answered without any records of theirs.
+  if (!context.used.length && !input.about) return { success: false, message: 'There is nothing in the last six months of what you chose to look at yet.' };
 
-  const user = askPayload(question, context.data, input.earlier);
+  const user = askPayload(question, context.data, input.earlier, input.about ?? null);
   if (Buffer.byteLength(user, 'utf8') > MAX_INPUT_BYTES) return { success: false, message: 'That is more data than Orbis can read at once. Untick a source and try again.' };
 
   try {
@@ -70,7 +74,7 @@ export async function answerFromRecords(input: {
     return { success: false, message: 'Ask Orbis is not available right now. Try again later.' };
   }
 
-  const system = askSystem({ spokenLanguage: input.spokenLanguage });
+  const system = askSystem({ spokenLanguage: input.spokenLanguage, about: input.about ?? null });
   const result = await routeJson({ userId, feature, sensitivity: 'personal', system, user, maxTokens: 700, temperature: 0.2, timeoutMs: 25_000, accept: (text) => readAnswer(text) !== null, escalate: await reasoning });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 

@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
-import { SettingsButton } from '@/components/shell/settings-context';
-import { QuietList } from '@/components/field/field';
+import { OrbisMark } from '@/components/brand/orbis-mark';
+import { NotificationsButton, SettingsButton } from '@/components/shell/settings-context';
 import { FocusNote } from '@/components/field/focus-note';
 import { RoutineCheck } from '@/components/today/routine-check';
 import { SetupChecklist } from '@/components/today/setup-checklist';
 import { TodayWidgets } from '@/components/today/today-widgets';
 import { WeatherCard } from '@/components/today/weather-card';
 import { ImportantMail } from '@/components/today/important-mail';
+import { NewsCard } from '@/components/today/news-card';
 import { Headsups } from '@/components/today/headsups';
 import type { HealthPlanRecord } from '@/lib/health-docs/types';
 import type { FinanceSummary } from '@/lib/finance/types';
@@ -18,10 +19,7 @@ import type { StepsSummary } from '@/lib/health/types';
 import type { BriefWeather } from '@/lib/home/weather';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
-import { composeQuietRows } from '@/lib/focus/home';
-import { composeSocialRow } from '@/lib/focus/social';
 import type { FocusTarget } from '@/lib/focus/types';
-import { indiaToday } from '@/lib/social/month';
 import type { SocialPost } from '@/lib/social/types';
 import { composeNote, type HomeNote } from '@/lib/home/note';
 import { trainingForToday } from '@/lib/home/training';
@@ -47,7 +45,7 @@ const PORTFOLIO_WAIT_MS = 8_000;
 
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, socialPosts, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openHeadsup, setup }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openHeadsup: (action: HeadsupAction) => void; setup: SetupStep[] }) {
+export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openHeadsup, setup }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openHeadsup: (action: HeadsupAction) => void; setup: SetupStep[] }) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
@@ -55,7 +53,6 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   const [portfolioSettled, setPortfolioSettled] = useState(false);
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
 
-  const input = { finance: financeSummary, steps: stepsSummary, documentCount, portfolio };
 
   // The daily investing line. Holdings come from the broker, so Home asks for
   // them the way it asks for the weather, and simply has no card until they land.
@@ -112,17 +109,17 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
     void fetchJson<{ state: string; caption?: string }>(`/api/home/brief?weather=${encodeURIComponent(JSON.stringify(weather))}`, { state: 'off' })
       .then((result) => { if (sentKey.current === key && result.state === 'ok' && typeof result.caption === 'string') setWritten(result.caption); });
   }, [aiBriefEnabled, dataKey, ready, weather]);
-  // The social row only appears for someone using the planner this month.
-  const socialRow = composeSocialRow(socialPosts, indiaToday());
-  const quiet = socialRow ? [...composeQuietRows(input), socialRow] : composeQuietRows(input);
-  const heading = quiet.every((row) => row.empty) ? 'Quiet today' : 'Everything else';
 
   return (
     <div className="screen-body field">
       <header className="fd-top">
         {/* The date is rendered in IST on both sides, but the day can turn between them. */}
-        <p className="fd-date" suppressHydrationWarning>{today}</p>
+        <div className="fd-brand">
+          <OrbisMark size={26} />
+          <p className="fd-date" suppressHydrationWarning>{today}</p>
+        </div>
         <div className="fd-top-actions">
+          <NotificationsButton />
           <ThemeToggle />
           <SettingsButton />
         </div>
@@ -130,21 +127,24 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
       <PasskeyPrompt />
 
-      <SetupChecklist steps={setup} />
-
+      {/* Home reads in the order the day is lived: what Orbis has to say, what
+          is due now, what it noticed, then the day's numbers and weather. The
+          things to read at leisure — mail, news — come after, and the reminders
+          about Orbis itself sit at the foot, out of the way of all of it. */}
       <FocusNote note={brief} />
+
+      {/* The brief says what is due; this records what happened to it. */}
+      {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
+      {current && canAnswer(current) && <RoutineCheck current={current} />}
 
       {/* What Orbis noticed on its own, each with its next step ready. */}
       <Headsups onAction={openHeadsup} />
 
       <TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />
 
-      {/* The brief says what is due; this records what happened to it. */}
-      {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
-      {current && canAnswer(current) && <RoutineCheck current={current} />}
-
       <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
 
+      {/* Mail you have not said "Got it" to yet. */}
       {gmailNotice && (
         <div className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`} role="status">
           <span>{gmailNotice === 'connected' ? 'Gmail connected.' : gmailNotice === 'cancelled' ? 'Gmail connection was cancelled.' : gmailNotice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : gmailNotice === 'expired' ? 'That Google sign-in took too long or started on a different address. Connect again from here.' :'Gmail could not be connected. Try again.'}</span>
@@ -153,7 +153,10 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       )}
       <ImportantMail />
 
-      <QuietList heading={heading} rows={quiet} onOpen={openTab} />
+      {/* What is happening in the world, and what it may mean for the market. */}
+      <NewsCard />
+
+      <SetupChecklist steps={setup} />
 
       <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
     </div>

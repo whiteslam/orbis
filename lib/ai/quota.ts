@@ -9,7 +9,7 @@
  *
  * Pure apart from the injected rpc, so the rules are unit-tested.
  */
-export type AiQuotaFeature = 'home_brief' | 'workbook_advice' | 'portfolio_advice' | 'health_plan';
+export type AiQuotaFeature = 'home_brief' | 'workbook_advice' | 'portfolio_advice' | 'health_plan' | 'portfolio_news';
 
 export type Rpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string } | null }>;
 

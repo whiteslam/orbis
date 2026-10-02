@@ -29,7 +29,7 @@ const QUALITY_FROM_INR = 500;
 const WARNING_SHARE = 0.8;
 
 /** Where answer quality is worth paying for first, when the budget allows it. */
-const QUALITY_FEATURES = new Set(['ask_orbis', 'talk_orbis', 'health_plan', 'health_plan_questions', 'workbook_advice', 'portfolio_advice']);
+const QUALITY_FEATURES = new Set(['ask_orbis', 'talk_orbis', 'health_plan', 'health_plan_questions', 'workbook_advice', 'portfolio_advice', 'news_digest', 'portfolio_news']);
 /** Where Orbis's own wording is already fine, so no request is ever paid for. */
 const FREE_ONLY_FEATURES = new Set(['headsups']);
 

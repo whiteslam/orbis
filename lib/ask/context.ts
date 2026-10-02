@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { isInvestmentCategory } from '@/lib/finance/manual';
 import { createClient } from '@/lib/supabase/server';
 import {
   istDate, rankJournal, weeklyRoutines, weeklySpending, weeklySteps,
@@ -82,7 +83,7 @@ export async function buildAskContext(userId: string, question: string, sources:
     used.push('notes');
   }
 
-  const spending = weeklySpending(((transactions.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  const spending = weeklySpending(((transactions.data ?? []) as Array<Record<string, unknown>>).filter((row) => !isInvestmentCategory(row.category as string | null)).map((row) => ({
     amount: Number(row.amount),
     currency: String(row.currency),
     occurredAt: String(row.occurred_at),

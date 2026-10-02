@@ -3,7 +3,7 @@ import 'server-only';
 // Shared plumbing for external data providers. The UI never sees raw provider
 // errors: every failure becomes one ProviderError kind with a plain message.
 
-export type ProviderId = 'open_meteo' | 'frankfurter' | 'alpha_vantage' | 'amfi' | 'coingecko';
+export type ProviderId = 'open_meteo' | 'frankfurter' | 'alpha_vantage' | 'amfi' | 'coingecko' | 'newsdata';
 
 export type ProviderErrorKind = 'rate_limited' | 'auth' | 'unavailable' | 'invalid_request' | 'timeout' | 'not_configured';
 
@@ -22,6 +22,7 @@ export const PROVIDER_LABEL: Record<ProviderId, string> = {
   alpha_vantage: 'Stock prices',
   amfi: 'Fund & ETF prices',
   coingecko: 'Crypto prices',
+  newsdata: 'News',
 };
 
 export class ProviderError extends Error {

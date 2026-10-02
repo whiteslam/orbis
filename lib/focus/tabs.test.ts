@@ -14,6 +14,7 @@ const finance = (overrides: Partial<FinanceSummary> = {}): FinanceSummary => ({
   loadError: false,
   transactions: [],
   monthlyExpenses: [], incomePlan: [], incomePlanReady: true,
+  ownInvestments: { currency: 'INR', total: 0, categories: [] },
   month: null,
   ...overrides,
 });
@@ -24,6 +25,7 @@ const month = (overrides: Partial<NonNullable<FinanceSummary['month']>> = {}) =>
   month: 9,
   spent: 24_000,
   received: 0,
+  invested: 0,
   incomeCategories: [], categories: [{ category: 'Food', amount: 9_000 }, { category: 'Transport', amount: 4_000 }],
   daily: [],
   ...overrides,

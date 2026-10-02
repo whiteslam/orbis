@@ -24,3 +24,20 @@
 .talk-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--sys-separator); border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--sys-label); font-size: 15px; }
 .talk-type button { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-blue); color: #fff; }
 .talk-type button:disabled { opacity: .5; }
+
+/* The item an "Ask Orbis" button attached: a headline, the market read, or a holding. */
+.talk-about { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; margin: 0 16px 8px; padding: 8px 4px 8px 12px; border-radius: 14px; background: var(--sys-tint-blue); }
+.talk-about-kind { grid-column: 1; font-size: 11px; font-weight: 650; color: var(--sys-secondary); }
+.talk-about-title { grid-column: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--sys-label); }
+.talk-about button { grid-column: 2; grid-row: 1 / span 2; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--sys-secondary); display: grid; place-items: center; }
+
+/* "Ask Orbis" on News and Investments cards. */
+.fd-ask { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 1px solid var(--fd-rule); border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.fd-ask:hover { color: var(--fd-ink); border-color: var(--fd-soft); }
+.fd-ask:focus-visible { outline: 2px solid var(--fd-ink); outline-offset: 2px; }
+.fd-ask.icon { padding: 0; width: 32px; justify-content: center; flex: none; }
+.fd-news-item { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--fd-rule); }
+.fd-news-item .fd-news-row { flex: 1; border-bottom: 0; }
+.fd-news-actions { margin: 8px 0 4px; }
+.fd-news-sector .fd-news-item { border-bottom: 0; }
+.fd-news-sector .fd-news-row { padding: 0; }

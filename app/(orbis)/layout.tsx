@@ -19,6 +19,7 @@ import '../styles/settings.css';
 import '../styles/glass.css';
 import '../styles/glass-dark.css';
 import '../styles/headsups.css';
+import '../styles/motion.css';
 
 export default function OrbisLayout({ children }: { children: React.ReactNode }) {
   return children;

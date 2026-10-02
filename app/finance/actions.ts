@@ -6,7 +6,7 @@ import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
 import { createClient } from '@/lib/supabase/server';
 import { isMissingTable } from '@/lib/supabase/errors';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
 
 export type FinanceActionState = {
   success: boolean;
@@ -55,7 +55,10 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
   }
   const amount = Number(input.amount);
   const currency = input.currency.trim().toUpperCase();
-  const direction = input.direction;
+  // An investment is stored as an expense with an investment category; the
+  // category alone keeps it out of "spent" and lists it under Investments.
+  const isInvestment = input.direction === 'investment';
+  const direction = isInvestment ? 'expense' : input.direction;
   const category = input.category;
   const merchant = input.merchant.trim().slice(0, 100);
   const paymentMethod = input.paymentMethod;
@@ -67,7 +70,7 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
   }
   if (!/^[A-Z]{3}$/.test(currency)) return { success: false, message: 'Use a three-letter currency code, such as INR.' };
   if (direction !== 'expense' && direction !== 'income') return { success: false, message: 'Choose whether this was an expense or income.' };
-  const categories: readonly string[] = direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const categories: readonly string[] = isInvestment ? INVESTMENT_CATEGORIES : direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   if (!categories.includes(category)) return { success: false, message: 'Choose a category.' };
   if (paymentMethod && !PAYMENT_METHODS.some(([key]) => key === paymentMethod)) return { success: false, message: 'Choose a valid payment method.' };
   if (note.length > MANUAL_NOTE_MAX_LENGTH) return { success: false, message: `Keep the note under ${MANUAL_NOTE_MAX_LENGTH} characters.` };
@@ -109,7 +112,7 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
     if (error) return { success: false, message: 'The transaction could not be saved. Please try again.' };
 
     revalidatePath('/active');
-    return { success: true, message: direction === 'expense' ? 'Expense saved.' : 'Income saved.' };
+    return { success: true, message: isInvestment ? 'Investment saved. It’s listed under Investments too.' : direction === 'expense' ? 'Expense saved.' : 'Income saved.' };
   } catch {
     return { success: false, message: 'The transaction could not be saved. Please refresh Finance and try again.' };
   }

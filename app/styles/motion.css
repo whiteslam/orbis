@@ -1,0 +1,70 @@
+/* ─── Motion ───────────────────────────────────────────────────────────
+   Nothing in the app should blink into place. A screen's contents rise in
+   one after another when a tab opens, a page opened from a tab slides in from
+   the side, sheets grow from where they were called, bars and rings draw
+   themselves, and anything pressed gives a little.
+
+   Everything here moves with transform and opacity only, which the browser
+   animates on the compositor: it runs at the display's own rate (60 or 120 Hz)
+   and never waits on layout. Entrances use `backwards` fill, so once an
+   element has arrived it carries no transform at all — sticky headers and
+   menus behave exactly as they did before.
+
+   All of it is inside prefers-reduced-motion: no-preference; with Reduce
+   Motion on, the app is as still as it was. */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --mo-ease: cubic-bezier(.22, 1, .36, 1);
+    --mo-spring: cubic-bezier(.34, 1.4, .64, 1);
+  }
+
+  /* A screen's sections rise in, each a beat after the one above it. */
+  .screen-body > * { animation: mo-rise .46s var(--mo-ease) backwards; }
+  .screen-body > :nth-child(2) { animation-delay: .03s; }
+  .screen-body > :nth-child(3) { animation-delay: .06s; }
+  .screen-body > :nth-child(4) { animation-delay: .09s; }
+  .screen-body > :nth-child(5) { animation-delay: .12s; }
+  .screen-body > :nth-child(6) { animation-delay: .15s; }
+  .screen-body > :nth-child(7) { animation-delay: .18s; }
+  .screen-body > :nth-child(8) { animation-delay: .21s; }
+  .screen-body > :nth-child(n+9) { animation-delay: .24s; }
+  /* A page opened from a tab (it has the back/close header) comes in from the side. */
+  .screen-body:has(> .fd-sub-head) > * { animation-name: mo-slide; }
+  @keyframes mo-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
+  @keyframes mo-slide { from { opacity: 0; transform: translate3d(28px, 0, 0); } }
+
+  /* Sheets: Settings rises from the foot; Ask Orbis grows out of its button. */
+  .settings-sheet { animation: mo-sheet-up .42s var(--mo-ease) backwards; }
+  .talk-sheet { transform-origin: calc(100% - 46px) calc(100% - 46px); animation: mo-bloom .44s var(--mo-ease) backwards; }
+  .talk-sheet > * { animation: mo-rise .5s var(--mo-ease) .1s backwards; }
+  .so-new-menu { transform-origin: top right; animation: mo-pop .2s var(--mo-ease) backwards; }
+  @keyframes mo-sheet-up { from { opacity: 0; transform: translate3d(0, 6%, 0); } }
+  @keyframes mo-bloom { from { opacity: 0; transform: scale(.9); border-radius: 48px; } }
+  @keyframes mo-pop { from { opacity: 0; transform: scale(.94) translate3d(0, -4px, 0); } }
+
+  /* The tab bar: the chosen tab's icon lands with a small bounce. */
+  .bottom-nav button.active svg { animation: mo-land .42s var(--mo-spring); }
+  @keyframes mo-land { from { transform: scale(.72); } }
+
+  /* Anything pressed gives slightly and comes back. */
+  .field button, .field .fd-button, .bottom-nav button, .talk-fab, .talk-sheet button, .settings-sheet button, .avatar {
+    transition: transform .16s var(--mo-ease), background-color .18s ease, color .18s ease, opacity .18s ease, box-shadow .18s ease;
+  }
+  .field button:active, .field .fd-button:active, .talk-sheet button:active, .settings-sheet button:active, .avatar:active { transform: scale(.97); }
+  .bottom-nav button:active, .talk-fab:active { transform: scale(.92); }
+  /* Whole-row and whole-card buttons move less: 3% of a full-width row is a lurch. */
+  .field .fd-line:active, .field .hl-row:active, .field .so-row:active, .field .hl-today:active, .field .setup-row:active, .field .today-widget:active, .field .so-day:active { transform: scale(.985); }
+
+  /* Rings draw after their card has arrived, and take a little longer over it. */
+  .activity-ring-progress { animation-duration: 1.15s; animation-delay: .18s; }
+
+  /* Bars grow from their baseline instead of appearing full-size. */
+  .fd-bars i, .today-widget-bars i { transform-origin: bottom; animation: mo-grow-y .7s var(--mo-ease) .16s backwards; }
+  .fd-cat-bar i, .hl-bar i, .highlight-bars i, .steps-progress i { transform-origin: left; animation: mo-grow-x .8s var(--mo-ease) .2s backwards; }
+  @keyframes mo-grow-y { from { transform: scaleY(0); } }
+  @keyframes mo-grow-x { from { transform: scaleX(0); } }
+
+  /* The numbers a screen opens on count for more than the rest: they settle last. */
+  .fd-hero-value, .today-widget-value { animation: mo-settle .6s var(--mo-ease) .08s backwards; }
+  @keyframes mo-settle { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.96); } }
+}

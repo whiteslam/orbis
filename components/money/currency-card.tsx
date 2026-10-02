@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FieldLabel } from '@/components/field/field';
+import { ChevronDown } from 'lucide-react';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED'] as const;
 
@@ -11,6 +11,8 @@ type Rates = { date: string; rates: Record<string, number | null>; stale: boolea
 export function CurrencyCard({ note }: { note?: string }) {
   const [data, setData] = useState<Rates | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Reference, not something to act on: one line until asked for.
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,22 +31,29 @@ export function CurrencyCard({ note }: { note?: string }) {
     ? `${data.stale ? 'Last saved · ' : ''}ECB, ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${data.date}T00:00:00Z`))}${note ? ` · ${note}` : ''}`
     : null;
 
+  const inr = (perInr: number | null | undefined) => (perInr ? `₹${(1 / perInr).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}` : '—');
+  const peek = error ? 'Unavailable' : data ? `1 USD ${inr(data.rates.USD)}` : 'Loading…';
+
   return (
     <section className="fd-rates" aria-label="Rates to INR">
-      <FieldLabel>Rates to INR</FieldLabel>
-      <p className="fd-rates-src">{error ?? source ?? 'Loading rates…'}</p>
-      {data && (
-        <div className="fd-rates-grid">
-          {CURRENCIES.map((code) => {
-            const perInr = data.rates[code];
-            return (
-              <div key={code}>
-                <span>1 {code}</span>
-                <strong>{perInr ? `₹${(1 / perInr).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}` : '—'}</strong>
-              </div>
-            );
-          })}
-        </div>
+      <button className="fd-rates-head" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="fd-label">Rates to INR</span>
+        <span className="fd-rates-peek">{peek}<ChevronDown size={14} strokeWidth={2.2} aria-hidden="true" /></span>
+      </button>
+      {open && (
+        <>
+          <p className="fd-rates-src">{error ?? source ?? 'Loading rates…'}</p>
+          {data && (
+            <div className="fd-rates-grid">
+              {CURRENCIES.map((code) => (
+                <div key={code}>
+                  <span>1 {code}</span>
+                  <strong>{inr(data.rates[code])}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

@@ -11,6 +11,9 @@ import { AllocationBreakdown, PortfolioHealth } from '@/components/money/portfol
 
 import { safeAction } from '@/lib/client/safe-action';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
+import type { OwnInvestments } from '@/lib/finance/types';
+import { OwnInvestmentsList } from '@/components/money/own-investments';
+import { PortfolioNewsCard } from '@/components/money/portfolio-news';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
 import { FieldHead, FieldHero, FieldLabel, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { inr } from '@/components/money/format';
@@ -35,7 +38,7 @@ const ZERODHA_NOTICE: Record<string, string> = {
   failed: 'Zerodha could not be connected. Try again.',
 };
 
-export function InvestDashboard({ savedAdvice, notice, clearNotice, switcher }: { savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void; switcher?: ReactNode }) {
+export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNotice, switcher }: { ownInvestments?: OwnInvestments; savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void; switcher?: ReactNode }) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [view, setView] = useState<InvestView>({ name: 'main' });
@@ -123,6 +126,9 @@ export function InvestDashboard({ savedAdvice, notice, clearNotice, switcher }: 
       {/* Six rows of dashes tell a new user nothing, so the numbers wait until there are numbers. */}
       {hasData && <QuietList heading="Position" rows={composeInvestRows({ analysis })} />}
 
+      {/* Waits for the broker load, so it is asked once with the holdings known. */}
+      {live && (hasData || Boolean(ownInvestments?.categories.length)) && <PortfolioNewsCard />}
+
       {hasData && <><FieldLabel>Health of the mix</FieldLabel><PortfolioHealth analysis={analysis} /></>}
       {hasData && <><FieldLabel>Allocation</FieldLabel><AllocationBreakdown analysis={analysis} /></>}
 
@@ -139,6 +145,8 @@ export function InvestDashboard({ savedAdvice, notice, clearNotice, switcher }: 
           />
         ))}
       </section>
+
+      {ownInvestments && <OwnInvestmentsList own={ownInvestments} />}
 
       {hasData && <PortfolioAiRow advice={advice} onOpen={() => setView({ name: 'advice' })} />}
     </>

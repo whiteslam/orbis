@@ -3,6 +3,12 @@
    is the only place a screen states a direction, so it carries the accent for
    good news and the Field's own alert red for bad. */
 .fd-hero { margin-top: 18px; }
+/* Money: the month's total with a small Add button on its right. */
+.mn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mn-top:empty { display: none; }
+.mn-top .fd-hero { min-width: 0; }
+.mn-add { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 34px; margin: 22px 0 0 auto; padding: 0 13px 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.mn-add:active { opacity: .85; }
 .fd-hero-value { margin: 0; font-family: var(--rounded); font-size: clamp(34px, 13.5vw, 52px); font-weight: 650; letter-spacing: -.04em; line-height: 1; color: var(--fd-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .fd-hero-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px; margin-top: 7px; }
 .fd-hero-meta > span:first-child { color: var(--fd-soft); font-size: 13px; line-height: 1.4; }
@@ -74,6 +80,10 @@
 .fd-quiet { margin-top: 26px; }
 .fd-quiet h2, .fd-label { margin: 0; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-faint); font-weight: 700; }
 .fd-label { display: block; margin-top: 22px; }
+/* A section label with one control on its right, such as Money in's show/hide. */
+.fd-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.fd-label-row .fd-label { margin-top: 0; }
+.fd-label-row .fd-link { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; }
 .fd-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 13px 2px; border: 0; border-bottom: 1px solid var(--fd-rule); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .fd-line span { color: var(--fd-soft); font-size: 13px; }
 .fd-line b { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -81,7 +91,11 @@
 .fd-note { margin: 18px 0 0; color: var(--fd-faint); font-size: 11px; line-height: 1.55; }
 
 /* Important mail on Home: hairline rows like the quiet list, three short lines each. */
-.fd-mail-row { display: flex; flex-direction: column; gap: 2px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); color: inherit; text-decoration: none; min-width: 0; }
+.fd-mail-row { display: flex; align-items: center; gap: 10px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); min-width: 0; }
+.fd-mail-open { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; color: inherit; text-decoration: none; }
+.fd-mail-ack { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 1px solid var(--fd-rule); border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.fd-mail-ack:hover { color: var(--fd-ink); border-color: var(--fd-soft); }
+.fd-mail-ack:focus-visible { outline: 2px solid var(--fd-ink); outline-offset: 2px; }
 .fd-mail-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
 .fd-mail-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 550; color: var(--fd-soft); }
 .fd-mail-row.unread .fd-mail-top b, .fd-mail-row.unread .fd-mail-subject { font-weight: 650; color: var(--fd-ink); }
@@ -89,6 +103,23 @@
 .fd-mail-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--fd-soft); }
 .fd-mail-snippet { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; font-size: 11.5px; color: var(--fd-faint); line-height: 1.45; }
 .fd-mail-more { margin-top: 10px; }
+
+/* News: headlines under the mail, with the AI's market read above them. */
+.fd-news-market { padding: 12px 2px 4px; border-bottom: 1px solid var(--fd-rule); }
+.fd-news-market-head { margin: 0 0 4px; font-size: 11px; font-weight: 650; color: var(--fd-soft); }
+.fd-news-summary { margin: 0; font-size: 13px; line-height: 1.5; color: var(--fd-ink); }
+.fd-news-sectors { list-style: none; margin: 10px 0 6px; padding: 0; display: grid; gap: 8px; }
+.fd-news-sector { display: grid; gap: 1px; min-width: 0; }
+.fd-news-sector-name { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; }
+.fd-news-sector.is-up .fd-news-sector-name { color: var(--status-good); }
+.fd-news-sector.is-down .fd-news-sector-name { color: var(--status-critical); }
+.fd-news-sector.is-mixed .fd-news-sector-name { color: var(--fd-soft); }
+.fd-news-sector-why { font-size: 11.5px; line-height: 1.45; color: var(--fd-faint); }
+.fd-news-row { display: flex; flex-direction: column; gap: 2px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); color: inherit; text-decoration: none; min-width: 0; }
+.fd-news-title { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--fd-ink); }
+.fd-news-line { font-size: 12px; line-height: 1.45; color: var(--fd-soft); }
+.fd-news-meta { font-size: 11px; color: var(--fd-faint); }
+.fd-news-foot { margin: 10px 2px 2px; font-size: 10.5px; line-height: 1.45; color: var(--fd-faint); }
 
 /* Tab screens: a title where Home has its date row. */
 .fd-head { margin-bottom: 18px; }

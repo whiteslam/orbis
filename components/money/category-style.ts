@@ -2,6 +2,10 @@ import {
   BookOpen,
   Briefcase,
   Car,
+  ChartLine,
+  Coins,
+  PiggyBank,
+  ShieldCheck,
   CircleDollarSign,
   Dumbbell,
   Film,
@@ -48,6 +52,15 @@ const STYLES: Record<string, { color: string; icon: LucideIcon }> = {
   'Interest & dividends': { color: '#00c7be', icon: CircleDollarSign },
   Refund: { color: '#007aff', icon: RefreshCcw },
   Gift: { color: '#bf5af2', icon: Gift },
+  // Investments share one green family so they read as saved, not spent.
+  'SIP / Mutual fund': { color: '#248a3d', icon: TrendingUp },
+  Stocks: { color: '#30d158', icon: ChartLine },
+  FD: { color: '#0a7a5c', icon: PiggyBank },
+  RD: { color: '#2fb380', icon: PiggyBank },
+  'PPF / EPF': { color: '#1f6f4a', icon: ShieldCheck },
+  NPS: { color: '#3d9970', icon: ShieldCheck },
+  Gold: { color: '#c9a227', icon: Coins },
+  'Other investment': { color: '#4caf7d', icon: TrendingUp },
 };
 
 const FALLBACK = { color: '#8e8e93', icon: Wallet };

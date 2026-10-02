@@ -1,7 +1,7 @@
 import type { PortfolioAdvice } from '@/lib/invest/types';
 import type { WorkbookAdvice, WorkbookObservation } from '@/lib/workbook/types';
 
-export type AiFeature = 'workbook_advice' | 'portfolio_advice' | 'home_brief';
+export type AiFeature = 'workbook_advice' | 'portfolio_advice' | 'home_brief' | 'portfolio_news';
 
 /** Identifies a freshly saved result so the page can delete it without a reload. */
 export type AiResultStamp = { id: string; createdAt: string };

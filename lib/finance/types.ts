@@ -32,15 +32,25 @@ export type FinanceSummary = {
   /** What you expect to earn. Empty until it is set up. */
   incomePlan: IncomePlanEntry[];
   incomePlanReady: boolean;
+  /** Investments you recorded yourself (FD, RD, SIP…), all time, by category. */
+  ownInvestments: OwnInvestments;
   month: null | {
     currency: string;
     year: number;
     month: number;
     spent: number;
     received: number;
+    /** Moved into investments this month; not part of spent. */
+    invested: number;
     categories: Array<{ category: string; amount: number }>;
     /** Income by source: Salary, Freelance, Refund and so on. */
     incomeCategories: Array<{ category: string; amount: number }>;
     daily: Array<{ day: number; amount: number }>;
   };
+};
+
+export type OwnInvestments = {
+  currency: string;
+  total: number;
+  categories: Array<{ category: string; amount: number; count: number; lastAt: string }>;
 };

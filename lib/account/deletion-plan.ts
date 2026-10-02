@@ -64,6 +64,7 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'journal_voice_notes',
   'headsups',
   'headsup_preferences',
+  'mail_acknowledgements',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */

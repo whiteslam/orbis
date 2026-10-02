@@ -32,5 +32,5 @@ export function MoneyScreen({ intent = null, view, onView, summary, savedPortfol
   const switcher = <MoneySwitch view={view} onView={onView} />;
   return view === 'spending'
     ? <SpendingScreen summary={summary} switcher={switcher} intent={intent} />
-    : <InvestmentsScreen savedAdvice={savedPortfolioAdvice} notice={brokerNotice} clearNotice={clearBrokerNotice} switcher={switcher} />;
+    : <InvestmentsScreen ownInvestments={summary.ownInvestments} savedAdvice={savedPortfolioAdvice} notice={brokerNotice} clearNotice={clearBrokerNotice} switcher={switcher} />;
 }

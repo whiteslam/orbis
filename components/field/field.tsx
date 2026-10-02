@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, X } from 'lucide-react';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SettingsButton } from '@/components/shell/settings-context';
 import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
 
@@ -11,7 +12,10 @@ export function FieldHead({ title, subtitle }: { title: string; subtitle?: strin
   return (
     <header className="fd-head">
       <div className="fd-head-row">
-        <p className="fd-date" suppressHydrationWarning>{subtitle ?? today}</p>
+        <div className="fd-brand">
+          <OrbisMark size={26} />
+          <p className="fd-date" suppressHydrationWarning>{subtitle ?? today}</p>
+        </div>
         <SettingsButton />
       </div>
       <h1>{title}</h1>
