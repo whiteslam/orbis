@@ -15,6 +15,7 @@ function toRoutine(row: Record<string, unknown>): Routine {
     atTime: String(row.at_time).slice(0, 5),
     days: Array.isArray(row.days) ? (row.days as number[]).map(Number) : [],
     active: row.active !== false,
+    flexible: row.flexible === true,
     archivedAt: typeof row.archived_at === 'string' ? row.archived_at : null,
   };
 }
@@ -43,11 +44,14 @@ export async function getRoutinesSummary(userId: string, now = new Date()): Prom
     const today = localParts(now).date;
     const listRoutines = (columns: string) => supabase.from('routines').select(columns).eq('user_id', userId).order('at_time').limit(60);
     const [first, events] = await Promise.all([
-      listRoutines('id,title,kind,at_time,days,active,archived_at'),
+      listRoutines('id,title,kind,at_time,days,active,archived_at,flexible'),
       supabase.from('routine_events').select('id,routine_id,title,local_date,status,note').eq('user_id', userId).eq('local_date', today).limit(40),
     ]);
-    // Before the archive migration there is no archived_at; the day still works without it.
-    const routines = first.error?.code === '42703' ? await listRoutines('id,title,kind,at_time,days,active') : first;
+    // Before the routine_flexible migration there is no flexible column, and
+    // before the archive migration no archived_at; the day still works without
+    // either, every routine simply counted as exact.
+    const second = first.error?.code === '42703' ? await listRoutines('id,title,kind,at_time,days,active,archived_at') : first;
+    const routines = second.error?.code === '42703' ? await listRoutines('id,title,kind,at_time,days,active') : second;
     const error = routines.error ?? events.error;
     if (error) return { state: isMissingTable(error.code) ? 'setup' : 'unavailable', routines: [], events: [] };
     return {
@@ -60,14 +64,21 @@ export async function getRoutinesSummary(userId: string, now = new Date()): Prom
   }
 }
 
-export type RoutineDraft = { title: string; kind: RoutineKind; atTime: string; days: number[] };
+export type RoutineDraft = { title: string; kind: RoutineKind; atTime: string; days: number[]; flexible: boolean };
 
 export async function saveRoutine(userId: string, draft: RoutineDraft, id?: string) {
   const supabase = await createClient();
   const row = { user_id: userId, title: draft.title, kind: draft.kind, at_time: draft.atTime, days: draft.days, updated_at: new Date().toISOString() };
-  const { error } = id
-    ? await supabase.from('routines').update(row).eq('id', id).eq('user_id', userId)
-    : await supabase.from('routines').insert(row);
+  const save = (values: Record<string, unknown>) => (id
+    ? supabase.from('routines').update(values).eq('id', id).eq('user_id', userId)
+    : supabase.from('routines').insert(values));
+  let { error } = await save({ ...row, flexible: draft.flexible });
+  // Before the routine_flexible migration the column is missing: keep the
+  // routine, which is what was asked for, and say what is needed for the flag.
+  if (error?.code === '42703') {
+    ({ error } = await save(row));
+    if (!error && draft.flexible) throw new Error('Saved, but "usually around" needs the routine_flexible migration in Supabase.');
+  }
   if (error) throw new Error(isMissingTable(error.code) ? 'Apply the routines migration in Supabase, then try again.' : 'That routine could not be saved.');
 }
 

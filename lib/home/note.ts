@@ -15,7 +15,7 @@ import type { BriefWeather } from '@/lib/home/weather';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import type { BriefTraining } from '@/lib/home/training';
 import type { RoutineToday } from '@/lib/routines/types';
-import { relativeWhen } from '@/lib/routines/today';
+import { relativeWhen, routineState } from '@/lib/routines/today';
 import { clockLabel } from '@/lib/routines/types';
 
 export type HomeNote = {
@@ -128,28 +128,43 @@ function financeLine(finance: FinanceSummary): string | null {
 }
 
 
-/** What today asks of you in the gym, from the plan already saved. */
 /**
  * What you planned to be doing around now.
  *
- * This outranks every other subject, because it is the literal answer to the
- * question the brief exists to answer. The weather is context; a 7 pm workout
- * at 6:52 pm is the point.
+ * This outranks every other subject when it is close, because it is the
+ * literal answer to the question the brief exists to answer. The weather is
+ * context; a 7 pm workout at 6:52 pm is the point.
+ *
+ * Orbis knows two things about a routine: the clock, and whether you have said
+ * anything. It does not know what you did. So a routine whose time has passed
+ * is one Orbis has not heard about, and that is the only claim this line ever
+ * makes. "Missed", "slipped", "probably" and "did it happen?" all read as
+ * verdicts on a day Orbis did not see, and note.test.ts keeps them out.
  */
 function routineLine(current: RoutineToday, missed: RoutineToday[], seed: number): string {
-  const { routine, minutesAway } = current;
+  const { routine } = current;
   const at = clockLabel(routine.atTime);
-  const when = relativeWhen(minutesAway);
+  const around = routine.flexible ? `around ${at}` : `at ${at}`;
   const behind = missed.length === 1
-    ? ` ${missed[0].routine.title} slipped by without a check-in.`
+    ? ` I haven’t heard about ${missed[0].routine.title} yet.`
     : missed.length > 1
-      ? ` ${missed.length} earlier ones slipped by without a check-in.`
+      ? ` I haven’t heard about ${missed.length} earlier ones yet.`
       : '';
 
-  if (minutesAway > 45) return `${pick([`You’ve got ${routine.title} at ${at}.`, `${routine.title} is next, at ${at}.`], seed, 7)}${behind}`;
-  if (minutesAway > 10) return `${routine.title} starts ${when}, so start wrapping up.${behind}`;
-  if (minutesAway >= -10) return `It’s time for ${routine.title}.${behind}`;
-  return `${routine.title} was ${when}; did it happen?${behind}`;
+  switch (routineState(current)) {
+    case 'later':
+      return `${pick([`You’ve got ${routine.title} ${around}.`, `${routine.title} is next, ${around}.`], seed, 7)}${behind}`;
+    case 'soon':
+      return routine.flexible
+        ? `${routine.title} is coming up, usually ${around}.${behind}`
+        : `${routine.title} starts ${relativeWhen(current.minutesAway)}, so start wrapping up.${behind}`;
+    case 'now':
+      return `It’s time for ${routine.title}.${behind}`;
+    case 'unheard':
+      return routine.flexible
+        ? `${routine.title} is usually ${around}; tell me when it happens.${behind}`
+        : `${routine.title} was set for ${at}; I haven’t heard how it went.${behind}`;
+  }
 }
 
 function trainingLine(training: BriefTraining, when: PartOfDay, seed: number): string | null {
@@ -225,25 +240,30 @@ export function composeNote(input: NoteInput): HomeNote {
   // Subjects in the order a person would raise them: what is happening outside,
   // what today asks of you, then the money. Each carries the service behind it
   // so the credits below list what the caption kept, not what it considered.
-  const candidates: Array<{ text: string; from: SourceId }> = [];
+  const candidates: Array<{ text: string; from: SourceId; id: string }> = [];
 
+  // A routine hours away is context, not the lead: "you've got Gym at 7 pm" at
+  // 8 am is true and useless, and it would spend one of the two sentences.
   const scheduled = input.routine ? routineLine(input.routine, input.missed ?? [], seed) : null;
-  if (scheduled) candidates.push({ text: scheduled, from: 'orbis' });
+  const routineLater = input.routine ? routineState(input.routine) === 'later' : false;
+  if (scheduled && !routineLater) candidates.push({ text: scheduled, from: 'orbis', id: 'routine-first' });
 
   const sky = input.weather ? weatherLine(input.weather, when, seed) : null;
-  if (sky) candidates.push({ text: sky, from: 'open-meteo' });
+  if (sky) candidates.push({ text: sky, from: 'open-meteo', id: 'weather-first' });
 
   // The plan's session only speaks when no routine already covers the gym, or
   // the brief says the same thing twice in two sentences.
   const covered = input.routine?.routine.kind === 'workout';
   const gym = !covered && input.training ? trainingLine(input.training, when, seed) : null;
-  if (gym) candidates.push({ text: gym, from: 'orbis' });
+  if (gym) candidates.push({ text: gym, from: 'orbis', id: 'training-first' });
 
   const cash = financeLine(input.finance);
-  if (cash) candidates.push({ text: cash, from: 'orbis' });
+  if (cash) candidates.push({ text: cash, from: 'orbis', id: 'money-first' });
 
   const investing = input.portfolio ? portfolioLine(input.portfolio, seed) : null;
-  if (investing) candidates.push({ text: investing, from: 'groww' });
+  if (investing) candidates.push({ text: investing, from: 'groww', id: 'investing-first' });
+
+  if (scheduled && routineLater) candidates.push({ text: scheduled, from: 'orbis', id: 'routine-first' });
 
   const kept = candidates.slice(0, MAX_SUBJECTS);
   const sources = new Set<SourceId>(kept.map((subject) => subject.from));
@@ -260,7 +280,7 @@ export function composeNote(input: NoteInput): HomeNote {
   }
 
   return {
-    id: scheduled ? 'routine-first' : sky ? 'weather-first' : gym ? 'training-first' : cash ? 'money-first' : 'investing-first',
+    id: kept[0].id,
     greeting: greet(today.hour, firstName, seed),
     time: clock(now),
     when,

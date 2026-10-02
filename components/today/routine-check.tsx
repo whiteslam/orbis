@@ -50,7 +50,7 @@ export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; o
 
   return (
     <div className="rt-check">
-      <p className="rt-check-head">{routine.title}<b>{clockLabel(routine.atTime)}</b></p>
+      <p className="rt-check-head">{routine.title}<b>{routine.flexible ? `around ${clockLabel(routine.atTime)}` : clockLabel(routine.atTime)}</b></p>
 
       {writingOther ? (
         <form

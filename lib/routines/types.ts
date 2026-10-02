@@ -24,6 +24,12 @@ export type Routine = {
   /** Days this runs, 0 = Sunday. */
   days: number[];
   active: boolean;
+  /**
+   * "Usually around" rather than "at": leaving the office, dinner, bed. The
+   * time is a habit, not an appointment, so running late is normal and the
+   * brief must never read it as missed.
+   */
+  flexible: boolean;
   /** When it was archived. Archived routines are hidden from the day but never lost. */
   archivedAt: string | null;
 };

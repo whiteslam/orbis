@@ -7,7 +7,7 @@ import { clockLabel, DAY_LABELS, ROUTINE_KINDS, type Routine, type RoutineKind, 
 import { safeAction } from '@/lib/client/safe-action';
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
-const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days: EVERY_DAY };
+const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days: EVERY_DAY, flexible: false };
 
 /**
  * Where the day's shape is set.
@@ -19,7 +19,7 @@ const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days
 export function RoutineSettings({ summary, editId = null }: { summary: RoutinesSummary; editId?: string | null }) {
   // A heads-up about a slipping routine opens it straight into editing.
   const target = editId ? summary.routines.find((routine) => routine.id === editId) : undefined;
-  const [draft, setDraft] = useState(() => target ? { title: target.title, kind: target.kind, atTime: target.atTime, days: target.days } : blank);
+  const [draft, setDraft] = useState(() => target ? { title: target.title, kind: target.kind, atTime: target.atTime, days: target.days, flexible: target.flexible } : blank);
   const [editing, setEditing] = useState<string | null>(target?.id ?? null);
   const [open, setOpen] = useState(Boolean(target));
   const [showArchived, setShowArchived] = useState(false);
@@ -44,14 +44,14 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
   }
 
   function edit(routine: Routine) {
-    setDraft({ title: routine.title, kind: routine.kind, atTime: routine.atTime, days: routine.days });
+    setDraft({ title: routine.title, kind: routine.kind, atTime: routine.atTime, days: routine.days, flexible: routine.flexible });
     setEditing(routine.id);
     setOpen(true);
   }
 
   const active = summary.routines.filter((routine) => routine.active);
   const archived = summary.routines.filter((routine) => !routine.active);
-  const when = (routine: Routine) => `${clockLabel(routine.atTime)} · ${routine.days.length === 7 ? 'every day' : routine.days.map((day) => DAY_LABELS[day]).join(', ')}`;
+  const when = (routine: Routine) => `${routine.flexible ? 'around ' : ''}${clockLabel(routine.atTime)} · ${routine.days.length === 7 ? 'every day' : routine.days.map((day) => DAY_LABELS[day]).join(', ')}`;
 
   const toggleDay = (day: number) => setDraft((current) => ({
     ...current,
@@ -103,6 +103,12 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
               <input type="time" value={draft.atTime} onChange={(change) => setDraft({ ...draft, atTime: change.currentTarget.value })} required disabled={isPending} />
             </label>
           </div>
+          {/* Leaving the office, dinner, bed: a usual time, not an appointment.
+              The brief says "around", waits longer, and never calls it late. */}
+          <label className="rt-flex">
+            <input type="checkbox" checked={draft.flexible} onChange={(change) => setDraft({ ...draft, flexible: change.currentTarget.checked })} disabled={isPending} />
+            <span><b>Usually around this time</b><small>Running late is normal, so Orbis won’t treat {clockLabel(draft.atTime)} as a deadline.</small></span>
+          </label>
           <p className="fd-label">Days</p>
           <div className="rt-days" role="group" aria-label="Days this runs">
             {DAY_LABELS.map((label, day) => (

@@ -16,6 +16,27 @@ const TIME_ZONE = 'Asia/Kolkata';
 export const LEAD_MINUTES = 45;
 /** How long after its time a routine is still the thing you are meant to be doing. */
 export const GRACE_MINUTES = 90;
+/** The same, for a routine that is "usually around" a time: leaving work late is not missing it. */
+export const FLEX_GRACE_MINUTES = 180;
+
+const graceFor = (routine: Routine) => (routine.flexible ? FLEX_GRACE_MINUTES : GRACE_MINUTES);
+
+/**
+ * Where a routine stands against the clock, in the only four words the brief
+ * may use for it.
+ *
+ * There is no 'missed'. Orbis knows the time and whether you have said
+ * anything; it does not know what you did. A 7 pm routine with no answer at
+ * 8 pm is one Orbis has not heard about, and that is all it may claim.
+ */
+export type RoutineState = 'later' | 'soon' | 'now' | 'unheard';
+
+export function routineState(item: RoutineToday): RoutineState {
+  if (item.minutesAway > LEAD_MINUTES) return 'later';
+  if (item.minutesAway > 10) return 'soon';
+  if (item.minutesAway >= -10) return 'now';
+  return 'unheard';
+}
 
 export function localParts(now: Date, timeZone = TIME_ZONE) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -57,7 +78,7 @@ export function currentRoutine(today: RoutineToday[]): RoutineToday | null {
   // Nearest first, and on a tie the one already under way: at exactly half past
   // between a 7:00 and a 7:20, the 7:00 is the one you are late for.
   const inPlay = open
-    .filter((item) => item.minutesAway <= LEAD_MINUTES && item.minutesAway >= -GRACE_MINUTES)
+    .filter((item) => item.minutesAway <= LEAD_MINUTES && item.minutesAway >= -graceFor(item.routine))
     .sort((left, right) => (Math.abs(left.minutesAway) - Math.abs(right.minutesAway)) || (left.minutesAway - right.minutesAway))[0];
   if (inPlay) return inPlay;
 
@@ -79,7 +100,7 @@ export function canAnswer(item: RoutineToday) {
 
 /** Routines whose time has passed with nothing said about them. */
 export function missedRoutines(today: RoutineToday[]): RoutineToday[] {
-  return today.filter((item) => item.event === null && item.minutesAway < -GRACE_MINUTES);
+  return today.filter((item) => item.event === null && item.minutesAway < -graceFor(item.routine));
 }
 
 /** What has been settled today, for the brief's closing line. */
@@ -107,3 +128,4 @@ export function relativeWhen(minutesAway: number) {
 }
 
 export type { Routine, RoutineToday };
+

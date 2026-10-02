@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { canAnswer, currentRoutine, localParts, missedRoutines, relativeWhen, routinesToday, settledToday } from './today.ts';
+import { canAnswer, currentRoutine, localParts, missedRoutines, relativeWhen, routineState, routinesToday, settledToday } from './today.ts';
 import type { Routine, RoutineEvent, RoutinesSummary } from './types.ts';
 
 // Thursday 24 September 2026. IST is UTC+5:30, so 13:30Z is 7:00 pm.
@@ -8,7 +8,7 @@ const at = (hhmm: string) => new Date(`2026-09-24T${hhmm}:00Z`);
 const SEVEN_PM = at('13:30');
 
 const routine = (over: Partial<Routine> = {}): Routine => ({
-  id: 'gym', title: 'Gym', kind: 'workout', atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, archivedAt: null, ...over,
+  id: 'gym', title: 'Gym', kind: 'workout', atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, flexible: false, archivedAt: null, ...over,
 });
 
 const summary = (routines: Routine[], events: RoutineEvent[] = []): RoutinesSummary => ({ state: 'ready', routines, events });
@@ -100,4 +100,25 @@ test('the gap is said the way a person would say it', () => {
   assert.equal(relativeWhen(120), 'in about 2 hours');
   assert.equal(relativeWhen(-40), '40 minutes ago');
   assert.equal(relativeWhen(-60), '1 hour ago');
+});
+
+test('a "usually around" routine stays current for three hours, because late is normal', () => {
+  const leave = routine({ id: 'leave', title: 'Leave office', kind: 'work', flexible: true });
+  // 8:45 pm: an exact 7 pm would be missed by now; a usual-around one is still the thing in hand.
+  assert.equal(currentRoutine(routinesToday(summary([leave]), at('15:15')))?.routine.id, 'leave');
+  assert.deepEqual(missedRoutines(routinesToday(summary([leave]), at('15:15'))), []);
+  // 10:15 pm: three hours on, Orbis stops holding it open.
+  assert.equal(currentRoutine(routinesToday(summary([leave]), at('16:45'))), null);
+  assert.deepEqual(missedRoutines(routinesToday(summary([leave]), at('16:45'))).map((item) => item.routine.id), ['leave']);
+});
+
+test('where a routine stands is one of four words, and none of them is "missed"', () => {
+  const stand = (minutesAway: number) => routineState({ routine: routine(), minutesAway, event: null });
+  assert.equal(stand(300), 'later');
+  assert.equal(stand(45), 'soon');
+  assert.equal(stand(11), 'soon');
+  assert.equal(stand(10), 'now');
+  assert.equal(stand(-10), 'now');
+  assert.equal(stand(-11), 'unheard');
+  assert.equal(stand(-400), 'unheard', 'however long ago, Orbis only knows it has not heard');
 });

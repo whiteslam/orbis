@@ -17,7 +17,7 @@ async function authed() {
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id);
 const KIND_IDS = ROUTINE_KINDS.map((kind) => kind.id);
 
-export async function saveRoutineAction(input: { id?: string; title: string; kind: string; atTime: string; days: number[] }) {
+export async function saveRoutineAction(input: { id?: string; title: string; kind: string; atTime: string; days: number[]; flexible?: unknown }) {
   const userId = await authed();
   if (!userId) return { success: false, message: 'Sign in again to save this.' };
   if (!input || typeof input !== 'object') return { success: false, message: 'Enter the routine details.' };
@@ -31,7 +31,7 @@ export async function saveRoutineAction(input: { id?: string; title: string; kin
   if (input.id !== undefined && !validId(input.id)) return { success: false, message: 'That routine is invalid.' };
 
   try {
-    await saveRoutine(userId, { title, kind: input.kind as RoutineKind, atTime: input.atTime, days }, input.id);
+    await saveRoutine(userId, { title, kind: input.kind as RoutineKind, atTime: input.atTime, days, flexible: input.flexible === true }, input.id);
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : 'That routine could not be saved.' };
   }

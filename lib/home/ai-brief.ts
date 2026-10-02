@@ -12,9 +12,15 @@
 import { createHash } from 'node:crypto';
 import { count, istParts, money } from '@/lib/focus/types';
 import type { FinanceSummary } from '@/lib/finance/types';
+import type { RoutineState } from '@/lib/routines/today';
 import { isInvestmentCategory } from '@/lib/finance/manual';
 
-export type BriefRoutine = { title: string; kind: string; at: string; minutesAway: number; answered: string | null };
+/**
+ * The one routine the brief speaks about, already placed against the clock.
+ * `state` is the placement (lib/routines/today.ts); the model is told what it
+ * means rather than left to work it out from minutesAway and the time.
+ */
+export type BriefRoutine = { title: string; kind: string; at: string; minutesAway: number; state: RoutineState; flexible: boolean; answered: string | null };
 export type BriefWeatherFacts = { temperature: number; feelsLike: number; condition: string; rainingNow: boolean; rainPeak: { probability: number; hour: string } | null };
 
 export type BriefSnapshot = {
@@ -95,15 +101,17 @@ export function briefSnapshot(input: {
  * so it must be rewritten when that stretch turns, four or five times a day.
  * Keeping the clock minute here would rewrite it every minute.
  *
- * A routine's exact minutesAway is likewise rounded away: the brief should not
- * regenerate because "in 25 minutes" became "in 24 minutes".
+ * A routine's exact minutesAway is likewise rounded away to its state: the brief
+ * should not regenerate because "in 25 minutes" became "in 24 minutes", but it
+ * must when "coming up" becomes "due" or "not heard about", or the sentence on
+ * screen is about a clock that has moved on.
  */
 export function snapshotFingerprint(snapshot: BriefSnapshot) {
   const { localTime: _ignored, weather, routine, ...rest } = snapshot;
   const stable = {
     ...rest,
     routine: routine
-      ? { title: routine.title, kind: routine.kind, at: routine.at, answered: routine.answered, due: routine.minutesAway > 45 ? 'later' : routine.minutesAway >= -90 ? 'now' : 'gone' }
+      ? { title: routine.title, kind: routine.kind, at: routine.at, answered: routine.answered, state: routine.state, flexible: routine.flexible }
       : null,
     weather: weather
       ? { raining: weather.rainingNow, rain: (weather.rainPeak?.probability ?? 0) >= 60, hot: weather.temperature >= 36, cold: weather.temperature <= 12 }

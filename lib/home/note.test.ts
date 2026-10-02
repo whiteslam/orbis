@@ -209,7 +209,7 @@ test('the weather is one sentence, with no follow-on forecast', () => {
 // ── The schedule ─────────────────────────────────────────────────────────────
 
 const due = (over: Partial<import('../routines/types.ts').RoutineToday> = {}) => ({
-  routine: { id: 'gym', title: 'Gym', kind: 'workout' as const, atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, archivedAt: null },
+  routine: { id: 'gym', title: 'Gym', kind: 'workout' as const, atTime: '19:00', days: [0, 1, 2, 3, 4, 5, 6], active: true, flexible: false, archivedAt: null },
   minutesAway: 0,
   event: null,
   ...over,
@@ -228,15 +228,15 @@ test('what is due leads the caption, ahead of weather and money', () => {
 test('the wording follows the clock, not just the schedule', () => {
   assert.match(settled({ routine: due({ minutesAway: 120 }) }).caption, /(You’ve got Gym|Gym is next), at 7 pm\.|You’ve got Gym at 7 pm\./);
   assert.match(settled({ routine: due({ minutesAway: 25 }) }).caption, /^Gym starts in 25 minutes/);
-  assert.match(settled({ routine: due({ minutesAway: -70 }) }).caption, /^Gym was 1 hour ago; did it happen\?/);
+  assert.match(settled({ routine: due({ minutesAway: -70 }) }).caption, /^Gym was set for 7 pm; I haven’t heard how it went\./);
 });
 
 test('routines that went by unanswered are mentioned, then stop being counted individually', () => {
   const one = settled({ routine: due(), missed: [due({ routine: { ...due().routine, id: 'lunch', title: 'Lunch', kind: 'meal' } })] });
-  assert.match(one.caption, /Lunch slipped by without a check-in/);
+  assert.match(one.caption, /I haven’t heard about Lunch yet/);
 
   const many = settled({ routine: due(), missed: [due(), due(), due()] });
-  assert.match(many.caption, /3 earlier ones slipped by without a check-in/);
+  assert.match(many.caption, /I haven’t heard about 3 earlier ones yet/);
 });
 
 test('a scheduled workout silences the plan’s own gym sentence', () => {
@@ -247,4 +247,33 @@ test('a scheduled workout silences the plan’s own gym sentence', () => {
   const meal = settled({ routine: due({ routine: { ...due().routine, kind: 'meal', title: 'Dinner' } }), training: training() });
   assert.match(meal.caption, /It’s time for Dinner/);
   assert.match(meal.caption, /still on today’s card|Gym today/);
+});
+
+test('the brief never passes a verdict on a routine it has not heard about', () => {
+  // Orbis knows the clock and whether you answered. It does not know what you
+  // did, so none of these words may ever appear, whatever the hour.
+  const verdicts = /\b(missed|slipped|probably|forgot|gone by|did it happen|late for)\b/i;
+  const leave = { ...due().routine, id: 'leave', title: 'Leave office', kind: 'work' as const, flexible: true };
+  for (const minutesAway of [300, 40, 0, -30, -85, -200]) {
+    for (const routine of [due().routine, leave]) {
+      for (const missed of [[], [due({ routine: { ...due().routine, id: 'lunch', title: 'Lunch', kind: 'meal' as const } })]]) {
+        const note = settled({ routine: due({ routine, minutesAway }), missed });
+        assert.ok(!verdicts.test(note.caption), `verdict in: ${note.caption}`);
+      }
+    }
+  }
+});
+
+test('a "usually around" routine is worded as a habit, and running late is not remarked on', () => {
+  const leave = due({ routine: { ...due().routine, id: 'leave', title: 'Leave office', kind: 'work' as const, flexible: true } });
+  assert.match(settled({ routine: { ...leave, minutesAway: 300 } }).caption, /(You’ve got Leave office|Leave office is next,) around 7 pm/);
+  assert.match(settled({ routine: { ...leave, minutesAway: -100 } }).caption, /^Leave office is usually around 7 pm; tell me when it happens\./);
+});
+
+test('a routine hours away gives way to anything nearer, and leads only when nothing else does', () => {
+  const later = due({ minutesAway: 300 });
+  const withWeather = settled({ routine: later, weather: raining });
+  assert.equal(withWeather.id, 'weather-first');
+  assert.match(withWeather.caption, /Gym/, 'still mentioned, second');
+  assert.equal(settled({ routine: later }).id, 'routine-first');
 });

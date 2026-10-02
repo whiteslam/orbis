@@ -2,7 +2,6 @@ import 'server-only';
 
 import type { NotificationContext } from '@/lib/notifications/context';
 import { writeBrief } from '@/lib/brief/compose';
-import { clockLabel } from '@/lib/routines/types';
 
 export type ComposedNotification = { title: string; body: string; source: 'ai' | 'rules' } | { skip: true };
 
@@ -41,10 +40,15 @@ const GREETING: Record<NotificationContext['slot'], string> = {
 export function ruleNotification(context: NotificationContext): { title: string; body: string; source: 'rules' } {
   const hello = context.name ? `, ${context.name}` : '';
   const open = context.routines.filter((routine) => routine.status === null);
-  const next = open[0] ?? null;
   const spendLine = context.spending ? `Spent ${money(context.spending.today, context.spending.currency)} today, ${money(context.spending.month, context.spending.currency)} this month.` : '';
-  const routineLine = next
-    ? `${next.title} is at ${clockLabel(next.at)}.${open.length > 1 ? ` ${open.length - 1} other${open.length > 2 ? 's' : ''} still open today.` : ''}`
+  const others = open.length > 1 ? ` ${open.length - 1} other${open.length > 2 ? 's' : ''} still open today.` : '';
+  // The same four states as the home note, and the same rule: Orbis has not
+  // heard about a routine, it never says one was missed.
+  const current = context.routine;
+  const routineLine = current
+    ? current.state === 'now' ? `It’s time for ${current.title}.${others}`
+      : current.state === 'unheard' ? `${current.title} was ${current.flexible ? 'usually around' : 'set for'} ${current.at}; I haven’t heard how it went.${others}`
+        : `${current.title} is ${current.flexible ? 'around' : 'at'} ${current.at}.${others}`
     : context.routines.length
       ? 'Everything on today’s list is answered.'
       : '';
@@ -66,7 +70,9 @@ export function ruleNotification(context: NotificationContext): { title: string;
  * app agree about the day, and falls back to Orbis's own wording on any failure.
  */
 export async function composeNotification(userId: string, context: NotificationContext): Promise<ComposedNotification> {
-  const written = await writeBrief(userId, context, 'push');
+  // What the model sees mirrors the home brief's snapshot: one placed routine,
+  // not the day's list, so the prompt's rules about `routine` apply as written.
+  const written = await writeBrief(userId, { ...context, routines: undefined }, 'push');
   if (!written) return ruleNotification(context);
   return {
     title: clip(written.title ?? `${GREETING[context.slot]}${context.name ? `, ${context.name}` : ''}`, TITLE_MAX),

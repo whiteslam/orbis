@@ -16,11 +16,16 @@ test('both surfaces are written from one prompt, differing only in length', () =
     'dayCoverage is at least 60%',
     'Never use an em dash',
     'British English',
+    // The rule this file exists for: a routine with no answer is one Orbis has
+    // not heard about, never one that was missed.
+    'Never say or imply that a routine was missed',
+    'state is unheard, say only that you have not heard',
   ]) {
     assert.ok(note.includes(rule), `note prompt lost: ${rule}`);
     assert.ok(push.includes(rule), `push prompt lost: ${rule}`);
   }
 
+  for (const prompt of [note, push]) assert.ok(!/probably missed|already gone/.test(prompt), 'the prompt must not presume what happened');
   assert.match(note, /25 to 40 words/);
   assert.match(push, /15 to 30 words/);
   assert.match(push, /title is at most 50 characters/);

@@ -21,9 +21,10 @@ import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { FocusTarget } from '@/lib/focus/types';
 import type { SocialPost } from '@/lib/social/types';
-import { composeNote, type HomeNote } from '@/lib/home/note';
+import { composeNote, partOfDay, type HomeNote } from '@/lib/home/note';
+import { istParts } from '@/lib/focus/types';
 import { trainingForToday } from '@/lib/home/training';
-import { canAnswer, currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
+import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SetupStep } from '@/lib/focus/setup';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -51,6 +52,13 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   const [written, setWritten] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<BriefPortfolio | null>(null);
   const [portfolioSettled, setPortfolioSettled] = useState(false);
+  // A minute hand. Home can sit open from 6 pm to 9 pm; without this nothing
+  // would re-render, so the routine would stay "coming up" after it had come.
+  const [, setMinute] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setMinute((count) => count + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
 
 
@@ -89,7 +97,10 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   // only when the data behind the brief changes. The server returns the saved
   // brief unless the numbers moved, so this is one request per real change
   // rather than one per visit, or one per piece of data arriving.
-  const dataKey = JSON.stringify([financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value]);
+  // The routine's state and the stretch of day are in here too: the server
+  // rewrites the brief when they turn, so the screen must ask again when they do.
+  const routineKey = current ? [current.routine.id, routineState(current), current.event !== null] : null;
+  const dataKey = JSON.stringify([financeSummary.monthlyExpenses, stepsSummary.average7, documentCount, portfolio?.total, portfolio?.day?.value, routineKey, missedRoutines(due).length, partOfDay(istParts(new Date()).hour)]);
   const ready = briefReady({ weather: weatherPhase, portfolioSettled });
   const sentKey = useRef<string | null>(null);
   useEffect(() => {

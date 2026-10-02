@@ -10,18 +10,20 @@ import { getFinanceSummary } from '@/lib/finance/repository';
 import { getHealthLibrary } from '@/lib/health-docs/repository';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import { getRoutinesSummary } from '@/lib/routines/repository';
-import { currentRoutine, missedRoutines, routinesToday } from '@/lib/routines/today';
+import { currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
 import { clockLabel } from '@/lib/routines/types';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 // The brief regenerates on a data change, not on every visit; a saved brief
-// for the same snapshot costs nothing. Four written briefs a day keeps it to
-// about ₹0.36 even when every one falls through to Claude. After the fourth,
-// Home shows Orbis's own wording, which is always accurate, until tomorrow
-// (India time). It has its own counter (lib/ai/quota.ts): a background brief
+// for the same snapshot costs nothing. It is rewritten when the stretch of the
+// day turns and when the routine it speaks about moves from coming up to due
+// to not heard about, which is most of a day's rewrites. Eight a day covers
+// that and costs about ₹0.72 even when every one falls through to Claude.
+// After the eighth, Home shows Orbis's own wording, which is always accurate,
+// until tomorrow (India time). It has its own counter (lib/ai/quota.ts): a background brief
 // must never eat a request the user wanted to spend on asking a question.
-const DAILY_BRIEF_LIMIT = 4;
+const DAILY_BRIEF_LIMIT = 8;
 
 export type BriefResult =
   | { state: 'ok'; caption: string; generatedAt: string; fresh: boolean }
@@ -93,6 +95,8 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
         kind: current.routine.kind,
         at: clockLabel(current.routine.atTime),
         minutesAway: current.minutesAway,
+        state: routineState(current),
+        flexible: current.routine.flexible,
         answered: current.event ? current.event.note ?? current.event.status : null,
       }
       : null,
