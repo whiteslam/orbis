@@ -35,3 +35,18 @@ test('DM Sans is the body font and ships without a request to Google', async ({ 
   expect(family).toMatch(/DM Sans|dm_sans|__DM_Sans/i);
   expect(external).toEqual([]);
 });
+
+test('the logo is a conic-gradient ring with a 45% hole, not an image', async ({ page }) => {
+  await page.goto('/login');
+  const mark = page.locator('.orbis-mark').first();
+  await expect(mark).toBeVisible();
+  expect(await mark.evaluate((el) => el.tagName)).toBe('SPAN');
+  expect(await mark.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('conic-gradient');
+  const [outer, hole] = await mark.evaluate((el) => [
+    el.getBoundingClientRect().width,
+    el.firstElementChild!.getBoundingClientRect().width,
+  ]);
+  expect(hole / outer).toBeGreaterThan(0.43);
+  expect(hole / outer).toBeLessThan(0.47);
+  expect(await page.locator('.orbis-mark svg').count()).toBe(0);
+});

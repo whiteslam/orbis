@@ -146,7 +146,6 @@ button { font: inherit; }
 .intro { position: absolute; top: 32px; left: 40px; z-index: 3; display: flex; gap: 12px; align-items: center; }
 .intro h1 { margin: 0; font-size: 28px; letter-spacing: -.05em; }
 .intro p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
-.orbis-mark { display: block; flex: none; border-radius: 24%; box-shadow: 0 6px 18px rgba(20,32,110,.22); }
 .phone { width: min(410px, 94vw); height: min(840px, 88vh); min-height: 690px; padding: 9px; border-radius: 48px; background: linear-gradient(145deg, #111820, #3f4853 50%, #0d1116); box-shadow: 0 28px 90px rgba(26,43,57,.25), inset 0 0 0 2px rgba(255,255,255,.14); position: relative; z-index: 2; }
 .phone::after { content: ''; position: absolute; inset: 5px; border-radius: 43px; border: 1px solid rgba(255,255,255,.18); pointer-events: none; }
 .phone-speaker { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; border-radius: var(--r-xl); background: #090d11; z-index: 10; box-shadow: inset 0 0 0 1px #222; }

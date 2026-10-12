@@ -1,15 +1,13 @@
-import Image from 'next/image';
-
-// The Orbis app icon, used as the brand mark wherever the UI shows the logo.
+// The Orbis mark: a conic-gradient ring with a hole at 45% of its diameter.
+// Two nested elements, never an SVG stroke, so it scales and themes from CSS.
 export function OrbisMark({ size = 42, className }: { size?: number; className?: string }) {
   return (
-    <Image
-      src="/brand/orbis-mark.png"
-      alt=""
+    <span
       aria-hidden="true"
-      width={size}
-      height={size}
       className={['orbis-mark', className].filter(Boolean).join(' ')}
-    />
+      style={{ width: size, height: size }}
+    >
+      <span className="orbis-mark-hole" />
+    </span>
   );
 }
