@@ -83,3 +83,24 @@ test('bottom nav is 60px with 10px labels and a gradient on the active tab', asy
   expect(active.replace(/\s/g, '')).toContain('rgb(91,180,232)');
   expect(active.replace(/\s/g, '')).toContain('rgb(66,204,168)');
 });
+
+test('primary buttons and the user bubble take the brand gradient; pills have teal, blue, red and gold fills', async ({ page }) => {
+  await page.goto('/login');
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="probe" style="position:fixed;inset:0;z-index:99">' +
+      '<button class="fd-button">Go</button><button class="fd-button ghost">Later</button>' +
+      '<p class="talk-q">hi</p><p class="talk-a">hello</p>' +
+      '<span class="pill teal">t</span><span class="pill blue">b</span><span class="pill red">r</span><span class="pill gold">g</span></div>');
+  });
+  const bg = (sel: string) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundImage);
+  const color = (sel: string) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(await bg('#probe .fd-button:not(.ghost)')).toContain('linear-gradient');
+  expect(await bg('#probe .fd-button.ghost')).not.toContain('linear-gradient');
+  expect(await bg('#probe .talk-q')).toContain('linear-gradient');
+  expect(await color('#probe .talk-a')).not.toBe('rgb(66, 204, 168)');
+  expect(await color('#probe .pill.teal')).toBe('rgba(66, 204, 168, 0.16)');
+  expect(await color('#probe .pill.blue')).toBe('rgba(91, 180, 232, 0.16)');
+  expect(await color('#probe .pill.red')).toBe('rgba(242, 107, 107, 0.16)');
+  expect(await color('#probe .pill.gold')).toBe('rgba(240, 180, 41, 0.16)');
+});

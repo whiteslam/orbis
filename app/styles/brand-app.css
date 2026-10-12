@@ -26,3 +26,26 @@
 .bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 4px 14px rgba(66,204,168,.28); font-weight: 600; }
 .bottom-nav button.active svg { stroke: var(--brand-on-accent); }
 .talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }
+
+/* ─── Buttons, pills and chat bubbles ───────────────────────────────── */
+.fd-button:not(.ghost), .fd-act button:not(.ghost), .finance-button:not(.secondary), .pf-pill.primary, .auth-submit {
+  background: var(--brand-gradient);
+  color: var(--brand-on-accent);
+  font-weight: 600;
+}
+.fd-chips button[aria-pressed="true"], .talk-sources button[aria-pressed="true"] {
+  background: var(--brand-teal);
+  border-color: var(--brand-teal);
+  color: var(--brand-on-accent);
+}
+.pf-pill.alert { background: rgba(242,107,107,.14); color: var(--fd-alert); }
+
+.pill { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
+.pill.teal { background: rgba(66,204,168,.16); color: var(--brand-teal); }
+.pill.blue { background: rgba(91,180,232,.16); color: var(--brand-blue); }
+.pill.red  { background: rgba(242,107,107,.16); color: var(--brand-red); }
+.pill.gold { background: rgba(240,180,41,.16); color: var(--brand-gold); }
+
+/* Ask Orbis: the user speaks in the gradient, Orbis answers on a dark card. */
+.talk-q { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); border-radius: 16px 16px 4px 16px; font-weight: 500; }
+.talk-a { align-self: flex-start; padding: 10px 14px; background: var(--sys-surface-2); border: 1px solid var(--sys-separator); border-radius: 16px 16px 16px 4px; font-size: 15px; line-height: 1.5; }
