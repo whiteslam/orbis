@@ -20,3 +20,9 @@
   .phone::after { border: 1.5px solid var(--brand-border); border-radius: 36px; }
   .phone-screen { border-radius: 32px; }
 }
+
+/* ─── Bottom nav: 60px, 20px icons, 10px labels, gradient on the active tab ── */
+.bottom-nav button span { font-size: 10px; font-weight: 500; letter-spacing: 0; }
+.bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 4px 14px rgba(66,204,168,.28); font-weight: 600; }
+.bottom-nav button.active svg { stroke: var(--brand-on-accent); }
+.talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }

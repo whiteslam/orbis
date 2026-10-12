@@ -168,7 +168,7 @@ button { font: inherit; }
 :root {
   --safe-top: 0px;
   --safe-bottom: 0px;
-  --nav-h: 62px;
+  --nav-h: 60px;
   --nav-gap: 10px;
   --nav-clear: calc(var(--nav-gap) + var(--safe-bottom) + var(--nav-h) + 10px);
 }

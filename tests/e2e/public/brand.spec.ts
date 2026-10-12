@@ -63,3 +63,23 @@ test('cards and fields use the 16px radius and the 1px brand border', async ({ p
   });
   expect(style).toEqual({ radius: '16px', width: '1px', color: 'rgb(36, 36, 40)' });
 });
+
+// The bottom nav only renders when signed in, so inject its markup into a page that
+// ships the same stylesheets and read what the shipped CSS makes of it.
+test('bottom nav is 60px with 10px labels and a gradient on the active tab', async ({ page }) => {
+  await page.goto('/login');
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="phone-screen" style="position:fixed;inset:0;z-index:99"><nav class="bottom-nav">' +
+      '<button class="active"><svg width="20" height="20"></svg><span>Today</span></button>' +
+      '<button><svg width="20" height="20"></svg><span>Money</span></button></nav></div>');
+  });
+  const nav = await page.locator('.bottom-nav').evaluate((el) => getComputedStyle(el).height);
+  expect(nav).toBe('60px');
+  const label = await page.locator('.bottom-nav button span').first().evaluate((el) => getComputedStyle(el).fontSize);
+  expect(label).toBe('10px');
+  const active = await page.locator('.bottom-nav button.active').evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(active).toContain('linear-gradient');
+  expect(active.replace(/\s/g, '')).toContain('rgb(91,180,232)');
+  expect(active.replace(/\s/g, '')).toContain('rgb(66,204,168)');
+});
