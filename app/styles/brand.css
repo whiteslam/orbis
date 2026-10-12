@@ -15,6 +15,10 @@
   --brand-gold: #f0b429;
   --brand-gradient: linear-gradient(135deg, #5bb4e8, #42cca8);
   --brand-on-accent: #0e0e10; /* ink on teal/blue/gradient */
+
+  /* DM Sans, here as well as in glass.css: the public pages never load glass.css. */
+  --font-text: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rounded: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root:not([data-theme="light"]) {
@@ -167,10 +171,10 @@ body { font-weight: 400; }
 .eyebrow, .page-head small, .fd-label { font-size: 11px !important; font-weight: 500 !important; letter-spacing: .5px !important; text-transform: uppercase; }
 
 /* ─── Logo ─────────────────────────────────────────────────────────────
-   A conic-gradient ring and a hole div at 45% — never an SVG stroke. The
-   hole takes the page background so it reads as a hole on every surface.
-   The marketing sheet squares the mark per context; those rules are
-   overridden here at the same specificity. */
+   A conic-gradient ring and a hole div at 45% — never an SVG stroke. The ring
+   is masked so the hole is genuinely see-through on any surface; the hole div
+   marks the 45% and stays transparent. The marketing sheet squares the mark per
+   context; those rules are overridden here at the same specificity. */
 .orbis-mark,
 .mkt-brand .orbis-mark,
 .wl-brand .orbis-mark {
@@ -179,6 +183,8 @@ body { font-weight: 400; }
   flex: none;
   border-radius: 50%;
   background: conic-gradient(from 200deg, #5bb4e8, #42cca8, #3dc87a, #5bb4e8);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
+  mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
   box-shadow: none;
 }
 .orbis-mark-hole {
@@ -189,7 +195,7 @@ body { font-weight: 400; }
   height: 45%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: var(--sys-bg);
+  background: transparent;
 }
 
 /* ─── Shape ────────────────────────────────────────────────────────────

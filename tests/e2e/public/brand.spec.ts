@@ -116,3 +116,27 @@ test('sheets that kept their own dark values follow the default, not the OS sett
   expect(await read('--fd-alert-ink')).toBe('#0e0e10');
   await context.close();
 });
+
+test('DM Sans also reaches the public pages that never load the app stylesheets', async ({ page }) => {
+  await page.goto('/privacy');
+  const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(family).toMatch(/DM Sans/i);
+});
+
+test('the logo hole is see-through: the ring is masked, not painted over', async ({ page }) => {
+  await page.goto('/login');
+  const mark = page.locator('.orbis-mark').first();
+  const style = await mark.evaluate((el) => {
+    const s = getComputedStyle(el);
+    const hole = getComputedStyle(el.firstElementChild!);
+    return { mask: s.maskImage || s.webkitMaskImage, hole: hole.backgroundColor };
+  });
+  expect(style.mask).toContain('radial-gradient');
+  expect(style.hole).toBe('rgba(0, 0, 0, 0)');
+});
+
+test('the installed app opens on the brand background', async ({ request }) => {
+  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  expect(manifest.background_color.toLowerCase()).toBe('#0e0e10');
+  expect(manifest.theme_color.toLowerCase()).toBe('#0e0e10');
+});

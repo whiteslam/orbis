@@ -9,10 +9,10 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    // Matches app/layout.tsx's light `themeColor`; the dark one only applies
-    // via the media-query variant the manifest spec doesn't support.
-    background_color: '#f2f2f7',
-    theme_color: '#f2f2f7',
+    // The brand background, matching app/layout.tsx's themeColor, so an installed
+    // app opens on the dark ground instead of flashing a pale splash.
+    background_color: '#0e0e10',
+    theme_color: '#0e0e10',
     categories: ['finance', 'health', 'productivity', 'lifestyle'],
     // No tab shortcuts: this file is public, and each one would have carried the
     // app's own address. start_url stays '/', which redirects whoever is signed
