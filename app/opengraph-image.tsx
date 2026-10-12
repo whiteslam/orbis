@@ -5,7 +5,7 @@ export const alt = `${SITE_NAME} — one calm daily brief for your money, health
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-// A generated share preview using the Field brand colours, so links to
+// A generated share preview using the Orbis brand ring and colours, so links to
 // Orbis look intentional wherever they're shared — no static asset to keep in sync.
 export default async function Image() {
   return new ImageResponse(
@@ -18,8 +18,8 @@ export default async function Image() {
           flexDirection: 'column',
           justifyContent: 'center',
           padding: '80px',
-          background: 'linear-gradient(176deg, #101614 0%, #131b19 46%, #0a100e 100%)',
-          color: '#eaf0ed',
+          background: '#0e0e10',
+          color: '#f2f3f5',
           fontFamily: 'sans-serif',
         }}
       >
@@ -28,17 +28,14 @@ export default async function Image() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 16,
-              background: '#85b3a3',
+              borderRadius: 28,
+              background: 'linear-gradient(135deg, #5bb4e8, #42cca8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 30,
-              fontWeight: 700,
-              color: '#101715',
             }}
           >
-            O
+            <div style={{ width: 25, height: 25, borderRadius: 13, background: '#0e0e10' }} />
           </div>
           <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.03em' }}>{SITE_NAME}</div>
         </div>
