@@ -49,3 +49,7 @@
 /* Ask Orbis: the user speaks in the gradient, Orbis answers on a dark card. */
 .talk-q { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); border-radius: 16px 16px 4px 16px; font-weight: 500; }
 .talk-a { align-self: flex-start; padding: 10px 14px; background: var(--sys-surface-2); border: 1px solid var(--sys-separator); border-radius: 16px 16px 16px 4px; font-size: 15px; line-height: 1.5; }
+
+/* Controls that carried white ink on the old blue: ink them for the brand accent instead. */
+.talk-mic, .talk-type button { background: var(--brand-gradient); color: var(--brand-on-accent); }
+.vn-record.on { color: var(--fd-alert-ink); }

@@ -13,8 +13,7 @@
   --so-published: #4a55a0;
   --so-published-wash: rgba(74,85,160,.12);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+:root:not([data-theme="light"]) {
     --so-post: rgba(120,190,196,.22);
     --so-reel: rgba(240,160,100,.22);
     --so-story: rgba(150,160,230,.22);
@@ -25,19 +24,6 @@
     --so-ready-wash: rgba(143,208,174,.14);
     --so-published: #b7bff0;
     --so-published-wash: rgba(183,191,240,.14);
-  }
-}
-:root[data-theme="dark"] {
-  --so-post: rgba(120,190,196,.22);
-  --so-reel: rgba(240,160,100,.22);
-  --so-story: rgba(150,160,230,.22);
-  --so-post-ink: #9fd3d8;
-  --so-reel-ink: #f2b88a;
-  --so-story-ink: #b7bff0;
-  --so-ready: #8fd0ae;
-  --so-ready-wash: rgba(143,208,174,.14);
-  --so-published: #b7bff0;
-  --so-published-wash: rgba(183,191,240,.14);
 }
 
 .so-fmt-post { --so-tint: var(--so-post); --so-tint-ink: var(--so-post-ink); }

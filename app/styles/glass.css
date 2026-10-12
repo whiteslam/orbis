@@ -206,8 +206,8 @@
    little dusk beside it. So it reads as the same room in evening light, not
    as a different app. */
 :root {
-  --talk-sun: rgba(238,166,112,.50);
-  --talk-dusk: rgba(206,160,186,.30);
+  --talk-sun: rgba(66,204,168,.34);
+  --talk-dusk: rgba(91,180,232,.24);
   --talk-sky:
     radial-gradient(circle, var(--gl-dot) 1px, transparent 1.3px) 0 0 / 14px 14px,
     radial-gradient(110% 40% at 50% 106%, var(--talk-sun), transparent 72%),
@@ -215,11 +215,8 @@
     radial-gradient(75% 34% at 0% 0%, var(--gl-blob-1), transparent 72%),
     var(--gl-ground);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --talk-sun: rgba(206,124,78,.46); --talk-dusk: rgba(116,70,108,.26); }
-}
-:root[data-theme="dark"] { --talk-sun: rgba(206,124,78,.46); --talk-dusk: rgba(116,70,108,.26); }
-@media (prefers-reduced-transparency: reduce) { :root { --talk-sun: transparent; --talk-dusk: transparent; } }
+:root:not([data-theme="light"]) { --talk-sun: rgba(66,204,168,.26); --talk-dusk: rgba(91,180,232,.16); }
+@media (prefers-reduced-transparency: reduce) { :root:root { --talk-sun: transparent; --talk-dusk: transparent; } }
 .talk-sheet { inset: 0; z-index: 30; max-height: none; padding: calc(var(--safe-top) + 6px) 0 var(--safe-bottom); border: 0; border-radius: 0; background: var(--talk-sky); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; color: var(--fd-ink); }
 @media (min-width: 721px) and (pointer: fine), (min-width: 721px) and (min-height: 541px) { .talk-sheet { padding-top: 40px; } }
 .talk-head { padding: 12px 18px 6px; }

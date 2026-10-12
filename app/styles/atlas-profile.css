@@ -133,8 +133,7 @@
 .pf-slot small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 11px; line-height: 1.45; }
 .pf-slot input[type="time"] { flex: none; box-sizing: border-box; min-height: 36px; padding: 0 8px; border: 1px solid var(--fd-rule); border-radius: 10px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; color-scheme: inherit; }
 .pf-slot input[type="time"]:focus { outline: none; border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
-:root[data-theme="dark"] .pf-slot input[type="time"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pf-slot input[type="time"] { color-scheme: dark; } }
+:root:not([data-theme="light"]) .pf-slot input[type="time"] { color-scheme: dark; }
 .pf-slot.off strong { color: var(--fd-faint); }
 .pf-slot.off input[type="time"] { background: none; color: var(--fd-faint); font-weight: 500; }
 .pf-notify > .fd-note.tight { margin-top: 11px; font-size: 11.5px; }

@@ -7,7 +7,7 @@ import { connectionMessage, safeAction } from '@/lib/client/safe-action';
 
 type Message = { text: string; success: boolean } | null;
 
-const destructive = { background: 'var(--fd-alert)', color: '#fff' } as const;
+const destructive = { background: 'var(--fd-alert)', color: 'var(--fd-alert-ink)' } as const;
 
 /** Clearing social post history: a quiet link that opens a confirm step in place. */
 function SocialHistory() {

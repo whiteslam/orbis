@@ -85,6 +85,7 @@
   --fd-wash: rgba(66,204,168,.13);
   --fd-ring-track: rgba(255,255,255,.08);
   --fd-alert: var(--brand-red);
+  --fd-alert-ink: var(--brand-on-accent); /* ink on a solid alert fill: 6.7:1 */
   --fd-alert-wash: rgba(242,107,107,.14);
   --fd-veil: rgba(14,14,16,.9);
 
@@ -129,6 +130,7 @@
   --fd-faint: #5b616b;
   --fd-accent: #12806a;
   --fd-alert: #b83a3a;
+  --fd-alert-ink: #ffffff;
   --fd-btn: #14161a;
   --fd-btn-ink: #ffffff;
   --fd-veil: rgba(238,241,243,.9);

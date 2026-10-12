@@ -104,3 +104,15 @@ test('primary buttons and the user bubble take the brand gradient; pills have te
   expect(await color('#probe .pill.red')).toBe('rgba(242, 107, 107, 0.16)');
   expect(await color('#probe .pill.gold')).toBe('rgba(240, 180, 41, 0.16)');
 });
+
+test('sheets that kept their own dark values follow the default, not the OS setting', async ({ browser }) => {
+  const context = await browser.newContext({ colorScheme: 'light' });
+  const page = await context.newPage();
+  await page.goto('/login');
+  const read = (n: string) =>
+    page.evaluate((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim().toLowerCase(), n);
+  expect(await read('--so-post-ink')).toBe('#9fd3d8');
+  expect(await read('--talk-sun')).toBe('#42cca842');
+  expect(await read('--fd-alert-ink')).toBe('#0e0e10');
+  await context.close();
+});
