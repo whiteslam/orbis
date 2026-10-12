@@ -50,3 +50,16 @@ test('the logo is a conic-gradient ring with a 45% hole, not an image', async ({
   expect(hole / outer).toBeLessThan(0.47);
   expect(await page.locator('.orbis-mark svg').count()).toBe(0);
 });
+
+test('cards and fields use the 16px radius and the 1px brand border', async ({ page }) => {
+  await page.goto('/login');
+  const root = (n: string) => page.evaluate((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim(), n);
+  expect(await root('--r-lg')).toBe('16px');
+  expect(await root('--r-xl')).toBe('16px');
+  const input = page.locator('.auth-form input').first();
+  const style = await input.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { radius: s.borderTopLeftRadius, width: s.borderTopWidth, color: s.borderTopColor };
+  });
+  expect(style).toEqual({ radius: '16px', width: '1px', color: 'rgb(36, 36, 40)' });
+});

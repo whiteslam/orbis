@@ -4,3 +4,19 @@
 
 .fd-head h1, .page-head h1 { font-weight: 600; letter-spacing: -.02em; }
 .fd-hero-value, .today-widget-value { font-weight: 600; }
+
+/* ─── Cards and fields: surface, 1px border, 16px radius ────────────── */
+.stack-card, .chart-card, .empty-state, .sync-card, .app-card, .currency-card, .integrations, .groww-card,
+.apple-card, .invest-ai, .journal-today, .journal-item, .manual-entry, .workbook-advisor, .passkey-prompt,
+.auth-form input {
+  border: 1px solid var(--sys-separator);
+  border-radius: 16px;
+}
+.stack-card, .chart-card, .app-card, .apple-card, .auth-form input { background: var(--sys-surface); }
+
+/* The desktop phone frame: near-black body, 40px radius, 1.5px border. */
+@media (min-width: 721px) {
+  .phone { background: #0a0a0c; border-radius: 40px; box-shadow: var(--e3); }
+  .phone::after { border: 1.5px solid var(--brand-border); border-radius: 36px; }
+  .phone-screen { border-radius: 32px; }
+}

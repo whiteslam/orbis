@@ -189,3 +189,11 @@ body { font-weight: 400; }
   border-radius: 50%;
   background: var(--sys-bg);
 }
+
+/* ─── Shape ────────────────────────────────────────────────────────────
+   Cards and fields are 16px. Small pills stay on --r-pill (999px), which is
+   indistinguishable from 20px at pill heights. */
+:root {
+  --r-lg: 16px;
+  --r-xl: 16px;
+}
