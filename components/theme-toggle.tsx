@@ -8,10 +8,8 @@ type Theme = 'light' | 'dark';
 /** Reads whatever the pre-paint script in the layout already resolved, so the
  *  button never disagrees with the page it sits on. */
 function currentTheme(): Theme {
-  if (typeof document === 'undefined') return 'light';
-  const set = document.documentElement.dataset.theme;
-  if (set === 'light' || set === 'dark') return set;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (typeof document === 'undefined') return 'dark';
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 }
 
 export function ThemeToggle() {
@@ -23,16 +21,6 @@ export function ThemeToggle() {
     // Reads the theme the pre-paint script already applied to the document.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(currentTheme());
-  }, []);
-
-  // While the user has not chosen, keep following the system.
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => {
-      if (!localStorage.getItem('orbis-theme')) setTheme(media.matches ? 'dark' : 'light');
-    };
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
   }, []);
 
   const toggle = () => {

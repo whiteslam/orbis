@@ -10,6 +10,7 @@ import { Figtree } from 'next/font/google';
 import './styles/01-base.css';
 import './styles/09-boundaries.css';
 import './styles/marketing.css';
+import './styles/brand.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';
@@ -46,10 +47,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   // Android resizes the layout around the on-screen keyboard instead of covering it.
   interactiveWidget: 'resizes-content',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f2f2f7' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
-  ],
+  themeColor: '#0e0e10',
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -1,0 +1,154 @@
+/* ─── Orbis brand: the one place the palette is decided ───────────────
+   Loaded after the base sheets. The older iOS / Field / Glass blocks still
+   define the structure of the tokens; this file sets their values. Dark is the
+   default; light applies only when <html data-theme="light">. Component
+   overrides for the signed-in app live in brand-app.css. */
+:root {
+  --brand-bg: #0e0e10;
+  --brand-s1: #141416;
+  --brand-s2: #1a1a1e;
+  --brand-border: #242428;
+  --brand-teal: #42cca8;
+  --brand-blue: #5bb4e8;
+  --brand-green: #3dc87a;
+  --brand-red: #f26b6b;
+  --brand-gold: #f0b429;
+  --brand-gradient: linear-gradient(135deg, #5bb4e8, #42cca8);
+  --brand-on-accent: #0e0e10; /* ink on teal/blue/gradient */
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+
+  --sys-bg: var(--brand-bg);
+  --sys-surface: var(--brand-s1);
+  --sys-surface-2: var(--brand-s2);
+  --sys-surface-3: #222226;
+
+  --sys-label: #f2f3f5;
+  --sys-secondary: #a0a4ab;
+  --sys-tertiary: #7d818a; /* large text and icons only */
+  --sys-separator: var(--brand-border);
+  --sys-hairline: #34343a;
+
+  --sys-blue: var(--brand-blue);
+  --sys-blue-press: #7cc4ee;
+  --sys-green: var(--brand-green);
+  --sys-red: var(--brand-red);
+  --sys-pink: #f26b9a;
+  --sys-amber: var(--brand-gold);
+  --sys-tint-blue: #112431;
+  --sys-tint-green: #11281d;
+  --sys-tint-red: #301616;
+  --sys-tint-amber: #302508;
+
+  --sys-wash: linear-gradient(135deg, #12202b, #0f1b1b);
+  --sys-wash-border: var(--brand-border);
+  --sys-page: var(--brand-bg);
+  --sys-stage: radial-gradient(circle at top, #1a1a1e 0, #121214 42%, #0e0e10 100%);
+
+  --e1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.05);
+  --e2: 0 8px 24px rgba(0,0,0,.5);
+  --e3: 0 28px 80px rgba(0,0,0,.6);
+
+  --glass-chrome-bg: rgba(20,20,22,.78);
+  --glass-sheet-bg: rgba(20,20,22,.86);
+  --glass-edge: inset 0 1px 0 rgba(255,255,255,.06);
+  --glass-hairline: 1px solid var(--brand-border);
+
+  --gl-ground: var(--brand-bg);
+  --gl-fill: rgba(26,26,30,.72);
+  --gl-fill-strong: rgba(36,36,40,.94);
+  --gl-edge: 1px solid var(--brand-border);
+  --gl-shadow: 0 8px 28px rgba(0,0,0,.4);
+  --gl-blob-1: #123027;
+  --gl-blob-2: #14283a;
+  --gl-blob-3: #1b1b2e;
+  --gl-dot: rgba(255,255,255,.04);
+
+  --fd-field: var(--brand-bg);
+  --fd-surface: var(--brand-s1);
+  --fd-ink: #f2f3f5;
+  --fd-soft: #a9adb4;
+  --fd-faint: #8a8e96;
+  --fd-rule: rgba(255,255,255,.08);
+  --fd-hairline: rgba(255,255,255,.2);
+  --fd-accent: var(--brand-teal);
+  --fd-lift: 0 18px 40px rgba(0,0,0,.55);
+  --fd-lift-slide: 0 12px 26px -12px rgba(0,0,0,.85);
+  --fd-deck-far: rgba(255,255,255,.07);
+  --fd-deck-near: rgba(255,255,255,.14);
+  --fd-btn: var(--brand-teal);
+  --fd-btn-ink: var(--brand-on-accent);
+  --fd-chip: rgba(255,255,255,.06);
+  --fd-card: var(--brand-s1);
+  --fd-wash: rgba(66,204,168,.13);
+  --fd-ring-track: rgba(255,255,255,.08);
+  --fd-alert: var(--brand-red);
+  --fd-alert-wash: rgba(242,107,107,.14);
+  --fd-veil: rgba(14,14,16,.9);
+
+  --series-1: #5bb4e8;
+  --series-2: #f0b429;
+  --series-3: #42cca8;
+  --series-4: #f26b6b;
+  --series-5: #b49bf2;
+  --series-6: #3dc87a;
+  --series-7: #8e95a3;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --sys-bg: #f4f6f8;
+  --sys-surface: #ffffff;
+  --sys-surface-2: #eef1f4;
+  --sys-surface-3: #e3e7ec;
+  --sys-label: #14161a;
+  --sys-secondary: #565c66;
+  --sys-tertiary: #757b85;
+  --sys-separator: #dfe3e8;
+  --sys-hairline: #c9ced6;
+  --sys-blue: #1b7fb8;
+  --sys-blue-press: #166a9a;
+  --sys-green: #1c8a4e;
+  --sys-red: #cf3f3f;
+  --sys-amber: #9a6a00;
+  --sys-tint-blue: #e6f3fb;
+  --sys-tint-green: #e6f6ee;
+  --sys-tint-red: #fdecec;
+  --sys-tint-amber: #fff3d9;
+  --sys-wash: linear-gradient(135deg, #e8f4fb, #e8f7f2);
+  --sys-wash-border: #d5e6ee;
+  --sys-page: #f4f6f8;
+
+  --gl-ground: #eef1f3;
+  --fd-field: var(--gl-ground);
+  --fd-ink: #14161a;
+  --fd-soft: #4c525c;
+  --fd-faint: #5b616b;
+  --fd-accent: #12806a;
+  --fd-alert: #b83a3a;
+  --fd-btn: #14161a;
+  --fd-btn-ink: #ffffff;
+  --fd-veil: rgba(238,241,243,.9);
+
+  --series-1: #1b7fb8;
+  --series-2: #b57f00;
+  --series-3: #12806a;
+  --series-4: #cf3f3f;
+  --series-5: #7a5bd1;
+  --series-6: #1c8a4e;
+  --series-7: #5b616b;
+}
+
+/* Reduce Transparency: the older sheets drop the blur with a plain :root rule,
+   which the palette above (more specific) would otherwise win over. */
+@media (prefers-reduced-transparency: reduce) {
+  :root:root {
+    --glass-chrome-bg: var(--sys-surface);
+    --glass-sheet-bg: var(--sys-surface);
+    --gl-fill: var(--sys-surface);
+    --gl-fill-strong: var(--sys-surface);
+  }
+}

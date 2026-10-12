@@ -1,0 +1,3 @@
+/* ─── Orbis brand: signed-in app components ───────────────────────────
+   Loaded last in app/(orbis)/layout.tsx so these win over the app's older
+   sheets at equal specificity. Tokens and the palette are in brand.css. */
