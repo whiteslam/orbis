@@ -26,3 +26,12 @@ test('a stored light choice still wins', async ({ browser }) => {
   expect(bg).not.toBe('#0e0e10');
   await context.close();
 });
+
+test('DM Sans is the body font and ships without a request to Google', async ({ page }) => {
+  const external: string[] = [];
+  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) external.push(r.url()); });
+  await page.goto('/login');
+  const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(family).toMatch(/DM Sans|dm_sans|__DM_Sans/i);
+  expect(external).toEqual([]);
+});

@@ -152,3 +152,14 @@
     --gl-fill-strong: var(--sys-surface);
   }
 }
+
+/* ─── Type ─────────────────────────────────────────────────────────────
+   DM Sans 300–600. Display 28–32 / 600, heading 18–20 / 600, body 14–15 / 400,
+   label 11–12 / 500 uppercase with 0.5px tracking. */
+:root {
+  --t-display: 600 clamp(28px, 6vw, 32px)/1.1 var(--font-text);
+  --t-heading: 600 19px/1.25 var(--font-text);
+  --t-body: 400 14.5px/1.5 var(--font-text);
+}
+body { font-weight: 400; }
+.eyebrow, .page-head small, .fd-label { font-size: 11px !important; font-weight: 500 !important; letter-spacing: .5px !important; text-transform: uppercase; }

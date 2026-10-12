@@ -1,3 +1,6 @@
 /* ─── Orbis brand: signed-in app components ───────────────────────────
    Loaded last in app/(orbis)/layout.tsx so these win over the app's older
    sheets at equal specificity. Tokens and the palette are in brand.css. */
+
+.fd-head h1, .page-head h1 { font-weight: 600; letter-spacing: -.02em; }
+.fd-hero-value, .today-widget-value { font-weight: 600; }
