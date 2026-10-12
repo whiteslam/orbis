@@ -57,7 +57,6 @@
 .so-day { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; min-height: 50px; padding: 6px 2px 5px; border: 0; border-radius: 10px; background: var(--fd-card); color: var(--fd-ink); font: inherit; cursor: pointer; }
 .so-day.out { background: transparent; color: var(--fd-faint); opacity: .55; }
 .so-day.today b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--fd-btn); color: var(--fd-btn-ink); }
-.so-day[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--fd-accent); }
 .so-day b { font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 20px; }
 .so-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; max-width: 100%; }
 .so-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--so-tint-ink); }
