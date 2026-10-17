@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { PasskeyPrompt } from '@/components/security/passkey-prompt';
 import { OrbisMark } from '@/components/brand/orbis-mark';
@@ -20,7 +20,6 @@ import type { BriefWeather } from '@/lib/home/weather';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { FocusTarget } from '@/lib/focus/types';
-import type { SocialPost } from '@/lib/social/types';
 import { composeNote, partOfDay, type HomeNote } from '@/lib/home/note';
 import { istParts } from '@/lib/focus/types';
 import { trainingForToday } from '@/lib/home/training';
@@ -44,9 +43,20 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
 // How long Home waits for the portfolio before writing the brief without it.
 const PORTFOLIO_WAIT_MS = 8_000;
 
+/** The line for the ?gmail= result Google's sign-in sent the user back with. */
+function gmailNoticeText(notice: string) {
+  switch (notice) {
+    case 'connected': return 'Gmail connected.';
+    case 'cancelled': return 'Gmail connection was cancelled.';
+    case 'setup-error': return 'Gmail can’t be connected right now. Try again later.';
+    case 'expired': return 'That Google sign-in took too long or started on a different address. Connect again from here.';
+    default: return 'Gmail could not be connected. Try again.';
+  }
+}
+
 // Home leads with one decision on a single lifted surface; everything else is a
 // quiet row. What that decision is comes from composeFocus, not from the layout.
-export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openHeadsup, setup }: { financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; socialPosts: SocialPost[]; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openHeadsup: (action: HeadsupAction) => void; setup: SetupStep[] }) {
+export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openHeadsup, setup }: Readonly<{ financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openHeadsup: (action: HeadsupAction) => void; setup: SetupStep[] }>) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
   const [written, setWritten] = useState<string | null>(null);
@@ -54,9 +64,9 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   const [portfolioSettled, setPortfolioSettled] = useState(false);
   // A minute hand. Home can sit open from 6 pm to 9 pm; without this nothing
   // would re-render, so the routine would stay "coming up" after it had come.
-  const [, setMinute] = useState(0);
+  const [, tick] = useReducer((count: number) => count + 1, 0);
   useEffect(() => {
-    const timer = setInterval(() => setMinute((count) => count + 1), 60_000);
+    const timer = setInterval(() => tick(), 60_000);
     return () => clearInterval(timer);
   }, []);
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
@@ -157,10 +167,10 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
       {/* Mail you have not said "Got it" to yet. */}
       {gmailNotice && (
-        <div className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`} role="status">
-          <span>{gmailNotice === 'connected' ? 'Gmail connected.' : gmailNotice === 'cancelled' ? 'Gmail connection was cancelled.' : gmailNotice === 'setup-error' ? 'Gmail can’t be connected right now. Try again later.' : gmailNotice === 'expired' ? 'That Google sign-in took too long or started on a different address. Connect again from here.' :'Gmail could not be connected. Try again.'}</span>
+        <output className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`}>
+          <span>{gmailNoticeText(gmailNotice)}</span>
           <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
-        </div>
+        </output>
       )}
       <ImportantMail />
 

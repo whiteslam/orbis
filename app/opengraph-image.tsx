@@ -7,7 +7,7 @@ export const contentType = 'image/png';
 
 // A generated share preview using the Orbis brand ring and colours, so links to
 // Orbis look intentional wherever they're shared — no static asset to keep in sync.
-export default async function Image() {
+export default function Image() {
   return new ImageResponse(
     (
       <div

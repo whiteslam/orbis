@@ -7,6 +7,8 @@ import type { Headsup, HeadsupAction, HeadsupKind, HeadsupsResponse } from '@/li
 
 const SHOWN = 3;
 
+const SERVER_ACTION = { go: completeHeadsupAction, snooze: snoozeHeadsupAction, dismiss: dismissHeadsupAction };
+
 const SOURCE: Record<string, string> = { money: 'your spending', routine: 'your routines', health: 'your health data' };
 
 function source(headsup: Headsup) {
@@ -15,7 +17,7 @@ function source(headsup: Headsup) {
 }
 
 /** What Orbis noticed without being asked. Renders nothing when there is nothing. */
-export function Headsups({ onAction }: { onAction: (action: HeadsupAction) => void }) {
+export function Headsups({ onAction }: Readonly<{ onAction: (action: HeadsupAction) => void }>) {
   const [data, setData] = useState<HeadsupsResponse | null>(null);
   const [all, setAll] = useState(false);
   const [offer, setOffer] = useState<HeadsupKind | null>(null);
@@ -39,7 +41,7 @@ export function Headsups({ onAction }: { onAction: (action: HeadsupAction) => vo
     requestAnimationFrame(() => document.getElementById(`headsup-${id}`)?.scrollIntoView({ block: 'center' }));
   }, [data]);
 
-  if (!data || !data.headsups.length) return null;
+  if (!data?.headsups.length) return null;
   const shown = all ? data.headsups : data.headsups.slice(0, SHOWN);
 
   function remove(id: string) {
@@ -49,7 +51,7 @@ export function Headsups({ onAction }: { onAction: (action: HeadsupAction) => vo
   function act(headsup: Headsup, kind: 'go' | 'snooze' | 'dismiss') {
     remove(headsup.id);
     if (kind === 'dismiss' && data?.offerOff.includes(headsup.kind)) setOffer(headsup.kind);
-    const action = kind === 'go' ? completeHeadsupAction : kind === 'snooze' ? snoozeHeadsupAction : dismissHeadsupAction;
+    const action = SERVER_ACTION[kind];
     startTransition(async () => { await safeAction(action)(headsup.id); });
     if (kind === 'go') onAction(headsup.action);
   }
@@ -73,11 +75,11 @@ export function Headsups({ onAction }: { onAction: (action: HeadsupAction) => vo
         <button type="button" className="hu-more" onClick={() => setAll(true)}>See all {data.headsups.length}</button>
       )}
       {offer && (
-        <div className="hu-offer" role="status">
+        <output className="hu-offer">
           <span>You’ve dismissed this a few times. Stop checking for it?</span>
           <button type="button" className="hu-quiet" onClick={() => { const kind = offer; setOffer(null); startTransition(async () => { await safeAction(setHeadsupKindAction)(kind, false); }); }}>Stop checking</button>
           <button type="button" className="hu-quiet" onClick={() => setOffer(null)}>Keep it</button>
-        </div>
+        </output>
       )}
     </section>
   );

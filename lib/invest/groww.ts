@@ -91,20 +91,46 @@ async function loadPrices(symbols: string[], token: string) {
   return prices;
 }
 
+/** The holdings in Groww's reply, read defensively: anything without a symbol and a positive quantity is dropped. */
+function readHoldings(payload: unknown) {
+  const rawHoldings = (payload as { holdings?: unknown })?.holdings;
+  return (Array.isArray(rawHoldings) ? rawHoldings : []).flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const { trading_symbol: symbol, isin, quantity, average_price: averagePrice } = item as Record<string, unknown>;
+    if (typeof symbol !== 'string' || typeof quantity !== 'number' || typeof averagePrice !== 'number' || quantity <= 0) return [];
+    return [{ symbol: symbol.slice(0, 40), isin: typeof isin === 'string' ? isin.slice(0, 20) : null, quantity, averagePrice }];
+  });
+}
+
+/**
+ * Fallbacks when Groww has no live price: AMFI NAV for fund/ETF units (ISIN INF…),
+ * Alpha Vantage BSE quotes for company shares. Fills the holdings in place.
+ */
+async function fillFallbackPrices(unpriced: BrokerHolding[]) {
+  const funds = unpriced.filter((holding) => holding.isin?.startsWith('INF'));
+  const stocks = unpriced.filter((holding) => !holding.isin?.startsWith('INF'));
+  const [navs, quotes] = await Promise.all([
+    getFundNavs(funds.map((holding) => holding.isin!)),
+    getStockQuotes(stocks.map((holding) => `${holding.symbol}.BSE`)),
+  ]);
+  for (const holding of unpriced) {
+    const price = holding.isin?.startsWith('INF') ? navs.get(holding.isin.toUpperCase()) : quotes.get(`${holding.symbol}.BSE`.toUpperCase());
+    if (!price) continue;
+    holding.lastPrice = price.price;
+    holding.dayChangePercent = price.changePercent;
+    holding.priceSource = price.source === 'amfi' ? 'amfi' : 'alpha_vantage';
+    holding.priceAsOf = price.asOf;
+    holding.priceStale = price.stale;
+  }
+}
+
 export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promise<Pick<BrokerPortfolio, 'livePrices' | 'fetchedAt' | 'holdings'>> {
   const token = await getAccessToken(credentials);
   const holdingsResult = await growwGet('/holdings/user', token, tokenCacheKey(credentials));
   if (holdingsResult.status === 401 || holdingsResult.status === 403) throw new GrowwAuthError('Groww rejected this connection. Approve today’s access on the Groww API keys page, or reconnect with a new key.');
   if (!holdingsResult.ok) throw new GrowwError('Groww holdings could not be loaded. Try again shortly.');
 
-  const rawHoldings = (holdingsResult.payload as { holdings?: unknown })?.holdings;
-  const holdings = (Array.isArray(rawHoldings) ? rawHoldings : []).flatMap((item) => {
-    if (!item || typeof item !== 'object') return [];
-    const { trading_symbol: symbol, isin, quantity, average_price: averagePrice } = item as Record<string, unknown>;
-    if (typeof symbol !== 'string' || typeof quantity !== 'number' || typeof averagePrice !== 'number' || quantity <= 0) return [];
-    return [{ symbol: symbol.slice(0, 40), isin: typeof isin === 'string' ? isin.slice(0, 20) : null, quantity, averagePrice }];
-  });
-
+  const holdings = readHoldings(holdingsResult.payload);
   const growwPrices = holdings.length ? await loadPrices(holdings.map((holding) => holding.symbol), token) : null;
   const priced: BrokerHolding[] = holdings.map((holding) => {
     const lastPrice = growwPrices?.get(holding.symbol) ?? null;
@@ -113,26 +139,8 @@ export async function fetchGrowwPortfolio(credentials: GrowwCredentials): Promis
     return { ...holding, lastPrice, dayChangePercent: null, priceSource: lastPrice === null ? null : 'groww', priceAsOf: lastPrice === null ? null : new Date().toISOString(), priceStale: false };
   });
 
-  // Fallbacks when Groww has no live price: AMFI NAV for fund/ETF units (ISIN INF…),
-  // Alpha Vantage BSE quotes for company shares.
   const unpriced = priced.filter((holding) => holding.lastPrice === null);
-  if (unpriced.length) {
-    const funds = unpriced.filter((holding) => holding.isin?.startsWith('INF'));
-    const stocks = unpriced.filter((holding) => !holding.isin?.startsWith('INF'));
-    const [navs, quotes] = await Promise.all([
-      getFundNavs(funds.map((holding) => holding.isin!)),
-      getStockQuotes(stocks.map((holding) => `${holding.symbol}.BSE`)),
-    ]);
-    for (const holding of unpriced) {
-      const price = holding.isin?.startsWith('INF') ? navs.get(holding.isin.toUpperCase()) : quotes.get(`${holding.symbol}.BSE`.toUpperCase());
-      if (!price) continue;
-      holding.lastPrice = price.price;
-      holding.dayChangePercent = price.changePercent;
-      holding.priceSource = price.source === 'amfi' ? 'amfi' : 'alpha_vantage';
-      holding.priceAsOf = price.asOf;
-      holding.priceStale = price.stale;
-    }
-  }
+  if (unpriced.length) await fillFallbackPrices(unpriced);
 
   return {
     livePrices: priced.length > 0 && priced.every((holding) => holding.lastPrice !== null),

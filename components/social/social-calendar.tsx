@@ -15,7 +15,7 @@ const DOTS_PER_DAY = 3;
  * is a dot in its format's colour (hollow until it is ready), and the chosen
  * day's posts listed underneath. Posts without a day wait in their own tray.
  */
-export function SocialCalendar({ period, posts, today, selected, onSelect, onOpen, onNew }: {
+export function SocialCalendar({ period, posts, today, selected, onSelect, onOpen, onNew }: Readonly<{
   period: string;
   posts: SocialPost[];
   today: string;
@@ -23,10 +23,10 @@ export function SocialCalendar({ period, posts, today, selected, onSelect, onOpe
   onSelect: (date: string) => void;
   onOpen: (post: SocialPost) => void;
   onNew: (date: string | null) => void;
-}) {
+}>) {
   const { byDay } = placePosts(posts);
   const weeks = monthGrid(period);
-  const chosen = selected && selected.startsWith(period.slice(0, 8)) ? selected : null;
+  const chosen = selected?.startsWith(period.slice(0, 8)) ? selected : null;
   const dayPosts = chosen ? byDay.get(chosen) ?? [] : [];
   // A week tall until the month is asked for: the week of the chosen day, or of
   // today, or the month's first week when neither falls in it.
@@ -47,6 +47,7 @@ export function SocialCalendar({ period, posts, today, selected, onSelect, onOpe
             {week.map(({ date, inMonth }) => {
               const onDay = byDay.get(date) ?? [];
               const described = onDay.map((post) => `${post.title}, ${formatLabel(post.format)}, ${SOCIAL_STATUS_LABEL[post.status]}`).join('; ');
+              const planned = onDay.length ? `: ${described}` : ', nothing planned';
               if (!inMonth) return <span key={date} className="so-day out" aria-hidden="true"><b>{Number(date.slice(8))}</b></span>;
               return (
                 <button
@@ -54,7 +55,7 @@ export function SocialCalendar({ period, posts, today, selected, onSelect, onOpe
                   type="button"
                   className={`so-day${date === today ? ' today' : ''}`}
                   aria-pressed={chosen === date}
-                  aria-label={`${dayLabel(date)}${onDay.length ? `: ${described}` : ', nothing planned'}`}
+                  aria-label={`${dayLabel(date)}${planned}`}
                   onClick={() => onSelect(date)}
                 >
                   <b>{Number(date.slice(8))}</b>

@@ -20,7 +20,46 @@ type FinanceView = 'main' | 'add';
 // The list sits at the foot of the tab and opens short; the rest is one tap away.
 const TRANSACTIONS_SHOWN = 3;
 
-export function SpendingScreen({ summary, switcher, intent = null }: { summary: FinanceSummary; switcher?: ReactNode; intent?: HeadsupAction | null }) {
+function monthLabel(month: FinanceSummary['month']) {
+  return month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
+}
+
+// Nothing saved: the screen is a doorway, not a dashboard.
+function isFirstRun(summary: FinanceSummary, ready: boolean) {
+  if (!ready || summary.transactions.length) return false;
+  const month = summary.month;
+  return !(month && (month.spent > 0 || month.received > 0));
+}
+
+function emptyListText(summary: FinanceSummary) {
+  if (!summary.databaseReady) return 'Saved transactions aren’t available right now.';
+  if (summary.loadError) return 'Transactions could not be loaded. Refreshing the app tries again.';
+  return 'Nothing saved yet.';
+}
+
+/** The foot of the tab: the latest few transactions, all of them on request. */
+function LatestTransactions({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all: boolean; onAll: (all: boolean) => void }>) {
+  const count = summary.transactions.length;
+  return (
+    <>
+      <div className="fd-label-row">
+        <FieldLabel>Latest{count ? ` · ${count}` : ''}</FieldLabel>
+        {count > TRANSACTIONS_SHOWN && (
+          <button className="fd-link" type="button" aria-expanded={all} onClick={() => onAll(!all)}>
+            {all ? 'Show less' : `Show all ${count}`}
+          </button>
+        )}
+      </div>
+      {count ? (
+        <TransactionList transactions={all ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} />
+      ) : (
+        <p className="fd-empty">{emptyListText(summary)}</p>
+      )}
+    </>
+  );
+}
+
+export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ summary: FinanceSummary; switcher?: ReactNode; intent?: HeadsupAction | null }>) {
   // A heads-up can open this ready to add a spend, or pointing at one category.
   const [view, setView] = useState<FinanceView>(() => intent?.type === 'open_spending_entry' ? 'add' : 'main');
   const prefill = intent?.type === 'open_spending_entry' ? intent.category : undefined;
@@ -38,10 +77,9 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
   const month = summary.month;
   const ready = summary.databaseReady && !summary.loadError;
   const monthReady = ready && Boolean(month);
-  const monthName = month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
+  const monthName = monthLabel(month);
   const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
-  // Nothing saved: the screen is a doorway, not a dashboard.
-  const firstRun = ready && !summary.transactions.length && !(month && (month.spent > 0 || month.received > 0));
+  const firstRun = isFirstRun(summary, ready);
 
   // addManualTransactionAction has already revalidated '/', so the new row is on its way.
   function saved(message: string) {
@@ -56,7 +94,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
     </div>
   );
 
-  const notices = actionMessage && <p className={`finance-notice ${actionMessage.success ? 'success' : 'error'}`} role="status">{actionMessage.text}</p>;
+  const notices = actionMessage && <output className={`finance-notice spaced ${actionMessage.success ? 'success' : 'error'}`}>{actionMessage.text}</output>;
 
   if (firstRun) return (
     <div className="screen-body field">
@@ -118,25 +156,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: { summary: 
 
       <CurrencyCard />
 
-      <div className="fd-label-row">
-        <FieldLabel>Latest{summary.transactions.length ? ` · ${summary.transactions.length}` : ''}</FieldLabel>
-        {summary.transactions.length > TRANSACTIONS_SHOWN && (
-          <button className="fd-link" type="button" aria-expanded={allTransactions} onClick={() => setAllTransactions(!allTransactions)}>
-            {allTransactions ? 'Show less' : `Show all ${summary.transactions.length}`}
-          </button>
-        )}
-      </div>
-      {summary.transactions.length ? (
-        <TransactionList transactions={allTransactions ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} />
-      ) : (
-        <p className="fd-empty">
-          {!summary.databaseReady
-            ? 'Saved transactions aren’t available right now.'
-            : summary.loadError
-              ? 'Transactions could not be loaded. Refreshing the app tries again.'
-              : 'Nothing saved yet.'}
-        </p>
-      )}
+      <LatestTransactions summary={summary} all={allTransactions} onAll={setAllTransactions} />
     </div>
   );
 }

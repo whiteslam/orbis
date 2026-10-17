@@ -48,7 +48,7 @@ test('the logo is a conic-gradient ring with a 45% hole, not an image', async ({
   ]);
   expect(hole / outer).toBeGreaterThan(0.43);
   expect(hole / outer).toBeLessThan(0.47);
-  expect(await page.locator('.orbis-mark svg').count()).toBe(0);
+  await expect(page.locator('.orbis-mark svg')).toHaveCount(0);
 });
 
 test('cards and fields use the 16px radius and the 1px brand border', async ({ page }) => {
@@ -80,8 +80,8 @@ test('bottom nav is 60px with 10px labels and a gradient on the active tab', asy
   expect(label).toBe('10px');
   const active = await page.locator('.bottom-nav button.active').evaluate((el) => getComputedStyle(el).backgroundImage);
   expect(active).toContain('linear-gradient');
-  expect(active.replace(/\s/g, '')).toContain('rgb(91,180,232)');
-  expect(active.replace(/\s/g, '')).toContain('rgb(66,204,168)');
+  expect(active.replaceAll(/\s/g, '')).toContain('rgb(91,180,232)');
+  expect(active.replaceAll(/\s/g, '')).toContain('rgb(66,204,168)');
 });
 
 test('primary buttons and the user bubble take the brand gradient; pills have teal, blue, red and gold fills', async ({ page }) => {

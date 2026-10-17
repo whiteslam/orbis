@@ -52,13 +52,18 @@ function positive(value: string | undefined, fallback: number, allowZero = false
   return number > 0 || (allowZero && number === 0) ? number : fallback;
 }
 
+/** The routing the env asks for, else quality once the budget is big enough for it. */
+function paidRoutingFor(routing: string | undefined, monthlyInr: number): PaidRouting {
+  if (routing === 'fallback' || routing === 'quality') return routing;
+  return monthlyInr >= QUALITY_FROM_INR ? 'quality' : 'fallback';
+}
+
 export function budgetConfig(env: Record<string, string | undefined>): BudgetConfig {
   const monthlyInr = positive(env.ORBIS_AI_MONTHLY_BUDGET_INR, DEFAULT_MONTHLY_INR, true);
-  const routing = env.ORBIS_AI_PAID_ROUTING?.trim();
   return {
     monthlyInr,
     usdInr: positive(env.ORBIS_AI_USD_INR, DEFAULT_USD_INR),
-    paidRouting: routing === 'fallback' || routing === 'quality' ? routing : monthlyInr >= QUALITY_FROM_INR ? 'quality' : 'fallback',
+    paidRouting: paidRoutingFor(env.ORBIS_AI_PAID_ROUTING?.trim(), monthlyInr),
   };
 }
 

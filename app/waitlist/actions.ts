@@ -1,10 +1,10 @@
 'use server';
 
+import { looksLikeEmail } from '@/lib/site';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type WaitlistResult = { ok: true; position: number | null } | { ok: false; message: string };
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVALID = 'Enter a valid email address.';
 const UNAVAILABLE = 'We couldn’t save that right now. Try again in a moment.';
 
@@ -23,7 +23,7 @@ export async function joinWaitlistAction(input: { email: string; website?: strin
   if (typeof input.website === 'string' && input.website.trim()) return { ok: true, position: null };
 
   const email = input.email.trim().toLowerCase();
-  if (email.length > 254 || !EMAIL.test(email)) return { ok: false, message: INVALID };
+  if (email.length > 254 || !looksLikeEmail(email)) return { ok: false, message: INVALID };
 
   try {
     const admin = createAdminClient();

@@ -8,6 +8,14 @@ import { aiAllowed } from '@/lib/ai/consent';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import { safeAction } from '@/lib/client/safe-action';
 
+/** Why the brief switch is off-limits, or null when it isn't (or the AI switch above already says why). */
+function briefBlockedReason(preferences: AiPreferences, aiOn: boolean) {
+  if (preferences.state !== 'ready') return null;
+  if (!aiOn) return 'Turn on AI features above first. Until then the brief stays in Orbis’s own wording.';
+  if (!preferences.configured) return 'AI writing isn’t available right now, so the brief stays in Orbis’s own wording.';
+  return null;
+}
+
 /**
  * The AI switch, then the opt-in for the written brief.
  *
@@ -16,20 +24,14 @@ import { safeAction } from '@/lib/client/safe-action';
  * before they had asked for anything at all. The brief setting only matters
  * once AI is on; with AI off, the router sends nothing whatever it says.
  */
-export function HomeBriefSetting({ preferences }: { preferences: AiPreferences }) {
+export function HomeBriefSetting({ preferences }: Readonly<{ preferences: AiPreferences }>) {
   const [enabled, setEnabled] = useState(preferences.homeBriefEnabled);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [aiOn, setAiOn] = useState(aiAllowed(preferences));
 
   const blocked = preferences.state !== 'ready' || !preferences.configured || !aiOn;
-  const reason = preferences.state !== 'ready'
-    ? null // the AI switch above already says why
-    : !aiOn
-      ? 'Turn on AI features above first. Until then the brief stays in Orbis’s own wording.'
-      : !preferences.configured
-        ? 'AI writing isn’t available right now, so the brief stays in Orbis’s own wording.'
-        : null;
+  const reason = briefBlockedReason(preferences, aiOn);
 
   function toggle(next: boolean) {
     setEnabled(next);
@@ -60,7 +62,7 @@ export function HomeBriefSetting({ preferences }: { preferences: AiPreferences }
             : 'Off. The brief is composed on your device from the same numbers, and nothing leaves it.'}
         </p>
       )}
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
+      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
     </div>
     </>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoaderCircle } from 'lucide-react';
 import { historyTime } from '@/lib/history/describe';
@@ -22,11 +22,11 @@ export type HistoryRow = {
  * Shared by journal entries and saved notes. Restoring never rewrites history:
  * it saves the old version as a new edit, which then appears at the top.
  */
-export function HistoryPanel({ title, load, empty }: {
+export function HistoryPanel({ title, load, empty }: Readonly<{
   title: string;
   load: () => Promise<{ success: boolean; message: string; rows: HistoryRow[] }>;
   empty: string;
-}) {
+}>) {
   const router = useRouter();
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -40,7 +40,7 @@ export function HistoryPanel({ title, load, empty }: {
 
   useEffect(() => {
     let live = true;
-    latestLoad.current().then((result) => {
+    void latestLoad.current().then((result) => {
       if (!live) return;
       setRows(result.rows);
       if (!result.success) setMessage({ text: result.message, success: false });
@@ -61,28 +61,35 @@ export function HistoryPanel({ title, load, empty }: {
     });
   }
 
+  let body: ReactNode;
+  if (rows === null) {
+    body = <p className="hs-loading"><LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> Loading…</p>;
+  } else if (rows.length) {
+    body = (
+      <ol className="hs-list">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <div className="hs-row">
+              <span><time dateTime={row.createdAt}>{historyTime(row.createdAt)}</time>{row.line}</span>
+              <span className="hs-actions">
+                {row.before ? <button type="button" className="fd-link" aria-expanded={opened === row.id} onClick={() => setOpened(opened === row.id ? null : row.id)}>{opened === row.id ? 'Hide' : 'Before'}</button> : null}
+                {row.restore ? <button type="button" className="fd-link" disabled={isPending} onClick={() => restore(row)}>{row.restoreLabel ?? 'Restore'}</button> : null}
+              </span>
+            </div>
+            {opened === row.id && row.before ? <p className="hs-before">{row.before}</p> : null}
+          </li>
+        ))}
+      </ol>
+    );
+  } else {
+    body = <p className="hs-empty">{empty}</p>;
+  }
+
   return (
     <section className="hs-panel" aria-label={title}>
       <p className="hs-title">{title}</p>
-      {rows === null ? (
-        <p className="hs-loading"><LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> Loading…</p>
-      ) : rows.length ? (
-        <ol className="hs-list">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <div className="hs-row">
-                <span><time dateTime={row.createdAt}>{historyTime(row.createdAt)}</time>{row.line}</span>
-                <span className="hs-actions">
-                  {row.before ? <button type="button" className="fd-link" aria-expanded={opened === row.id} onClick={() => setOpened(opened === row.id ? null : row.id)}>{opened === row.id ? 'Hide' : 'Before'}</button> : null}
-                  {row.restore ? <button type="button" className="fd-link" disabled={isPending} onClick={() => restore(row)}>{row.restoreLabel ?? 'Restore'}</button> : null}
-                </span>
-              </div>
-              {opened === row.id && row.before ? <p className="hs-before">{row.before}</p> : null}
-            </li>
-          ))}
-        </ol>
-      ) : <p className="hs-empty">{empty}</p>}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {body}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </section>
   );
 }

@@ -45,6 +45,6 @@ test('on a phone the header keeps Log in and Join, and nothing scrolls sideways'
   const header = page.locator('header.wl-header');
   await expect(header.getByRole('link', { name: 'Log in' })).toBeVisible();
   await expect(header.getByRole('link', { name: 'Join waitlist' })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= globalThis.innerWidth + 1)).toBe(true);
   await context.close();
 });

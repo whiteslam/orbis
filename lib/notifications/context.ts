@@ -46,6 +46,42 @@ async function loadRoutines(admin: Admin, userId: string): Promise<{ data: Routi
   return { data: (basic.data ?? null) as unknown as RoutineRow[] | null };
 }
 
+/** The routine that matters now, in the shape the brief reads it. */
+function briefRoutine(current: ReturnType<typeof currentRoutine>): BriefRoutine | null {
+  if (!current) return null;
+  return {
+    title: current.routine.title.slice(0, 60), kind: current.routine.kind, at: clockLabel(current.routine.atTime),
+    minutesAway: current.minutesAway, state: routineState(current), flexible: current.routine.flexible,
+    answered: current.event ? current.event.note ?? current.event.status : null,
+  };
+}
+
+type ExpenseRow = { amount: unknown; currency: string; occurred_at: string; category: string | null };
+
+/** Today's and this month's spending, in the most common currency only so amounts are never mixed. */
+function spendingSummary(rows: ExpenseRow[], localDate: string, timeZone: string): NotificationContext['spending'] {
+  // Money moved into an FD or a SIP is saved, not spent.
+  const expenses = rows.filter((row) => !isInvestmentCategory(row.category));
+  if (!expenses.length) return null;
+  const monthPrefix = localDate.slice(0, 7);
+  const counts = new Map<string, number>();
+  expenses.forEach((row) => counts.set(row.currency, (counts.get(row.currency) ?? 0) + 1));
+  const currency = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  let today = 0;
+  let month = 0;
+  let todayCount = 0;
+  for (const row of expenses) {
+    if (row.currency !== currency) continue;
+    const date = localClock(new Date(row.occurred_at), timeZone).date;
+    if (date.startsWith(monthPrefix)) month += Number(row.amount);
+    if (date === localDate) {
+      today += Number(row.amount);
+      todayCount += 1;
+    }
+  }
+  return { currency, today: Math.round(today), month: Math.round(month), todayCount };
+}
+
 // Small, trimmed facts about the user's day. Runs from the scheduler (no browser session), so it reads with the
 // service role and every query is filtered by user_id. Missing tables or errors simply leave a section empty.
 export async function buildNotificationContext(admin: Admin, userId: string, slot: Slot, now: Date, timeZone: string): Promise<NotificationContext> {
@@ -84,38 +120,9 @@ export async function buildNotificationContext(admin: Admin, userId: string, slo
       id: '', routineId: row.routine_id as string, title: '', localDate, status: row.status as RoutineStatus, note: (row.note as string | null) ?? null,
     })),
   }, now, timeZone);
-  const current = currentRoutine(placed);
-  const routine: BriefRoutine | null = current
-    ? {
-      title: current.routine.title.slice(0, 60), kind: current.routine.kind, at: clockLabel(current.routine.atTime),
-      minutesAway: current.minutesAway, state: routineState(current), flexible: current.routine.flexible,
-      answered: current.event ? current.event.note ?? current.event.status : null,
-    }
-    : null;
+  const routine = briefRoutine(currentRoutine(placed));
   const weekday = new Date(`${localDate}T12:00:00Z`).getUTCDay();
-  const monthPrefix = localDate.slice(0, 7);
-  let spending: NotificationContext['spending'] = null;
-  // Money moved into an FD or a SIP is saved, not spent.
-  const expenses = (transactions.data ?? []).filter((row) => !isInvestmentCategory(row.category));
-  if (expenses.length) {
-    // Report the most common currency only, so amounts are never mixed.
-    const counts = new Map<string, number>();
-    expenses.forEach((row) => counts.set(row.currency, (counts.get(row.currency) ?? 0) + 1));
-    const currency = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    let today = 0;
-    let month = 0;
-    let todayCount = 0;
-    for (const row of expenses) {
-      if (row.currency !== currency) continue;
-      const date = localClock(new Date(row.occurred_at), timeZone).date;
-      if (date.startsWith(monthPrefix)) month += Number(row.amount);
-      if (date === localDate) {
-        today += Number(row.amount);
-        todayCount += 1;
-      }
-    }
-    spending = { currency, today: Math.round(today), month: Math.round(month), todayCount };
-  }
+  const spending = spendingSummary(transactions.data ?? [], localDate, timeZone);
 
   const name = profile.data?.preferred_name?.trim().split(/\s+/)[0] ?? null;
   return {

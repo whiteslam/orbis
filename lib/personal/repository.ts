@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isMissingTable } from '@/lib/supabase/errors';
 
 export type PersonalDataState = 'ready' | 'setup' | 'unavailable';
-export type FitnessPersonaState = PersonalDataState;
-export type FitnessPersonaSummary = { state: FitnessPersonaState; persona: string | null };
+export type FitnessPersonaSummary = { state: PersonalDataState; persona: string | null };
 export type PersonalProfile = { preferredName: string; role: string; aboutMe: string };
 export type PersonalProfileSummary = { state: PersonalDataState; profile: PersonalProfile | null };
 

@@ -117,6 +117,13 @@
   --status-good: var(--sys-green);
   --status-warning: var(--sys-amber);
   --status-critical: var(--sys-red);
+
+  /* Screen geometry: see the note above the safe-area media query below. */
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  --nav-h: 60px;
+  --nav-gap: 10px;
+  --nav-clear: calc(var(--nav-gap) + var(--safe-bottom) + var(--nav-h) + 10px);
 }
 
 /* Dark values live in brand.css. */
@@ -139,6 +146,9 @@ body { overflow-x: clip; }
 a, button, input, select, textarea, label, summary { touch-action: manipulation; }
 a, button, summary { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
+/* <output>, <fieldset> and <progress> stand in for role="status", role="group" and role="progressbar"; start them as plain blocks so they look like the p/div they replaced. */
+output { display: block; margin: 0; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .stage { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 42px 20px; position: relative; overflow: hidden; overflow: clip; background: var(--sys-stage); }
 .ambient { position: absolute; border-radius: var(--r-pill); filter: blur(10px); opacity: .45; }
 .ambient-one { width: 360px; height: 360px; background: var(--sys-tint-green); top: -130px; right: -80px; }
@@ -156,22 +166,17 @@ button { font: inherit; }
 .topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
 .avatar { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-label); color: var(--sys-bg); font-size: 13px; cursor: pointer; }
 .icon-btn { position: relative; width: 34px; height: 34px; border: 0; background: var(--sys-surface); border-radius: var(--r-md); display: grid; place-items: center; box-shadow: var(--e2); color: var(--ink); }
-.eyebrow, .page-head small { text-transform: uppercase; font-size: 10px !important; letter-spacing: .12em; font-weight: 800; color: var(--accent) !important; }
+.eyebrow, .page-head small { text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; color: var(--accent); }
 
 /* ─── Screen geometry ─────────────────────────────────────────────────
    The floating tab bar and everything that has to keep clear of it or of
-   the notch read these, so the numbers live in one place. The safe-area
-   insets only apply to the full-screen phone layout (the media query below);
-   inside the desktop phone frame they stay 0, which reduces every rule to
-   the frame's own values. --nav-clear is the space from the screen's bottom
-   edge that content must leave for the tab bar, with a 10px breath above it. */
-:root {
-  --safe-top: 0px;
-  --safe-bottom: 0px;
-  --nav-h: 60px;
-  --nav-gap: 10px;
-  --nav-clear: calc(var(--nav-gap) + var(--safe-bottom) + var(--nav-h) + 10px);
-}
+   the notch read --safe-top, --safe-bottom, --nav-h, --nav-gap and
+   --nav-clear (set in :root at the top of this file), so the numbers live
+   in one place. The safe-area insets only apply to the full-screen phone
+   layout (the media query below); inside the desktop phone frame they stay
+   0, which reduces every rule to the frame's own values. --nav-clear is the
+   space from the screen's bottom edge that content must leave for the tab
+   bar, with a 10px breath above it. */
 @media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
   :root {
     --safe-top: env(safe-area-inset-top, 0px);

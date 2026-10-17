@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
   let signed: ReturnType<typeof signState>;
   try {
     signed = signState(userId, 'zerodha');
-  } catch (caught) {
-    console.error(caught);
+  } catch (error_) {
+    console.error(error_);
     return NextResponse.redirect(new URL('/?tab=investments&zerodha=not-configured', request.url));
   }
 

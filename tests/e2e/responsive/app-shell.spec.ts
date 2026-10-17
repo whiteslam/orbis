@@ -1,4 +1,4 @@
-import { expect, openApp, openTab, test } from '../support/fixtures';
+import { expect, focusAndReveal, openApp, openTab, test } from '../support/fixtures';
 
 const PHONES = [
   { width: 320, height: 568 },
@@ -22,8 +22,7 @@ for (const viewport of PHONES) {
     await openTab(page, 'Money');
     await page.getByRole('button', { name: /^(Add manually|Add one now)$/ }).first().click();
     const field = page.getByLabel('Amount');
-    await field.focus();
-    await page.waitForTimeout(600);
+    await focusAndReveal(field);
     await field.blur();
     const metrics = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();

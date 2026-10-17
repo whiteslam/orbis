@@ -74,8 +74,10 @@ test.describe('database isolation between users', () => {
   });
 
   for (const spec of USER_TABLES) {
-    test(`${spec.table}: user B cannot read, change, delete or forge user A's rows`, async () => {
-      test.skip(missing.includes(spec.table), `${spec.table} does not exist yet: apply its migration, then re-run.`);
+    test(`${spec.table}: user B cannot read, change, delete or forge user A's rows`, async ({}, testInfo) => {
+      // A table whose migration is not applied on this database has nothing to
+      // isolate yet; the seed above recorded it, and the reason says what to do.
+      testInfo.skip(missing.includes(spec.table), `${spec.table} does not exist yet: apply its migration, then re-run.`);
       const users = readUsers();
       const target = `${spec.table}?${spec.key}=eq.${created[spec.table]}`;
 

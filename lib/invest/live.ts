@@ -14,8 +14,39 @@ type BrokerLoader = (userId: string, email: string | null) => Promise<BrokerPort
 
 const empty = (broker: BrokerId) => ({ broker, livePrices: false, fetchedAt: null, holdings: [], connection: null });
 
-function growwFailure(caught: unknown) {
-  return caught instanceof GrowwError ? caught.message : 'Groww could not be reached. Try again shortly.';
+function growwFailure(error_: unknown) {
+  return error_ instanceof GrowwError ? error_.message : 'Groww could not be reached. Try again shortly.';
+}
+
+type GrowwSaved = Extract<GrowwConnectionLookup, { kind: 'connected' }>['connection'];
+
+/** A connection this user saved in Orbis. */
+async function loadSavedGroww(userId: string, connection: GrowwSaved): Promise<BrokerPortfolio> {
+  try {
+    const data = await fetchGrowwPortfolio(connection.credentials);
+    await recordGrowwSync(userId, 'ok');
+    return { ...empty('groww'), state: 'ok', ...data, connection: { source: 'account', status: 'connected', lastSyncAt: data.fetchedAt } };
+  } catch (error_) {
+    const authFailed = error_ instanceof GrowwAuthError;
+    if (authFailed) await recordGrowwSync(userId, 'auth_failed');
+    return { ...empty('groww'), state: 'error', message: growwFailure(error_), connection: { source: 'account', status: authFailed ? 'reconnect_required' : connection.status, lastSyncAt: connection.lastSyncAt } };
+  }
+}
+
+/** Server-wide keys from the environment. */
+async function loadServerGroww(credentials: NonNullable<ReturnType<typeof envGrowwCredentials>>): Promise<BrokerPortfolio> {
+  try {
+    const data = await fetchGrowwPortfolio(credentials);
+    return { ...empty('groww'), state: 'ok', ...data, connection: { source: 'server', status: 'connected', lastSyncAt: data.fetchedAt } };
+  } catch (error_) {
+    return { ...empty('groww'), state: 'error', message: growwFailure(error_), connection: { source: 'server', status: error_ instanceof GrowwAuthError ? 'reconnect_required' : 'connected', lastSyncAt: null } };
+  }
+}
+
+/** Why the connect form cannot be used yet, if it cannot. */
+function growwSetupMessage(lookup: GrowwConnectionLookup, encryptionReady: boolean) {
+  if (lookup.kind === 'setup') return lookup.message;
+  return encryptionReady ? undefined : CONNECTION_UNAVAILABLE;
 }
 
 async function loadGroww(userId: string, email: string | null): Promise<BrokerPortfolio> {
@@ -27,30 +58,12 @@ async function loadGroww(userId: string, email: string | null): Promise<BrokerPo
   }
 
   // 1. A connection this user saved in Orbis.
-  if (lookup.kind === 'connected') {
-    const { connection } = lookup;
-    try {
-      const data = await fetchGrowwPortfolio(connection.credentials);
-      await recordGrowwSync(userId, 'ok');
-      return { ...empty('groww'), state: 'ok', ...data, connection: { source: 'account', status: 'connected', lastSyncAt: data.fetchedAt } };
-    } catch (caught) {
-      const authFailed = caught instanceof GrowwAuthError;
-      if (authFailed) await recordGrowwSync(userId, 'auth_failed');
-      return { ...empty('groww'), state: 'error', message: growwFailure(caught), connection: { source: 'account', status: authFailed ? 'reconnect_required' : connection.status, lastSyncAt: connection.lastSyncAt } };
-    }
-  }
+  if (lookup.kind === 'connected') return loadSavedGroww(userId, lookup.connection);
 
   // 2. Server-wide keys from the environment, only for their owner.
   const serverCredentials = envGrowwCredentials();
   const owner = growwOwnerEmail();
-  if (serverCredentials && owner && email === owner) {
-    try {
-      const data = await fetchGrowwPortfolio(serverCredentials);
-      return { ...empty('groww'), state: 'ok', ...data, connection: { source: 'server', status: 'connected', lastSyncAt: data.fetchedAt } };
-    } catch (caught) {
-      return { ...empty('groww'), state: 'error', message: growwFailure(caught), connection: { source: 'server', status: caught instanceof GrowwAuthError ? 'reconnect_required' : 'connected', lastSyncAt: null } };
-    }
-  }
+  if (serverCredentials && owner && email === owner) return loadServerGroww(serverCredentials);
 
   // 3. Not connected yet: the card offers the connect form.
   const encryptionReady = credentialEncryptionReady();
@@ -58,7 +71,7 @@ async function loadGroww(userId: string, email: string | null): Promise<BrokerPo
     ...empty('groww'),
     state: 'not_connected',
     setupRequired: lookup.kind === 'setup' || !encryptionReady,
-    message: lookup.kind === 'setup' ? lookup.message : encryptionReady ? undefined : CONNECTION_UNAVAILABLE,
+    message: growwSetupMessage(lookup, encryptionReady),
   };
 }
 
@@ -91,9 +104,9 @@ async function loadZerodha(userId: string): Promise<BrokerPortfolio> {
   try {
     const data = await fetchZerodhaPortfolio(credentials, lookup.session.accessToken);
     return { ...empty('zerodha'), state: 'ok', ...data, connection: { source: 'account', status: 'connected', lastSyncAt: data.fetchedAt } };
-  } catch (caught) {
+  } catch (error_) {
     // Kite rejecting the token means the same thing as an expired one.
-    if (caught instanceof ZerodhaAuthError) {
+    if (error_ instanceof ZerodhaAuthError) {
       await markZerodhaReconnect(userId);
       return {
         ...empty('zerodha'),
@@ -105,7 +118,7 @@ async function loadZerodha(userId: string): Promise<BrokerPortfolio> {
     return {
       ...empty('zerodha'),
       state: 'error',
-      message: caught instanceof ZerodhaError ? caught.message : 'Zerodha could not be reached. Try again shortly.',
+      message: error_ instanceof ZerodhaError ? error_.message : 'Zerodha could not be reached. Try again shortly.',
       connection: { source: 'account', status: 'connected', lastSyncAt: lookup.session.lastSyncAt },
     };
   }

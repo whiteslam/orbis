@@ -101,5 +101,6 @@ for (const [name, id, secret, slug] of [['Instagram', 'INSTAGRAM_APP_ID', 'INSTA
   warn('until Meta App Review approves the permissions, only accounts added as testers on the app can connect');
 }
 
-console.log(failures ? `\n${failures} problem${failures === 1 ? '' : 's'} to fix.` : '\nNothing blocking.');
+const problems = failures === 1 ? '1 problem' : `${failures} problems`;
+console.log(failures ? `\n${problems} to fix.` : '\nNothing blocking.');
 process.exitCode = failures ? 1 : 0;

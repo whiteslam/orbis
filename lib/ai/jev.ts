@@ -20,6 +20,29 @@ function jevEnabled() {
   return process.env.ORBIS_JEV?.trim() !== 'off' && Boolean(process.env.OPENROUTER_API_KEY?.trim());
 }
 
+type JevReply = { status: number | null; outcome: string; decision: Decision | null };
+
+/** One call to Jev: the HTTP status, how it went, and its decision when it gave one. */
+async function askJev(model: string, question: string): Promise<JevReply> {
+  let status: number | null = null;
+  try {
+    const response = await fetch(SYSTEM_ONE_URL, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${process.env.OPENROUTER_API_KEY?.trim() ?? ''}`, 'content-type': 'application/json' },
+      body: JSON.stringify(questionDepthRequest(model, question)),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    status = response.status;
+    if (!response.ok) return { status, outcome: failureFor(response.status), decision: null };
+    const decision = readDecision(await response.json().catch(() => null), 'depth', DEPTHS);
+    return { status, outcome: decision?.choice ? 'succeeded' : 'invalid_output', decision };
+  } catch (error) {
+    const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+    return { status, outcome: timedOut ? 'timeout' : 'failed', decision: null };
+  }
+}
+
 /**
  * Whether a question needs reasoning, in Jev's judgement: true puts Claude
  * first for this one request, false keeps free models first, undefined (Jev
@@ -45,27 +68,7 @@ export async function needsReasoning(userId: string, question: string, feature: 
 
   const model = jevModel();
   const startedAt = Date.now();
-  let status: number | null = null;
-  let outcome = 'failed';
-  let decision: Decision | null = null;
-  try {
-    const response = await fetch(SYSTEM_ONE_URL, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${process.env.OPENROUTER_API_KEY?.trim() ?? ''}`, 'content-type': 'application/json' },
-      body: JSON.stringify(questionDepthRequest(model, question)),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    status = response.status;
-    if (!response.ok) {
-      outcome = failureFor(response.status);
-    } else {
-      decision = readDecision(await response.json().catch(() => null), 'depth', DEPTHS);
-      outcome = decision?.choice ? 'succeeded' : 'invalid_output';
-    }
-  } catch (error) {
-    outcome = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'timeout' : 'failed';
-  }
+  const { status, outcome, decision } = await askJev(model, question);
 
   const costUsd = decision?.costUsd ?? null;
   if (costUsd) noteSpend(costUsd);

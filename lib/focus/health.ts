@@ -4,7 +4,7 @@
 import type { StepsSummary } from '@/lib/health/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
 // Relative, so the unit tests can load this module under plain Node.
-import { count, percent, shortDate, whole } from './types.ts';
+import { count, shortDate, whole } from './types.ts';
 
 export type HealthFocusInput = {
   steps: StepsSummary;
@@ -18,6 +18,24 @@ export type HealthFocusInput = {
 function stepTrend(steps: StepsSummary) {
   if (steps.average30 === null || steps.previous30 === null || steps.previous30 <= 0) return null;
   return Math.round(((steps.average30 - steps.previous30) / steps.previous30) * 100);
+}
+
+function signedPercent(value: number) {
+  return `${value > 0 ? '+' : ''}${value}%`;
+}
+
+/** A month-on-month step change of 10% or more, worded; null when there is none. */
+function stepsFocus(steps: StepsSummary): Focus | null {
+  const trend = stepTrend(steps);
+  if (trend === null || Math.abs(trend) < 10 || steps.average30 === null || steps.previous30 === null) return null;
+  const falling = trend < 0;
+  const lastRead = steps.latest ? `, last read ${shortDate(steps.latest.date)}` : '';
+  return {
+    id: falling ? 'steps-falling' : 'steps-rising',
+    headline: `Your daily steps are ${falling ? 'down' : 'up'} ${Math.abs(trend)}% on the month before.`,
+    body: `${whole(steps.average30)} a day over the last 30 days against ${whole(steps.previous30)} before that${lastRead}.${falling ? ' Two thirty-minute walks a week is usually enough to close a gap that size.' : ' Worth keeping whatever changed.'}`,
+    action: null,
+  };
 }
 
 export function composeHealthFocus({ steps, documentCount, planCount, libraryState, savedAdviceAt }: HealthFocusInput): Focus {
@@ -38,16 +56,8 @@ export function composeHealthFocus({ steps, documentCount, planCount, librarySta
     };
   }
 
-  const trend = stepTrend(steps);
-  if (trend !== null && Math.abs(trend) >= 10 && steps.average30 !== null && steps.previous30 !== null) {
-    const falling = trend < 0;
-    return {
-      id: falling ? 'steps-falling' : 'steps-rising',
-      headline: `Your daily steps are ${falling ? 'down' : 'up'} ${Math.abs(trend)}% on the month before.`,
-      body: `${whole(steps.average30)} a day over the last 30 days against ${whole(steps.previous30)} before that${steps.latest ? `, last read ${shortDate(steps.latest.date)}` : ''}.${falling ? ' Two thirty-minute walks a week is usually enough to close a gap that size.' : ' Worth keeping whatever changed.'}`,
-      action: null,
-    };
-  }
+  const stepsChange = stepsFocus(steps);
+  if (stepsChange) return stepsChange;
 
   if (documentCount === 0) {
     return {
@@ -81,7 +91,7 @@ export function composeHealthRows({ steps, documentCount, planCount }: Pick<Heal
   return [
     { label: 'Steps today', value: steps.latest ? whole(steps.latest.steps) : 'Not imported', empty: !steps.latest, target: null },
     { label: '7-day average', value: steps.average7 !== null ? whole(steps.average7) : 'No data', empty: steps.average7 === null, target: null },
-    { label: '30 days vs before', value: trend === null ? 'No data' : `${trend > 0 ? '+' : ''}${trend}%`, empty: trend === null, target: null },
+    { label: '30 days vs before', value: trend === null ? 'No data' : signedPercent(trend), empty: trend === null, target: null },
     { label: 'Best day', value: steps.best ? `${whole(steps.best.steps)} · ${shortDate(steps.best.date)}` : 'No data', empty: !steps.best, target: null },
     { label: 'Documents', value: documentCount ? count(documentCount, 'file') : 'None yet', empty: documentCount === 0, target: null },
     { label: 'Plans', value: planCount ? String(planCount) : 'None yet', empty: planCount === 0, target: null },

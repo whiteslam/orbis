@@ -45,13 +45,41 @@ export type ManualTransactionInput = {
   note: string;
 };
 
-export async function addManualTransactionAction(input: ManualTransactionInput): Promise<FinanceActionState> {
-  const userId = await getAuthenticatedUserId();
-  if (!userId) return { success: false, message: 'Sign in again before adding a transaction.' };
+type ManualTransaction = {
+  amount: number;
+  currency: string;
+  direction: 'expense' | 'income';
+  isInvestment: boolean;
+  category: string;
+  merchant: string;
+  paymentMethod: string;
+  note: string;
+  occurredAt: Date;
+};
 
+function categoriesFor(isInvestment: boolean, direction: 'expense' | 'income'): readonly string[] {
+  if (isInvestment) return INVESTMENT_CATEGORIES;
+  return direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+}
+
+function savedMessage(isInvestment: boolean, direction: 'expense' | 'income') {
+  if (isInvestment) return 'Investment saved. It’s listed under Investments too.';
+  return direction === 'expense' ? 'Expense saved.' : 'Income saved.';
+}
+
+/** Why the transaction date can't be used, or null when it can. */
+function occurredAtProblem(occurredAt: Date) {
+  if (Number.isNaN(occurredAt.getTime())) return 'The transaction date is invalid.';
+  if (occurredAt.getTime() > Date.now() + 5 * 60 * 1000) return 'The transaction date cannot be in the future.';
+  if (occurredAt.getFullYear() < 2000) return 'The transaction date is too far in the past.';
+  return null;
+}
+
+/** The checked transaction, or the message explaining what's wrong with it. */
+function parseManualTransaction(input: ManualTransactionInput): ManualTransaction | string {
   const fields = ['amount', 'currency', 'direction', 'category', 'merchant', 'paymentMethod', 'occurredAt', 'note'] as const;
   if (!input || typeof input !== 'object' || fields.some((field) => typeof input[field] !== 'string')) {
-    return { success: false, message: 'This transaction is invalid. Refresh Finance and try again.' };
+    return 'This transaction is invalid. Refresh Finance and try again.';
   }
   const amount = Number(input.amount);
   const currency = input.currency.trim().toUpperCase();
@@ -66,18 +94,21 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
   const occurredAt = new Date(input.occurredAt);
 
   if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000 || Math.round(amount * 100) !== amount * 100) {
-    return { success: false, message: 'Enter a valid amount with no more than two decimal places.' };
+    return 'Enter a valid amount with no more than two decimal places.';
   }
-  if (!/^[A-Z]{3}$/.test(currency)) return { success: false, message: 'Use a three-letter currency code, such as INR.' };
-  if (direction !== 'expense' && direction !== 'income') return { success: false, message: 'Choose whether this was an expense or income.' };
-  const categories: readonly string[] = isInvestment ? INVESTMENT_CATEGORIES : direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-  if (!categories.includes(category)) return { success: false, message: 'Choose a category.' };
-  if (paymentMethod && !PAYMENT_METHODS.some(([key]) => key === paymentMethod)) return { success: false, message: 'Choose a valid payment method.' };
-  if (note.length > MANUAL_NOTE_MAX_LENGTH) return { success: false, message: `Keep the note under ${MANUAL_NOTE_MAX_LENGTH} characters.` };
-  if (Number.isNaN(occurredAt.getTime())) return { success: false, message: 'The transaction date is invalid.' };
-  if (occurredAt.getTime() > Date.now() + 5 * 60 * 1000) return { success: false, message: 'The transaction date cannot be in the future.' };
-  if (occurredAt.getFullYear() < 2000) return { success: false, message: 'The transaction date is too far in the past.' };
+  if (!/^[A-Z]{3}$/.test(currency)) return 'Use a three-letter currency code, such as INR.';
+  if (direction !== 'expense' && direction !== 'income') return 'Choose whether this was an expense or income.';
+  if (!categoriesFor(isInvestment, direction).includes(category)) return 'Choose a category.';
+  if (paymentMethod && !PAYMENT_METHODS.some(([key]) => key === paymentMethod)) return 'Choose a valid payment method.';
+  if (note.length > MANUAL_NOTE_MAX_LENGTH) return `Keep the note under ${MANUAL_NOTE_MAX_LENGTH} characters.`;
+  const dateProblem = occurredAtProblem(occurredAt);
+  if (dateProblem) return dateProblem;
 
+  return { amount, currency, direction, isInvestment, category, merchant, paymentMethod, note, occurredAt };
+}
+
+async function saveManualTransaction(userId: string, transaction: ManualTransaction): Promise<FinanceActionState> {
+  const { amount, currency, direction, isInvestment, category, merchant, paymentMethod, note, occurredAt } = transaction;
   try {
     const supabase = await createClient();
     const base = {
@@ -112,10 +143,19 @@ export async function addManualTransactionAction(input: ManualTransactionInput):
     if (error) return { success: false, message: 'The transaction could not be saved. Please try again.' };
 
     revalidatePath('/active');
-    return { success: true, message: isInvestment ? 'Investment saved. It’s listed under Investments too.' : direction === 'expense' ? 'Expense saved.' : 'Income saved.' };
+    return { success: true, message: savedMessage(isInvestment, direction) };
   } catch {
     return { success: false, message: 'The transaction could not be saved. Please refresh Finance and try again.' };
   }
+}
+
+export async function addManualTransactionAction(input: ManualTransactionInput): Promise<FinanceActionState> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, message: 'Sign in again before adding a transaction.' };
+
+  const transaction = parseManualTransaction(input);
+  if (typeof transaction === 'string') return { success: false, message: transaction };
+  return saveManualTransaction(userId, transaction);
 }
 
 export async function deleteManualTransactionAction(transactionId: string): Promise<FinanceActionState> {
@@ -142,6 +182,11 @@ export async function deleteManualTransactionAction(transactionId: string): Prom
   }
 }
 
+/** One of the income categories, falling back to Salary. */
+function incomeCategory(value: unknown) {
+  return typeof value === 'string' && (INCOME_CATEGORIES as readonly string[]).includes(value) ? value : 'Salary';
+}
+
 /**
  * Sets or clears what you expect to earn.
  *
@@ -163,7 +208,7 @@ export async function saveIncomePlanAction(input: { id?: string; label: string; 
   if (!/^[A-Z]{3}$/.test(currency)) return { success: false, message: 'Use a three-letter currency code.' };
   const payDay = Number(input.payDay);
   if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return { success: false, message: 'Choose the day it usually arrives.' };
-  const category = typeof input.category === 'string' && (INCOME_CATEGORIES as readonly string[]).includes(input.category) ? input.category : 'Salary';
+  const category = incomeCategory(input.category);
 
   const row = { user_id: userId, label, amount, currency, pay_day: payDay, category };
   const { error } = input.id

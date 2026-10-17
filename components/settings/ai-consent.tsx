@@ -18,17 +18,18 @@ import { safeAction } from '@/lib/client/safe-action';
  *
  * Every line below matches what the code sends; update it with the prompts.
  */
-export function AiConsent({ preferences, onChange }: { preferences: AiPreferences; onChange: (enabled: boolean) => void }) {
+const UNAVAILABLE_REASON: Partial<Record<AiPreferences['state'], string>> = {
+  setup: 'This setting isn’t available right now.',
+  unavailable: 'This setting could not be loaded. Try again shortly.',
+};
+
+export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiPreferences; onChange: (enabled: boolean) => void }>) {
   const [enabled, setEnabled] = useState(aiAllowed(preferences));
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const blocked = preferences.state !== 'ready';
-  const reason = preferences.state === 'setup'
-    ? 'This setting isn’t available right now.'
-    : preferences.state === 'unavailable'
-      ? 'This setting could not be loaded. Try again shortly.'
-      : null;
+  const reason = UNAVAILABLE_REASON[preferences.state] ?? null;
 
   function toggle(next: boolean) {
     setEnabled(next);
@@ -77,7 +78,7 @@ export function AiConsent({ preferences, onChange }: { preferences: AiPreference
           One exception: adding a health document sends its text to OpenRouter to index it for search, and building a plan sends a short search from your answers the same way. That index is made by a model that may train on what it receives.
         </p>
       )}
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
+      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
     </div>
   );
 }

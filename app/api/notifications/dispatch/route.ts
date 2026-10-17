@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         counts.deferred += 1;
         continue;
       }
-      const result = await deliverSlot(admin, { userId: row.user_id, slot, messageSlot: slot, localDate: due.date, timeZone: prefs.timezone, now });
+      const result = await deliverSlot(admin, { userId: row.user_id, slot, messageSlot: slot, localDate: due.date, timeZone: prefs.timezone, now }); // NOSONAR: sent one at a time so the time budget above can defer the rest
       counts[result.status] += 1;
     }
   }

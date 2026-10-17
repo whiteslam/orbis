@@ -52,25 +52,26 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
   }
 }
 
+function richTextValue(parts: unknown[]): string {
+  return parts.map((part) => typeof part === 'object' && part && 'text' in part ? String(part.text ?? '') : '').join('').trim().slice(0, 80);
+}
+
+function objectCellValue(value: object): string {
+  if ('result' in value && value.result !== undefined) return safeCellValue(value.result as ExcelJS.CellValue);
+  if ('text' in value && typeof value.text === 'string') return value.text.trim().slice(0, 80);
+  if ('error' in value) return 'Spreadsheet error';
+  if ('formula' in value || 'sharedFormula' in value) return 'Calculated value';
+  return '';
+}
+
 function safeCellValue(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return '';
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'string') return value.trim().slice(0, 80);
   if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
   if (typeof value === 'boolean') return String(value);
-
-  if (Array.isArray(value)) {
-    return value.map((part) => typeof part === 'object' && part && 'text' in part ? String(part.text ?? '') : '').join('').trim().slice(0, 80);
-  }
-
-  if (typeof value === 'object') {
-    if ('result' in value && value.result !== undefined) return safeCellValue(value.result as ExcelJS.CellValue);
-    if ('text' in value && typeof value.text === 'string') return value.text.trim().slice(0, 80);
-    if ('error' in value) return 'Spreadsheet error';
-    if ('formula' in value || 'sharedFormula' in value) return 'Calculated value';
-    return '';
-  }
-
+  if (Array.isArray(value)) return richTextValue(value);
+  if (typeof value === 'object') return objectCellValue(value);
   return '';
 }
 
@@ -93,6 +94,94 @@ type PdfTextSegment = { x: number; text: string };
 // makes pdfjs use it directly.
 (globalThis as typeof globalThis & { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
+type PdfDocument = Awaited<ReturnType<typeof getDocument>['promise']>;
+type PdfTextItems = Awaited<ReturnType<Awaited<ReturnType<PdfDocument['getPage']>>['getTextContent']>>['items'];
+type PdfLine = { pageNumber: number; lineNumber: number; text: string };
+type PdfTextCount = { items: number; characters: number };
+
+/** One page's text items joined into lines, top to bottom, counting them against the document's text limits. */
+function pageTextLines(items: PdfTextItems, count: PdfTextCount): string[] {
+  const grouped = new Map<number, PdfTextSegment[]>();
+  for (const item of items) {
+    if (!('str' in item) || typeof item.str !== 'string' || !item.str.trim()) continue;
+    count.items += 1;
+    count.characters += item.str.length;
+    if (count.items > MAX_PDF_TEXT_ITEMS || count.characters > MAX_PDF_TEXT_CHARS) {
+      throw new UserFacingError('This PDF contains too much text to preview safely. Choose a shorter or simpler document.');
+    }
+
+    const y = Math.round(item.transform[5] * 2) / 2;
+    const segments = grouped.get(y) ?? [];
+    segments.push({ x: item.transform[4], text: item.str.trim() });
+    grouped.set(y, segments);
+  }
+
+  return [...grouped.entries()]
+    .sort(([leftY], [rightY]) => rightY - leftY)
+    .map(([, segments]) => segments
+      .toSorted((left, right) => left.x - right.x)
+      .map((segment) => segment.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim())
+    .filter(Boolean);
+}
+
+async function readPdfPage(document: PdfDocument, pageNumber: number, count: PdfTextCount) {
+  const page = await document.getPage(pageNumber);
+  const content = await page.getTextContent();
+  const lines = pageTextLines(content.items, count);
+  page.cleanup();
+  return lines;
+}
+
+async function readPdfLines(document: PdfDocument): Promise<PdfLine[]> {
+  const lines: PdfLine[] = [];
+  const count: PdfTextCount = { items: 0, characters: 0 };
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const pageLines = await readPdfPage(document, pageNumber, count); // NOSONAR: pages are read one at a time so the text limits stop a huge PDF early and each page is released before the next
+    for (const text of pageLines) {
+      if (lines.length >= MAX_ROWS) {
+        throw new UserFacingError(`This PDF has more than ${MAX_ROWS} text lines. Choose a shorter document and try again.`);
+      }
+      lines.push({ pageNumber, lineNumber: lines.length + 1, text });
+    }
+  }
+  return lines;
+}
+
+function pdfPreview(file: File, lines: PdfLine[]): ParsedWorkbookPreview {
+  const meaningfulLines = lines.filter((line) => line.text.length >= 8);
+  const numericLines = meaningfulLines.filter((line) => /\d/.test(line.text));
+  const sourceLines = numericLines.length ? numericLines : meaningfulLines;
+  const observationLines = sourceLines.length <= 24
+    ? sourceLines
+    : Array.from({ length: 24 }, (_, index) => sourceLines[Math.floor(index * (sourceLines.length - 1) / 23)]);
+  const observations: WorkbookObservation[] = observationLines.map((line, index) => ({
+    id: `obs_${index + 1}`,
+    sheet: 'PDF text',
+    column: 'Extracted text',
+    label: `Extracted content from page ${line.pageNumber}`,
+    value: `Page ${line.pageNumber}: ${line.text}`.slice(0, 240),
+  }));
+
+  const sheet: ParsedWorkbookPreview['sheets'][number] = {
+    name: 'PDF text',
+    rowCount: lines.length,
+    columnCount: 2,
+    columns: ['Page', 'Extracted text'],
+    previewRows: lines.slice(0, 2).map((line) => ({
+      rowNumber: line.lineNumber,
+      values: [String(line.pageNumber), line.text.slice(0, 80)],
+    })),
+  };
+  const preview: ParsedWorkbookPreview = { fileName: safeFileName(file.name), sheets: [sheet], observations };
+  if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
+    throw new UserFacingError('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
+  }
+  return preview;
+}
+
 async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
   if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') {
     throw new UserFacingError('This file does not look like a valid PDF. Choose an Excel workbook or text-based PDF.');
@@ -111,81 +200,12 @@ async function parsePdf(file: File, bytes: Buffer): Promise<ParsedDocument> {
       throw new UserFacingError(`This PDF has more than ${MAX_PDF_PAGES} pages. Split it into smaller files and try again.`);
     }
 
-    const lines: Array<{ pageNumber: number; lineNumber: number; text: string }> = [];
-    let textItemCount = 0;
-    let textCharacterCount = 0;
-
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const grouped = new Map<number, PdfTextSegment[]>();
-
-      for (const item of content.items) {
-        if (!('str' in item) || typeof item.str !== 'string' || !item.str.trim()) continue;
-        textItemCount += 1;
-        textCharacterCount += item.str.length;
-        if (textItemCount > MAX_PDF_TEXT_ITEMS || textCharacterCount > MAX_PDF_TEXT_CHARS) {
-          throw new UserFacingError('This PDF contains too much text to preview safely. Choose a shorter or simpler document.');
-        }
-
-        const y = Math.round(item.transform[5] * 2) / 2;
-        const segments = grouped.get(y) ?? [];
-        segments.push({ x: item.transform[4], text: item.str.trim() });
-        grouped.set(y, segments);
-      }
-
-      const pageLines = [...grouped.entries()]
-        .sort(([leftY], [rightY]) => rightY - leftY)
-        .map(([, segments]) => segments
-          .sort((left, right) => left.x - right.x)
-          .map((segment) => segment.text)
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim())
-        .filter(Boolean);
-
-      for (const text of pageLines) {
-        if (lines.length >= MAX_ROWS) {
-          throw new UserFacingError(`This PDF has more than ${MAX_ROWS} text lines. Choose a shorter document and try again.`);
-        }
-        lines.push({ pageNumber, lineNumber: lines.length + 1, text });
-      }
-      page.cleanup();
-    }
-
+    const lines = await readPdfLines(document);
     if (!lines.length) {
       throw new UserFacingError('Orbis could not find selectable text in this PDF. Scanned image-only PDFs are not supported yet; choose a text-based PDF or Excel workbook.');
     }
 
-    const meaningfulLines = lines.filter((line) => line.text.length >= 8);
-    const numericLines = meaningfulLines.filter((line) => /\d/.test(line.text));
-    const sourceLines = numericLines.length ? numericLines : meaningfulLines;
-    const observationLines = sourceLines.length <= 24
-      ? sourceLines
-      : Array.from({ length: 24 }, (_, index) => sourceLines[Math.floor(index * (sourceLines.length - 1) / 23)]);
-    const observations: WorkbookObservation[] = observationLines.map((line, index) => ({
-      id: `obs_${index + 1}`,
-      sheet: 'PDF text',
-      column: 'Extracted text',
-      label: `Extracted content from page ${line.pageNumber}`,
-      value: `Page ${line.pageNumber}: ${line.text}`.slice(0, 240),
-    }));
-
-    const sheet: ParsedWorkbookPreview['sheets'][number] = {
-      name: 'PDF text',
-      rowCount: lines.length,
-      columnCount: 2,
-      columns: ['Page', 'Extracted text'],
-      previewRows: lines.slice(0, 2).map((line) => ({
-        rowNumber: line.lineNumber,
-        values: [String(line.pageNumber), line.text.slice(0, 80)],
-      })),
-    };
-    const preview: ParsedWorkbookPreview = { fileName: safeFileName(file.name), sheets: [sheet], observations };
-    if (Buffer.byteLength(JSON.stringify(preview), 'utf8') > MAX_PREVIEW_BYTES) {
-      throw new UserFacingError('This PDF is too complex to preview safely. Choose a shorter or simpler document.');
-    }
-    return { preview, textLines: lines.map((line) => `Page ${line.pageNumber}: ${line.text}`) };
+    return { preview: pdfPreview(file, lines), textLines: lines.map((line) => `Page ${line.pageNumber}: ${line.text}`) };
   } catch (error) {
     if (error instanceof Error && /^(This PDF|Orbis could not find selectable text)/.test(error.message)) throw error;
     throw new UserFacingError('Orbis could not read this file. Check that it is a valid, unprotected PDF.');
@@ -200,8 +220,8 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbookPreview> 
   return (await parseDocument(file)).preview;
 }
 
-// Preview plus the full text as lines, for saving and search (RAG).
-export async function parseDocument(file: File): Promise<ParsedDocument> {
+/** Rejects anything that is not a non-empty .xlsx or .pdf under the size limit; returns which of the two it is. */
+function checkUpload(file: File) {
   if (!(file instanceof File)) throw new UserFacingError('Choose an Excel workbook or PDF file.');
   const extension = file.name.toLowerCase().split('.').pop();
   if (extension !== 'xlsx' && extension !== 'pdf') {
@@ -209,82 +229,117 @@ export async function parseDocument(file: File): Promise<ParsedDocument> {
   }
   if (!file.size) throw new UserFacingError('This file is empty. Choose a workbook or PDF with data.');
   if (file.size > MAX_FILE_BYTES) throw new UserFacingError('This file is larger than 100 MB. Choose a smaller file and try again.');
+  return extension;
+}
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  if (extension === 'pdf') return parsePdf(file, bytes);
-
+async function loadWorkbook(bytes: Buffer) {
   const workbook = new ExcelJS.Workbook();
   try {
     await checkXlsxArchiveSize(bytes);
     await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
-  } catch (error) {
+  } catch {
+    // Whatever failed inside the archive check or ExcelJS, the only fix open to the person is a cleaner file.
     throw new UserFacingError('Orbis could not read this file. Check that it is a valid, unprotected .xlsx workbook.');
   }
+  return workbook;
+}
 
+type WorkbookRow = { rowNumber: number; values: string[] };
+type WorkbookTotals = { rows: number; cells: number };
+
+/** A worksheet's non-empty rows, counting them against the whole workbook's limits. */
+function worksheetRows(worksheet: ExcelJS.Worksheet, totals: WorkbookTotals): WorkbookRow[] {
+  let maxColumn = 0;
+  const rows: WorkbookRow[] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    totals.rows += 1;
+    if (totals.rows > MAX_ROWS + MAX_SHEETS) throw new UserFacingError(`This workbook has more than ${MAX_ROWS} non-empty rows. Remove extra rows and try again.`);
+    maxColumn = Math.max(maxColumn, row.cellCount);
+    if (maxColumn > MAX_COLUMNS) throw new UserFacingError(`A worksheet has more than ${MAX_COLUMNS} columns. Remove extra columns and try again.`);
+    const values = Array.from({ length: maxColumn }, (_, index) => safeCellValue(row.getCell(index + 1).value));
+    totals.cells += values.filter(Boolean).length;
+    if (totals.cells > MAX_CELLS) throw new UserFacingError(`This workbook has more than ${MAX_CELLS} filled cells. Use a smaller workbook and try again.`);
+    if (values.some(Boolean)) rows.push({ rowNumber: row.number, values });
+  });
+  return rows;
+}
+
+/** Column names from the header row, with a placeholder for blank headings. */
+function sheetColumns(rows: WorkbookRow[]) {
+  const headerRow = rows[0];
+  const columnCount = Math.min(MAX_COLUMNS, Math.max(headerRow.values.length, ...rows.map((row) => row.values.length)));
+  return Array.from({ length: columnCount }, (_, index) => {
+    const heading = headerRow.values[index]?.trim();
+    return (heading || `Column ${index + 1}`).slice(0, 48);
+  });
+}
+
+/** A sum/average/range line for each column with at least three numbers, up to 24 across the workbook. */
+function addNumericObservations(sheetName: string, columns: string[], dataRows: WorkbookRow[], observations: WorkbookObservation[]) {
+  for (let columnIndex = 0; columnIndex < columns.length && observations.length < 24; columnIndex += 1) {
+    const numeric = dataRows.map((row) => numericValue(row.values[columnIndex] ?? '')).filter((value): value is number => value !== null);
+    if (numeric.length < 3) continue;
+    const sum = numeric.reduce((total, value) => total + value, 0);
+    const average = sum / numeric.length;
+    observations.push({
+      id: `obs_${observations.length + 1}`,
+      sheet: sheetName,
+      column: columns[columnIndex],
+      label: `Numeric pattern in ${columns[columnIndex]}`,
+      value: `${numeric.length} values; sum ${Number(sum.toFixed(2))}; average ${Number(average.toFixed(2))}; range ${Math.min(...numeric)}–${Math.max(...numeric)}`.slice(0, 240),
+    });
+  }
+}
+
+/** One worksheet's preview, adding its text lines and observations to the workbook's; null when it has no rows. */
+function readWorksheet(
+  worksheet: ExcelJS.Worksheet,
+  totals: WorkbookTotals,
+  observations: WorkbookObservation[],
+  textLines: string[],
+): ParsedWorkbookPreview['sheets'][number] | null {
+  const rows = worksheetRows(worksheet, totals);
+  if (!rows.length) return null;
+  const name = worksheet.name.slice(0, 48);
+  const columns = sheetColumns(rows);
+  const dataRows = rows.slice(1);
+  for (const row of dataRows) {
+    const cells = columns.map((column, index) => (row.values[index] ? `${column}: ${row.values[index]}` : '')).filter(Boolean);
+    if (cells.length) textLines.push(`${name} row ${row.rowNumber}: ${cells.join('; ')}`);
+  }
+  const visibleColumnCount = Math.min(columns.length, 10);
+  const previewRows = dataRows.slice(0, 2).map((row) => ({
+    rowNumber: row.rowNumber,
+    values: Array.from({ length: visibleColumnCount }, (_, index) => row.values[index] ?? ''),
+  }));
+  addNumericObservations(name, columns, dataRows, observations);
+
+  return {
+    name,
+    rowCount: dataRows.length,
+    columnCount: columns.length,
+    columns: columns.slice(0, 10),
+    previewRows,
+  };
+}
+
+// Preview plus the full text as lines, for saving and search (RAG).
+export async function parseDocument(file: File): Promise<ParsedDocument> {
+  const extension = checkUpload(file);
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (extension === 'pdf') return parsePdf(file, bytes);
+
+  const workbook = await loadWorkbook(bytes);
   if (workbook.worksheets.length === 0) throw new UserFacingError('No worksheets with data were found in this file.');
   if (workbook.worksheets.length > MAX_SHEETS) throw new UserFacingError(`This workbook has more than ${MAX_SHEETS} worksheets. Remove extra sheets and try again.`);
 
-  let totalRows = 0;
-  let totalCells = 0;
-  let observationNumber = 0;
+  const totals: WorkbookTotals = { rows: 0, cells: 0 };
   const observations: WorkbookObservation[] = [];
   const sheets: ParsedWorkbookPreview['sheets'] = [];
   const textLines: string[] = [];
-
   for (const worksheet of workbook.worksheets) {
-    let maxColumn = 0;
-    const rows: Array<{ rowNumber: number; values: string[] }> = [];
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
-      totalRows += 1;
-      if (totalRows > MAX_ROWS + MAX_SHEETS) throw new UserFacingError(`This workbook has more than ${MAX_ROWS} non-empty rows. Remove extra rows and try again.`);
-      maxColumn = Math.max(maxColumn, row.cellCount);
-      if (maxColumn > MAX_COLUMNS) throw new UserFacingError(`A worksheet has more than ${MAX_COLUMNS} columns. Remove extra columns and try again.`);
-      const values = Array.from({ length: maxColumn }, (_, index) => safeCellValue(row.getCell(index + 1).value));
-      totalCells += values.filter(Boolean).length;
-      if (totalCells > MAX_CELLS) throw new UserFacingError(`This workbook has more than ${MAX_CELLS} filled cells. Use a smaller workbook and try again.`);
-      if (values.some(Boolean)) rows.push({ rowNumber: row.number, values });
-    });
-
-    if (!rows.length) continue;
-    const headerRow = rows[0];
-    const columnCount = Math.min(MAX_COLUMNS, Math.max(headerRow.values.length, ...rows.map((row) => row.values.length)));
-    const columns = Array.from({ length: columnCount }, (_, index) => {
-      const heading = headerRow.values[index]?.trim();
-      return (heading || `Column ${index + 1}`).slice(0, 48);
-    });
-    const dataRows = rows.slice(1);
-    for (const row of dataRows) {
-      const cells = columns.map((column, index) => (row.values[index] ? `${column}: ${row.values[index]}` : '')).filter(Boolean);
-      if (cells.length) textLines.push(`${worksheet.name.slice(0, 48)} row ${row.rowNumber}: ${cells.join('; ')}`);
-    }
-    const visibleColumnCount = Math.min(columns.length, 10);
-    const previewRows = dataRows.slice(0, 2).map((row) => ({
-      rowNumber: row.rowNumber,
-      values: Array.from({ length: visibleColumnCount }, (_, index) => row.values[index] ?? ''),
-    }));
-
-    for (let columnIndex = 0; columnIndex < columnCount && observations.length < 24; columnIndex += 1) {
-      const numeric = dataRows.map((row) => numericValue(row.values[columnIndex] ?? '')).filter((value): value is number => value !== null);
-      if (numeric.length < 3) continue;
-      const sum = numeric.reduce((total, value) => total + value, 0);
-      const average = sum / numeric.length;
-      observationNumber += 1;
-      observations.push({
-        id: `obs_${observationNumber}`,
-        sheet: worksheet.name.slice(0, 48),
-        column: columns[columnIndex],
-        label: `Numeric pattern in ${columns[columnIndex]}`,
-        value: `${numeric.length} values; sum ${Number(sum.toFixed(2))}; average ${Number(average.toFixed(2))}; range ${Math.min(...numeric)}–${Math.max(...numeric)}`.slice(0, 240),
-      });
-    }
-
-    sheets.push({
-      name: worksheet.name.slice(0, 48),
-      rowCount: dataRows.length,
-      columnCount,
-      columns: columns.slice(0, 10),
-      previewRows,
-    });
+    const sheet = readWorksheet(worksheet, totals, observations, textLines);
+    if (sheet) sheets.push(sheet);
   }
 
   if (!sheets.length) throw new UserFacingError('No usable rows were found. Add a header row and at least one data row, then try again.');

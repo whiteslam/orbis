@@ -13,7 +13,7 @@ import { TALK_MAX_SECONDS, type TalkTurn } from '@/lib/voice/talk';
 const SOURCE_ICONS: Record<AskSource, LucideIcon> = { journal: BookOpen, notes: Pin, spending: WalletCards, routines: Clock, steps: Flame };
 
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking';
-type Turn = TalkTurn & { language?: string };
+type Turn = TalkTurn & { language?: string; id: number };
 
 /** Quieter than this (RMS, 0–1) counts as silence. */
 const SILENCE_LEVEL = 0.02;
@@ -26,8 +26,17 @@ function recorderType() {
 }
 
 function wavUrl(base64: string) {
-  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  const bytes = Uint8Array.from(atob(base64), (char) => char.codePointAt(0) ?? 0);
   return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+}
+
+const ABOUT_KIND: Record<AskAbout['kind'], string> = { holding: 'About your holding', market: 'About the market read', news: 'About this story' };
+
+/** The mic button's face: a spinner while Orbis thinks, stop while it listens. */
+function MicIcon({ phase }: Readonly<{ phase: Phase }>) {
+  if (phase === 'thinking') return <LoaderCircle className="workbook-spinner" size={24} />;
+  if (phase === 'listening') return <Square size={20} />;
+  return <Mic size={24} />;
 }
 
 /** Outside the component so the timing loop's clock reads don't read as render impurity. */
@@ -64,10 +73,12 @@ export function TalkToOrbis() {
   const turnsRef = useRef<Turn[]>([]);
   // send() also reads what to look at through this ref, kept in step with `sources`.
   const sourcesRef = useRef(sources);
+  /** Gives each turn a stable key; turns are only ever appended. */
+  const nextTurnId = useRef(0);
 
   useEffect(() => {
     let live = true;
-    safeAction(talkAvailableAction, () => false)().then((ok) => live && setVoice(ok));
+    void safeAction(talkAvailableAction, () => false)().then((ok) => live && setVoice(ok));
     return () => {
       live = false;
     };
@@ -154,7 +165,7 @@ export function TalkToOrbis() {
       setPhase('idle');
       return;
     }
-    turnsRef.current = [...turnsRef.current, { question: result.transcript ?? '', answer: result.answer, language: result.language }];
+    turnsRef.current = [...turnsRef.current, { question: result.transcript ?? '', answer: result.answer, language: result.language, id: nextTurnId.current++ }];
     setTurns(turnsRef.current);
     say(result);
   }
@@ -173,7 +184,7 @@ export function TalkToOrbis() {
       return;
     }
     setDraft('');
-    turnsRef.current = [...turnsRef.current, { question, answer: result.answer }];
+    turnsRef.current = [...turnsRef.current, { question, answer: result.answer, id: nextTurnId.current++ }];
     setTurns(turnsRef.current);
   }
 
@@ -283,8 +294,8 @@ export function TalkToOrbis() {
                 <p className="talk-hint">{`Ask about your spending, journal, saved notes, routines or steps, by typing${voice ? ' or speaking in any Indian language' : ''}. Recordings aren’t kept.`}</p>
               </div>
             )}
-            {turns.map((turn, index) => (
-              <div key={index} className="talk-turn">
+            {turns.map((turn) => (
+              <div key={turn.id} className="talk-turn">
                 <p className="talk-q">{turn.question}</p>
                 <p className="talk-a" lang={turn.language}>{turn.answer}</p>
               </div>
@@ -295,7 +306,7 @@ export function TalkToOrbis() {
               their own on/off state, rather than as a row of tabs under the title. */}
           <div className="talk-sources-wrap">
             <p className="talk-sources-label">Orbis can look at</p>
-            <div className="fd-chips talk-sources" role="group" aria-label="What Orbis may look at">
+            <fieldset className="fd-chips talk-sources" aria-label="What Orbis may look at">
               {ASK_SOURCES.map((source) => {
                 const Icon = SOURCE_ICONS[source.id];
                 return (
@@ -304,11 +315,11 @@ export function TalkToOrbis() {
                   </button>
                 );
               })}
-            </div>
+            </fieldset>
           </div>
           {about && (
             <div className="talk-about">
-              <span className="talk-about-kind">{about.kind === 'holding' ? 'About your holding' : about.kind === 'market' ? 'About the market read' : 'About this story'}</span>
+              <span className="talk-about-kind">{ABOUT_KIND[about.kind]}</span>
               <span className="talk-about-title">{about.title}</span>
               <button type="button" onClick={() => setAbout(null)} aria-label="Stop asking about this" disabled={phase === 'thinking'}><X size={14} /></button>
             </div>
@@ -316,7 +327,7 @@ export function TalkToOrbis() {
           <footer className="talk-foot">
             {voice && (
               <button type="button" className={`talk-mic ${phase}`} onClick={onMic} disabled={phase === 'thinking' || !sources.length} aria-label={phase === 'listening' ? 'Done speaking' : 'Speak'}>
-                {phase === 'thinking' ? <LoaderCircle className="workbook-spinner" size={24} /> : phase === 'listening' ? <Square size={20} /> : <Mic size={24} />}
+                <MicIcon phase={phase} />
               </button>
             )}
             <form className="talk-type" onSubmit={ask}>

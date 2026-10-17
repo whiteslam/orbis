@@ -141,19 +141,25 @@ function financeLine(finance: FinanceSummary): string | null {
  * makes. "Missed", "slipped", "probably" and "did it happen?" all read as
  * verdicts on a day Orbis did not see, and note.test.ts keeps them out.
  */
+/** The routines before this one that Orbis has not heard about, as a trailing sentence, or nothing. */
+function unheardLine(missed: RoutineToday[]): string {
+  if (missed.length === 1) return ` I haven’t heard about ${missed[0].routine.title} yet.`;
+  if (missed.length > 1) return ` I haven’t heard about ${missed.length} earlier ones yet.`;
+  return '';
+}
+
 function routineLine(current: RoutineToday, missed: RoutineToday[], seed: number): string {
   const { routine } = current;
   const at = clockLabel(routine.atTime);
   const around = routine.flexible ? `around ${at}` : `at ${at}`;
-  const behind = missed.length === 1
-    ? ` I haven’t heard about ${missed[0].routine.title} yet.`
-    : missed.length > 1
-      ? ` I haven’t heard about ${missed.length} earlier ones yet.`
-      : '';
+  const behind = unheardLine(missed);
 
   switch (routineState(current)) {
-    case 'later':
-      return `${pick([`You’ve got ${routine.title} ${around}.`, `${routine.title} is next, ${around}.`], seed, 7)}${behind}`;
+    case 'later': {
+      const gotIt = `You’ve got ${routine.title} ${around}.`;
+      const next = `${routine.title} is next, ${around}.`;
+      return `${pick([gotIt, next], seed, 7)}${behind}`;
+    }
     case 'soon':
       return routine.flexible
         ? `${routine.title} is coming up, usually ${around}.${behind}`

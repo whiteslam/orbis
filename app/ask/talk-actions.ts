@@ -23,6 +23,12 @@ export type TalkResult = {
   audio?: string;
 };
 
+/** A text field from the form; a missing field or an uploaded file reads as the fallback. */
+function formText(form: FormData, name: string, fallback = '') {
+  const value = form.get(name);
+  return typeof value === 'string' ? value : fallback;
+}
+
 function sarvamKey() {
   return process.env.SARVAM_API_KEY?.trim() || null;
 }
@@ -51,7 +57,7 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
 
   let earlier: ReturnType<typeof trimHistory> = [];
   try {
-    earlier = trimHistory(JSON.parse(String(form.get('history') ?? '[]')));
+    earlier = trimHistory(JSON.parse(formText(form, 'history', '[]')));
   } catch {
     earlier = [];
   }
@@ -59,7 +65,7 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
   let sources: AskSource[] = TALK_SOURCES;
   if (form.has('sources')) {
     try {
-      sources = pickSources(JSON.parse(String(form.get('sources'))));
+      sources = pickSources(JSON.parse(formText(form, 'sources')));
     } catch {
       sources = [];
     }

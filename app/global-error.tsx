@@ -12,7 +12,7 @@ import './styles/marketing.css';
 // the stored theme is applied after mount instead, because the
 // Content-Security-Policy only runs scripts carrying the layout's nonce and this
 // page has no layout. Until then it follows the system setting.
-export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+export default function GlobalError({ error, retry }: Readonly<{ error: Error & { digest?: string }; retry: () => void }>) {
   useEffect(() => {
     console.error(error);
   }, [error]);

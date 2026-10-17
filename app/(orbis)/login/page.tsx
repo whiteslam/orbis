@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: 'Sign in', robots: { index: false } }
 
 export default async function LoginPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<{ error?: string; reset?: string }>;
-}) {
+}>) {
   const params = await searchParams;
   const initialMessage = params.reset === 'success'
     ? 'Your password has been updated. Sign in with your new password.'

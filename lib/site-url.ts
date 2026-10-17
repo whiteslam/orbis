@@ -1,7 +1,9 @@
 import 'server-only';
 
+import { withoutTrailingSlashes } from '@/lib/site';
+
 export function getSiteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
+  const configured = withoutTrailingSlashes(process.env.NEXT_PUBLIC_SITE_URL?.trim() ?? '');
   if (configured) {
     try {
       const url = new URL(configured);

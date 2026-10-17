@@ -1,6 +1,6 @@
 // The Orbis mark: a conic-gradient ring with a hole at 45% of its diameter.
 // Two nested elements, never an SVG stroke, so it scales and themes from CSS.
-export function OrbisMark({ size = 42, className }: { size?: number; className?: string }) {
+export function OrbisMark({ size = 42, className }: Readonly<{ size?: number; className?: string }>) {
   return (
     <span
       aria-hidden="true"

@@ -7,14 +7,30 @@ const MAX_ARTICLES = 16;
 
 const HOUSE_STYLE = 'Use British English spelling and grammar. Never use an em dash or an en dash; use a comma, semicolon or full stop instead. No hype, no exclamation marks, no emoji.';
 
+/** Every `<…>` tag replaced by a space, scanning once rather than with a backtracking regex. */
+function stripTags(text: string) {
+  let out = '';
+  let from = 0;
+  for (;;) {
+    const open = text.indexOf('<', from);
+    if (open === -1) break;
+    // No `>` after this `<` means none after any later `<` either.
+    const close = text.indexOf('>', open + 1);
+    if (close === -1) break;
+    out += `${text.slice(from, open)} `;
+    from = close + 1;
+  }
+  return out + text.slice(from);
+}
+
 /** House style is enforced here, not trusted to the prompt. */
 function clean(value: unknown, max: number) {
   if (typeof value !== 'string') return '';
-  return value
-    .replace(/<[^>]*>/g, ' ')
+  // Whitespace is collapsed to single spaces first, so one optional space is all the later steps need.
+  return stripTags(value)
     .replace(/\s+/g, ' ')
-    .replace(/\s*[—–]\s*/g, ', ')
-    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/ ?[—–] ?/g, ', ')
+    .replace(/ ([,.;:])/g, '$1')
     .trim()
     .slice(0, max);
 }

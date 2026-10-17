@@ -9,7 +9,7 @@ import type { OwnInvestments } from '@/lib/finance/types';
  * manually → Investment. No broker reports these, so this is the only place
  * they are counted towards what you hold.
  */
-export function OwnInvestmentsList({ own }: { own: OwnInvestments }) {
+export function OwnInvestmentsList({ own }: Readonly<{ own: OwnInvestments }>) {
   if (own.categories.length === 0) {
     return (
       <section className="fd-quiet">

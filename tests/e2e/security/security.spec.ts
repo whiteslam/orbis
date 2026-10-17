@@ -50,7 +50,8 @@ test('user-supplied text is rendered as text, not HTML', async ({ page }) => {
   const payload = `<img src=x onerror="window.__xss=1">QA-${Date.now()}`;
   await page.getByLabel('Name to use').fill(payload.slice(0, 80));
   await page.getByRole('button', { name: 'Save profile' }).click();
-  await page.waitForTimeout(1500);
+  // The save has finished once its result is announced.
+  await expect(page.getByRole('region', { name: 'Your personal profile' }).getByRole('status').last()).toBeVisible({ timeout: 15_000 });
   await page.reload();
   await openApp(page);
   await openSettings(page);

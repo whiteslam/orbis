@@ -48,7 +48,7 @@ function jumpTo(section: SettingsSection) {
   document.getElementById(`settings-${section}`)?.scrollIntoView({ block: 'start' });
 }
 
-function Group({ id, note, children }: { id: SettingsSection; note?: string; children: ReactNode }) {
+function Group({ id, note, children }: Readonly<{ id: SettingsSection; note?: string; children: ReactNode }>) {
   return (
     <section className="pf-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`}>
       <h2 className="fd-label" id={`settings-${id}-title`}>{LABEL[id]}</h2>
@@ -62,7 +62,7 @@ function Group({ id, note, children }: { id: SettingsSection; note?: string; chi
  * Everything you configure, in one place, opened from the avatar on any tab.
  * It sits above the bottom nav, so tapping a tab is always a way out.
  */
-export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: {
+export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: Readonly<{
   /** A routine to open for editing, when a heads-up asked to adjust it. */
   editRoutineId?: string | null;
   section: SettingsSection;
@@ -71,7 +71,7 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   googleNotice: string | null;
   clearGoogleNotice: () => void;
   data: SettingsData;
-}) {
+}>) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => jumpTo(section), [section]);
@@ -107,15 +107,15 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
 
   return (
-    <section className="settings-sheet field pf-screen" role="dialog" aria-modal="true" aria-label="Settings">
+    <dialog open className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
       <header className="settings-head">
         <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
         <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
       </header>
       {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
-      <div className="settings-jump" role="group" aria-label="Settings sections">
+      <fieldset className="settings-jump" aria-label="Settings sections">
         {SETTINGS_SECTIONS.map((item) => <button key={item.id} type="button" onClick={() => jumpTo(item.id)}>{item.label}</button>)}
-      </div>
+      </fieldset>
 
       <Group id="you" note="The name Orbis calls you, what you do, and where you are.">
         <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
@@ -124,10 +124,10 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
 
       <Group id="connections" note="Everything Orbis reads from. Every connection is read-only, and you can disconnect at any time.">
         {notice && (
-          <div className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`} role="status">
+          <output className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`}>
             <span>{notice.text}</span>
             <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
-          </div>
+          </output>
         )}
         <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
         <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
@@ -160,6 +160,6 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
         </div>
         <AccountData />
       </Group>
-    </section>
+    </dialog>
   );
 }

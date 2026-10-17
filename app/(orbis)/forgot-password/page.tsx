@@ -7,9 +7,9 @@ export const metadata: Metadata = { title: 'Forgot password', robots: { index: f
 
 export default async function ForgotPasswordPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<{ error?: string }>;
-}) {
+}>) {
   const params = await searchParams;
 
   return (

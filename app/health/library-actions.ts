@@ -192,7 +192,6 @@ export async function startHealthPlanAction(): Promise<Result<PlanQuestion[]>> {
   const limited = await consumeAiRequest(auth.userId);
   if (limited) return { success: false, message: limited };
 
-  const startedAt = Date.now();
   try {
     const context = await buildPlanContext(auth.userId, 'health fitness measurements weight heart rate blood sleep activity steps diet conditions');
     const result = await generatePlanQuestions(auth.userId, context);
@@ -217,7 +216,6 @@ export async function generateHealthPlanAction(input: { answers: PlanAnswer[] })
   const limited = await consumeAiRequest(auth.userId);
   if (limited) return { success: false, message: limited };
 
-  const startedAt = Date.now();
   try {
     const context = await buildPlanContext(auth.userId, answers.map((answer) => `${answer.question} ${answer.answer}`).join(' ').slice(0, 2000));
     const result = await generateHealthPlan(auth.userId, context, answers);

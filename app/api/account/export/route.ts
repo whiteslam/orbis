@@ -60,15 +60,19 @@ export async function POST(request: Request) {
 
   const tables: Record<string, unknown[]> = {};
   const unavailable: string[] = [];
-  for (const { table, key } of EXPORT_TABLES) {
+  const results = await Promise.all(EXPORT_TABLES.map(async ({ table, key }) => {
     try {
-      tables[table] = await readTable(supabase, userId, table, key);
+      return { table, rows: await readTable(supabase, userId, table, key) };
     } catch (error) {
       // A table this session can't read (or that isn't set up yet) is left out
       // and named, rather than failing the whole export.
       console.error(`Account export: ${table} could not be read`, error);
-      unavailable.push(table);
+      return { table, rows: null };
     }
+  }));
+  for (const { table, rows } of results) {
+    if (rows) tables[table] = rows;
+    else unavailable.push(table);
   }
 
   let files: Array<{ bucket: string; about: string; paths: string[] }> | null = null;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Flame, LoaderCircle, Trash2 } from 'lucide-react';
 import { deleteJournalEntryAction, loadDeletedJournalAction, loadJournalHistoryAction, saveJournalEntryAction } from '@/app/personal/journal-actions';
@@ -40,12 +40,36 @@ function lastSevenDays(todayKey: string) {
   });
 }
 
+/** A day on the week bar: filled when written, faint while today is still open, empty when missed. */
+function weekDayClass(day: string, written: Set<string>, todayKey: string) {
+  if (written.has(day)) return 'on';
+  return day === todayKey ? 'open' : undefined;
+}
+
+/** "#work #sleep". */
+function hashtags(tags: string[]) {
+  return tags.map((tag) => `#${tag}`).join(' ');
+}
+
+/** A tag tapped on comes off; a new one goes on, up to eight. */
+function withTagToggled(current: string[], tag: string) {
+  if (current.includes(tag)) return current.filter((item) => item !== tag);
+  return current.length < 8 ? [...current, tag] : current;
+}
+
+/** The button under past entries: fewer, or how many there are to show. */
+function pastToggleLabel(showAll: boolean, pastCount: number, loadedCount: number) {
+  if (showAll) return 'Show fewer';
+  // The journal loads the latest 60 entries, so a full page is only the latest.
+  return loadedCount >= 60 ? `Latest ${pastCount} past entries` : `All ${pastCount} past entries`;
+}
+
 /**
  * The streak as a number and the last seven days as a segmented bar: filled
  * where there is an entry, empty where a day was missed, and a faint fill for
  * today while it is still open.
  */
-function StreakHero({ journal, todayKey }: { journal: JournalSummary; todayKey: string }) {
+function StreakHero({ journal, todayKey }: Readonly<{ journal: JournalSummary; todayKey: string }>) {
   const written = new Set(journal.entries.map((entry) => entry.date));
   const days = lastSevenDays(todayKey);
   const missed = days.filter((day) => day !== todayKey && !written.has(day)).map(weekday);
@@ -65,7 +89,7 @@ function StreakHero({ journal, todayKey }: { journal: JournalSummary; todayKey: 
         {count > 0 && <span className="fd-delta flat"><Flame size={10} strokeWidth={2.4} aria-hidden="true" />{countLabel}</span>}
       </div>
       <div className="pf-week" role="img" aria-label={`Last seven days: ${summary}.`}>
-        {days.map((day) => <i key={day} className={written.has(day) ? 'on' : day === todayKey ? 'open' : undefined} />)}
+        {days.map((day) => <i key={day} className={weekDayClass(day, written, todayKey)} />)}
       </div>
     </div>
   );
@@ -108,7 +132,7 @@ async function loadDeleted() {
   };
 }
 
-function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: string; onDone: () => void }) {
+function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; date: string; onDone: () => void }>) {
   const router = useRouter();
   const [mood, setMood] = useState<number>(entry?.mood ?? 0);
   const [body, setBody] = useState(entry?.body ?? '');
@@ -118,7 +142,7 @@ function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: str
   const isToday = date === today();
 
   function toggleTag(tag: string) {
-    setTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length < 8 ? [...current, tag] : current);
+    setTags((current) => withTagToggled(current, tag));
   }
 
   function save(event: React.FormEvent<HTMLFormElement>) {
@@ -138,6 +162,9 @@ function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: str
     });
   }
 
+  let submitLabel: ReactNode = entry ? 'Update entry' : 'Save entry';
+  if (isPending) submitLabel = <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Saving…</>;
+
   return (
     <form className="fd-form pf-editor" onSubmit={save}>
       <p className="pf-prompt">{isToday ? 'How are you feeling today?' : `How were you feeling on ${prettyDate(date)}?`}</p>
@@ -150,24 +177,24 @@ function Editor({ entry, date, onDone }: { entry: JournalEntry | null; date: str
       </div>
       <label className="sr-only" htmlFor={`journal-body-${date}`}>Journal entry</label>
       <textarea id={`journal-body-${date}`} className="pf-textarea" value={body} onChange={(event) => setBody(event.currentTarget.value)} rows={4} maxLength={4000} placeholder="What happened, what you’re grateful for, what’s on your mind…" disabled={isPending} />
-      <div className="fd-chips pf-tags" role="group" aria-label="Tags">
+      <fieldset className="fd-chips pf-tags" aria-label="Tags">
         <div>
           {SUGGESTED_TAGS.map((tag) => (
             <button key={tag} type="button" aria-pressed={tags.includes(tag)} onClick={() => toggleTag(tag)} disabled={isPending}>#{tag}</button>
           ))}
         </div>
-      </div>
+      </fieldset>
       <div className="fd-act pf-save">
-        <button type="submit" disabled={isPending}>{isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Saving…</> : entry ? 'Update entry' : 'Save entry'}</button>
+        <button type="submit" disabled={isPending}>{submitLabel}</button>
         {entry && <button className="ghost" type="button" onClick={onDone} disabled={isPending}>Cancel</button>}
         <span className="pf-count">{body.length}/4000</span>
       </div>
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </form>
   );
 }
 
-export function Journal({ journal }: { journal: JournalSummary }) {
+export function Journal({ journal }: Readonly<{ journal: JournalSummary }>) {
   const router = useRouter();
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -205,7 +232,7 @@ export function Journal({ journal }: { journal: JournalSummary }) {
           <div className="pf-entry-view">
             <p className="pf-prompt"><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
             {todayEntry.body && <p className="fd-prose">{todayEntry.body}</p>}
-            {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{todayEntry.tags.map((tag) => `#${tag}`).join(' ')}</p>}
+            {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{hashtags(todayEntry.tags)}</p>}
             <div className="fd-act">
               <button className="ghost" type="button" onClick={() => setEditingDate(todayKey)}>Edit today’s entry</button>
               <button className="fd-link" type="button" aria-expanded={historyDate === todayKey} onClick={() => toggleHistory(todayKey)}>History</button>
@@ -229,7 +256,7 @@ export function Journal({ journal }: { journal: JournalSummary }) {
                 <>
                   <div className="pf-entry-head">
                     <span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}>{moodOf(entry.mood).emoji}</span>
-                    <div><strong>{prettyDate(entry.date)}</strong><small>{moodOf(entry.mood).label}{entry.tags.length ? ` · ${entry.tags.map((tag) => `#${tag}`).join(' ')}` : ''}</small></div>
+                    <div><strong>{prettyDate(entry.date)}</strong><small>{moodOf(entry.mood).label}{entry.tags.length ? ` · ${hashtags(entry.tags)}` : ''}</small></div>
                     <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
                   </div>
                   {entry.body && <p className="pf-entry-body">{entry.body}</p>}
@@ -245,7 +272,7 @@ export function Journal({ journal }: { journal: JournalSummary }) {
           ))}
           {past.length > PAST_PREVIEW && (
             <button type="button" className="fd-link pf-more" onClick={() => setShowAll(!showAll)} aria-expanded={showAll}>
-              {showAll ? 'Show fewer' : journal.entries.length >= 60 ? `Latest ${past.length} past entries` : `All ${past.length} past entries`}
+              {pastToggleLabel(showAll, past.length, journal.entries.length)}
             </button>
           )}
         </div>

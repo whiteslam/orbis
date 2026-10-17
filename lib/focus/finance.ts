@@ -38,10 +38,12 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
     const { month, days, top } = totals;
     const perDay = month.spent / days;
     const share = top && month.spent > 0 ? percent(top.amount / month.spent) : null;
+    const topLine = top && share ? ` ${top.category} is the largest share at ${share}.` : '';
+    const receivedLine = month.received > 0 ? ` ${money(month.received, month.currency)} came in over the same period.` : '';
     return {
       id: 'month-so-far',
       headline: `${money(month.spent, month.currency)} spent${totals.isThisMonth ? ' so far' : ''}.`,
-      body: `About ${money(perDay, month.currency)} a day, ${count(days, 'day')} in.${top && share ? ` ${top.category} is the largest share at ${share}.` : ''}${month.received > 0 ? ` ${money(month.received, month.currency)} came in over the same period.` : ''}`,
+      body: `About ${money(perDay, month.currency)} a day, ${count(days, 'day')} in.${topLine}${receivedLine}`,
       action: null,
     };
   }
@@ -58,18 +60,16 @@ export function composeFinanceRows({ summary, now = new Date() }: { summary: Fin
   const totals = monthTotals(summary, now);
   const month = totals?.month;
   const top = totals?.top ?? null;
-  const expenses = summary.monthlyExpenses.length === 1
-    ? money(summary.monthlyExpenses[0].amount, summary.monthlyExpenses[0].currency)
-    : summary.monthlyExpenses.length > 1
-      ? 'Several currencies'
-      : 'No data';
+  let expenses = 'No data';
+  if (summary.monthlyExpenses.length === 1) expenses = money(summary.monthlyExpenses[0].amount, summary.monthlyExpenses[0].currency);
+  else if (summary.monthlyExpenses.length > 1) expenses = 'Several currencies';
 
   return [
     { label: 'Spent this month', value: expenses, empty: summary.monthlyExpenses.length === 0, target: null },
     { label: 'Daily average', value: month && month.spent > 0 && totals ? money(month.spent / totals.days, month.currency) : 'No data', empty: !month || month.spent === 0, target: null },
     { label: 'Largest category', value: top ? `${top.category} · ${money(top.amount, month?.currency ?? 'INR')}` : 'No data', empty: !top, target: null },
     { label: 'Received this month', value: month && month.received > 0 ? money(month.received, month.currency) : 'None', empty: !month || month.received === 0, target: null },
-    { label: 'Invested this month', value: month && month.invested > 0 ? money(month.invested, month.currency) : 'None', empty: !month || !(month.invested > 0), target: null },
+    { label: 'Invested this month', value: month && month.invested > 0 ? money(month.invested, month.currency) : 'None', empty: !month || month.invested <= 0, target: null },
     { label: 'Saved transactions', value: summary.transactions.length ? count(summary.transactions.length, 'transaction') : 'None yet', empty: summary.transactions.length === 0, target: null },
   ];
 }

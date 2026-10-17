@@ -9,7 +9,7 @@ import { later, MISSING_COLUMN, recordAiEvent } from '@/lib/ai/events';
 import { getAiConsent } from '@/lib/ai/consent-store';
 import {
   attemptCostUsd, budgetState, capAttempts, orderCandidates, paidAffordable, personalDataGuarded, worstCaseCostUsd,
-  type BudgetState, type Priced,
+  type BudgetConfig, type BudgetState, type Priced,
 } from '@/lib/ai/policy';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -131,6 +131,27 @@ async function registry(admin: Admin) {
 
 const price = (value: unknown) => (value === null || value === undefined || value === '' ? null : Number(value));
 
+type Row = Record<string, unknown>;
+
+/** Whether this provider and model can be called at all right now: JSON, a known host and adapter, no cooldown. */
+function callable(provider: Row, model: Row, apiStyle: string, now: string) {
+  if (model.supports_json === false) return false;
+  if (!providerAllowed(provider.api_key_env, provider.base_url)) return false;
+  if (!ADAPTERS[apiStyle]) return false;
+  if (provider.cooldown_until && (provider.cooldown_until as string) > now) return false;
+  return !(model.cooldown_until && (model.cooldown_until as string) > now);
+}
+
+/** A model's prices per million tokens, or null for a paid model with no price, which could spend money nobody can see. */
+function pricing(model: Row): Pick<Candidate, 'paid' | 'inputUsdPerMTok' | 'outputUsdPerMTok'> | null {
+  const paid = model.is_free !== true;
+  if (!paid) return { paid, inputUsdPerMTok: 0, outputUsdPerMTok: 0 };
+  const inputPrice = price(model.input_usd_per_mtok);
+  const outputPrice = price(model.output_usd_per_mtok);
+  if (!(Number.isFinite(inputPrice) && Number.isFinite(outputPrice))) return null;
+  return { paid, inputUsdPerMTok: inputPrice!, outputUsdPerMTok: outputPrice! };
+}
+
 /**
  * Every model that could serve this sensitivity right now, free or paid, with
  * the registry's own order (provider priority, then model priority). Whether a
@@ -141,16 +162,13 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
   const { providers, models } = await registry(admin);
   if (providers.error || models.error) return [];
 
-  const rows = (data: unknown) => (data ?? []) as Array<Record<string, unknown>>;
+  const rows = (data: unknown) => (data ?? []) as Row[];
   const byId = new Map(rows(providers.data).map((provider) => [provider.id as string, provider]));
   return rows(models.data).flatMap((model): Candidate[] => {
     const provider = byId.get(model.provider_id as string);
-    if (!provider || model.supports_json === false) return [];
-    if (!providerAllowed(provider.api_key_env, provider.base_url)) return [];
+    if (!provider) return [];
     const apiStyle = typeof provider.api_style === 'string' ? provider.api_style : 'openai';
-    if (!ADAPTERS[apiStyle]) return [];
-    if (provider.cooldown_until && (provider.cooldown_until as string) > now) return [];
-    if (model.cooldown_until && (model.cooldown_until as string) > now) return [];
+    if (!callable(provider, model, apiStyle, now)) return [];
     // A model may override its provider's training stance; the stricter of the two wins.
     const mayTrain = model.may_train ?? provider.may_train;
     if (sensitivity === 'personal' && mayTrain !== false) return [];
@@ -160,17 +178,12 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
     const extra = (model.request_extra ?? provider.request_extra ?? {}) as Record<string, unknown>;
     if (sensitivity === 'personal' && !personalDataGuarded(provider.base_url as string, extra)) return [];
     if (!process.env[provider.api_key_env as string]?.trim()) return [];
-    // A paid model with no price could spend money nobody can see, so it is never used.
-    const paid = model.is_free !== true;
-    const inputPrice = price(model.input_usd_per_mtok);
-    const outputPrice = price(model.output_usd_per_mtok);
-    if (paid && !(Number.isFinite(inputPrice) && Number.isFinite(outputPrice))) return [];
+    const cost = pricing(model);
+    if (!cost) return [];
     return [{
       id: `${model.provider_id}/${model.model_id}`,
       order: (provider.priority as number) * 1000 + (model.priority as number),
-      paid,
-      inputUsdPerMTok: paid ? inputPrice! : 0,
-      outputUsdPerMTok: paid ? outputPrice! : 0,
+      ...cost,
       providerId: model.provider_id as string,
       modelId: model.model_id as string,
       baseUrl: provider.base_url as string,
@@ -228,6 +241,40 @@ async function penalise(admin: Admin, candidate: Candidate, hard: boolean) {
   }
 }
 
+/** Whether a paid model may take this request: the prompt is within the cap and its worst case fits what is left of the month. */
+function paidFits(request: RouterRequest, promptChars: number, candidate: Candidate, spentUsd: number, config: BudgetConfig) {
+  return promptChars <= MAX_PAID_PROMPT_CHARS && paidAffordable({ promptChars, maxTokens: request.maxTokens }, candidate, spentUsd, config);
+}
+
+/** One attempt at one model, with its own timeout. */
+function callModel(request: RouterRequest, candidate: Candidate, timeoutMs: number) {
+  return ADAPTERS[candidate.apiStyle]({
+    modelId: candidate.modelId,
+    baseUrl: candidate.baseUrl,
+    apiKey: process.env[candidate.apiKeyEnv]?.trim() ?? '',
+    extra: candidate.extra,
+  }, {
+    system: request.system,
+    user: request.user,
+    temperature: request.temperature ?? 0.4,
+    maxTokens: request.maxTokens,
+    // Each attempt gets its own timeout, but never more than what is left overall.
+    signal: AbortSignal.timeout(timeoutMs),
+    accept: request.accept,
+  });
+}
+
+/**
+ * What an attempt cost. A paid reply that did not report usage is booked at its
+ * worst case, so the budget errs towards stopping early rather than overspending.
+ */
+function attemptCost(result: AdapterResult, candidate: Candidate, promptChars: number, maxTokens: number) {
+  if (!candidate.paid) return 0;
+  const usage = 'usage' in result ? result.usage : null;
+  if (usage) return attemptCostUsd(usage, candidate);
+  return 'bytes' in result ? worstCaseCostUsd(promptChars, maxTokens, candidate) : null;
+}
+
 /**
  * Asks the best available model for JSON, falling through the registry on
  * failure. Returns null when every candidate is exhausted, which is the
@@ -259,33 +306,15 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
   for (const candidate of ordered) {
     const remaining = deadline - Date.now();
     if (remaining < MIN_ATTEMPT_MS) break;
-    if (candidate.paid && (promptChars > MAX_PAID_PROMPT_CHARS || !paidAffordable({ promptChars, maxTokens: request.maxTokens }, candidate, spentUsd, config))) continue;
+    if (candidate.paid && !paidFits(request, promptChars, candidate, spentUsd, config)) continue;
 
     attempt += 1;
     const thisAttempt = attempt;
     const startedAt = Date.now();
-    const result = await ADAPTERS[candidate.apiStyle]({
-      modelId: candidate.modelId,
-      baseUrl: candidate.baseUrl,
-      apiKey: process.env[candidate.apiKeyEnv]?.trim() ?? '',
-      extra: candidate.extra,
-    }, {
-      system: request.system,
-      user: request.user,
-      temperature: request.temperature ?? 0.4,
-      maxTokens: request.maxTokens,
-      // Each attempt gets its own timeout, but never more than what is left overall.
-      signal: AbortSignal.timeout(Math.min(timeoutMs, remaining)),
-      accept: request.accept,
-    });
+    const result = await callModel(request, candidate, Math.min(timeoutMs, remaining)); // NOSONAR: models are tried in order until one answers
     const durationMs = Date.now() - startedAt;
 
-    // A paid reply that did not report usage is booked at its worst case, so
-    // the budget errs towards stopping early rather than overspending.
-    const usage = 'usage' in result ? result.usage : null;
-    const costUsd = !candidate.paid ? 0
-      : usage ? attemptCostUsd(usage, candidate)
-        : 'bytes' in result ? worstCaseCostUsd(promptChars, request.maxTokens, candidate) : null;
+    const costUsd = attemptCost(result, candidate, promptChars, request.maxTokens);
     if (costUsd) noteSpend(costUsd);
     const hard = result.outcome === 'failed' || result.outcome === 'auth_failed' || result.outcome === 'not_found';
     later(async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import type { MouseEvent, ReactNode } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { Delete } from 'lucide-react';
 import { PIN_LENGTH } from '@/lib/security/pin-rules';
 
@@ -9,17 +9,24 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 // A single numeric field drawn as six dots; calls onComplete as soon as the sixth digit is typed.
 // With `keypad`, an on-screen number pad replaces the phone keyboard; a hardware keyboard still types into the field.
 // `extraKey` fills the pad's bottom-left slot (e.g. the passkey button).
-export function PinInput({ id, value, onChange, onComplete, disabled, autoFocus, describedBy, keypad = false, extraKey }: {
+export function PinInput({ id, value, onChange, onComplete, disabled, focusOnMount, describedBy, keypad = false, extraKey }: Readonly<{
   id: string;
   value: string;
   onChange: (value: string) => void;
   onComplete?: (value: string) => void;
   disabled?: boolean;
-  autoFocus?: boolean;
+  focusOnMount?: boolean;
   describedBy?: string;
   keypad?: boolean;
   extraKey?: ReactNode;
-}) {
+}>) {
+  const input = useRef<HTMLInputElement>(null);
+
+  // `focusOnMount` focuses the field once it mounts (the PIN screens have nothing else to do).
+  useEffect(() => {
+    if (focusOnMount) input.current?.focus();
+  }, [focusOnMount]);
+
   function update(next: string) {
     const digits = next.replace(/\D/g, '').slice(0, PIN_LENGTH);
     onChange(digits);
@@ -33,6 +40,7 @@ export function PinInput({ id, value, onChange, onComplete, disabled, autoFocus,
     <>
       <div className={keypad ? 'pin-field keypad' : 'pin-field'}>
         <input
+          ref={input}
           id={id}
           className="pin-native"
           type="password"
@@ -42,7 +50,6 @@ export function PinInput({ id, value, onChange, onComplete, disabled, autoFocus,
           maxLength={PIN_LENGTH}
           value={value}
           disabled={disabled}
-          autoFocus={autoFocus}
           aria-describedby={describedBy}
           onChange={(event) => update(event.target.value)}
         />

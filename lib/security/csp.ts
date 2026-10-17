@@ -1,3 +1,5 @@
+import { withoutTrailingSlashes } from '@/lib/site';
+
 // The Content-Security-Policy, built per request so scripts can carry a nonce.
 //
 // style-src keeps 'unsafe-inline' because React style={…} attributes are inline
@@ -36,7 +38,7 @@ export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app' }: { nonce: 
     ].join('; ');
   }
 
-  const supabase = supabaseUrl.replace(/\/+$/, '');
+  const supabase = withoutTrailingSlashes(supabaseUrl);
   const realtime = supabase.replace(/^https:/, 'wss:');
   return [
     ...shared,

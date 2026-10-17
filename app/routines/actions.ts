@@ -15,7 +15,9 @@ async function authed() {
 }
 
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id);
-const KIND_IDS = ROUTINE_KINDS.map((kind) => kind.id);
+const KIND_IDS = new Set<string>(ROUTINE_KINDS.map((kind) => kind.id));
+
+const ANSWERED: Record<RoutineStatus, string> = { done: 'Logged.', skipped: 'Noted.', other: 'Logged what you did instead.' };
 
 export async function saveRoutineAction(input: { id?: string; title: string; kind: string; atTime: string; days: number[]; flexible?: unknown }) {
   const userId = await authed();
@@ -24,9 +26,9 @@ export async function saveRoutineAction(input: { id?: string; title: string; kin
 
   const title = typeof input.title === 'string' ? input.title.trim().slice(0, 60) : '';
   if (!title) return { success: false, message: 'Give it a name, like Gym or Breakfast.' };
-  if (!KIND_IDS.includes(input.kind as RoutineKind)) return { success: false, message: 'Choose what kind of routine this is.' };
+  if (!KIND_IDS.has(input.kind)) return { success: false, message: 'Choose what kind of routine this is.' };
   if (typeof input.atTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.atTime)) return { success: false, message: 'Choose a time.' };
-  const days = Array.isArray(input.days) ? Array.from(new Set(input.days.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort() : [];
+  const days = Array.isArray(input.days) ? Array.from(new Set(input.days.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort((a, b) => a - b) : [];
   if (!days.length) return { success: false, message: 'Pick at least one day.' };
   if (input.id !== undefined && !validId(input.id)) return { success: false, message: 'That routine is invalid.' };
 
@@ -96,6 +98,6 @@ export async function answerRoutineAction(input: { routineId: string; title: str
   revalidatePath('/active');
   return {
     success: true,
-    message: status === 'done' ? 'Logged.' : status === 'skipped' ? 'Noted.' : 'Logged what you did instead.',
+    message: ANSWERED[status],
   };
 }

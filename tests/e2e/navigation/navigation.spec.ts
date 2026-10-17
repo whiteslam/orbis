@@ -1,4 +1,4 @@
-import { expect, openApp, openSettings, openTab, test, type Tab } from '../support/fixtures';
+import { expect, focusAndReveal, openApp, openSettings, openTab, test, type Tab } from '../support/fixtures';
 
 const TABS: Array<[Tab, RegExp]> = [
   ['Money', /#money$/],
@@ -33,8 +33,7 @@ test('mobile keyboard: a focused field near the bottom stays visible above the n
   await openApp(page);
   await openSettings(page);
   const field = page.getByLabel('Name to use');
-  await field.focus();
-  await page.waitForTimeout(700);
+  await focusAndReveal(field);
   const { fieldBox, navTop, stageScroll } = await page.evaluate(() => ({
     fieldBox: document.activeElement!.getBoundingClientRect().toJSON() as DOMRect,
     navTop: document.querySelector('.bottom-nav')!.getBoundingClientRect().top,

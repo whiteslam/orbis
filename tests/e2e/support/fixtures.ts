@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
 import { readUsers, TEST_PIN, type TestUser } from './env';
 
 export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social';
@@ -89,6 +89,52 @@ export async function openSettings(page: Page) {
   await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 }
 
+/**
+ * Waits for a screen to come to rest. Its contents rise in when it opens and
+ * sheets slide up (app/styles/motion.css), so layout and contrast checks made
+ * mid-entrance would measure elements still offset or faded. Endless
+ * animations never finish, so only the finite ones are waited for.
+ */
+export async function settle(page: Page) {
+  await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running' || animation.effect?.getComputedTiming().endTime === Infinity));
+}
+
+/** Waits until an element has held the same position for several frames, so any scroll moving it has finished. */
+async function untilStill(locator: Locator) {
+  await locator.evaluate((element) => new Promise<void>((resolve) => {
+    let last = Number.NaN;
+    let still = 0;
+    const frame = () => {
+      const { top } = element.getBoundingClientRect();
+      still = top === last ? still + 1 : 0;
+      last = top;
+      if (still >= 8) resolve();
+      else requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }));
+}
+
+/**
+ * Focuses a text field and waits for the app's keyboard-aware reveal to run and
+ * come to rest. KeyboardAware scrolls a focused field into view a moment after
+ * focus (once the on-screen keyboard is up), so a test measuring layout after
+ * focus has to wait for that scroll, not just for the focus.
+ */
+export async function focusAndReveal(field: Locator) {
+  // Marks the field when the app scrolls it into view, so the wait is on that call rather than on a guess at its delay.
+  await field.evaluate((element) => {
+    const scrollIntoView = element.scrollIntoView.bind(element);
+    element.scrollIntoView = (options) => {
+      element.dataset.revealed = 'true';
+      scrollIntoView(options);
+    };
+  });
+  await field.focus();
+  await expect(field).toHaveAttribute('data-revealed', 'true');
+  await untilStill(field);
+}
+
 type Fixtures = {
   userA: TestUser;
   userB: TestUser;
@@ -97,9 +143,9 @@ type Fixtures = {
 
 // Every test signs in as user A and fails on unexpected console errors or failed same-origin requests.
 export const test = base.extend<Fixtures>({
-  userA: async ({}, use) => use(readUsers().a),
-  userB: async ({}, use) => use(readUsers().b),
-  storageState: async ({}, use) => use(readUsers().a.storageState),
+  userA: ({}, use) => use(readUsers().a),
+  userB: ({}, use) => use(readUsers().b),
+  storageState: ({}, use) => use(readUsers().a.storageState),
   consoleErrors: async ({ page, baseURL }, use) => {
     const errors: string[] = [];
     page.on('console', (message) => {

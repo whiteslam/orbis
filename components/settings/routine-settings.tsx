@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { Archive, Clock, Plus } from 'lucide-react';
 import { archiveRoutineAction, deleteRoutineAction, saveRoutineAction } from '@/app/routines/actions';
 import { clockLabel, DAY_LABELS, ROUTINE_KINDS, type Routine, type RoutineKind, type RoutinesSummary } from '@/lib/routines/types';
@@ -16,7 +16,7 @@ const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days
  * the brief needs to know when to ask about something, not to become a
  * calendar with its own opinions about your week.
  */
-export function RoutineSettings({ summary, editId = null }: { summary: RoutinesSummary; editId?: string | null }) {
+export function RoutineSettings({ summary, editId = null }: Readonly<{ summary: RoutinesSummary; editId?: string | null }>) {
   // A heads-up about a slipping routine opens it straight into editing.
   const target = editId ? summary.routines.find((routine) => routine.id === editId) : undefined;
   const [draft, setDraft] = useState(() => target ? { title: target.title, kind: target.kind, atTime: target.atTime, days: target.days, flexible: target.flexible } : blank);
@@ -25,6 +25,7 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
   const [showArchived, setShowArchived] = useState(false);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const flexibleHint = useId();
 
   if (summary.state !== 'ready') {
     return <p className="fd-note">{summary.state === 'setup' ? 'Apply the routines migration in Supabase to set up your day.' : 'Your routines could not be loaded. Try again shortly.'}</p>;
@@ -55,7 +56,7 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
 
   const toggleDay = (day: number) => setDraft((current) => ({
     ...current,
-    days: current.days.includes(day) ? current.days.filter((item) => item !== day) : [...current.days, day].sort(),
+    days: current.days.includes(day) ? current.days.filter((item) => item !== day) : [...current.days, day].sort((a, b) => a - b),
   }));
 
   return (
@@ -90,27 +91,27 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
           className="rt-form"
           onSubmit={(submit) => { submit.preventDefault(); run(() => safeAction(saveRoutineAction)({ ...draft, id: editing ?? undefined })); }}
         >
-          <label className="fd-field">Name
+          <label className="fd-field">Name{' '}
             <input value={draft.title} onChange={(change) => setDraft({ ...draft, title: change.currentTarget.value })} placeholder="Gym" maxLength={60} required disabled={isPending} />
           </label>
           <div className="rt-form-row">
-            <label className="fd-field">Kind
+            <label className="fd-field">Kind{' '}
               <select value={draft.kind} onChange={(change) => setDraft({ ...draft, kind: change.currentTarget.value as RoutineKind })} disabled={isPending}>
                 {ROUTINE_KINDS.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
               </select>
             </label>
-            <label className="fd-field">Time
+            <label className="fd-field">Time{' '}
               <input type="time" value={draft.atTime} onChange={(change) => setDraft({ ...draft, atTime: change.currentTarget.value })} required disabled={isPending} />
             </label>
           </div>
           {/* Leaving the office, dinner, bed: a usual time, not an appointment.
               The brief says "around", waits longer, and never calls it late. */}
           <label className="rt-flex">
-            <input type="checkbox" checked={draft.flexible} onChange={(change) => setDraft({ ...draft, flexible: change.currentTarget.checked })} disabled={isPending} />
-            <span><b>Usually around this time</b><small>Running late is normal, so Orbis won’t treat {clockLabel(draft.atTime)} as a deadline.</small></span>
+            <input type="checkbox" aria-label="Usually around this time" aria-describedby={flexibleHint} checked={draft.flexible} onChange={(change) => setDraft({ ...draft, flexible: change.currentTarget.checked })} disabled={isPending} />
+            <span><b>Usually around this time</b><small id={flexibleHint}>Running late is normal, so Orbis won’t treat {clockLabel(draft.atTime)} as a deadline.</small></span>
           </label>
           <p className="fd-label">Days</p>
-          <div className="rt-days" role="group" aria-label="Days this runs">
+          <fieldset className="rt-days" aria-label="Days this runs">
             {DAY_LABELS.map((label, day) => (
               <button
                 key={label}
@@ -121,7 +122,7 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
                 disabled={isPending}
               >{label.slice(0, 1)}</button>
             ))}
-          </div>
+          </fieldset>
           <div className="fd-act">
             <button type="submit" disabled={isPending || !draft.title.trim() || !draft.days.length}>{editing ? 'Save changes' : 'Add routine'}</button>
             <button type="button" className="fd-link" onClick={() => { setOpen(false); setEditing(null); setDraft(blank); }} disabled={isPending}>Cancel</button>
@@ -161,7 +162,7 @@ export function RoutineSettings({ summary, editId = null }: { summary: RoutinesS
       {!active.length && !open && (
         <p className="fd-note"><Clock size={12} aria-hidden="true" /> Add the times your day already has, like a 7 pm gym session or breakfast at 8. The brief then knows what to ask you about.</p>
       )}
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
+      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
     </div>
   );
 }

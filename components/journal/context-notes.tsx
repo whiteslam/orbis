@@ -43,7 +43,7 @@ async function loadDeleted() {
   };
 }
 
-export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextNote[] }) {
+export function ContextNotes({ ready, notes }: Readonly<{ ready: boolean; notes: ContextNote[] }>) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState('');
@@ -64,18 +64,20 @@ export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextN
 
   const shown = showAll ? notes : notes.slice(0, NOTES_PREVIEW);
   const hidden = notes.length - NOTES_PREVIEW;
+  const moreLabel = `${hidden} more note${hidden === 1 ? '' : 's'}`;
 
   return <>
     <form className="fd-form" onSubmit={(event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const note = new FormData(form).get('note');
-      startTransition(async () => { const result = await safeAction(addContextNoteAction)(String(note ?? '')); show(result); if (result.success) form.reset(); });
+      const text = typeof note === 'string' ? note : '';
+      startTransition(async () => { const result = await safeAction(addContextNoteAction)(text); show(result); if (result.success) form.reset(); });
     }}>
       <label className="fd-field wide" htmlFor="context-note">Add a note<textarea id="context-note" name="note" maxLength={1000} rows={3} required placeholder="For example: I prefer simple meal plans and have 30 minutes for exercise." /></label>
       <div className="fd-act pf-act"><button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save note'}</button></div>
     </form>
-    {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
+    {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
     {notes.length ? <div className="pf-notes">
       {shown.map((item) => <article className="pf-card" key={item.id}>
         {editing === item.id ? (
@@ -103,7 +105,7 @@ export function ContextNotes({ ready, notes }: { ready: boolean; notes: ContextN
           {historyId === item.id && <HistoryPanel title="Changes to this note" load={() => loadHistory(item.id)} empty="No changes recorded yet." />}
         </>}
       </article>)}
-      {hidden > 0 && <button className="fd-link pf-more" type="button" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>{showAll ? 'Show fewer' : `${hidden} more note${hidden === 1 ? '' : 's'}`}</button>}
+      {hidden > 0 && <button className="fd-link pf-more" type="button" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>{showAll ? 'Show fewer' : moreLabel}</button>}
     </div> : <p className="fd-empty pf-empty">Nothing saved yet. Add a note above when there is something you want Orbis to keep handy.</p>}
     <button className="fd-link pf-more" type="button" aria-expanded={showDeleted} onClick={() => setShowDeleted(!showDeleted)}>{showDeleted ? 'Hide deleted notes' : 'Deleted notes'}</button>
     {showDeleted && <HistoryPanel title="Deleted notes" load={loadDeleted} empty="Nothing deleted. Notes you delete wait here." />}

@@ -17,7 +17,7 @@ const initialState: AuthActionState = { error: null, message: null };
  * The tab is hidden rather than disabled: offering a control that the server
  * will always refuse is worse than not offering it.
  */
-export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage?: string; signupOpen?: boolean }) {
+export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initialMessage?: string; signupOpen?: boolean }>) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [state, setState] = useState<AuthActionState>({ ...initialState, message: initialMessage ?? null });
   const [isPending, startTransition] = useTransition();
@@ -51,7 +51,7 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
     if (isSignup || !supportsPasskeys()) return;
     const controller = new AbortController();
     autofill.current = controller;
-    (async () => {
+    void (async () => {
       const available = await window.PublicKeyCredential.isConditionalMediationAvailable?.().catch(() => false);
       if (!available || controller.signal.aborted) return;
       const { error } = await createClient().auth.signInWithPasskey({ options: { mediation: 'conditional', signal: controller.signal } });
@@ -80,6 +80,9 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
     });
   }
 
+  let submitLabel = isSignup ? 'Create account' : 'Sign in';
+  if (isPending) submitLabel = 'Please wait…';
+
   function switchMode(nextMode: 'signin' | 'signup') {
     setMode(nextMode);
     setState(initialState);
@@ -94,10 +97,10 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
       </div>
 
       {signupOpen && (
-        <div className="auth-mode" role="group" aria-label="Account access">
+        <fieldset className="auth-mode" aria-label="Account access">
           <button type="button" onClick={() => switchMode('signin')} className={!isSignup ? 'active' : ''} aria-pressed={!isSignup}>Sign in</button>
           <button type="button" onClick={() => switchMode('signup')} className={isSignup ? 'active' : ''} aria-pressed={isSignup}>Create account</button>
-        </div>
+        </fieldset>
       )}
 
       <form className="auth-form" onSubmit={handleSubmit}>
@@ -113,10 +116,10 @@ export function AuthForm({ initialMessage, signupOpen = true }: { initialMessage
         </>}
 
         {state.error && <p id="auth-feedback" className="auth-feedback error" role="alert">{state.error}</p>}
-        {state.message && <p id="auth-feedback" className="auth-feedback success" role="status">{state.message}</p>}
+        {state.message && <output id="auth-feedback" className="auth-feedback success">{state.message}</output>}
 
         <button className="auth-submit" type="submit" disabled={isPending}>
-          {isPending ? 'Please wait…' : isSignup ? 'Create account' : 'Sign in'}
+          {submitLabel}
         </button>
       </form>
 

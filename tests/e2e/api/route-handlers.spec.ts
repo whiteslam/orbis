@@ -56,7 +56,7 @@ test.describe('GET route handlers', () => {
     expect([200, 503]).toContain(response.status());
     if (response.status() === 200) {
       const body = await response.json();
-      expect(Object.keys(body.rates).sort()).toEqual(['EUR', 'USD']);
+      expect(Object.keys(body.rates).sort((a, b) => a.localeCompare(b))).toEqual(['EUR', 'USD']);
       expect(body.rates.USD).toBeGreaterThan(0);
     }
   });

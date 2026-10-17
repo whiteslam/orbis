@@ -34,7 +34,8 @@ h4 { font-size:13px; margin:14px 0 6px; color:var(--muted);
 .banner-num { font-size:46px; font-weight:700; letter-spacing:-0.03em; }
 .banner-grade { font-size:15px; font-weight:600; margin-top:4px; }
 .banner-body p { margin:0; color:var(--muted); }
-.cap-note { margin-top:10px !important; font-size:13px;
+/* .banner-body .cap-note outranks .banner-body p above. */
+.cap-note, .banner-body .cap-note { margin-top:10px; font-size:13px;
   border-left:3px solid #b3261e; padding-left:10px; }
 .gauges { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
 .gauge { text-align:center; }

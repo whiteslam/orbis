@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { NOTIFICATION_SLOTS, type NotificationPreferences } from '@/lib/notifications/preferences';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
-import { localClock } from '@/lib/notifications/schedule';
+import { localClock, type Slot } from '@/lib/notifications/schedule';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 import { isMissingTable } from '@/lib/supabase/errors';
 
@@ -13,12 +13,20 @@ const MAX_DEVICES = 10;
 
 const setupMessage = 'Notifications aren’t available right now. Try again later.';
 
+/** The part of the day an hour (0–24, local) falls in, for wording a test send. */
+function slotForHour(hour: number): Slot {
+  if (hour < 11) return 'morning';
+  if (hour < 17) return 'lunch';
+  if (hour < 21) return 'evening';
+  return 'night';
+}
+
 export async function saveNotificationPreferencesAction(input: NotificationPreferences) {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to update notifications.' };
   if (!input || typeof input !== 'object' || typeof input.enabled !== 'boolean' || !input.slots || typeof input.timezone !== 'string') return { success: false, message: 'These settings are invalid.' };
 
-  let timezone = 'Asia/Kolkata';
+  let timezone: string;
   try {
     timezone = new Intl.DateTimeFormat('en-US', { timeZone: input.timezone }).resolvedOptions().timeZone;
   } catch {
@@ -57,8 +65,8 @@ export async function subscribePushAction(input: { endpoint: string; p256dh: str
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
-  } catch (caught) {
-    console.error(caught);
+  } catch (error_) {
+    console.error(error_);
     return { success: false, message: 'This device could not be registered.' };
   }
 
@@ -95,7 +103,7 @@ export async function sendTestNotificationAction() {
   const clock = localClock(now, timeZone);
 
   const hour = clock.minutes / 60;
-  const messageSlot = hour < 11 ? 'morning' : hour < 17 ? 'lunch' : hour < 21 ? 'evening' : 'night';
+  const messageSlot = slotForHour(hour);
   const result = await deliverSlot(admin, { userId: auth.userId, slot: 'test', messageSlot, localDate: clock.date, timeZone, now });
   if (result.status === 'failed') return { success: false, message: result.reason };
   if (result.status !== 'sent') return { success: false, message: 'Orbis had nothing to send right now. Try again later.' };
@@ -106,9 +114,10 @@ export async function sendTestNotificationAction() {
   // as a success. A partial delivery now says so.
   const missed = result.devices - result.sent;
   if (missed > 0) {
+    const missedDevices = missed === 1 ? 'One device' : `${missed} devices`;
     return {
       success: true,
-      message: `Sent “${result.title}” to ${result.sent} of ${result.devices} devices. ${missed === 1 ? 'One device' : `${missed} devices`} did not accept it; turn notifications off and on there.`,
+      message: `Sent “${result.title}” to ${result.sent} of ${result.devices} devices. ${missedDevices} did not accept it; turn notifications off and on there.`,
     };
   }
   return { success: true, message: `Sent “${result.title}” to ${result.sent} device${result.sent === 1 ? '' : 's'}.` };

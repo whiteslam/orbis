@@ -9,7 +9,7 @@ export function dayLabel(date: string) {
 }
 
 /** The picture or video when there is one, otherwise the format's tint and icon. */
-export function PostThumb({ post }: { post: SocialPost }) {
+export function PostThumb({ post }: Readonly<{ post: SocialPost }>) {
   return (
     <span className={`so-thumb so-fmt-${post.format}`} aria-hidden="true">
       {post.mediaUrl && post.mediaType === 'image' && <img src={post.mediaUrl} alt="" loading="lazy" />}
@@ -19,7 +19,7 @@ export function PostThumb({ post }: { post: SocialPost }) {
   );
 }
 
-function PostMeta({ post, withDate }: { post: SocialPost; withDate: boolean }) {
+function PostMeta({ post, withDate }: Readonly<{ post: SocialPost; withDate: boolean }>) {
   return (
     <>
       <span>{formatLabel(post.format)}</span>
@@ -30,7 +30,7 @@ function PostMeta({ post, withDate }: { post: SocialPost; withDate: boolean }) {
   );
 }
 
-export function PostRow({ post, onOpen, withDate = false }: { post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean }) {
+export function PostRow({ post, onOpen, withDate = false }: Readonly<{ post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean }>) {
   return (
     <button type="button" className="so-row" onClick={() => onOpen(post)}>
       <PostThumb post={post} />
@@ -46,7 +46,7 @@ const STATUS_ORDER: Record<SocialStatus, number> = { idea: 0, draft: 1, ready: 2
 export type SocialSort = 'date' | 'status' | 'format';
 
 /** Rows in the chosen order. Undated posts sort last by date. The order is picked in the card's header. */
-export function SocialList({ posts, onOpen, sort = 'date' }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort }) {
+export function SocialList({ posts, onOpen, sort = 'date' }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort }>) {
   const byDate = (left: SocialPost, right: SocialPost) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999');
   const sorted = [...posts].sort((left, right) => {
     if (sort === 'status') return STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || byDate(left, right);
@@ -56,7 +56,7 @@ export function SocialList({ posts, onOpen, sort = 'date' }: { posts: SocialPost
   return <div className="so-rows">{sorted.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}</div>;
 }
 
-export function SocialGrid({ posts, onOpen }: { posts: SocialPost[]; onOpen: (post: SocialPost) => void }) {
+export function SocialGrid({ posts, onOpen }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void }>) {
   return (
     <div className="so-grid">
       {posts.map((post) => (

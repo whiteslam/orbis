@@ -9,7 +9,7 @@ const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scrol
 
 // Hides the app after idleMs without activity, or when it returns from the background after that long.
 // The server enforces the same window through the unlock cookie; this keeps the screen in step with it.
-export function AppLockGuard({ idleMs, children }: { idleMs: number; children: ReactNode }) {
+export function AppLockGuard({ idleMs, children }: Readonly<{ idleMs: number; children: ReactNode }>) {
   const router = useRouter();
   const [locked, setLocked] = useState(false);
   // Seeds the idle clock once on mount; re-running this on every render would defeat the timers below.

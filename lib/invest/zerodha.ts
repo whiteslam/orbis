@@ -39,7 +39,9 @@ export const zerodhaStateCookieName = 'orbis-zerodha-oauth-state';
  */
 export function zerodhaLoginUrl(apiKey: string, state?: string) {
   const base = `${LOGIN_URL}?v=3&api_key=${encodeURIComponent(apiKey)}`;
-  return state ? `${base}&redirect_params=${encodeURIComponent(`state=${encodeURIComponent(state)}`)}` : base;
+  if (!state) return base;
+  const redirectParams = `state=${encodeURIComponent(state)}`;
+  return `${base}&redirect_params=${encodeURIComponent(redirectParams)}`;
 }
 
 /**

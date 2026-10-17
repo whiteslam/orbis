@@ -72,11 +72,50 @@ export type DraftPost = Omit<CleanPost, 'platforms'>;
 
 const text = (value: unknown, cap: number) => (typeof value === 'string' ? value.trim().slice(0, cap) : '');
 
+/** The reply without a Markdown code fence around it, if the model added one. */
+function unfence(reply: string) {
+  let body = reply.trim();
+  if (body.startsWith('```')) {
+    body = body.slice(3);
+    if (body.slice(0, 4).toLowerCase() === 'json') body = body.slice(4);
+    body = body.trimStart();
+  }
+  if (body.endsWith('```')) body = body.slice(0, -3).trimEnd();
+  return body;
+}
+
+type DraftOptions = { period: string; count: number; formats: SocialFormat[] };
+
+/** The day as an ISO date in the period, or null when it is not a day of that month. */
+function plannedDate(day: unknown, period: string, days: number) {
+  if (typeof day !== 'number' || !Number.isInteger(day) || day < 1 || day > days) return null;
+  return `${period.slice(0, 8)}${String(day).padStart(2, '0')}`;
+}
+
+/** One entry of the reply as a clean draft, or null when it has no caption. */
+function toDraft(entry: unknown, options: DraftOptions, days: number): DraftPost | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const raw = entry as Record<string, unknown>;
+  const caption = text(raw.caption, SOCIAL_CAPS.caption);
+  if (!caption) return null;
+  const title = text(raw.title, SOCIAL_CAPS.title) || caption.split('\n')[0].trim().slice(0, 60);
+  const fallbackFormat = options.formats[0] ?? 'post';
+  return {
+    period: options.period,
+    title,
+    headline: text(raw.headline, SOCIAL_CAPS.headline) || null,
+    caption,
+    hashtags: cleanHashtags(raw.hashtags),
+    format: isFormat(raw.format) && options.formats.includes(raw.format) ? raw.format : fallbackFormat,
+    plannedFor: plannedDate(raw.day, options.period, days),
+  };
+}
+
 /** Reads the model's reply into at most `count` clean drafts. Never throws. */
-export function parseAiDraft(reply: string, options: { period: string; count: number; formats: SocialFormat[] }): DraftPost[] {
+export function parseAiDraft(reply: string, options: DraftOptions): DraftPost[] {
   let data: unknown;
   try {
-    data = JSON.parse(reply.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
+    data = JSON.parse(unfence(reply));
   } catch {
     return [];
   }
@@ -84,27 +123,11 @@ export function parseAiDraft(reply: string, options: { period: string; count: nu
   if (!Array.isArray(list)) return [];
 
   const days = daysInMonth(options.period);
-  const fallbackFormat = options.formats[0] ?? 'post';
   const drafts: DraftPost[] = [];
   for (const entry of list) {
     if (drafts.length >= options.count) break;
-    if (!entry || typeof entry !== 'object') continue;
-    const raw = entry as Record<string, unknown>;
-    const caption = text(raw.caption, SOCIAL_CAPS.caption);
-    if (!caption) continue;
-    const title = text(raw.title, SOCIAL_CAPS.title) || caption.split('\n')[0].trim().slice(0, 60);
-    const day = raw.day;
-    drafts.push({
-      period: options.period,
-      title,
-      headline: text(raw.headline, SOCIAL_CAPS.headline) || null,
-      caption,
-      hashtags: cleanHashtags(raw.hashtags),
-      format: isFormat(raw.format) && options.formats.includes(raw.format) ? raw.format : fallbackFormat,
-      plannedFor: typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= days
-        ? `${options.period.slice(0, 8)}${String(day).padStart(2, '0')}`
-        : null,
-    });
+    const draft = toDraft(entry, options, days);
+    if (draft) drafts.push(draft);
   }
   return drafts;
 }

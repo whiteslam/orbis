@@ -57,6 +57,59 @@ function contextRelevance(note: string, preview: WorkbookPreview): number {
   return score;
 }
 
+type PreviewSheet = ParsedWorkbookPreview['sheets'][number];
+
+function readPreviewRow(rawRow: unknown): PreviewSheet['previewRows'][number] | null {
+  if (!isRecord(rawRow) || !Number.isInteger(rawRow.rowNumber) || (rawRow.rowNumber as number) < 1 || (rawRow.rowNumber as number) > 2_008 || !Array.isArray(rawRow.values) || rawRow.values.length > 10 || !rawRow.values.every((cell) => typeof cell === 'string' && cell.length <= 80)) return null;
+  return { rowNumber: rawRow.rowNumber as number, values: rawRow.values as string[] };
+}
+
+function readPreviewSheet(rawSheet: unknown): PreviewSheet | null {
+  if (!isRecord(rawSheet)) return null;
+  const { name, rowCount, columnCount, columns, previewRows } = rawSheet;
+  if (typeof name !== 'string' || name.length > 48 || !Number.isInteger(rowCount) || (rowCount as number) < 0 || (rowCount as number) > 2_000 || !Number.isInteger(columnCount) || (columnCount as number) < 1 || (columnCount as number) > 40 || !Array.isArray(columns) || columns.length > 10 || !columns.every((column) => typeof column === 'string' && column.length <= 48) || !Array.isArray(previewRows) || previewRows.length > 2) return null;
+  const safeRows: PreviewSheet['previewRows'] = [];
+  for (const rawRow of previewRows) {
+    const row = readPreviewRow(rawRow);
+    if (!row) return null;
+    safeRows.push(row);
+  }
+  return { name, rowCount: rowCount as number, columnCount: columnCount as number, columns: columns as string[], previewRows: safeRows };
+}
+
+function readPreviewObservations(rawObservations: unknown[]): ParsedWorkbookPreview['observations'] | null {
+  const observations: ParsedWorkbookPreview['observations'] = [];
+  const observationIds = new Set<string>();
+  for (const rawObservation of rawObservations) {
+    if (!isRecord(rawObservation)) return null;
+    const { id, sheet, column, label, value: observationValue } = rawObservation;
+    if (typeof id !== 'string' || !/^obs_\d{1,2}$/.test(id) || observationIds.has(id) || typeof sheet !== 'string' || sheet.length > 48 || typeof column !== 'string' || column.length > 48 || typeof label !== 'string' || label.length > 120 || typeof observationValue !== 'string' || observationValue.length > 240) return null;
+    observationIds.add(id);
+    observations.push({ id, sheet, column, label, value: observationValue });
+  }
+  return observations;
+}
+
+/** Whether the rebuilt preview is within bounds and carries the signature we issued for it. */
+function signatureMatches(userId: string, previewData: ParsedWorkbookPreview, token: string) {
+  let json: string;
+  try {
+    json = JSON.stringify(previewData);
+  } catch {
+    return false;
+  }
+  if (Buffer.byteLength(json, 'utf8') > MAX_PREVIEW_BYTES) return false;
+  let expected: string;
+  try {
+    expected = signedPreview(userId, previewData);
+  } catch {
+    return false;
+  }
+  const providedBuffer = Buffer.from(token);
+  const expectedBuffer = Buffer.from(expected);
+  return providedBuffer.length === expectedBuffer.length && timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
 function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
   if (!isRecord(value)) return null;
   const token = value.verificationToken;
@@ -70,44 +123,16 @@ function verifyPreview(userId: string, value: unknown): WorkbookPreview | null {
   // fields we issued before serializing or verifying the signature.
   const sheets: ParsedWorkbookPreview['sheets'] = [];
   for (const rawSheet of rawSheets) {
-    if (!isRecord(rawSheet)) return null;
-    const { name, rowCount, columnCount, columns, previewRows } = rawSheet;
-    if (typeof name !== 'string' || name.length > 48 || !Number.isInteger(rowCount) || (rowCount as number) < 0 || (rowCount as number) > 2_000 || !Number.isInteger(columnCount) || (columnCount as number) < 1 || (columnCount as number) > 40 || !Array.isArray(columns) || columns.length > 10 || !columns.every((column) => typeof column === 'string' && column.length <= 48) || !Array.isArray(previewRows) || previewRows.length > 2) return null;
-    const safeRows: ParsedWorkbookPreview['sheets'][number]['previewRows'] = [];
-    for (const rawRow of previewRows) {
-      if (!isRecord(rawRow) || !Number.isInteger(rawRow.rowNumber) || (rawRow.rowNumber as number) < 1 || (rawRow.rowNumber as number) > 2_008 || !Array.isArray(rawRow.values) || rawRow.values.length > 10 || !rawRow.values.every((cell) => typeof cell === 'string' && cell.length <= 80)) return null;
-      safeRows.push({ rowNumber: rawRow.rowNumber as number, values: rawRow.values as string[] });
-    }
-    sheets.push({ name, rowCount: rowCount as number, columnCount: columnCount as number, columns: columns as string[], previewRows: safeRows });
+    const sheet = readPreviewSheet(rawSheet);
+    if (!sheet) return null;
+    sheets.push(sheet);
   }
 
-  const observations: ParsedWorkbookPreview['observations'] = [];
-  const observationIds = new Set<string>();
-  for (const rawObservation of rawObservations) {
-    if (!isRecord(rawObservation)) return null;
-    const { id, sheet, column, label, value: observationValue } = rawObservation;
-    if (typeof id !== 'string' || !/^obs_\d{1,2}$/.test(id) || observationIds.has(id) || typeof sheet !== 'string' || sheet.length > 48 || typeof column !== 'string' || column.length > 48 || typeof label !== 'string' || label.length > 120 || typeof observationValue !== 'string' || observationValue.length > 240) return null;
-    observationIds.add(id);
-    observations.push({ id, sheet, column, label, value: observationValue });
-  }
+  const observations = readPreviewObservations(rawObservations);
+  if (!observations) return null;
 
   const previewData: ParsedWorkbookPreview = { fileName, sheets, observations };
-  let json: string;
-  try {
-    json = JSON.stringify(previewData);
-  } catch {
-    return null;
-  }
-  if (Buffer.byteLength(json, 'utf8') > MAX_PREVIEW_BYTES) return null;
-  let expected: string;
-  try {
-    expected = signedPreview(userId, previewData);
-  } catch {
-    return null;
-  }
-  const providedBuffer = Buffer.from(token);
-  const expectedBuffer = Buffer.from(expected);
-  if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) return null;
+  if (!signatureMatches(userId, previewData, token)) return null;
 
   return { ...previewData, verificationToken: token };
 }
@@ -191,98 +216,156 @@ function parseAdvice(text: string, preview: WorkbookPreview): WorkbookAdvice | n
   };
 }
 
+type AdviceRequest = {
+  preview: unknown;
+  includeSavedContext: boolean;
+  includeFitnessPersona: boolean;
+  includePersonalProfile: boolean;
+  includeSteps?: boolean;
+  consented: true;
+};
+
+function isAdviceRequest(value: unknown): value is AdviceRequest {
+  return isRecord(value) && typeof value.includeSavedContext === 'boolean' && typeof value.includeFitnessPersona === 'boolean' && typeof value.includePersonalProfile === 'boolean' && (value.includeSteps === undefined || typeof value.includeSteps === 'boolean') && value.consented === true;
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+type PersonalContext = {
+  savedContextNotes: string[];
+  fitnessPersona: string | null;
+  personalProfile: { preferredName?: string; role?: string; aboutMe?: string } | null;
+  steps: ReturnType<typeof stepContext> | null;
+};
+
+/** The saved notes most relevant to this workbook, within a character budget; null when they can't be read. */
+async function loadSavedContextNotes(admin: AdminClient, userId: string, preview: WorkbookPreview): Promise<string[] | null> {
+  const { data, error } = await admin
+    .from('user_context_notes')
+    .select('note')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(20);
+  if (error) {
+    console.error('Reading saved context for workbook advice failed', error);
+    return null;
+  }
+  const rankedNotes = (data ?? [])
+    .map(({ note }, index) => ({ note: note.trim(), index, score: contextRelevance(note, preview) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, 5);
+  const notes: string[] = [];
+  let remainingCharacters = 3_000;
+  for (const item of rankedNotes) {
+    if (remainingCharacters <= 0) break;
+    const note = item.note.trim().slice(0, remainingCharacters);
+    if (note) notes.push(note);
+    remainingCharacters -= note.length;
+  }
+  return notes;
+}
+
+async function loadFitnessPersona(admin: AdminClient, userId: string): Promise<string | null> {
+  const { data, error } = await admin
+    .from('user_fitness_personas')
+    .select('persona')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) console.error('Reading the fitness persona for workbook advice failed', error);
+  if (error || !data?.persona) return null;
+  return data.persona.trim().slice(0, 3_000);
+}
+
+async function loadPersonalProfile(admin: AdminClient, userId: string): Promise<PersonalContext['personalProfile']> {
+  const { data, error } = await admin
+    .from('user_personal_profiles')
+    .select('preferred_name,role,about_me')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) console.error('Reading the personal profile for workbook advice failed', error);
+  if (error || !data) return null;
+  return {
+    ...(data.preferred_name ? { preferredName: data.preferred_name.slice(0, 80) } : {}),
+    ...(data.role ? { role: data.role.slice(0, 120) } : {}),
+    ...(data.about_me ? { aboutMe: data.about_me.slice(0, 3_000) } : {}),
+  };
+}
+
+async function loadSteps(admin: AdminClient, userId: string): Promise<PersonalContext['steps']> {
+  const { data, error } = await admin
+    .from('health_daily_steps')
+    .select('date,steps')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(120);
+  if (error || !data?.length) return null;
+  return stepContext(data.map((day) => ({ date: day.date, steps: Number(day.steps) })));
+}
+
+/** Reads each piece of personal context the user chose to share, in order; a message when one isn't available. */
+async function loadPersonalContext(admin: AdminClient, userId: string, request: AdviceRequest, preview: WorkbookPreview): Promise<PersonalContext | { message: string }> {
+  const context: PersonalContext = { savedContextNotes: [], fitnessPersona: null, personalProfile: null, steps: null };
+  if (request.includeSavedContext) {
+    const notes = await loadSavedContextNotes(admin, userId, preview);
+    if (!notes) return { message: 'Your saved context isn’t available right now. Turn off context sharing or try again later.' };
+    context.savedContextNotes = notes;
+  }
+  if (request.includeFitnessPersona) {
+    context.fitnessPersona = await loadFitnessPersona(admin, userId);
+    if (context.fitnessPersona === null) return { message: 'Your saved fitness persona isn’t available. Save it in Personal first, or turn off persona sharing.' };
+  }
+  if (request.includePersonalProfile) {
+    context.personalProfile = await loadPersonalProfile(admin, userId);
+    if (!context.personalProfile) return { message: 'Your personal profile isn’t available. Save it in Personal first, or turn off profile sharing.' };
+  }
+  if (request.includeSteps === true) {
+    context.steps = await loadSteps(admin, userId);
+    if (!context.steps) return { message: 'Your step data is not available. Import an Apple Health export or turn off step sharing.' };
+  }
+  return context;
+}
+
+function creditRefusal(credit: Awaited<ReturnType<typeof claimAiCredit>>) {
+  if (credit === 'error') return 'AI advice isn’t available right now. Try again later.';
+  if (credit === 'limit') return `You have reached the limit of ${DAILY_ADVICE_LIMIT} workbook advice requests today. Try again tomorrow.`;
+  return null;
+}
+
 export async function generateWorkbookAdviceAction(value: unknown): Promise<{ success: true; data: WorkbookAdvice; saved: AiResultStamp | null } | { success: false; message: string }> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return { success: false, message: 'Sign in again before requesting advice.' };
 
-  if (!isRecord(value) || typeof value.includeSavedContext !== 'boolean' || typeof value.includeFitnessPersona !== 'boolean' || typeof value.includePersonalProfile !== 'boolean' || (value.includeSteps !== undefined && typeof value.includeSteps !== 'boolean') || value.consented !== true) return { success: false, message: 'Confirm what you want to share before requesting workbook advice.' };
+  if (!isAdviceRequest(value)) return { success: false, message: 'Confirm what you want to share before requesting workbook advice.' };
   const preview = verifyPreview(userId, value.preview);
   if (!preview) return { success: false, message: 'This workbook preview expired or changed. Upload the file again to continue.' };
   if (preview.observations.length === 0) return { success: false, message: 'Orbis needs readable PDF text or at least three numeric values in an Excel column to ground its advice. Check the preview or choose another file.' };
-  const documentText = `${preview.fileName} ${preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ')}`;
+  const observationText = preview.observations.map((observation) => `${observation.label} ${observation.value}`).join(' ');
+  const documentText = `${preview.fileName} ${observationText}`;
   if (value.includeFitnessPersona && !workbookHasFitnessFields(preview.sheets, documentText)) return { success: false, message: 'A fitness persona can only be included with a health or fitness document.' };
 
   // Before any personal context is read or the daily advice credit is spent:
   // a request that consent or the registry would stop must not cost a credit.
   const blocked = await aiBlocked(userId, 'personal');
-  if (blocked === 'off') return { success: false, message: AI_OFF_MESSAGE };
-  if (blocked) return { success: false, message: NO_PROVIDER_MESSAGE };
+  if (blocked) return { success: false, message: blocked === 'off' ? AI_OFF_MESSAGE : NO_PROVIDER_MESSAGE };
 
   const { verificationToken: _verificationToken, ...workbookData } = preview;
-  const savedContextNotes: string[] = [];
-  let fitnessPersona: string | null = null;
-  let personalProfile: { preferredName?: string; role?: string; aboutMe?: string } | null = null;
-  let steps: ReturnType<typeof stepContext> | null = null;
-  let admin: ReturnType<typeof createAdminClient>;
+  let admin: AdminClient;
+  let context: Awaited<ReturnType<typeof loadPersonalContext>>;
   try {
     admin = createAdminClient();
-    if (value.includeSavedContext) {
-      const { data, error } = await admin
-        .from('user_context_notes')
-        .select('note')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(20);
-      if (error) {
-        console.error('Reading saved context for workbook advice failed', error);
-        return { success: false, message: 'Your saved context isn’t available right now. Turn off context sharing or try again later.' };
-      }
-      const rankedNotes = (data ?? [])
-        .map(({ note }, index) => ({ note: note.trim(), index, score: contextRelevance(note, preview) }))
-        .sort((left, right) => right.score - left.score || left.index - right.index)
-        .slice(0, 5);
-      let remainingCharacters = 3_000;
-      for (const item of rankedNotes) {
-        if (remainingCharacters <= 0) break;
-        const note = item.note.trim().slice(0, remainingCharacters);
-        if (note) savedContextNotes.push(note);
-        remainingCharacters -= note.length;
-      }
-    }
-    if (value.includeFitnessPersona) {
-      const { data, error } = await admin
-        .from('user_fitness_personas')
-        .select('persona')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (error) console.error('Reading the fitness persona for workbook advice failed', error);
-      if (error || !data?.persona) return { success: false, message: 'Your saved fitness persona isn’t available. Save it in Personal first, or turn off persona sharing.' };
-      fitnessPersona = data.persona.trim().slice(0, 3_000);
-    }
-    if (value.includePersonalProfile) {
-      const { data, error } = await admin
-        .from('user_personal_profiles')
-        .select('preferred_name,role,about_me')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (error) console.error('Reading the personal profile for workbook advice failed', error);
-      if (error || !data) return { success: false, message: 'Your personal profile isn’t available. Save it in Personal first, or turn off profile sharing.' };
-      personalProfile = {
-        ...(data.preferred_name ? { preferredName: data.preferred_name.slice(0, 80) } : {}),
-        ...(data.role ? { role: data.role.slice(0, 120) } : {}),
-        ...(data.about_me ? { aboutMe: data.about_me.slice(0, 3_000) } : {}),
-      };
-    }
-    if (value.includeSteps === true) {
-      const { data, error } = await admin
-        .from('health_daily_steps')
-        .select('date,steps')
-        .eq('user_id', userId)
-        .order('date', { ascending: false })
-        .limit(120);
-      if (error || !data?.length) return { success: false, message: 'Your step data is not available. Import an Apple Health export or turn off step sharing.' };
-      steps = stepContext(data.map((day) => ({ date: day.date, steps: Number(day.steps) })));
-    }
+    context = await loadPersonalContext(admin, userId, value, preview);
   } catch {
     return { success: false, message: 'Your selected personal details could not be loaded for this request.' };
   }
+  if ('message' in context) return { success: false, message: context.message };
+  const { savedContextNotes, fitnessPersona, personalProfile, steps } = context;
 
   const payload = JSON.stringify({ workbook: workbookData, savedContextNotes, fitnessPersona, personalProfile, steps, today: new Date().toISOString().slice(0, 10) });
   if (Buffer.byteLength(payload, 'utf8') > MAX_AI_INPUT_BYTES) return { success: false, message: 'The workbook summary and selected personal context are too large to analyze. Try a smaller workbook.' };
 
   const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'workbook_advice', DAILY_ADVICE_LIMIT);
-  if (credit === 'error') return { success: false, message: 'AI advice isn’t available right now. Try again later.' };
-  if (credit === 'limit') return { success: false, message: `You have reached the limit of ${DAILY_ADVICE_LIMIT} workbook advice requests today. Try again tomorrow.` };
+  const refused = creditRefusal(credit);
+  if (refused) return { success: false, message: refused };
 
   // A workbook is the most personal thing a user hands Orbis, so this goes
   // through the router rather than straight to a provider: only a model whose

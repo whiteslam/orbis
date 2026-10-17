@@ -33,11 +33,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await exchangeSocialCode(platform, code, siteUrl(request));
     await saveSocialConnection(userId, platform, session);
-  } catch (caught) {
+  } catch (error_) {
     // Meta's own words are more useful than a generic failure here: "no Business
     // account linked" is something the user can act on.
-    const message = caught instanceof SocialAuthError ? caught.message : null;
-    return NextResponse.redirect(new URL(`/?tab=social&social=${platform}-failed${message ? `&why=${encodeURIComponent(message.slice(0, 160))}` : ''}`, request.url));
+    const message = error_ instanceof SocialAuthError ? error_.message : null;
+    const why = message ? `&why=${encodeURIComponent(message.slice(0, 160))}` : '';
+    return NextResponse.redirect(new URL(`/?tab=social&social=${platform}-failed${why}`, request.url));
   }
   return back(`${platform}-connected`);
 }

@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { withoutTrailingSlashes } from '@/lib/site';
+
 /**
  * Instagram and Threads publishing, through Meta's Graph APIs.
  *
@@ -43,7 +45,7 @@ function credentials(platform: SocialPlatformId) {
 }
 
 export const socialRedirectUri = (platform: SocialPlatformId, siteUrl: string) =>
-  `${siteUrl.replace(/\/+$/, '')}/auth/social/${platform}/callback`;
+  `${withoutTrailingSlashes(siteUrl)}/auth/social/${platform}/callback`;
 
 /**
  * Where the user authorises Orbis.
@@ -137,48 +139,57 @@ export async function exchangeSocialCode(platform: SocialPlatformId, code: strin
 
 export type PublishInput = { accessToken: string; accountId: string; caption: string; mediaUrl: string | null; mediaType: 'image' | 'video' | null };
 
+function threadsMediaType(input: PublishInput) {
+  if (!input.mediaUrl) return 'TEXT';
+  return input.mediaType === 'video' ? 'VIDEO' : 'IMAGE';
+}
+
+/** The container's fields for the platform. */
+function containerFields(platform: SocialPlatformId, input: PublishInput) {
+  const create = new URLSearchParams({ access_token: input.accessToken });
+  const mediaField = input.mediaType === 'video' ? 'video_url' : 'image_url';
+  if (platform === 'threads') {
+    create.set('media_type', threadsMediaType(input));
+    create.set('text', input.caption);
+    if (input.mediaUrl) create.set(mediaField, input.mediaUrl);
+    return create;
+  }
+  // Instagram has no text-only post: a caption needs something to sit under.
+  if (!input.mediaUrl) throw new SocialPublishError('Instagram needs a picture or a video. Add one to this post first.');
+  create.set('caption', input.caption);
+  create.set(mediaField, input.mediaUrl);
+  if (input.mediaType === 'video') create.set('media_type', 'REELS');
+  return create;
+}
+
+/** POSTs to Meta and returns the id it answers with; any failure becomes a SocialPublishError with `fallback` as its message when there is no better one. */
+async function postForId(path: string, body: URLSearchParams, step: string, fallback: string): Promise<string | undefined> {
+  try {
+    const reply = await readJson<{ id?: string }>(
+      await fetch(path, { method: 'POST', body, cache: 'no-store', signal: AbortSignal.timeout(30_000) }),
+      step,
+    );
+    return reply.id;
+  } catch (error) {
+    throw new SocialPublishError(error instanceof Error ? error.message : fallback);
+  }
+}
+
 /** Creates the container, then publishes it. Returns the published post's id. */
 export async function publishSocialPost(platform: SocialPlatformId, input: PublishInput): Promise<string> {
   const base = platform === 'threads' ? THREADS : INSTAGRAM;
   const createPath = platform === 'threads' ? `${base}/${input.accountId}/threads` : `${base}/${input.accountId}/media`;
   const publishPath = platform === 'threads' ? `${base}/${input.accountId}/threads_publish` : `${base}/${input.accountId}/media_publish`;
 
-  const create = new URLSearchParams({ access_token: input.accessToken });
-  if (platform === 'threads') {
-    create.set('media_type', input.mediaUrl ? (input.mediaType === 'video' ? 'VIDEO' : 'IMAGE') : 'TEXT');
-    create.set('text', input.caption);
-    if (input.mediaUrl) create.set(input.mediaType === 'video' ? 'video_url' : 'image_url', input.mediaUrl);
-  } else {
-    // Instagram has no text-only post: a caption needs something to sit under.
-    if (!input.mediaUrl) throw new SocialPublishError('Instagram needs a picture or a video. Add one to this post first.');
-    create.set('caption', input.caption);
-    create.set(input.mediaType === 'video' ? 'video_url' : 'image_url', input.mediaUrl);
-    if (input.mediaType === 'video') create.set('media_type', 'REELS');
-  }
-
-  let container: { id?: string };
-  try {
-    container = await readJson<{ id?: string }>(
-      await fetch(createPath, { method: 'POST', body: create, cache: 'no-store', signal: AbortSignal.timeout(30_000) }),
-      'Preparing the post',
-    );
-  } catch (error) {
-    throw new SocialPublishError(error instanceof Error ? error.message : 'The post could not be prepared.');
-  }
-  if (!container.id) throw new SocialPublishError('The post could not be prepared.');
+  const create = containerFields(platform, input);
+  const containerId = await postForId(createPath, create, 'Preparing the post', 'The post could not be prepared.');
+  if (!containerId) throw new SocialPublishError('The post could not be prepared.');
 
   // Video containers are processed asynchronously, so publishing straight away
   // fails with "media not ready". A short wait covers the common case.
   if (input.mediaType === 'video') await new Promise((resolve) => setTimeout(resolve, 8_000));
 
-  try {
-    const published = await readJson<{ id?: string }>(
-      await fetch(publishPath, { method: 'POST', body: new URLSearchParams({ access_token: input.accessToken, creation_id: container.id }), cache: 'no-store', signal: AbortSignal.timeout(30_000) }),
-      'Publishing the post',
-    );
-    if (!published.id) throw new SocialPublishError('The post was prepared but not published.');
-    return published.id;
-  } catch (error) {
-    throw new SocialPublishError(error instanceof Error ? error.message : 'The post could not be published.');
-  }
+  const publishedId = await postForId(publishPath, new URLSearchParams({ access_token: input.accessToken, creation_id: containerId }), 'Publishing the post', 'The post could not be published.');
+  if (!publishedId) throw new SocialPublishError('The post was prepared but not published.');
+  return publishedId;
 }

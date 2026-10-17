@@ -24,7 +24,7 @@ export function PasskeyPrompt() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       if (!supportsPasskeys() || snoozed()) return;
       const platform = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
       if (!platform) return;
@@ -59,9 +59,9 @@ export function PasskeyPrompt() {
 
   if (state === 'added') {
     return (
-      <section className="passkey-prompt added" role="status">
+      <section className="passkey-prompt added">
         <div className="passkey-icon"><Check size={18} aria-hidden="true" /></div>
-        <div><strong>Passkey added</strong><p>Next time, unlock Orbis with your device.</p></div>
+        <div><output><strong>Passkey added</strong></output><p>Next time, unlock Orbis with your device.</p></div>
       </section>
     );
   }

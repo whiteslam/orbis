@@ -7,6 +7,13 @@ export type GmailConfig = {
   tokenEncryptionKey: Buffer;
 };
 
+/** A base64 string without its trailing `=` padding. */
+function withoutPadding(value: string) {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '=') end--;
+  return value.slice(0, end);
+}
+
 export function getGmailConfig(): GmailConfig {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -34,8 +41,8 @@ export function getGmailConfig(): GmailConfig {
   }
 
   const tokenEncryptionKey = Buffer.from(encodedKey, 'base64');
-  const canonicalKey = tokenEncryptionKey.toString('base64').replace(/=+$/, '');
-  if (tokenEncryptionKey.length !== 32 || canonicalKey !== encodedKey.replace(/=+$/, '')) {
+  const canonicalKey = withoutPadding(tokenEncryptionKey.toString('base64'));
+  if (tokenEncryptionKey.length !== 32 || canonicalKey !== withoutPadding(encodedKey)) {
     throw new Error('Gmail connection is not configured. Check the server environment setup.');
   }
 

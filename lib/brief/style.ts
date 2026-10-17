@@ -61,11 +61,12 @@ export function briefSystemPrompt(surface: BriefSurface) {
  */
 export function cleanCaption(raw: string, surface: BriefSurface): string | null {
   const limit = LIMITS[surface];
+  // Whitespace is collapsed to single spaces first, so one optional space is all the later steps need.
   const caption = raw
     .replace(/\s+/g, ' ')
-    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/ ?[—–] ?/g, ', ')
     .replace(/,\s*,/g, ',')
-    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/ ([,.;:])/g, '$1')
     .trim();
   if (/^[-*•#]/.test(caption) || /\n[-*•#]/.test(raw.trim())) return null;
   if (caption.length < limit.min) return null;

@@ -8,7 +8,7 @@ import { FieldSubHead } from '@/components/field/field';
  * again and a way home. Never the error itself; that stays in the server log
  * (the digest ties the two together).
  */
-export function BoundaryScreen({ onRetry, home }: { onRetry: () => void; home: ReactNode }) {
+export function BoundaryScreen({ onRetry, home }: Readonly<{ onRetry: () => void; home: ReactNode }>) {
   return (
     <main className="screen-body field fd-boundary">
       <FieldSubHead crumb="Orbis" title="Something went wrong" lead="This part of Orbis didn’t load. Your data is safe. Try again, or go back to Home." />

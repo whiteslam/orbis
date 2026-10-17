@@ -6,7 +6,7 @@ test('the Jev request carries only the question, and always asks for zero data r
   const body = questionDepthRequest('typesafe/jev-1.13', 'How did my spending change in stressful weeks?');
   assert.equal(body.model, 'typesafe/jev-1.13');
   assert.deepEqual(body.state, { question: 'How did my spending change in stressful weeks?' });
-  assert.deepEqual(Object.keys(body.questions.depth.criteria).sort(), ['lookup', 'reasoning']);
+  assert.deepEqual(Object.keys(body.questions.depth.criteria).sort((a, b) => a.localeCompare(b)), ['lookup', 'reasoning']);
   assert.equal(body.questions.depth.type, 'choice');
   assert.deepEqual(body.provider, { zdr: true, data_collection: 'deny' });
 });

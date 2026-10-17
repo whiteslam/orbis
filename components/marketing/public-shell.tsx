@@ -8,7 +8,7 @@ import { SITE_NAME } from '@/lib/site';
 // ground rather than the phone-frame shell, since there is no account yet to
 // frame, and with no sign-in button: nothing a stranger fetches should point at
 // the way in.
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="mkt-shell">
       <header className="mkt-header">

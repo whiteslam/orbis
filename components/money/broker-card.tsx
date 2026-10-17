@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { ExternalLink, KeyRound, LoaderCircle, RefreshCw, ShieldCheck, Unplug } from 'lucide-react';
 import { connectBrokerAction, disconnectBrokerAction } from '@/app/invest/actions';
 import type { BrokerMeta } from '@/lib/invest/brokers';
-import type { BrokerPortfolio, PriceSource } from '@/lib/invest/types';
+import type { BrokerHolding, BrokerPortfolio, PriceSource } from '@/lib/invest/types';
 import { inr, signedInr } from '@/components/money/format';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
@@ -26,7 +26,7 @@ function syncedAt(value: string) {
  * carries its own intro and two-step instructions, for use inline (Settings →
  * Connections); the Connect screen draws those itself and passes `steps={false}`.
  */
-export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, steps = true }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; onConnected: () => void; steps?: boolean }) {
+export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, steps = true }: Readonly<{ meta: BrokerMeta; reconnect: boolean; setupMessage?: string; onConnected: () => void; steps?: boolean }>) {
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -75,13 +75,13 @@ export function BrokerConnectForm({ meta, reconnect, setupMessage, onConnected, 
           {isPending ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Checking with {meta.name}…</> : <><KeyRound size={14} aria-hidden="true" /> {reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}</>}
         </button>
       </div>
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
       <p className="fd-shield"><ShieldCheck size={13} aria-hidden="true" /> Read-only. Orbis only reads holdings and can’t place orders. Your key and secret are encrypted at rest and never shown again.</p>
     </form>
   );
 }
 
-function BrokerSteps({ meta }: { meta: BrokerMeta }) {
+function BrokerSteps({ meta }: Readonly<{ meta: BrokerMeta }>) {
   // A redirect broker has no keys to copy: the whole setup is one login at the
   // broker, which is also what happens again each day.
   if (meta.connect === 'redirect') {
@@ -108,21 +108,27 @@ function BrokerSteps({ meta }: { meta: BrokerMeta }) {
   );
 }
 
+/** The Connect view's lead line, for a login broker or a key broker, first time or again. */
+function connectLead(meta: BrokerMeta, reconnect: boolean) {
+  if (meta.connect === 'redirect') {
+    return reconnect
+      ? `${meta.name} ends every session overnight. One login and today’s holdings are back.`
+      : `Log in at ${meta.name} and Orbis reads your ${meta.covers}. It reads holdings, it cannot place an order.`;
+  }
+  return reconnect
+    ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.`
+    : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings, it cannot place an order.`;
+}
+
 /** The Connect view: what linking does, the two steps, the form, and what will sync. */
-export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onBack, onConnected, onOpen }: { meta: BrokerMeta; reconnect: boolean; setupMessage?: string; others: Array<{ meta: BrokerMeta; connected: boolean }>; onBack: () => void; onConnected: () => void; onOpen: (id: BrokerMeta['id']) => void }) {
+export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onBack, onConnected, onOpen }: Readonly<{ meta: BrokerMeta; reconnect: boolean; setupMessage?: string; others: Array<{ meta: BrokerMeta; connected: boolean }>; onBack: () => void; onConnected: () => void; onOpen: (id: BrokerMeta['id']) => void }>) {
   const covers = meta.covers.charAt(0).toLocaleUpperCase() + meta.covers.slice(1);
   return (
     <>
       <FieldSubHead
         crumb="Investments · accounts"
         title={reconnect ? `Reconnect ${meta.name}` : `Connect ${meta.name}`}
-        lead={meta.connect === 'redirect'
-          ? (reconnect
-            ? `${meta.name} ends every session overnight. One login and today’s holdings are back.`
-            : `Log in at ${meta.name} and Orbis reads your ${meta.covers}. It reads holdings, it cannot place an order.`)
-          : (reconnect
-            ? `${meta.name} stopped accepting the saved key. Paste a fresh key and secret to sync again.`
-            : `Link your account and Orbis syncs your ${meta.covers} on its own. It reads holdings, it cannot place an order.`)}
+        lead={connectLead(meta, reconnect)}
         onBack={onBack}
         backLabel="Back to Investments"
       />
@@ -154,18 +160,72 @@ export function BrokerConnectScreen({ meta, reconnect, setupMessage, others, onB
   );
 }
 
+// A session that ran out overnight is not the same as never having linked
+// the account, and saying "not connected" would read as though something
+// had been lost. Zerodha ends every session by design.
+function notConnectedNote(setupRequired: boolean | undefined, expired: boolean) {
+  if (setupRequired) return 'not set up on this server';
+  return expired ? 'session ended overnight' : 'not connected';
+}
+
+function connectionStatus(needsReconnect: boolean, connected: boolean) {
+  if (needsReconnect) return { className: 'groww-status warn', label: 'NEEDS RECONNECT' };
+  if (connected) return { className: 'groww-status', label: 'CONNECTED · READ-ONLY' };
+  return { className: 'groww-status off', label: 'NOT CONNECTED' };
+}
+
+function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
+  const cost = holding.quantity * holding.averagePrice;
+  const value = holding.lastPrice === null ? null : holding.quantity * holding.lastPrice;
+  return (
+    <div className="groww-row">
+      <div>
+        <strong>{holding.symbol}</strong>
+        <small>{holding.quantity.toLocaleString('en-IN')} shares · avg {inr(holding.averagePrice)}</small>
+        {holding.lastPrice !== null && holding.priceSource
+          ? <small className="groww-price">{SOURCE_LABEL[holding.priceSource]} {inr(holding.lastPrice)}{holding.priceAsOf ? ` · ${shortDate(holding.priceAsOf)}` : ''}{holding.priceStale ? ' · last saved' : ''}</small>
+          : <small className="groww-price missing">Price unavailable</small>}
+      </div>
+      <div className="groww-row-value">
+        <strong>{inr(value ?? cost)}</strong>
+        {value !== null ? <small className={value - cost >= 0 ? 'up' : 'down'}>{signedInr(value - cost)}</small> : <small>invested</small>}
+      </div>
+    </div>
+  );
+}
+
+/** A loaded account: its holdings, then where the prices came from and when. */
+function BrokerHoldings({ meta, portfolio }: Readonly<{ meta: BrokerMeta; portfolio: BrokerPortfolio }>) {
+  return (
+    <>
+      {portfolio.holdings.length ? (
+        <div className="groww-list">
+          {portfolio.holdings.map((holding) => <HoldingRow key={holding.isin ?? holding.symbol} holding={holding} />)}
+        </div>
+      ) : <p className="groww-muted">No {meta.covers} in this {meta.name} account.</p>}
+
+      <p className="groww-muted">
+        {meta.priceNote}
+        {!portfolio.livePrices && ' Holdings without a price count at the amount invested.'}
+        {meta.gapNote ? ` ${meta.gapNote}` : ''}
+        {portfolio.fetchedAt && ` Synced ${syncedAt(portfolio.fetchedAt)}.`}
+      </p>
+    </>
+  );
+}
+
 /**
  * One connected account: its state, its holdings, and the controls for the
  * connection itself. Every provider renders through this, so the screen grows
  * by adding an entry to the broker registry rather than another component.
  */
-export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }: { meta: BrokerMeta; portfolio: BrokerPortfolio | null; isLoading: boolean; onRefresh: () => void; onConnect: (reconnect: boolean) => void }) {
+export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }: Readonly<{ meta: BrokerMeta; portfolio: BrokerPortfolio | null; isLoading: boolean; onRefresh: () => void; onConnect: (reconnect: boolean) => void }>) {
   const [notice, setNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [isDisconnecting, startDisconnect] = useTransition();
-  const holdings = portfolio?.holdings ?? [];
   const connection = portfolio?.connection ?? null;
   const connected = Boolean(connection) && portfolio?.state !== 'not_connected';
   const needsReconnect = connection?.status === 'reconnect_required';
+  const status = connectionStatus(needsReconnect, connected);
 
   function disconnect() {
     if (!window.confirm(`Disconnect ${meta.name}? Orbis will delete the saved key and secret.`)) return;
@@ -179,15 +239,12 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
 
   // Not connected: one quiet row. The form lives on its own Connect view.
   if (portfolio?.state === 'not_connected' && !notice) {
-    // A session that ran out overnight is not the same as never having linked
-    // the account, and saying "not connected" would read as though something
-    // had been lost. Zerodha ends every session by design.
     const expired = portfolio.connection?.status === 'reconnect_required';
     return (
       <div className="fd-line">
         <span className="fd-two">
           {meta.name}
-          <small>{portfolio.setupRequired ? 'not set up on this server' : expired ? 'session ended overnight' : 'not connected'}</small>
+          <small>{notConnectedNote(portfolio.setupRequired, expired)}</small>
         </span>
         <button className="fd-link" type="button" onClick={() => onConnect(expired)}>{expired ? 'Reconnect' : 'Connect'}</button>
       </div>
@@ -199,7 +256,7 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
       <div className="groww-head">
         <div className="groww-icon"><Image src={meta.logo} alt={meta.name} width={24} height={24} /></div>
         <div>
-          <small className={needsReconnect ? 'groww-status warn' : connected ? 'groww-status' : 'groww-status off'}>{needsReconnect ? 'NEEDS RECONNECT' : connected ? 'CONNECTED · READ-ONLY' : 'NOT CONNECTED'}</small>
+          <small className={status.className}>{status.label}</small>
           <h3 id={`broker-${meta.id}-title`}>{meta.name} holdings</h3>
         </div>
         {connected && (
@@ -210,44 +267,11 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
       </div>
 
       {!portfolio && <p className="groww-muted">Checking your {meta.name} connection…</p>}
-      {notice && <p className={`finance-notice ${notice.success ? 'success' : 'error'}`} role="status">{notice.text}</p>}
+      {notice && <output className={`finance-notice spaced ${notice.success ? 'success' : 'error'}`}>{notice.text}</output>}
       {portfolio?.state === 'error' && <p className="finance-notice error">{portfolio.message}</p>}
       {portfolio?.state === 'error' && needsReconnect && connection?.source === 'account' && <div className="fd-act"><button type="button" onClick={() => onConnect(true)}>Reconnect {meta.name}</button></div>}
 
-      {portfolio?.state === 'ok' && (
-        <>
-          {holdings.length ? (
-            <div className="groww-list">
-              {holdings.map((holding) => {
-                const cost = holding.quantity * holding.averagePrice;
-                const value = holding.lastPrice === null ? null : holding.quantity * holding.lastPrice;
-                return (
-                  <div className="groww-row" key={holding.isin ?? holding.symbol}>
-                    <div>
-                      <strong>{holding.symbol}</strong>
-                      <small>{holding.quantity.toLocaleString('en-IN')} shares · avg {inr(holding.averagePrice)}</small>
-                      {holding.lastPrice !== null && holding.priceSource
-                        ? <small className="groww-price">{SOURCE_LABEL[holding.priceSource]} {inr(holding.lastPrice)}{holding.priceAsOf ? ` · ${shortDate(holding.priceAsOf)}` : ''}{holding.priceStale ? ' · last saved' : ''}</small>
-                        : <small className="groww-price missing">Price unavailable</small>}
-                    </div>
-                    <div className="groww-row-value">
-                      <strong>{inr(value ?? cost)}</strong>
-                      {value !== null ? <small className={value - cost >= 0 ? 'up' : 'down'}>{signedInr(value - cost)}</small> : <small>invested</small>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p className="groww-muted">No {meta.covers} in this {meta.name} account.</p>}
-
-          <p className="groww-muted">
-            {meta.priceNote}
-            {!portfolio.livePrices && ' Holdings without a price count at the amount invested.'}
-            {meta.gapNote ? ` ${meta.gapNote}` : ''}
-            {portfolio.fetchedAt && ` Synced ${syncedAt(portfolio.fetchedAt)}.`}
-          </p>
-        </>
-      )}
+      {portfolio?.state === 'ok' && <BrokerHoldings meta={meta} portfolio={portfolio} />}
 
       {connected && connection?.source === 'account' && (
         <div className="groww-actions">

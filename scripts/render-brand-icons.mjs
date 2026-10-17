@@ -39,16 +39,18 @@ const render = async (spec) => {
   return png;
 };
 
-for (const target of targets) {
+// Each icon gets its own page, so they can all render at once.
+await Promise.all(targets.map(async (target) => {
   const out = resolve(root, target.file);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, await render(target));
   console.log('wrote', target.file);
-}
+}));
 
 // favicon.ico: an ICO container holding one PNG per size.
-const images = [];
-for (const size of favicons) images.push({ size, png: await render({ size, shape: 'rounded', ring: 0.66 }) });
+const images = await Promise.all(
+  favicons.map(async (size) => ({ size, png: await render({ size, shape: 'rounded', ring: 0.66 }) })),
+);
 const header = Buffer.alloc(6);
 header.writeUInt16LE(0, 0);
 header.writeUInt16LE(1, 2);

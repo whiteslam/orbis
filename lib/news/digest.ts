@@ -54,8 +54,14 @@ async function loadArticles(): Promise<{ articles: NewsArticle[]; fetchedAt: str
   }
 }
 
+/** Plain code-unit order, as `.sort()` gives: a fingerprint must not depend on the server's locale. */
+function byCodeUnit(left: string, right: string) {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
 export function batchOf(articles: NewsArticle[]) {
-  return createHash('sha256').update(articles.map((article) => article.id).sort().join('|')).digest('hex').slice(0, 16);
+  return createHash('sha256').update(articles.map((article) => article.id).sort(byCodeUnit).join('|')).digest('hex').slice(0, 16);
 }
 
 /**

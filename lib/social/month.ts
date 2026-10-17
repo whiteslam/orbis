@@ -68,10 +68,14 @@ export function monthGrid(period: string) {
   const lead = (first.getUTCDay() + 6) % 7;
   const total = Math.ceil((lead + daysInMonth(period)) / 7) * 7;
   const weeks: { date: string; inMonth: boolean }[][] = [];
+  let week: { date: string; inMonth: boolean }[] = [];
   for (let index = 0; index < total; index += 1) {
     const day = new Date(Date.UTC(year, month - 1, 1 - lead + index));
-    if (index % 7 === 0) weeks.push([]);
-    weeks[weeks.length - 1].push({ date: iso(day), inMonth: day.getUTCMonth() === month - 1 });
+    if (index % 7 === 0) {
+      week = [];
+      weeks.push(week);
+    }
+    week.push({ date: iso(day), inMonth: day.getUTCMonth() === month - 1 });
   }
   return weeks;
 }

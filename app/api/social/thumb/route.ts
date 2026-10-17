@@ -18,6 +18,35 @@ const MAX_HOPS = 3;
 
 const refuse = (status: number) => new Response(null, { status, headers: { 'cache-control': 'no-store' } });
 
+/** One request to the CDN, without following redirects; null when it fails or times out. */
+async function fetchOnce(url: string): Promise<Response | null> {
+  try {
+    return await fetch(url, { redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(10_000), headers: { accept: 'image/*' } });
+  } catch {
+    return null;
+  }
+}
+
+/** Hands a final (non-redirect) CDN answer on as our own, or refuses it. */
+async function passOnImage(response: Response): Promise<Response> {
+  // Signed CDN links expire; the Refresh button fetches fresh ones.
+  if (!response.ok) return refuse(response.status === 403 || response.status === 404 ? 410 : 502);
+  const type = response.headers.get('content-type') ?? '';
+  if (!type.startsWith('image/')) return refuse(415);
+  if (Number(response.headers.get('content-length') ?? 0) > MAX_BYTES) return refuse(413);
+  const body = await response.arrayBuffer();
+  if (body.byteLength > MAX_BYTES) return refuse(413);
+
+  return new Response(body, {
+    headers: {
+      'content-type': type,
+      // Private: the URL is the user's own signed CDN link.
+      'cache-control': 'private, max-age=3600',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   if (!(await getAuthenticatedUserId())) return refuse(401);
 
@@ -25,36 +54,13 @@ export async function GET(request: NextRequest) {
   if (!isMetaCdnUrl(url)) return refuse(400);
 
   for (let hop = 0; hop <= MAX_HOPS; hop += 1) {
-    let response: Response;
-    try {
-      response = await fetch(url!, { redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(10_000), headers: { accept: 'image/*' } });
-    } catch {
-      return refuse(504);
-    }
+    const response = await fetchOnce(url!); // NOSONAR: each redirect hop needs the previous hop's Location
+    if (!response) return refuse(504);
+    if (response.status < 300 || response.status >= 400) return passOnImage(response);
 
-    if (response.status >= 300 && response.status < 400) {
-      const next = response.headers.get('location');
-      url = next ? new URL(next, url!).toString() : null;
-      if (!isMetaCdnUrl(url)) return refuse(502);
-      continue;
-    }
-
-    // Signed CDN links expire; the Refresh button fetches fresh ones.
-    if (!response.ok) return refuse(response.status === 403 || response.status === 404 ? 410 : 502);
-    const type = response.headers.get('content-type') ?? '';
-    if (!type.startsWith('image/')) return refuse(415);
-    if (Number(response.headers.get('content-length') ?? 0) > MAX_BYTES) return refuse(413);
-    const body = await response.arrayBuffer();
-    if (body.byteLength > MAX_BYTES) return refuse(413);
-
-    return new Response(body, {
-      headers: {
-        'content-type': type,
-        // Private: the URL is the user's own signed CDN link.
-        'cache-control': 'private, max-age=3600',
-        'x-content-type-options': 'nosniff',
-      },
-    });
+    const next = response.headers.get('location');
+    url = next ? new URL(next, url!).toString() : null;
+    if (!isMetaCdnUrl(url)) return refuse(502);
   }
   return refuse(508);
 }

@@ -94,6 +94,8 @@
 .finance-notice { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: var(--r-md); font-size: 11px; line-height: 1.45; }
 .finance-notice.success { background: var(--sys-tint-green); border: 1px solid var(--sys-separator); color: var(--sys-green); }
 .finance-notice.error { background: var(--sys-tint-red); border: 1px solid var(--sys-separator); color: var(--sys-red); }
+/* Notices that were a <p> before becoming an <output> keep the paragraph gap below them. */
+.finance-notice.spaced { margin-bottom: 1em; }
 .finance-notice button { border: 0; background: transparent; color: inherit; font-size: 18px; cursor: pointer; }
 .finance-candidate-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 8px; margin: 15px 2px 0; }
 .finance-candidate-summary strong { font-size: 20px; }
@@ -154,7 +156,7 @@
 .manual-entry-toggle button.active { background: var(--sys-surface); color: var(--ink); box-shadow: 0 2px 8px rgba(29,45,57,.08); }
 .manual-entry-amount { margin-top: 12px; }
 .manual-entry-amount label, .manual-entry-group legend { display: block; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
-.manual-entry-fields label, .manual-entry-note { color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+.manual-entry-fields label, .manual-entry-note { display: flex; flex-direction: column; gap: 4px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
 /* What you are typing is the largest thing on the screen, as on the Atlas
    hero — a figure sitting on a rule rather than inside a box. */
 .manual-entry-amount > div { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 0 0 12px; border: 0; border-bottom: 1.5px solid var(--fd-hairline); }
@@ -173,7 +175,6 @@
 .plan-options button.active,
 .journal-tags button.active { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); font-weight: 650; }
 .manual-entry-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-.manual-entry-fields label, .manual-entry-note { display: flex; flex-direction: column; gap: 4px; }
 .manual-entry-wide { grid-column: 1 / -1; }
 .manual-entry-fields input, .manual-entry-note textarea { width: 100%; min-width: 0; box-sizing: border-box; height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--ink); font: inherit; font-size: 11px; }
 .manual-entry-note { margin-top: 12px; }
@@ -267,10 +268,9 @@
 .personal-form textarea { width: 100%; min-height: 90px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; resize: vertical; }
 .personal-form .finance-button { justify-self: start; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.memory-note p { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.memory-note p { margin: 0 0 10px; white-space: pre-wrap; color: var(--ink); font-size: 11px; line-height: 1.5; }
 .memory-list { display: grid; gap: 10px; margin-top: 14px; }
 .memory-note { padding: 14px; margin: 0; }
-.memory-note p { margin: 0 0 10px; white-space: pre-wrap; color: var(--ink); }
 .memory-note > div { display: flex; align-items: center; justify-content: space-between; }
 .memory-note small { color: var(--muted); font-size: 10px; }
 .personal-form select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 10px; color: var(--ink); background: var(--sys-surface); font: inherit; font-size: 11px; }

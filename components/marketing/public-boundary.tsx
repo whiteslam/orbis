@@ -6,7 +6,7 @@
 // component tree, and the service names inside it, being bundled into every
 // public page.
 
-export function PublicBoundary({ onRetry }: { onRetry?: () => void }) {
+export function PublicBoundary({ onRetry }: Readonly<{ onRetry?: () => void }>) {
   return (
     <div className="wl-shell">
       <main className="wl-main">
@@ -29,7 +29,7 @@ export function PublicLoading() {
   return (
     <div className="wl-shell">
       <main className="wl-main" aria-busy="true">
-        <p className="wl-loading" role="status">Loading…</p>
+        <output className="wl-loading">Loading…</output>
       </main>
     </div>
   );

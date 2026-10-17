@@ -33,8 +33,9 @@
   .rings-card { flex-direction: column; align-items: stretch; }
   .activity-rings { align-self: center; }
 }
-.groww-price { color: var(--accent) !important; font-weight: 700; }
-.groww-price.missing { color: var(--muted) !important; font-weight: 500; }
+/* Scoped under .groww-row so they outrank .groww-row small. */
+.groww-row .groww-price { color: var(--accent); font-weight: 700; }
+.groww-row .groww-price.missing { color: var(--muted); font-weight: 500; }
 .weather-main { display: flex; align-items: center; gap: 10px; }
 .weather-main > div { display: flex; flex-direction: column; }
 .weather-main strong { font-size: 26px; letter-spacing: -.05em; line-height: 1; }
@@ -72,8 +73,8 @@
 .integration-status span { font-size: 10px; font-weight: 750; color: var(--dot-text, var(--dot)); }
 .integrations li.not_configured .integration-status span { color: var(--muted); }
 .groww-status { color: var(--accent); }
-.groww-status.warn { color: var(--status-warning) !important; }
-.groww-status.off { color: var(--muted) !important; }
+.groww-status.warn { color: var(--status-warning); }
+.groww-status.off { color: var(--muted); }
 .groww-connect { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
 .groww-connect-intro { margin: 0; font-size: 12px; line-height: 1.45; }
 .groww-steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 10px; line-height: 1.6; }
@@ -86,7 +87,8 @@
 .groww-privacy svg { flex: 0 0 auto; margin-top: 1px; color: var(--status-good); }
 .groww-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .groww-actions .finance-button { gap: 5px; }
-.groww-disconnect { color: var(--status-critical) !important; }
+/* Specific enough to outrank .field .finance-button.secondary. */
+.groww-card .groww-actions .finance-button.groww-disconnect { color: var(--status-critical); }
 .profile-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .profile-head small { text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; color: var(--accent); }
 .profile-head h2 { margin: 2px 0 0; font-size: 23px; letter-spacing: -.04em; }
@@ -114,7 +116,7 @@
 .app-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 10px; }
 .app-card-actions:empty { display: none; }
 .app-card-actions .finance-button { gap: 5px; }
-.app-disconnect { color: var(--status-critical) !important; }
+.app-disconnect { color: var(--status-critical); }
 .journal-today { padding: 14px; border-radius: var(--r-xl); background: var(--sys-wash); border: 1px solid var(--sys-wash-border); }
 .journal-head { display: flex; justify-content: space-between; align-items: flex-start; }
 .journal-head small { color: var(--sys-amber); font-size: 9px; font-weight: 850; letter-spacing: .1em; }

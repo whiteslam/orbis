@@ -116,11 +116,17 @@ export async function getAppConnections(userId: string, email: string | null): P
   return result;
 }
 
-export async function getIntegrationStatus(userId: string, email: string | null): Promise<Integration[]> {
-  let statusRows: StatusRow[] = [];
-  let usageRows: Array<{ provider: string; calls: number }> = [];
-  let gmail: { status: string; last_sync_at: string | null } | null = null;
-  let growwRow: { status: string; last_sync_at: string | null } | null = null;
+type ConnectionRow = { status: string; last_sync_at: string | null };
+
+type IntegrationRows = {
+  statusRows: StatusRow[];
+  usageRows: Array<{ provider: string; calls: number }>;
+  gmail: ConnectionRow | null;
+  growwRow: ConnectionRow | null;
+};
+
+/** Provider health, today's usage and this person's connections; empty when they cannot be read. */
+async function readIntegrationRows(userId: string): Promise<IntegrationRows> {
   try {
     const admin = createAdminClient();
     const today = new Date().toISOString().slice(0, 10);
@@ -130,61 +136,67 @@ export async function getIntegrationStatus(userId: string, email: string | null)
       admin.from('gmail_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
       admin.from('groww_connections').select('status,last_sync_at').eq('user_id', userId).maybeSingle(),
     ]);
-    statusRows = (status.data ?? []) as StatusRow[];
-    usageRows = (usage.data ?? []) as typeof usageRows;
-    gmail = connection.data ?? null;
-    growwRow = growwConnection.data ?? null;
+    return {
+      statusRows: (status.data ?? []) as StatusRow[],
+      usageRows: (usage.data ?? []) as IntegrationRows['usageRows'],
+      gmail: connection.data ?? null,
+      growwRow: growwConnection.data ?? null,
+    };
   } catch {
     // Show configuration only.
+    return { statusRows: [], usageRows: [], gmail: null, growwRow: null };
   }
+}
 
-  const integrations: Integration[] = [];
-
+function growwIntegration(growwRow: ConnectionRow | null, email: string | null): Integration {
   const owner = growwOwnerEmail();
   if (growwRow) {
     const ok = growwRow.status === 'connected';
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: growwRow.last_sync_at, usage: null });
-  } else if (growwConfigured() && owner && email === owner) {
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null });
-  } else {
-    integrations.push({ id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: 'Connect in Money → Investments', lastSyncAt: null, usage: null });
+    return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: growwRow.last_sync_at, usage: null };
   }
-
-  integrations.push({
-    id: 'gmail',
-    label: 'Gmail',
-    purpose: 'Important mail on Today · read-only',
-    state: !gmail ? 'not_configured' : gmail.status === 'connected' ? 'connected' : 'attention',
-    detail: !gmail ? 'Connect in Settings → Connections' : gmail.status === 'connected' ? null : 'Reconnect in Settings → Connections',
-    lastSyncAt: gmail?.last_sync_at ?? null,
-    usage: null,
-  });
-
-  for (const provider of PROVIDERS) {
-    const used = usageRows.find((row) => row.provider === provider.id)?.calls ?? 0;
-    const usage = provider.limit ? { used, limit: provider.limit } : null;
-    if (provider.key && !process.env[provider.key]?.trim()) {
-      integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, state: 'not_configured', detail: 'Not available right now', lastSyncAt: null, usage: null });
-      continue;
-    }
-    integrations.push({ id: provider.id, label: provider.label, purpose: provider.purpose, usage, ...providerState(statusRows.find((row) => row.provider === provider.id)) });
+  if (growwConfigured() && owner && email === owner) {
+    return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null };
   }
+  return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: 'not_configured', detail: 'Connect in Money → Investments', lastSyncAt: null, usage: null };
+}
 
-  // Anything built from your own data (the brief, plan, workbook advice,
-  // portfolio suggestions) only goes to a provider the registry marks as one
-  // that will not train on it. Today that is Groq. Without its key those
-  // features stand down rather than sending the data somewhere that would keep it.
-  const privateAi = Boolean(process.env.GROQ_API_KEY?.trim());
-  const anyAi = privateAi || Boolean(process.env.OPENROUTER_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim() || process.env.MISTRAL_API_KEY?.trim());
-  integrations.push({
-    id: 'ai',
-    label: 'AI',
-    purpose: privateAi ? 'Routed to providers that don’t train on your data' : 'No provider that can hold your data',
-    state: privateAi ? 'connected' : anyAi ? 'degraded' : 'not_configured',
-    detail: privateAi ? null : 'Personal features stay off until a private provider is available',
-    lastSyncAt: null,
-    usage: null,
-  });
+function gmailIntegration(gmail: ConnectionRow | null): Integration {
+  const base = { id: 'gmail', label: 'Gmail', purpose: 'Important mail on Today · read-only', usage: null };
+  if (!gmail) return { ...base, state: 'not_configured', detail: 'Connect in Settings → Connections', lastSyncAt: null };
+  const ok = gmail.status === 'connected';
+  return { ...base, state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: gmail.last_sync_at ?? null };
+}
 
-  return integrations;
+function providerIntegration(provider: (typeof PROVIDERS)[number], { statusRows, usageRows }: IntegrationRows): Integration {
+  if (provider.key && !process.env[provider.key]?.trim()) {
+    return { id: provider.id, label: provider.label, purpose: provider.purpose, state: 'not_configured', detail: 'Not available right now', lastSyncAt: null, usage: null };
+  }
+  const used = usageRows.find((row) => row.provider === provider.id)?.calls ?? 0;
+  const usage = provider.limit ? { used, limit: provider.limit } : null;
+  return { id: provider.id, label: provider.label, purpose: provider.purpose, usage, ...providerState(statusRows.find((row) => row.provider === provider.id)) };
+}
+
+/**
+ * Anything built from your own data (the brief, plan, workbook advice,
+ * portfolio suggestions) only goes to a provider the registry marks as one
+ * that will not train on it. Today that is Groq. Without its key those
+ * features stand down rather than sending the data somewhere that would keep it.
+ */
+function aiIntegration(): Integration {
+  const base = { id: 'ai', label: 'AI', lastSyncAt: null, usage: null };
+  if (process.env.GROQ_API_KEY?.trim()) {
+    return { ...base, purpose: 'Routed to providers that don’t train on your data', state: 'connected', detail: null };
+  }
+  const anyAi = Boolean(process.env.OPENROUTER_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim() || process.env.MISTRAL_API_KEY?.trim());
+  return { ...base, purpose: 'No provider that can hold your data', state: anyAi ? 'degraded' : 'not_configured', detail: 'Personal features stay off until a private provider is available' };
+}
+
+export async function getIntegrationStatus(userId: string, email: string | null): Promise<Integration[]> {
+  const rows = await readIntegrationRows(userId);
+  return [
+    growwIntegration(rows.growwRow, email),
+    gmailIntegration(rows.gmail),
+    ...PROVIDERS.map((provider) => providerIntegration(provider, rows)),
+    aiIntegration(),
+  ];
 }

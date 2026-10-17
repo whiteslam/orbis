@@ -4,8 +4,20 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteFitnessPersonaAction, saveFitnessPersonaAction } from '@/app/personal/actions';
 import { FITNESS_PERSONA_STARTER } from '@/lib/personal/fitness-persona';
-import type { FitnessPersonaState } from '@/lib/personal/repository';
+import type { PersonalDataState } from '@/lib/personal/repository';
 import { safeAction } from '@/lib/client/safe-action';
+
+/** Why the coaching style can't be used right now, if it can't. */
+function noticeFor(state: PersonalDataState) {
+  if (state === 'setup') return 'Coaching style can’t be saved right now. Try again later.';
+  if (state === 'unavailable') return 'Your saved coaching style could not be loaded. Refresh and try again.';
+  return null;
+}
+
+function saveLabel(pending: boolean, persona: string | null) {
+  if (pending) return 'Saving…';
+  return persona ? 'Save changes' : 'Save coaching style';
+}
 
 /**
  * How you want to be coached about fitness.
@@ -19,7 +31,7 @@ import { safeAction } from '@/lib/client/safe-action';
  * default you inherit, and the copy says who reads this: Health, and only when
  * you tick the box for that request.
  */
-export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersonaState; persona: string | null }) {
+export function FitnessPersonaEditor({ state, persona }: Readonly<{ state: PersonalDataState; persona: string | null }>) {
   const router = useRouter();
   const [draft, setDraft] = useState(persona ?? '');
   const [editing, setEditing] = useState(false);
@@ -43,9 +55,7 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
   }
 
   const blocked = pending || state !== 'ready';
-  const notice = state === 'setup'
-    ? 'Coaching style can’t be saved right now. Try again later.'
-    : state === 'unavailable' ? 'Your saved coaching style could not be loaded. Refresh and try again.' : null;
+  const notice = noticeFor(state);
 
   function open(seed: string) {
     setDraft(seed);
@@ -55,7 +65,7 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
 
   if (!editing) {
     return <section aria-label="Your fitness coaching style">
-      {notice && <p className="fd-msg bad" role="status">{notice}</p>}
+      {notice && <output className="fd-msg bad">{notice}</output>}
       {persona ? <>
         <p className="fd-prose clamp">{persona}</p>
         <div className="fd-act pf-act">
@@ -69,12 +79,12 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
           <button className="ghost" type="button" disabled={blocked} onClick={() => open(FITNESS_PERSONA_STARTER)}>Start from a draft</button>
         </div>
       </>}
-      {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
+      {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
     </section>;
   }
 
   return <section aria-label="Your fitness coaching style">
-    {notice && <p className="fd-msg bad" role="status">{notice}</p>}
+    {notice && <output className="fd-msg bad">{notice}</output>}
     <form className="fd-form" onSubmit={(event) => {
       event.preventDefault();
       startTransition(async () => show(await safeAction(saveFitnessPersonaAction)(draft)));
@@ -83,10 +93,10 @@ export function FitnessPersonaEditor({ state, persona }: { state: FitnessPersona
       {/* A count, not a budget: there is no limit to count down to any more. */}
       <p className="fd-count">{draft.length.toLocaleString('en-IN')} character{draft.length === 1 ? '' : 's'}</p>
       <div className="fd-act">
-        <button type="submit" disabled={blocked}>{pending ? 'Saving…' : persona ? 'Save changes' : 'Save coaching style'}</button>
+        <button type="submit" disabled={blocked}>{saveLabel(pending, persona)}</button>
         <button className="ghost" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
       </div>
     </form>
-    {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
+    {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
   </section>;
 }

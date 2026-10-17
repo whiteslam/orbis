@@ -23,8 +23,10 @@ function usageFrom(input: unknown, output: unknown): TokenUsage | null {
 
 /** JSON a model wrapped in a Markdown code fence, unwrapped. */
 function unfence(text: string) {
-  const match = text.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return match ? match[1] : text;
+  const trimmed = text.trim();
+  if (trimmed.length < 6 || !trimmed.startsWith('```') || !trimmed.endsWith('```')) return text;
+  const body = trimmed.slice(3, -3);
+  return (body.slice(0, 4).toLowerCase() === 'json' ? body.slice(4) : body).trim();
 }
 
 /** The shared verdict: empty or unusable text is invalid, whichever provider sent it. */

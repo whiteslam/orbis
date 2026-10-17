@@ -33,7 +33,18 @@ function currentPosition() {
   });
 }
 
-export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (weather: BriefWeather | null) => void; onPhase?: (phase: WeatherPhase) => void; openPersonal: () => void }) {
+/**
+ * Rain is only mentioned when it is happening or likely. "Mostly dry, 10% at
+ * most" on every clear day was noise, and a forecast always names its hour.
+ */
+function rainNote(weather: BriefWeather) {
+  if (weather.rainingNow) return 'raining now';
+  const peak = weather.rain.peak;
+  if (peak && peak.probability >= RAIN_WORTH_SAYING) return `rain likely around ${peak.hour}`;
+  return null;
+}
+
+export function WeatherCard({ onWeather, onPhase, openPersonal }: Readonly<{ onWeather: (weather: BriefWeather | null) => void; onPhase?: (phase: WeatherPhase) => void; openPersonal: () => void }>) {
   const [state, setState] = useState<State>(() => (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS ? lastResult.state : { status: 'loading' }));
 
   useEffect(() => {
@@ -46,7 +57,7 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (
       lastResult = { at: Date.now(), state: next, weather };
       setState(next);
     };
-    (async () => {
+    void (async () => {
       let result: Awaited<ReturnType<typeof fetchWeather>> | null = null;
       let place = 'Your location';
       try {
@@ -55,7 +66,7 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (
       } catch {
         // Location denied or unavailable: use the saved home city instead.
       }
-      if (!result || result.status !== 200) {
+      if (result?.status !== 200) {
         result = await fetchWeather('').catch(() => null);
         place = result?.body?.place ?? place;
       }
@@ -80,7 +91,7 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (
   // Weather is a line of text on Home, not a card: one number and the two facts
   // that change what you'd do about it.
   if (state.status === 'loading') {
-    return <p className="fd-weather-quiet" role="status"><LoaderCircle className="workbook-spinner" size={14} /> Checking the weather…</p>;
+    return <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Checking the weather…</output>;
   }
   if (state.status === 'needs-city') {
     return (
@@ -94,16 +105,10 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: { onWeather: (
   }
 
   const { weather, place } = state;
-  // Rain is only mentioned when it is happening or likely. "Mostly dry, 10% at
-  // most" on every clear day was noise, and a forecast always names its hour.
-  const peak = weather.rain.peak;
-  const rain = weather.rainingNow
-    ? 'raining now'
-    : peak && peak.probability >= RAIN_WORTH_SAYING
-      ? `rain likely around ${peak.hour}`
-      : null;
+  const rain = rainNote(weather);
+  const rainPart = rain ? `, ${rain}` : '';
   return (
-    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}${rain ? `, ${rain}` : ''}`}>
+    <section className="fd-weather" aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}${rainPart}`}>
       <b>{weather.temperature}°</b>
       <div>
         {/* Two short lines with room between them, rather than one dense run of

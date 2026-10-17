@@ -18,6 +18,47 @@ export type InvestFocusInput = {
   savedAdviceAt?: string | null;
 };
 
+function failureFocus(failures: InvestFocusInput['failures']): Focus {
+  const [first] = failures;
+  const others = failures.length > 1 ? `${count(failures.length - 1, 'other account')} also failed. ` : '';
+  return {
+    id: 'account-error',
+    headline: `${first.name} could not be reached.`,
+    body: `${first.message} Nothing about your portfolio has changed — only Orbis's view of it. ${others}Try syncing again below.`,
+    action: null,
+  };
+}
+
+/** The total, said in terms of live gain or loss when there is a live price, else cost. */
+function positionsFocus(analysis: PortfolioAnalysis, savedAdviceAt: string | null | undefined): Focus {
+  const top = analysis.byClass.slice().sort((left, right) => right.value - left.value)[0];
+  const mostly = top ? ` Mostly ${top.assetClass.toLowerCase()} at ${percent(top.share)}.` : '';
+  const saved = savedAdviceAt ? ` Suggestions saved ${shortDate(savedAdviceAt)}.` : '';
+  const headline = `${money(analysis.total)} across ${count(analysis.positions.length, 'holding')}.`;
+  if (analysis.livePnl !== null && analysis.liveInvested > 0) {
+    const up = analysis.livePnl >= 0;
+    const change = percent(Math.abs(analysis.livePnl / analysis.liveInvested));
+    const unpriced = analysis.allLive ? '' : ' Holdings without a live price count at what they cost.';
+    return {
+      id: 'live-position',
+      headline,
+      body: `Positions with a live price are ${up ? 'up' : 'down'} ${money(Math.abs(analysis.livePnl))} on what you paid, ${change} ${up ? 'ahead' : 'behind'}.${mostly}${unpriced}${saved}`,
+      action: null,
+    };
+  }
+
+  return {
+    id: 'cost-basis',
+    headline,
+    body: `No live price came back for these, so the total is what they cost rather than what the market says today.${mostly}${saved}`,
+    action: null,
+  };
+}
+
+function signedMoney(value: number) {
+  return `${value >= 0 ? '+' : '−'}${money(Math.abs(value))}`;
+}
+
 export function composeInvestFocus({ analysis, loaded, failures, connected, savedAdviceAt }: InvestFocusInput): Focus {
   // Holdings arrive from the broker after the page renders, so an empty screen
   // during that first fetch must not read as "you own nothing".
@@ -30,15 +71,7 @@ export function composeInvestFocus({ analysis, loaded, failures, connected, save
     };
   }
 
-  if (failures.length) {
-    const [first] = failures;
-    return {
-      id: 'account-error',
-      headline: `${first.name} could not be reached.`,
-      body: `${first.message} Nothing about your portfolio has changed — only Orbis's view of it. ${failures.length > 1 ? `${count(failures.length - 1, 'other account')} also failed. ` : ''}Try syncing again below.`,
-      action: null,
-    };
-  }
+  if (failures.length) return failureFocus(failures);
 
   if (!connected) {
     return {
@@ -68,24 +101,7 @@ export function composeInvestFocus({ analysis, loaded, failures, connected, save
     };
   }
 
-  const top = analysis.byClass.slice().sort((left, right) => right.value - left.value)[0];
-  if (analysis.livePnl !== null && analysis.liveInvested > 0) {
-    const up = analysis.livePnl >= 0;
-    const change = percent(Math.abs(analysis.livePnl / analysis.liveInvested));
-    return {
-      id: 'live-position',
-      headline: `${money(analysis.total)} across ${count(analysis.positions.length, 'holding')}.`,
-      body: `Positions with a live price are ${up ? 'up' : 'down'} ${money(Math.abs(analysis.livePnl))} on what you paid, ${change} ${up ? 'ahead' : 'behind'}.${top ? ` Mostly ${top.assetClass.toLowerCase()} at ${percent(top.share)}.` : ''}${analysis.allLive ? '' : ' Holdings without a live price count at what they cost.'}${savedAdviceAt ? ` Suggestions saved ${shortDate(savedAdviceAt)}.` : ''}`,
-      action: null,
-    };
-  }
-
-  return {
-    id: 'cost-basis',
-    headline: `${money(analysis.total)} across ${count(analysis.positions.length, 'holding')}.`,
-    body: `No live price came back for these, so the total is what they cost rather than what the market says today.${top ? ` Mostly ${top.assetClass.toLowerCase()} at ${percent(top.share)}.` : ''}${savedAdviceAt ? ` Suggestions saved ${shortDate(savedAdviceAt)}.` : ''}`,
-    action: null,
-  };
+  return positionsFocus(analysis, savedAdviceAt);
 }
 
 export function composeInvestRows({ analysis }: { analysis: PortfolioAnalysis }): QuietRow[] {
@@ -94,7 +110,7 @@ export function composeInvestRows({ analysis }: { analysis: PortfolioAnalysis })
   // The total is the screen's hero figure now, so it is not repeated here.
   return [
     { label: 'Invested', value: empty ? '—' : money(analysis.invested), empty, target: null },
-    { label: 'Unrealised', value: analysis.livePnl === null ? 'No live prices' : `${analysis.livePnl >= 0 ? '+' : '−'}${money(Math.abs(analysis.livePnl))}`, empty: analysis.livePnl === null, target: null },
+    { label: 'Unrealised', value: analysis.livePnl === null ? 'No live prices' : signedMoney(analysis.livePnl), empty: analysis.livePnl === null, target: null },
     { label: 'Holdings', value: empty ? 'None' : String(analysis.positions.length), empty, target: null },
     { label: 'Largest position', value: analysis.largest ? `${analysis.largest.name} · ${percent(analysis.largest.share)}` : 'None', empty: !analysis.largest, target: null },
     { label: 'Mostly', value: top ? `${top.assetClass} · ${percent(top.share)}` : 'None', empty: !top, target: null },

@@ -73,9 +73,7 @@
 .field .journal-editor textarea:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; border-color: transparent; }
 .field .personal-form small,
 .field .groww-muted,
-.field .home-city-note,
-.field .gmail-review-message,
-.field .gmail-review-message.success { color: var(--fd-accent); }
+.field .home-city-note { color: var(--fd-accent); }
 
 /* One button shape across the screen: a pill, filled or quiet. */
 .field .finance-button { min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 650; }
@@ -84,7 +82,7 @@
 .field .finance-notice { margin-top: 12px; padding: 12px 13px; border: 0; border-radius: var(--r-md); font-size: 12.5px; line-height: 1.5; }
 .field .finance-notice.success { background: var(--fd-wash); color: var(--fd-accent); }
 .field .finance-notice.error { background: var(--fd-alert-wash); color: var(--fd-alert); }
-.field .app-disconnect, .field .gmail-review-message { color: var(--fd-alert) !important; }
+.field .app-disconnect, .field .gmail-review-message, .field .gmail-review-message.success { color: var(--fd-alert); }
 .field .empty-state { margin-top: 10px; padding: 16px 0; background: none; text-align: left; }
 .field .empty-state svg { color: var(--fd-accent); }
 .field .empty-state strong { margin-top: 8px; font-size: 13.5px; color: var(--fd-ink); }

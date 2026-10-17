@@ -10,7 +10,7 @@ function block(selector: string): Record<string, string> {
   const start = css.indexOf(`${selector} {`);
   const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('\n}', start));
   const tokens: Record<string, string> = {};
-  for (const [, name, value] of body.matchAll(/(--[\w-]+):\s*([^;]+);/g)) tokens[name] = value.trim();
+  for (const [, name, value] of body.matchAll(/(?<![\w-])(--[\w-]+):([^;]+);/g)) tokens[name] = value.trim();
   return tokens;
 }
 
@@ -19,18 +19,19 @@ const dark = { ...base, ...block(':root:not([data-theme="light"])') };
 const light = { ...base, ...block(':root[data-theme="light"]') };
 
 function resolveColor(tokens: Record<string, string>, value: string): string {
-  const ref = value.match(/^var\((--[\w-]+)\)$/);
+  const ref = /^var\((--[\w-]+)\)$/.exec(value);
   return ref ? resolveColor(tokens, tokens[ref[1]]) : value;
 }
 
 function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255)
     .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function ratio(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  const hi = Math.max(luminance(a), luminance(b));
+  const lo = Math.min(luminance(a), luminance(b));
   return (hi + 0.05) / (lo + 0.05);
 }
 

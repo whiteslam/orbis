@@ -83,6 +83,8 @@ export async function savePostAction(input: {
   }
 }
 
+const STATUS_SET: Record<'idea' | 'draft' | 'ready', string> = { ready: 'Ready to post.', idea: 'Kept as an idea.', draft: 'Back to draft.' };
+
 /** Idea, draft or ready. Published has its own action, and only it can undo itself. */
 export async function setPostStatusAction(id: string, status: 'idea' | 'draft' | 'ready'): Promise<Result> {
   const userId = (await requireUser())?.userId;
@@ -95,7 +97,7 @@ export async function setPostStatusAction(id: string, status: 'idea' | 'draft' |
     if (current.status === 'published') return { success: false, message: 'This post is published. Mark it as not published first.' };
     const post = await setStatus(userId, id, status);
     revalidatePath('/active');
-    return { success: true, message: status === 'ready' ? 'Ready to post.' : status === 'idea' ? 'Kept as an idea.' : 'Back to draft.', post };
+    return { success: true, message: STATUS_SET[status], post };
   } catch (error) {
     return failure(error, 'That post could not be updated.');
   }
@@ -270,15 +272,7 @@ const DAILY_DRAFT_LIMIT = 10;
 // A second Generate within this many seconds is a double click, not a new request.
 const DRAFT_GAP_SECONDS = 20;
 
-/**
- * Drafts posts for a month with AI, through the router.
- *
- * Only what the user typed into the brief is sent, unless they ticked "Use my
- * profile" — then the request is 'personal', which the router only lets reach
- * a provider that does not train on it. Results are only ever added as new
- * drafts: the AI never overwrites words the user wrote.
- */
-export async function draftMonthWithAiAction(input: {
+type DraftMonthInput = {
   period: string;
   brief: string;
   count: number;
@@ -286,35 +280,39 @@ export async function draftMonthWithAiAction(input: {
   platforms: string[];
   tone: string;
   useProfile: boolean;
-}): Promise<Result> {
-  const userId = (await requireUser())?.userId;
-  if (!userId) return SIGN_IN;
-  if (!input || typeof input !== 'object') return { success: false, message: 'Say what the month is about.' };
-  if (typeof input.period !== 'string' || !PERIOD_PATTERN.test(input.period)) return { success: false, message: 'That month is invalid.' };
+};
+
+type DraftRequest = {
+  period: string;
+  brief: string;
+  count: number;
+  formats: ReturnType<typeof cleanDraftFormats>;
+  platforms: ReturnType<typeof cleanPlatforms>;
+  tone: DraftTone;
+  useProfile: boolean;
+};
+
+function cleanDraftFormats(value: unknown) {
+  return Array.isArray(value) ? Array.from(new Set(value.filter(isFormat))) : [];
+}
+
+/** The checked request, or the message explaining what's missing from it. */
+function readDraftRequest(input: DraftMonthInput): DraftRequest | string {
+  if (!input || typeof input !== 'object') return 'Say what the month is about.';
+  if (typeof input.period !== 'string' || !PERIOD_PATTERN.test(input.period)) return 'That month is invalid.';
   const brief = typeof input.brief === 'string' ? input.brief.trim() : '';
-  if (!brief) return { success: false, message: 'Say what the month is about.' };
-  if (brief.length > MAX_BRIEF_LENGTH) return { success: false, message: `Keep the brief under ${MAX_BRIEF_LENGTH.toLocaleString('en-IN')} characters.` };
-  if (!Number.isInteger(input.count) || input.count < 1 || input.count > MAX_DRAFT_COUNT) return { success: false, message: `Choose between 1 and ${MAX_DRAFT_COUNT} posts.` };
-  const formats = Array.isArray(input.formats) ? Array.from(new Set(input.formats.filter(isFormat))) : [];
-  if (!formats.length) return { success: false, message: 'Choose at least one format.' };
+  if (!brief) return 'Say what the month is about.';
+  if (brief.length > MAX_BRIEF_LENGTH) return `Keep the brief under ${MAX_BRIEF_LENGTH.toLocaleString('en-IN')} characters.`;
+  if (!Number.isInteger(input.count) || input.count < 1 || input.count > MAX_DRAFT_COUNT) return `Choose between 1 and ${MAX_DRAFT_COUNT} posts.`;
+  const formats = cleanDraftFormats(input.formats);
+  if (!formats.length) return 'Choose at least one format.';
   const platforms = cleanPlatforms(input.platforms);
-  if (!DRAFT_TONES.includes(input.tone as DraftTone)) return { success: false, message: 'Choose a tone.' };
-  const tone = input.tone as DraftTone;
-  const useProfile = input.useProfile === true;
+  if (!DRAFT_TONES.includes(input.tone as DraftTone)) return 'Choose a tone.';
+  return { period: input.period, brief, count: input.count, formats, platforms, tone: input.tone as DraftTone, useProfile: input.useProfile === true };
+}
 
-  // Before the daily draft credit is spent: nothing is charged for a request
-  // that consent or the registry would stop anyway.
-  const blocked = await aiBlocked(userId, useProfile ? 'personal' : 'general');
-  if (blocked === 'off') return { success: false, message: AI_OFF_MESSAGE };
-  if (blocked) return { success: false, message: NO_MODEL_MESSAGE };
-
-  let profile: { preferredName: string; role: string; aboutMe: string } | null = null;
-  if (useProfile) {
-    const summary = await getPersonalProfile(userId);
-    if (!summary.profile) return { success: false, message: 'Your profile is empty. Fill in Settings → You, or untick "Use my profile".' };
-    profile = summary.profile;
-  }
-
+/** Spends one of today's AI drafts; a message when none can be spent. */
+async function claimDraftCredit(userId: string): Promise<string | null> {
   try {
     const { data: verdict, error } = await createAdminClient().rpc('consume_social_ai_request', {
       p_user_id: userId,
@@ -323,39 +321,77 @@ export async function draftMonthWithAiAction(input: {
     });
     if (error) {
       console.error('consume_social_ai_request failed', error);
-      return { success: false, message: 'AI drafts aren’t available right now. Try again later.' };
+      return 'AI drafts aren’t available right now. Try again later.';
     }
-    if (verdict === 'busy') return { success: false, message: 'Already drafting. Give it a moment.' };
-    if (verdict !== 'ok') return { success: false, message: `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.` };
+    if (verdict === 'busy') return 'Already drafting. Give it a moment.';
+    if (verdict !== 'ok') return `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.`;
+    return null;
   } catch {
-    return { success: false, message: 'AI drafts are not available right now. Try again later.' };
+    return 'AI drafts are not available right now. Try again later.';
+  }
+}
+
+/** Saves each draft as a new post, in order; one that fails to save is left out rather than costing the others. */
+async function saveDrafts(userId: string, drafts: ReturnType<typeof parseAiDraft>, platforms: DraftRequest['platforms']): Promise<SocialPost[]> {
+  const saved = await Promise.all(drafts.map(async (draft) => {
+    try {
+      return await insertPost(userId, { ...draft, platforms, status: 'draft', source: 'ai' }, 'ai_draft');
+    } catch {
+      // One bad draft should not cost the others.
+      return null;
+    }
+  }));
+  return saved.filter((post): post is SocialPost => post !== null);
+}
+
+/**
+ * Drafts posts for a month with AI, through the router.
+ *
+ * Only what the user typed into the brief is sent, unless they ticked "Use my
+ * profile" — then the request is 'personal', which the router only lets reach
+ * a provider that does not train on it. Results are only ever added as new
+ * drafts: the AI never overwrites words the user wrote.
+ */
+export async function draftMonthWithAiAction(input: DraftMonthInput): Promise<Result> {
+  const userId = (await requireUser())?.userId;
+  if (!userId) return SIGN_IN;
+  const request = readDraftRequest(input);
+  if (typeof request === 'string') return { success: false, message: request };
+  const { period, brief, count, formats, platforms, tone, useProfile } = request;
+
+  // Before the daily draft credit is spent: nothing is charged for a request
+  // that consent or the registry would stop anyway.
+  const blocked = await aiBlocked(userId, useProfile ? 'personal' : 'general');
+  if (blocked) return { success: false, message: blocked === 'off' ? AI_OFF_MESSAGE : NO_MODEL_MESSAGE };
+
+  let profile: { preferredName: string; role: string; aboutMe: string } | null = null;
+  if (useProfile) {
+    const summary = await getPersonalProfile(userId);
+    if (!summary.profile) return { success: false, message: 'Your profile is empty. Fill in Settings → You, or untick "Use my profile".' };
+    profile = summary.profile;
   }
 
-  const prompt = buildDraftPrompt({ period: input.period, brief, count: input.count, formats, platforms, tone, profile });
+  const refused = await claimDraftCredit(userId);
+  if (refused) return { success: false, message: refused };
+
+  const prompt = buildDraftPrompt({ period, brief, count, formats, platforms, tone, profile });
   const result = await routeJson({
     userId,
     feature: 'social_drafts',
     sensitivity: useProfile ? 'personal' : 'general',
     system: prompt.system,
     user: prompt.user,
-    maxTokens: draftMaxTokens(input.count),
+    maxTokens: draftMaxTokens(count),
     temperature: 0.7,
     timeoutMs: 30_000,
-    accept: (text) => parseAiDraft(text, { period: input.period, count: input.count, formats }).length > 0,
+    accept: (text) => parseAiDraft(text, { period, count, formats }).length > 0,
   });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 
-  const drafts = parseAiDraft(result.text, { period: input.period, count: input.count, formats });
+  const drafts = parseAiDraft(result.text, { period, count, formats });
   if (!drafts.length) return { success: false, message: 'The AI reply could not be used. Try again, or change the brief.' };
 
-  const posts: SocialPost[] = [];
-  for (const draft of drafts) {
-    try {
-      posts.push(await insertPost(userId, { ...draft, platforms, status: 'draft', source: 'ai' }, 'ai_draft'));
-    } catch {
-      // One bad draft should not cost the others.
-    }
-  }
+  const posts = await saveDrafts(userId, drafts, platforms);
   if (!posts.length) return { success: false, message: 'The drafts could not be saved. Try again.' };
   revalidatePath('/active');
   return { success: true, message: `${posts.length} ${posts.length === 1 ? 'draft' : 'drafts'} added. Edit them before marking ready.`, posts };

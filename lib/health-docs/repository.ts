@@ -24,9 +24,8 @@ export function chunkLines(fileName: string, lines: string[]) {
     if (!line) continue;
     if (length + line.length > CHUNK_CHARS && current.length) {
       chunks.push(`${fileName}\n${current.join('\n')}`);
-      const carry = current[current.length - 1];
-      current = [carry];
-      length = carry.length;
+      current = current.slice(-1);
+      length = current[0].length;
     }
     current.push(line);
     length += line.length + 1;
@@ -81,10 +80,10 @@ export async function storeHealthDocument(userId: string, input: { file: File; f
 
   try {
     const rows = chunks.map((content, index) => ({ document_id: document.id, user_id: userId, chunk_index: index, content, embedding: toVectorLiteral(vectors[index]) }));
-    for (let start = 0; start < rows.length; start += 100) {
-      const { error: chunkError } = await admin.from('health_document_chunks').insert(rows.slice(start, start + 100));
-      if (chunkError) throw new UserFacingError('The document text could not be indexed.');
-    }
+    const batches: typeof rows[] = [];
+    for (let start = 0; start < rows.length; start += 100) batches.push(rows.slice(start, start + 100));
+    const inserted = await Promise.all(batches.map((batch) => admin.from('health_document_chunks').insert(batch)));
+    if (inserted.some((result) => result.error)) throw new UserFacingError('The document text could not be indexed.');
 
     let storedOriginal = false;
     if (input.file.size <= MAX_STORED_ORIGINAL_BYTES) {
@@ -99,9 +98,9 @@ export async function storeHealthDocument(userId: string, input: { file: File; f
       }
     }
     return { id: document.id, chunkCount: chunks.length, storedOriginal };
-  } catch (caught) {
+  } catch (error_) {
     await admin.from('health_documents').delete().eq('id', document.id);
-    throw caught;
+    throw error_;
   }
 }
 

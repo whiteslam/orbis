@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoaderCircle, Mic, Pause, Play, Square, Trash2 } from 'lucide-react';
 import { deleteVoiceNoteAction, uploadVoiceNoteAction, voiceNoteUrlAction } from '@/app/personal/voice-actions';
@@ -20,7 +20,7 @@ function recorderType() {
  * A quick capture for when typing is too slow. Audio stays in a private bucket;
  * the play button asks for a ten-minute link only when pressed.
  */
-export function VoiceNotes({ date, notes }: { date: string; notes: VoiceNote[] }) {
+export function VoiceNotes({ date, notes }: Readonly<{ date: string; notes: VoiceNote[] }>) {
   const router = useRouter();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -133,6 +133,20 @@ export function VoiceNotes({ date, notes }: { date: string; notes: VoiceNote[] }
 
   const full = notes.length >= VOICE_MAX_PER_DAY;
 
+  // Stop while recording, a spinner while saving, otherwise the record button until the day is full.
+  let control: ReactNode = null;
+  if (recording) {
+    control = (
+      <button type="button" className="vn-record on" onClick={stop}>
+        <Square size={12} aria-hidden="true" /> Stop · {clipLength(elapsed)} / {clipLength(VOICE_MAX_SECONDS)}
+      </button>
+    );
+  } else if (isPending) {
+    control = <p className="vn-status"><LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> Saving…</p>;
+  } else if (!full) {
+    control = <button type="button" className="vn-record" onClick={start}><Mic size={13} aria-hidden="true" /> Record a voice note</button>;
+  }
+
   return (
     <div className="vn-box">
       {notes.length > 0 && (
@@ -148,16 +162,8 @@ export function VoiceNotes({ date, notes }: { date: string; notes: VoiceNote[] }
           ))}
         </ul>
       )}
-      {recording ? (
-        <button type="button" className="vn-record on" onClick={stop}>
-          <Square size={12} aria-hidden="true" /> Stop · {clipLength(elapsed)} / {clipLength(VOICE_MAX_SECONDS)}
-        </button>
-      ) : isPending ? (
-        <p className="vn-status"><LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> Saving…</p>
-      ) : !full ? (
-        <button type="button" className="vn-record" onClick={start}><Mic size={13} aria-hidden="true" /> Record a voice note</button>
-      ) : null}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {control}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockKeyhole, UserKey } from 'lucide-react';
 import { AuthShell } from '@/components/auth/auth-shell';
@@ -15,7 +15,7 @@ import { safeAction } from '@/lib/client/safe-action';
 type Method = 'pin' | 'password';
 
 // Unlock with the device PIN or a passkey, or with the account password as the fallback.
-export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
+export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
   const router = useRouter();
   const [pinLocked, setPinLocked] = useState(pinStatus === 'locked');
   const [method, setMethod] = useState<Method>(pinStatus === 'active' ? 'pin' : 'password');
@@ -24,6 +24,7 @@ export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
   const [hasPasskey, setHasPasskey] = useState(false);
   const [isPending, startTransition] = useTransition();
   const canUsePin = pinStatus === 'active' && !pinLocked;
+  const passwordInput = useRef<HTMLInputElement>(null);
 
   // The passkey key only shows when this account has a passkey and the browser can use it.
   useEffect(() => {
@@ -34,6 +35,11 @@ export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
       .catch(() => undefined);
     return () => { cancelled = true; };
   }, []);
+
+  // The password field takes focus whenever it appears: the lock screen has nothing else to do.
+  useEffect(() => {
+    if (method === 'password') passwordInput.current?.focus();
+  }, [method]);
 
   function choose(next: Method) {
     setMessage(null);
@@ -73,7 +79,8 @@ export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
 
   function unlockWithPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const password = String(new FormData(event.currentTarget).get('password') ?? '');
+    const value = new FormData(event.currentTarget).get('password');
+    const password = typeof value === 'string' ? value : '';
     setMessage(null);
     startTransition(async () => {
       const result = await safeAction(unlockWithPasswordAction)(password);
@@ -104,13 +111,13 @@ export function LockScreen({ pinStatus }: { pinStatus: PinStatus }) {
       {method === 'pin' ? (
         <div className="lock-pin">
           <label htmlFor="lock-pin">Enter your PIN</label>
-          <PinInput id="lock-pin" value={pin} onChange={setPin} onComplete={submitPin} disabled={isPending} autoFocus describedBy={message ? 'lock-feedback' : undefined} keypad extraKey={passkeyKey} />
-          {isPending && <p className="lock-pin-status" role="status">Checking…</p>}
+          <PinInput id="lock-pin" value={pin} onChange={setPin} onComplete={submitPin} disabled={isPending} focusOnMount describedBy={message ? 'lock-feedback' : undefined} keypad extraKey={passkeyKey} />
+          {isPending && <output className="lock-pin-status">Checking…</output>}
         </div>
       ) : (
         <form className="auth-form lock-password" onSubmit={unlockWithPassword}>
           <label htmlFor="lock-password">Password</label>
-          <input id="lock-password" name="password" type="password" autoComplete="current-password" required autoFocus aria-describedby={message ? 'lock-feedback' : undefined} />
+          <input id="lock-password" name="password" type="password" autoComplete="current-password" required ref={passwordInput} aria-describedby={message ? 'lock-feedback' : undefined} />
           <button className="auth-submit" type="submit" disabled={isPending}>{isPending ? 'Unlocking…' : 'Unlock'}</button>
           {hasPasskey && <button className="auth-passkey" type="button" onClick={unlockWithPasskey} disabled={isPending}><UserKey size={17} strokeWidth={1.8} aria-hidden="true" /> Use a passkey</button>}
         </form>

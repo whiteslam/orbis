@@ -11,7 +11,7 @@ type DeviceState = 'checking' | 'unsupported' | 'ios-install' | 'blocked' | 'off
 
 function urlBase64ToUint8Array(value: string) {
   const padded = `${value}${'='.repeat((4 - (value.length % 4)) % 4)}`.replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  return Uint8Array.from(atob(padded), (char) => char.codePointAt(0) ?? 0);
 }
 
 const SERVICE_WORKER_TIMEOUT_MS = 10_000;
@@ -29,7 +29,14 @@ function isIosBrowserTab() {
   return ios && !standalone;
 }
 
-export function NotificationSettings({ settings }: { settings: Settings }) {
+/** " On for 2 other devices.", or nothing when there are none. */
+function otherDevicesNote(count: number) {
+  if (!count) return '';
+  const plural = count === 1 ? '' : 's';
+  return ` On for ${count} other device${plural}.`;
+}
+
+export function NotificationSettings({ settings }: Readonly<{ settings: Settings }>) {
   const router = useRouter();
   const [prefs, setPrefs] = useState<NotificationPreferences>(settings.preferences);
   const [device, setDevice] = useState<DeviceState>('checking');
@@ -134,8 +141,8 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
           <strong>This device</strong>
           <small>
             {device === 'checking' && 'Checking…'}
-            {device === 'on' && `Notifications will arrive here.${otherDevices ? ` On for ${otherDevices} other device${otherDevices === 1 ? '' : 's'}.` : ''}`}
-            {device === 'off' && `Not enabled on this device.${settings.deviceEndpoints.length ? ` On for ${settings.deviceEndpoints.length} other device${settings.deviceEndpoints.length === 1 ? '' : 's'}.` : ''}`}
+            {device === 'on' && `Notifications will arrive here.${otherDevicesNote(otherDevices)}`}
+            {device === 'off' && `Not enabled on this device.${otherDevicesNote(settings.deviceEndpoints.length)}`}
             {device === 'blocked' && 'Blocked in your browser settings. Allow notifications for Orbis, then come back.'}
             {device === 'unsupported' && 'This browser doesn’t support push notifications.'}
             {device === 'ios-install' && 'On iPhone, tap Share → Add to Home Screen, open Orbis from there, then enable notifications.'}
@@ -146,7 +153,7 @@ export function NotificationSettings({ settings }: { settings: Settings }) {
       </div>
       {device === 'on' && <button className="fd-link pf-test" type="button" onClick={() => run(() => safeAction(sendTestNotificationAction)(), true)} disabled={isPending}><Send size={13} aria-hidden="true" /> Send a test notification</button>}
       {!settings.pushConfigured && <p className="fd-note tight">Push notifications aren’t available right now.</p>}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </div>
   );
 }

@@ -15,8 +15,14 @@ Limits:
 - Don't treat numbers in old documents as my current measurements.
 - Don't diagnose conditions or replace advice from a qualified health professional.`;
 
-const FITNESS_TERMS = /\b(health|fitness|body|weight|steps?|activity|workouts?|exercise|training|sleep|calories?|nutrition|food|meals?|protein|carbs?|fat|blood pressure|glucose|heart rate|wellness|diet|waist|muscle)\b/i;
+// Split into a few short patterns, each kept simple; a match in any one counts.
+const FITNESS_TERMS = [
+  /\b(health|fitness|body|weight|steps?|activity|workouts?|exercise)\b/i,
+  /\b(training|sleep|calories?|nutrition|food|meals?|protein|carbs?)\b/i,
+  /\b(fat|blood pressure|glucose|heart rate|wellness|diet|waist|muscle)\b/i,
+];
 
 export function workbookHasFitnessFields(sheets: Array<{ name: string; columns: string[] }>, documentText = ''): boolean {
-  return FITNESS_TERMS.test(`${sheets.map((sheet) => [sheet.name, ...sheet.columns].join(' ')).join(' ')} ${documentText}`);
+  const text = `${sheets.map((sheet) => [sheet.name, ...sheet.columns].join(' ')).join(' ')} ${documentText}`;
+  return FITNESS_TERMS.some((terms) => terms.test(text));
 }

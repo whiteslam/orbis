@@ -46,7 +46,7 @@ const STALE_AFTER_HIDDEN_MS = 60_000;
 
 const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone };
 
-export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: { financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }) {
+export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>('today');
   const [money, setMoney] = useState<MoneyView>('spending');
@@ -178,7 +178,6 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         documentCount={healthLibrary.documents.length}
         plan={healthLibrary.plans[0] ?? null}
         routines={routines}
-        socialPosts={socialMonth.posts}
         preferredName={personalProfile.profile?.preferredName ?? null}
         aiBriefEnabled={aiPreferences.homeBriefEnabled && aiAllowed(aiPreferences)}
         gmailNotice={gmailNotice}

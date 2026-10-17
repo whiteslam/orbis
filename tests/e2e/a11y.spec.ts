@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, openApp, openInvestments, openSettings, openTab, TABS, test } from './support/fixtures';
+import { expect, openApp, openInvestments, openSettings, openTab, settle, TABS, test } from './support/fixtures';
 
 type Violation = { id: string; impact?: string | null; help: string; nodes: Array<{ target: unknown }> };
 const summarize = (where: string, violations: Violation[]) => violations
@@ -17,14 +17,14 @@ test('no serious or critical accessibility violations', async ({ page, browser, 
   await openApp(page);
   for (const tab of TABS) {
     await openTab(page, tab);
-    await page.waitForTimeout(800);
+    await settle(page);
     findings.push(...summarize(tab, (await new AxeBuilder({ page }).analyze()).violations as Violation[]));
   }
   await openInvestments(page);
-  await page.waitForTimeout(800);
+  await settle(page);
   findings.push(...summarize('Money/Investments', (await new AxeBuilder({ page }).analyze()).violations as Violation[]));
   await openSettings(page);
-  await page.waitForTimeout(500);
+  await settle(page);
   findings.push(...summarize('Settings', (await new AxeBuilder({ page }).analyze()).violations as Violation[]));
   await testInfo.attach('a11y.txt', { body: findings.join('\n'), contentType: 'text/plain' });
   console.log(findings.join('\n'));

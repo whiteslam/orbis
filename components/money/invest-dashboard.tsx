@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { loadInvestLiveAction } from '@/app/invest/actions';
-import { analysePortfolio } from '@/lib/invest/analysis';
+import { analysePortfolio, type PortfolioAnalysis } from '@/lib/invest/analysis';
 import { BROKERS, brokerMeta, type BrokerId } from '@/lib/invest/brokers';
 import type { LivePortfolioData } from '@/lib/invest/types';
 import { BrokerCard, BrokerConnectScreen } from '@/components/money/broker-card';
@@ -38,7 +38,17 @@ const ZERODHA_NOTICE: Record<string, string> = {
   failed: 'Zerodha could not be connected. Try again.',
 };
 
-export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNotice, switcher }: { ownInvestments?: OwnInvestments; savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void; switcher?: ReactNode }) {
+// Atlas leads on the figure; the composed statement below it deliberately
+// spends its words on what the figure does not say. Gain is only shown where
+// every contributing position had a live price, which is what livePnl means.
+function gainDelta(analysis: PortfolioAnalysis) {
+  if (analysis.livePnl !== null && analysis.liveInvested > 0) {
+    return { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl))} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const };
+  }
+  return null;
+}
+
+export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNotice, switcher }: Readonly<{ ownInvestments?: OwnInvestments; savedAdvice: SavedPortfolioAdvice | null; notice?: string | null; clearNotice?: () => void; switcher?: ReactNode }>) {
   const [live, setLive] = useState<LivePortfolioData | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [view, setView] = useState<InvestView>({ name: 'main' });
@@ -95,12 +105,7 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
     savedAdviceAt: advice?.createdAt ?? null,
   });
 
-  // Atlas leads on the figure; the composed statement below it deliberately
-  // spends its words on what the figure does not say. Gain is only shown where
-  // every contributing position had a live price, which is what livePnl means.
-  const gain = analysis.livePnl !== null && analysis.liveInvested > 0
-    ? { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl))} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const }
-    : null;
+  const gain = gainDelta(analysis);
 
   return (
     <>
@@ -115,10 +120,10 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
       )}
 
       {notice && (
-        <div className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`} role="status">
+        <output className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`}>
           <span>{ZERODHA_NOTICE[notice] ?? ZERODHA_NOTICE.failed}</span>
           <button type="button" onClick={clearNotice} aria-label="Dismiss message">×</button>
-        </div>
+        </output>
       )}
 
       <FocusSurface focus={focus} />

@@ -82,7 +82,7 @@ export function currentRoutine(today: RoutineToday[]): RoutineToday | null {
     .sort((left, right) => (Math.abs(left.minutesAway) - Math.abs(right.minutesAway)) || (left.minutesAway - right.minutesAway))[0];
   if (inPlay) return inPlay;
 
-  const upcoming = open.filter((item) => item.minutesAway > LEAD_MINUTES)[0];
+  const upcoming = open.find((item) => item.minutesAway > LEAD_MINUTES);
   return upcoming ?? null;
 }
 

@@ -23,6 +23,12 @@ const MAX_HOLDINGS = 30;
 
 type Holding = { name: string; kind: string; sharePercent: number | null };
 
+/** Plain code-unit order, as `.sort()` gives: a fingerprint must not depend on the server's locale. */
+function byCodeUnit(left: string, right: string) {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
 /**
  * What today's news may mean for what you hold: the shared market reading of
  * the news, set against your broker holdings and the FDs, SIPs and the rest you
@@ -53,7 +59,7 @@ export async function loadPortfolioNews(userId: string, email: string | null): P
   if (!holdings.length) return { state: 'empty' };
 
   const fingerprint = createHash('sha256')
-    .update(JSON.stringify([news.batch, holdings.map((holding) => holding.name).sort()]))
+    .update(JSON.stringify([news.batch, holdings.map((holding) => holding.name).sort(byCodeUnit)]))
     .digest('hex')
     .slice(0, 32);
   const saved = await getLatestAiResult<PortfolioNews, { fingerprint?: string }>(userId, 'portfolio_news');

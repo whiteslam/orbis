@@ -13,7 +13,8 @@ const KEYS = { instagram: 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET', threads: 
 const WHY_MAX = 160;
 
 export function socialConnectNotice(code: string | null, why: string | null): SocialConnectNotice | null {
-  const match = code?.match(/^(instagram|threads)-(connected|cancelled|failed|not-configured|needs-https)$/);
+  if (!code) return null;
+  const match = /^(instagram|threads)-(connected|cancelled|failed|not-configured|needs-https)$/.exec(code);
   if (!match) return null;
   const platform = match[1] as keyof typeof NAMES;
   const name = NAMES[platform];
@@ -28,7 +29,8 @@ export function socialConnectNotice(code: string | null, why: string | null): So
       return { tone: 'error', text: `${name} can only be connected from an HTTPS address, because Meta refuses anything else. Connect it from the live site, or open this computer through an HTTPS tunnel.` };
     default: {
       const reason = why?.replace(/\s+/g, ' ').trim().slice(0, WHY_MAX);
-      return { tone: 'error', text: `${name} could not be connected. ${reason ? `Meta said: ${reason}` : 'Try again.'}` };
+      const next = reason ? `Meta said: ${reason}` : 'Try again.';
+      return { tone: 'error', text: `${name} could not be connected. ${next}` };
     }
   }
 }

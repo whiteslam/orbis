@@ -44,8 +44,8 @@ describe('trimHistory', () => {
 
   it('clips long turns so the client cannot flood the prompt', () => {
     const [turn] = trimHistory([{ question: 'q'.repeat(2000), answer: 'a'.repeat(5000) }]);
-    expect(turn.question.length).toBe(300);
-    expect(turn.answer.length).toBe(600);
+    expect(turn.question).toHaveLength(300);
+    expect(turn.answer).toHaveLength(600);
   });
 
   it('returns nothing for a non-array', () => {

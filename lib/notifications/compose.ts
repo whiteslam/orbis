@@ -30,6 +30,27 @@ const GREETING: Record<NotificationContext['slot'], string> = {
   night: 'Winding down',
 };
 
+function greeting(context: NotificationContext) {
+  const hello = context.name ? `, ${context.name}` : '';
+  return `${GREETING[context.slot]}${hello}`;
+}
+
+function othersOpenLine(openCount: number) {
+  if (openCount <= 1) return '';
+  const others = openCount - 1;
+  return ` ${others} other${others > 1 ? 's' : ''} still open today.`;
+}
+
+// The same four states as the home note, and the same rule: Orbis has not
+// heard about a routine, it never says one was missed.
+function routineLine(context: NotificationContext, others: string) {
+  const current = context.routine;
+  if (!current) return context.routines.length ? 'Everything on today’s list is answered.' : '';
+  if (current.state === 'now') return `It’s time for ${current.title}.${others}`;
+  if (current.state === 'unheard') return `${current.title} was ${current.flexible ? 'usually around' : 'set for'} ${current.at}; I haven’t heard how it went.${others}`;
+  return `${current.title} is ${current.flexible ? 'around' : 'at'} ${current.at}.${others}`;
+}
+
 /**
  * Orbis's own wording, used when no provider may hold the data.
  *
@@ -38,28 +59,17 @@ const GREETING: Record<NotificationContext['slot'], string> = {
  * has, which meant the fallback described a day that could not exist.
  */
 export function ruleNotification(context: NotificationContext): { title: string; body: string; source: 'rules' } {
-  const hello = context.name ? `, ${context.name}` : '';
   const open = context.routines.filter((routine) => routine.status === null);
   const spendLine = context.spending ? `Spent ${money(context.spending.today, context.spending.currency)} today, ${money(context.spending.month, context.spending.currency)} this month.` : '';
-  const others = open.length > 1 ? ` ${open.length - 1} other${open.length > 2 ? 's' : ''} still open today.` : '';
-  // The same four states as the home note, and the same rule: Orbis has not
-  // heard about a routine, it never says one was missed.
-  const current = context.routine;
-  const routineLine = current
-    ? current.state === 'now' ? `It’s time for ${current.title}.${others}`
-      : current.state === 'unheard' ? `${current.title} was ${current.flexible ? 'usually around' : 'set for'} ${current.at}; I haven’t heard how it went.${others}`
-        : `${current.title} is ${current.flexible ? 'around' : 'at'} ${current.at}.${others}`
-    : context.routines.length
-      ? 'Everything on today’s list is answered.'
-      : '';
+  const routine = routineLine(context, othersOpenLine(open.length));
   const parts: Record<NotificationContext['slot'], string[]> = {
-    morning: [routineLine, context.socialLine, 'A good start sets up the day.'],
-    lunch: [routineLine, 'Eat well and drink some water.', spendLine],
-    evening: [routineLine, spendLine],
-    night: [routineLine, 'Aim for a good night’s sleep.'],
+    morning: [routine, context.socialLine, 'A good start sets up the day.'],
+    lunch: [routine, 'Eat well and drink some water.', spendLine],
+    evening: [routine, spendLine],
+    night: [routine, 'Aim for a good night’s sleep.'],
   };
   return {
-    title: clip(`${GREETING[context.slot]}${hello}`, TITLE_MAX),
+    title: clip(greeting(context), TITLE_MAX),
     body: clip(parts[context.slot].filter(Boolean).join(' ') || 'A quick check-in from Orbis.', BODY_MAX),
     source: 'rules',
   };
@@ -75,7 +85,7 @@ export async function composeNotification(userId: string, context: NotificationC
   const written = await writeBrief(userId, { ...context, routines: undefined }, 'push');
   if (!written) return ruleNotification(context);
   return {
-    title: clip(written.title ?? `${GREETING[context.slot]}${context.name ? `, ${context.name}` : ''}`, TITLE_MAX),
+    title: clip(written.title ?? greeting(context), TITLE_MAX),
     body: clip(written.caption, BODY_MAX),
     source: 'ai',
   };

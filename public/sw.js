@@ -58,7 +58,6 @@ self.addEventListener('fetch', (event) => {
       if (response.ok) await cache.put(request, response.clone());
       return response;
     })());
-    return;
   }
 
   // passthrough: /api/*, auth, Supabase, any cross-origin request and non-GETs

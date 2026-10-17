@@ -8,7 +8,12 @@ import { safeAction } from '@/lib/client/safe-action';
 
 const EMPTY_PROFILE: PersonalProfile = { preferredName: '', role: '', aboutMe: '' };
 
-export function ProfileEditor({ state, profile }: { state: PersonalDataState; profile: PersonalProfile | null }) {
+const NOTICE: Partial<Record<PersonalDataState, string>> = {
+  setup: 'Your profile can’t be saved right now. Try again later.',
+  unavailable: 'Your profile could not be loaded. Refresh and try again.',
+};
+
+export function ProfileEditor({ state, profile }: Readonly<{ state: PersonalDataState; profile: PersonalProfile | null }>) {
   const router = useRouter();
   const [draft, setDraft] = useState(profile ?? EMPTY_PROFILE);
   // Saved details read as text, like a journal entry does. The form is a mode
@@ -34,13 +39,11 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
   }
 
   const blocked = pending || state !== 'ready';
-  const notice = state === 'setup'
-    ? 'Your profile can’t be saved right now. Try again later.'
-    : state === 'unavailable' ? 'Your profile could not be loaded. Refresh and try again.' : null;
+  const notice = NOTICE[state] ?? null;
 
   if (profile && !editing) {
     return <section aria-label="Your personal profile">
-      {notice && <p className="fd-msg bad" role="status">{notice}</p>}
+      {notice && <output className="fd-msg bad">{notice}</output>}
       <dl className="fd-pairs">
         <div><dt>Name</dt><dd>{profile.preferredName.trim() || 'Not set'}</dd></div>
         <div><dt>Work or role</dt><dd>{profile.role.trim() || 'Not set'}</dd></div>
@@ -52,12 +55,15 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
         <button type="button" onClick={() => setEditing(true)}>Edit</button>
         <button className="fd-link alert" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deletePersonalProfileAction)()))}>{pending ? 'Removing…' : 'Remove'}</button>
       </div>
-      {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
+      {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
     </section>;
   }
 
+  let submitLabel = profile ? 'Save changes' : 'Save profile';
+  if (pending) submitLabel = 'Saving…';
+
   return <section aria-label="Your personal profile">
-    {notice && <p className="fd-msg bad" role="status">{notice}</p>}
+    {notice && <output className="fd-msg bad">{notice}</output>}
     <form className="fd-form" onSubmit={(event) => {
       event.preventDefault();
       startTransition(async () => show(await safeAction(savePersonalProfileAction)(draft)));
@@ -67,10 +73,10 @@ export function ProfileEditor({ state, profile }: { state: PersonalDataState; pr
       <label className="fd-field wide" htmlFor="profile-about">More about me<textarea id="profile-about" maxLength={3000} rows={7} value={draft.aboutMe} onChange={(event) => setDraft({ ...draft, aboutMe: event.currentTarget.value })} disabled={blocked} placeholder="Share your priorities, interests, routines, preferences, and anything else you want Orbis to consider." /></label>
       <p className="fd-count">{draft.aboutMe.length.toLocaleString('en-IN')} / 3,000 · avoid passwords or other secrets</p>
       <div className="fd-act">
-        <button type="submit" disabled={blocked}>{pending ? 'Saving…' : profile ? 'Save changes' : 'Save profile'}</button>
+        <button type="submit" disabled={blocked}>{submitLabel}</button>
         {profile && <button className="ghost" type="button" disabled={pending} onClick={() => { setDraft(profile); setEditing(false); setMessage(''); }}>Cancel</button>}
       </div>
     </form>
-    {message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`} role="status">{message}</p>}
+    {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
   </section>;
 }

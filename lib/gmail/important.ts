@@ -44,7 +44,7 @@ export async function getImportantMail(userId: string): Promise<ImportantMailRes
     const messages: ImportantMail[] = [];
 
     for (let offset = 0; offset < ids.length && messages.length < SHOWN; offset += CONCURRENCY) {
-      const batch = await Promise.all(ids.slice(offset, offset + CONCURRENCY).map((id) => getMessageSummary(accessToken, id)));
+      const batch = await Promise.all(ids.slice(offset, offset + CONCURRENCY).map((id) => getMessageSummary(accessToken, id))); // NOSONAR: batches keep Gmail calls throttled and stop once enough mail is found
       for (const message of batch) {
         if (!message || isAlertMail(message)) continue;
         messages.push({

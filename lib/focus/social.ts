@@ -11,6 +11,7 @@ export function composeSocialRow(posts: SocialPost[], today: string): QuietRow |
   if (!todays.length) return { label: 'Social today', value: 'Nothing planned', empty: true, target: 'social' };
   const notReady = todays.filter((post) => post.status === 'idea' || post.status === 'draft').length;
   const out = todays.every((post) => post.status === 'published');
-  const tail = notReady ? `${notReady} not ready` : out ? 'all out' : 'ready';
+  let tail = out ? 'all out' : 'ready';
+  if (notReady) tail = `${notReady} not ready`;
   return { label: 'Social today', value: `${todays.length} today, ${tail}`, empty: false, target: 'social' };
 }

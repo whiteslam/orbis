@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await exchangeRequestToken(credentials, requestToken);
     await saveZerodhaSession(userId, session);
-  } catch (caught) {
-    if (!(caught instanceof ZerodhaAuthError)) console.error(caught);
-    return back(caught instanceof ZerodhaAuthError ? 'rejected' : 'failed');
+  } catch (error_) {
+    if (!(error_ instanceof ZerodhaAuthError)) console.error(error_);
+    return back(error_ instanceof ZerodhaAuthError ? 'rejected' : 'failed');
   }
   return back('connected');
 }

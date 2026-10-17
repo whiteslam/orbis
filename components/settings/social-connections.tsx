@@ -13,6 +13,18 @@ const PLATFORMS = [
   { id: 'threads', name: 'Threads', detail: 'Publish planned posts, read-only otherwise' },
 ] as const;
 
+/** The status pill: connected, waiting on a reconnect, or not connected at all. */
+function connectionStatus(linked: boolean, expired: boolean) {
+  if (!linked) return { tone: 'off', label: 'Not connected' };
+  return expired ? { tone: 'warn', label: 'Reconnect' } : { tone: 'on', label: 'Connected' };
+}
+
+function connectLabel(name: string, linked: boolean, expired: boolean) {
+  if (expired) return `Reconnect ${name}`;
+  if (linked) return `Refresh ${name}`;
+  return `Connect ${name}`;
+}
+
 /**
  * Instagram and Threads in Connections.
  *
@@ -21,7 +33,7 @@ const PLATFORMS = [
  * could actually be posted and the Social tab could only ever record what you
  * had done elsewhere.
  */
-export function SocialConnections({ connections, ready, configured }: { connections: SocialConnectionStatus[]; ready: boolean; configured: Record<string, boolean> }) {
+export function SocialConnections({ connections, ready, configured }: Readonly<{ connections: SocialConnectionStatus[]; ready: boolean; configured: Record<string, boolean> }>) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -39,6 +51,7 @@ export function SocialConnections({ connections, ready, configured }: { connecti
         const linked = connections.find((item) => item.platform === platform.id) ?? null;
         const expired = linked?.status === 'reconnect_required';
         const isConfigured = configured[platform.id];
+        const status = connectionStatus(Boolean(linked), expired);
         return (
           <article className="pf-app" key={platform.id}>
             <div className="pf-app-head">
@@ -47,8 +60,8 @@ export function SocialConnections({ connections, ready, configured }: { connecti
                 {platform.name}
                 <small>{linked?.username ? `@${linked.username}` : platform.detail}</small>
               </span>
-              <span className={`app-status ${linked ? (expired ? 'warn' : 'on') : 'off'}`}>
-                <i aria-hidden="true" />{linked ? (expired ? 'Reconnect' : 'Connected') : 'Not connected'}
+              <span className={`app-status ${status.tone}`}>
+                <i aria-hidden="true" />{status.label}
               </span>
             </div>
 
@@ -63,7 +76,7 @@ export function SocialConnections({ connections, ready, configured }: { connecti
             <div className="fd-act pf-act">
               {ready && isConfigured && (
                 <a className="fd-button" href={`/auth/social/${platform.id}/start`}>
-                  {expired ? `Reconnect ${platform.name}` : linked ? `Refresh ${platform.name}` : `Connect ${platform.name}`}
+                  {connectLabel(platform.name, Boolean(linked), expired)}
                 </a>
               )}
               {linked && (

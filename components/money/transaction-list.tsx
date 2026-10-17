@@ -27,7 +27,7 @@ function dayHeading(key: string) {
   return new Date(`${key}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-export function TransactionList({ transactions }: { transactions: FinanceTransactionSummary[] }) {
+export function TransactionList({ transactions }: Readonly<{ transactions: FinanceTransactionSummary[] }>) {
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -84,7 +84,7 @@ export function TransactionList({ transactions }: { transactions: FinanceTransac
           </div>
         </section>
       ))}
-      {message && <p className="gmail-review-message" role="status">{message}</p>}
+      {message && <output className="gmail-review-message">{message}</output>}
     </div>
   );
 }

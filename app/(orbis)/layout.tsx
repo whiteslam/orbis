@@ -22,6 +22,6 @@ import '../styles/headsups.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
 
-export default function OrbisLayout({ children }: { children: React.ReactNode }) {
+export default function OrbisLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;
 }

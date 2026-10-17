@@ -11,7 +11,7 @@ import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
 import { createClient } from '@/lib/supabase/client';
 
 /** The body of the Documents view: how many there are, the upload box, and each saved file. */
-export function HealthLibrary({ documents, state }: { documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }) {
+export function HealthLibrary({ documents, state }: Readonly<{ documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }>) {
   const inputId = useId();
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export function HealthLibrary({ documents, state }: { documents: HealthDocument[
         event.currentTarget.value = '';
         if (file) upload(file);
       }} />
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
 
       {documents.length > 0 ? (
         <>

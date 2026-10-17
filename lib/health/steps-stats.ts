@@ -29,6 +29,8 @@ export function stepStats(days: DayRow[]) {
   };
 }
 
+const signedPercent = (value: number) => `${value >= 0 ? '+' : ''}${value}%`;
+
 // Bounded step summary for AI advice: averages, a 30-day trend and the most recent fortnight.
 export function stepContext(days: DayRow[]) {
   const stats = stepStats(days);
@@ -38,7 +40,7 @@ export function stepContext(days: DayRow[]) {
     average7: stats.average7,
     average30: stats.average30,
     average90: stats.average90,
-    trendVsPrevious30: trend === null ? null : `${trend >= 0 ? '+' : ''}${trend}%`,
+    trendVsPrevious30: trend === null ? null : signedPercent(trend),
     last14Days: [...days].sort((a, b) => a.date.localeCompare(b.date)).slice(-14),
   };
 }

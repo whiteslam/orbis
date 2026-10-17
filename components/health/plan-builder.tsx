@@ -22,7 +22,7 @@ function planDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
 }
 
-function QuestionField({ question, value, onChange, disabled }: { question: PlanQuestion; value: string; onChange: (value: string) => void; disabled: boolean }) {
+function QuestionField({ question, value, onChange, disabled }: Readonly<{ question: PlanQuestion; value: string; onChange: (value: string) => void; disabled: boolean }>) {
   if (question.kind === 'single' || question.kind === 'multi') {
     const selected = value ? value.split(' | ') : [];
     const toggle = (option: string) => {
@@ -30,11 +30,11 @@ function QuestionField({ question, value, onChange, disabled }: { question: Plan
       onChange((selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]).join(' | '));
     };
     return (
-      <div className="hl-q-options" role="group" aria-label={question.question}>
+      <fieldset className="hl-q-options" aria-label={question.question}>
         {question.options.map((option) => (
           <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => toggle(option)} disabled={disabled}>{option}</button>
         ))}
-      </div>
+      </fieldset>
     );
   }
   return (
@@ -45,7 +45,7 @@ function QuestionField({ question, value, onChange, disabled }: { question: Plan
   );
 }
 
-function BackLink({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+function BackLink({ onClick, disabled }: Readonly<{ onClick: () => void; disabled?: boolean }>) {
   return <button type="button" className="hl-back" onClick={onClick} disabled={disabled}><ChevronLeft size={14} strokeWidth={2.2} aria-hidden="true" /> All plans</button>;
 }
 
@@ -54,7 +54,7 @@ function BackLink({ onClick, disabled }: { onClick: () => void; disabled?: boole
  * way to start a new one), the interview, and a plan itself. `initialPlanId`
  * opens one plan directly from the Health tab.
  */
-export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBack }: { plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable'; initialPlanId?: string | null; onBack: () => void }) {
+export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBack }: Readonly<{ plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable'; initialPlanId?: string | null; onBack: () => void }>) {
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openPlanId, setOpenPlanId] = useState<string | null>(initialPlanId);
@@ -120,7 +120,8 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
           <h1>A few questions first</h1>
           <p className="fd-lead">Orbis has already read your documents and steps. These fill the gaps it cannot infer.</p>
         </header>
-        <div className="hl-bar big" role="progressbar" aria-label="Questions answered" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answered}><i style={{ width: `${(answered / total) * 100}%` }} /></div>
+        {/* The drawn bar is the <i>; the native <progress> beside it is what assistive tech reads. */}
+        <div className="hl-bar big"><progress className="sr-only" aria-label="Questions answered" value={answered} max={total} /><i aria-hidden="true" style={{ width: `${(answered / total) * 100}%` }} /></div>
         <p className="hl-bar-note"><b>{answered} of {total}</b> answered · at least {needed} to build your plan</p>
 
         <ol className="hl-questions">
@@ -140,7 +141,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
         </ol>
         {collapsed && <button className="fd-link hl-more" type="button" onClick={() => setShowAll(true)}>{total - FIRST_QUESTIONS} more questions</button>}
 
-        {message && <p className="fd-msg bad" role="status">{message}</p>}
+        {message && <output className="fd-msg bad">{message}</output>}
         <div className="fd-act hl-generate">
           <button type="button" onClick={() => generate(stage.questions)} disabled={!ready || isPending}>
             {working === 'plan' ? <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Writing your plan…</> : <><Sparkles size={14} aria-hidden="true" /> Generate my plan</>}
@@ -175,7 +176,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
           </button>
         </div>
       )}
-      {message && <p className="fd-msg bad" role="status">{message}</p>}
+      {message && <output className="fd-msg bad">{message}</output>}
 
       {plans.length > 0 && (
         <section className="fd-quiet">

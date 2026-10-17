@@ -137,7 +137,9 @@
     .finding { grid-template-columns: 1fr; gap: 4px; }
     .stage { padding-inline: 12px; }
   }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  /* The page's only motion is the console caret and the AI sheen; the extra
+     body prefix outranks their rules below without !important. */
+  @media (prefers-reduced-motion: reduce) { body .console .cs-caret, body .grouped .gr-ai { animation: none; transition: none; } }
 
   /* ==========================================================================
      MOCKUPS

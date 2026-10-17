@@ -16,12 +16,12 @@ const TONE_LABEL: Record<DraftTone, string> = { friendly: 'Friendly', profession
  * profile box is ticked. What comes back is added as new drafts; nothing the
  * user already wrote is touched.
  */
-export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: {
+export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: Readonly<{
   period: string;
   hasProfile: boolean;
   onClose: () => void;
   onDrafted: (posts: SocialPost[], message: string) => void;
-}) {
+}>) {
   const [brief, setBrief] = useState('');
   const [count, setCount] = useState(8);
   const [formats, setFormats] = useState<SocialFormat[]>(['post', 'reel']);
@@ -42,6 +42,9 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: {
     });
   }
 
+  let submitLabel = `Draft ${count} ${count === 1 ? 'post' : 'posts'}`;
+  if (isPending) submitLabel = 'Drafting… this can take half a minute';
+
   return (
     <div>
       <FieldSubHead
@@ -52,12 +55,12 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: {
         backLabel="Close"
       />
       <form className="fd-form" onSubmit={(event) => { event.preventDefault(); generate(); }}>
-        <label className="fd-field wide">What is this month about?
+        <label className="fd-field wide">What is this month about?{' '}
           <textarea rows={5} value={brief} maxLength={MAX_BRIEF_LENGTH} required disabled={isPending} placeholder="Launching my autumn menu, a behind-the-scenes week, two customer stories…" onChange={(event) => setBrief(event.currentTarget.value)} />
         </label>
         <p className="so-counter"><span>{brief.length.toLocaleString('en-IN')} / {MAX_BRIEF_LENGTH.toLocaleString('en-IN')}</span></p>
 
-        <label className="fd-field wide">How many posts
+        <label className="fd-field wide">How many posts{' '}
           <select value={count} disabled={isPending} onChange={(event) => setCount(Number(event.currentTarget.value))}>
             {Array.from({ length: MAX_DRAFT_COUNT }, (_, index) => index + 1).map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
@@ -100,7 +103,7 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: {
         {message && <p className="so-message error" role="alert">{message}</p>}
         <div className="fd-act">
           <button type="submit" disabled={isPending || !brief.trim() || !formats.length}>
-            <Sparkles size={14} aria-hidden="true" />{isPending ? 'Drafting… this can take half a minute' : `Draft ${count} ${count === 1 ? 'post' : 'posts'}`}
+            <Sparkles size={14} aria-hidden="true" />{submitLabel}
           </button>
         </div>
       </form>

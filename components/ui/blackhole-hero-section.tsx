@@ -593,12 +593,19 @@ function hexToLinear(hex: string): [number, number, number] {
   const h = hex.trim().replace("#", "");
   const full =
     h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h.slice(0, 6);
-  const n = parseInt(full, 16);
+  const n = Number.parseInt(full, 16);
   const srgb = [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
   return srgb.map((v) =>
-    v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+    v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
   ) as [number, number, number];
 }
+
+type GL = WebGL2RenderingContext | WebGLRenderingContext;
+
+/** The props the render loop reads, every one of them filled in. */
+type SceneSettings = Required<
+  Omit<BlackHoleHeroSectionProps, keyof React.HTMLAttributes<HTMLDivElement>>
+>;
 
 type Prog = {
   program: WebGLProgram;
@@ -611,6 +618,710 @@ type Target = {
   w: number;
   h: number;
 };
+
+/** How the offscreen targets are stored, decided once per context. */
+type TargetFormat = {
+  hdr: boolean;
+  texType: number;
+  internal: number;
+  filter: number;
+  /** Bloom is scaled down before it goes into 8 bits, and scaled back after. */
+  pack: number;
+};
+
+/** The scrim edge as the composite shader numbers it. */
+const SCRIM_DIR: Record<SceneSettings["scrim"], number> = {
+  none: 0,
+  left: 1,
+  right: 2,
+  top: 3,
+  bottom: 4,
+};
+
+/**
+ * Sub-pixel aim points, eight of them, from the Halton 2,3 sequence. They
+ * spread across the pixel far more evenly than eight random draws would,
+ * which is the whole job: the average has to cover the pixel, not clump in
+ * one corner of it.
+ */
+const HALTON: Array<[number, number]> = [
+  [0.5, 0.333], [0.25, 0.667], [0.75, 0.111], [0.125, 0.444],
+  [0.625, 0.778], [0.375, 0.222], [0.875, 0.556], [0.0625, 0.889],
+];
+
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|microsoft basic/i;
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof globalThis.matchMedia === "function" &&
+    globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function getContext(canvas: HTMLCanvasElement): GL | null {
+  const opts: WebGLContextAttributes = {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    powerPreference: "high-performance",
+    preserveDrawingBuffer: false,
+  };
+  return (canvas.getContext("webgl2", opts) ||
+    canvas.getContext("webgl", opts)) as GL | null;
+}
+
+/**
+ * Take the canvas out of the picture and leave the black background and
+ * whatever copy sits on it. A canvas whose context has died does not go
+ * quietly: it paints white, or the browser's broken-image mark, straight
+ * over the background — which is worse than showing nothing at all.
+ */
+function giveUp(host: HTMLDivElement, canvas: HTMLCanvasElement, why: string) {
+  host.dataset.webgl = why;
+  canvas.style.display = "none";
+}
+
+/**
+ * Software renderers — a machine with no GPU, a virtual desktop, the
+ * sandbox a component gallery previews in — run this shader at seconds per
+ * frame, and the browser kills the context for hanging. Spotting one and
+ * dropping to a cheap setting is the difference between a picture and a
+ * dead canvas.
+ */
+function isSoftwareRenderer(gl: GL): boolean {
+  const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = dbg
+    ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "")
+    : "";
+  return SOFTWARE_RENDERER.test(renderer);
+}
+
+/** The half-float texture format, or null where this context cannot render to one. */
+function halfFloatFormat(
+  gl: GL,
+  isGL2: boolean
+): { texType: number; internal: number } | null {
+  if (isGL2) {
+    const g2 = gl as WebGL2RenderingContext;
+    const ok =
+      g2.getExtension("EXT_color_buffer_half_float") ||
+      g2.getExtension("EXT_color_buffer_float");
+    return ok ? { texType: g2.HALF_FLOAT, internal: g2.RGBA16F } : null;
+  }
+  const hf = gl.getExtension("OES_texture_half_float");
+  const cb = gl.getExtension("EXT_color_buffer_half_float");
+  return hf && cb ? { texType: hf.HALF_FLOAT_OES, internal: gl.RGBA } : null;
+}
+
+/**
+ * Half floats keep the gas bright enough to bloom properly. Where they are
+ * missing the scene is packed with Reinhard into 8 bits instead and
+ * unpacked on the way out — coarser, but it holds the highlights.
+ */
+function pickTargetFormat(gl: GL, isGL2: boolean): TargetFormat {
+  const half = halfFloatFormat(gl, isGL2);
+  const hdr = half !== null;
+  const linearOK =
+    isGL2 ||
+    !!gl.getExtension("OES_texture_half_float_linear") ||
+    !hdr;
+  return {
+    hdr,
+    texType: half?.texType ?? gl.UNSIGNED_BYTE,
+    internal: half?.internal ?? gl.RGBA,
+    filter: linearOK ? gl.LINEAR : gl.NEAREST,
+    pack: hdr ? 1 : 0.12,
+  };
+}
+
+/* --- shader plumbing ------------------------------------------------------ */
+
+function compile(gl: GL, type: number, src: string): WebGLShader | null {
+  const sh = gl.createShader(type);
+  if (!sh) return null;
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    // Short and once per shader. When a context dies every shader fails at
+    // the same moment with an empty log, and dumping five listings of GLSL
+    // into the console buries whatever the real problem was.
+    console.error("blackhole: shader failed —", gl.getShaderInfoLog(sh) || "no log (context lost?)");
+    gl.deleteShader(sh);
+    return null;
+  }
+  return sh;
+}
+
+function link(gl: GL, fragSrc: string): Prog | null {
+  const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+  const fs = compile(gl, gl.FRAGMENT_SHADER, fragSrc);
+  if (!vs || !fs) return null;
+  const program = gl.createProgram();
+  if (!program) return null;
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.bindAttribLocation(program, 0, "aPos");
+  gl.linkProgram(program);
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(program));
+    return null;
+  }
+  const u: Record<string, WebGLUniformLocation | null> = {};
+  const n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS) as number;
+  for (let i = 0; i < n; i++) {
+    const info = gl.getActiveUniform(program, i);
+    if (info) u[info.name] = gl.getUniformLocation(program, info.name);
+  }
+  return { program, u };
+}
+
+/* --- render targets ------------------------------------------------------- */
+
+function makeTarget(gl: GL, fmt: TargetFormat, w: number, h: number): Target | null {
+  const tex = gl.createTexture();
+  const fb = gl.createFramebuffer();
+  if (!tex || !fb) return null;
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, fmt.internal, w, h, 0, gl.RGBA, fmt.texType, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, fmt.filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, fmt.filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(
+    gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0
+  );
+  const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (status !== gl.FRAMEBUFFER_COMPLETE) {
+    gl.deleteTexture(tex);
+    gl.deleteFramebuffer(fb);
+    return null;
+  }
+  return { fb, tex, w, h };
+}
+
+/* --- camera ---------------------------------------------------------------- */
+
+/** Where the camera sits and which way it faces: forward, right and up. */
+type CameraFrame = {
+  dist: number;
+  pos: [number, number, number];
+  fwd: [number, number, number];
+  right: [number, number, number];
+  up: [number, number, number];
+};
+
+function cameraFrame(C: SceneSettings, t: number): CameraFrame {
+  // Camera: an orbit about the hole, at a fixed height above the disc.
+  const az = (C.azimuth + C.orbitSpeed * t) * RAD;
+  const el = Math.max(-88, Math.min(88, C.elevation)) * RAD;
+  const dist = Math.max(2.2, C.distance);
+  const ce = Math.cos(el);
+  const camX = dist * ce * Math.cos(az);
+  const camY = dist * Math.sin(el);
+  const camZ = dist * ce * Math.sin(az);
+
+  // Look at the hole. Then roll about the line of sight, which changes
+  // nothing in space and only decides how the disc lies across the frame.
+  const fx = -camX / dist, fy = -camY / dist, fz = -camZ / dist;
+  let rx = fz, ry = 0, rz = -fx;          // cross(fwd, worldUp), worldUp = +y
+  const rl = Math.hypot(rx, ry, rz) || 1;
+  rx /= rl; ry /= rl; rz /= rl;
+  const ux = ry * fz - rz * fy;
+  const uy = rz * fx - rx * fz;
+  const uz = rx * fy - ry * fx;
+  const cr = Math.cos(C.roll * RAD);
+  const sr = Math.sin(C.roll * RAD);
+  const RX = rx * cr + ux * sr, RY = ry * cr + uy * sr, RZ = rz * cr + uz * sr;
+  const UX = -rx * sr + ux * cr, UY = -ry * sr + uy * cr, UZ = -rz * sr + uz * cr;
+
+  return {
+    dist,
+    pos: [camX, camY, camZ],
+    fwd: [fx, fy, fz],
+    right: [RX, RY, RZ],
+    up: [UX, UY, UZ],
+  };
+}
+
+/** Ray steps for this frame: the prop, scaled by quality, inside the shader's limits. */
+function raySteps(steps: number, quality: number, software: boolean): number {
+  if (software) return 130;
+  const floor = quality < 1 ? 100 : 60;
+  return Math.max(floor, Math.min(460, Math.round(steps * (0.55 + 0.45 * quality))));
+}
+
+/* -------------------------------------------------------------------------- */
+/*  The scene                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Owns one WebGL context's worth of programs, targets and render loop. The
+ * component starts one when it mounts and disposes of it when it unmounts.
+ */
+class BlackHoleScene {
+  private readonly host: HTMLDivElement;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly gl: GL;
+  /** The render loop reads the latest props off this ref. */
+  private readonly props: React.RefObject<SceneSettings>;
+  private readonly reduced: boolean;
+  private readonly software: boolean;
+  private readonly fmt: TargetFormat;
+
+  private sceneProg: Prog | null = null;
+  private blendProg: Prog | null = null;
+  private brightProg: Prog | null = null;
+  private blurProg: Prog | null = null;
+  private compProg: Prog | null = null;
+  private vbo: WebGLBuffer | null = null;
+  private scene: Target | null = null;
+  private histA: Target | null = null;
+  private histB: Target | null = null;
+  private bloomA: Target | null = null;
+  private bloomB: Target | null = null;
+  /** Frames folded into the running average since it was last thrown away. */
+  private settled = 0;
+
+  private width = 0;
+  private height = 0;
+  private sceneW = 0;
+  private sceneH = 0;
+  /**
+   * Multiplier on render scale and ray steps, stepped down when the device
+   * cannot hold its frame rate. 1 is what the props ask for.
+   */
+  private quality = 1;
+  /** Set when even the cheapest setting was too slow: one still, no loop. */
+  private stalled = false;
+
+  /** Simulation clock, in seconds. Advances only while the thing is running. */
+  private clock: number;
+  private lastFrame = 0;
+  private running = true;
+  private visible = true;
+  private raf = 0;
+
+  // Rendered-frame intervals, summed over a short window. If the average is
+  // far over what was asked for, the device is struggling: quality drops a
+  // step and the window starts again. Out of steps, it settles one still.
+  private sampleSum = 0;
+  private sampleCount = 0;
+
+  private ro: ResizeObserver | null = null;
+  private io: IntersectionObserver | null = null;
+
+  constructor(
+    host: HTMLDivElement,
+    canvas: HTMLCanvasElement,
+    gl: GL,
+    props: React.RefObject<SceneSettings>
+  ) {
+    this.host = host;
+    this.canvas = canvas;
+    this.gl = gl;
+    this.props = props;
+    this.reduced = prefersReducedMotion();
+    this.software = isSoftwareRenderer(gl);
+    const isGL2 = typeof WebGL2RenderingContext !== "undefined" &&
+      gl instanceof WebGL2RenderingContext;
+    this.fmt = pickTargetFormat(gl, isGL2);
+    this.clock = this.reduced ? 6 : 0;
+  }
+
+  /* --- resources ---------------------------------------------------------- */
+
+  build(): boolean {
+    const gl = this.gl;
+    this.sceneProg = link(gl, SCENE_FRAG);
+    this.blendProg = link(gl, BLEND_FRAG);
+    this.brightProg = link(gl, BRIGHT_FRAG);
+    this.blurProg = link(gl, BLUR_FRAG);
+    this.compProg = link(gl, COMPOSITE_FRAG);
+    if (!this.sceneProg || !this.blendProg || !this.brightProg || !this.blurProg || !this.compProg) return false;
+
+    // One triangle, big enough to cover the frame. Cheaper than two, and no
+    // seam down the diagonal.
+    this.vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 3, -1, -1, 3]),
+      gl.STATIC_DRAW
+    );
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    return true;
+  }
+
+  private dropTargets() {
+    for (const t of [this.scene, this.histA, this.histB, this.bloomA, this.bloomB]) {
+      if (!t) continue;
+      this.gl.deleteTexture(t.tex);
+      this.gl.deleteFramebuffer(t.fb);
+    }
+    this.scene = null;
+    this.histA = null;
+    this.histB = null;
+    this.bloomA = null;
+    this.bloomB = null;
+    this.settled = 0;
+  }
+
+  /** Forgets the current size, so the next resize rebuilds every target. */
+  private invalidateSize() {
+    this.width = 0;
+    this.height = 0;
+    this.sceneW = 0;
+    this.sceneH = 0;
+  }
+
+  private resize() {
+    const C = this.props.current;
+    const rect = this.host.getBoundingClientRect();
+    const dpr = this.software
+      ? 1
+      : Math.min(globalThis.devicePixelRatio || 1, Math.max(1, C.maxDpr));
+    const cssW = Math.max(1, Math.round(rect.width));
+    const cssH = Math.max(1, Math.round(rect.height));
+    const scale = this.software
+      ? 0.34
+      : Math.max(0.28, Math.min(1, Math.max(0.4, C.resolution)) * this.quality);
+    const w = Math.max(2, Math.round(cssW * dpr));
+    const h = Math.max(2, Math.round(cssH * dpr));
+    const sw = Math.max(2, Math.round(w * scale));
+    const sh = Math.max(2, Math.round(h * scale));
+    if (w === this.width && h === this.height && sw === this.sceneW && sh === this.sceneH) return;
+    this.width = w;
+    this.height = h;
+    this.sceneW = sw;
+    this.sceneH = sh;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.canvas.style.width = `${cssW}px`;
+    this.canvas.style.height = `${cssH}px`;
+    this.dropTargets();
+    this.scene = makeTarget(this.gl, this.fmt, sw, sh);
+    this.histA = makeTarget(this.gl, this.fmt, sw, sh);
+    this.histB = makeTarget(this.gl, this.fmt, sw, sh);
+    const bw = Math.max(2, sw >> 2);
+    const bh = Math.max(2, sh >> 2);
+    this.bloomA = makeTarget(this.gl, this.fmt, bw, bh);
+    this.bloomB = makeTarget(this.gl, this.fmt, bw, bh);
+  }
+
+  /* --- draw --------------------------------------------------------------- */
+
+  private pass(prog: Prog, target: Target | null) {
+    const gl = this.gl;
+    gl.useProgram(prog.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
+    gl.viewport(0, 0, target ? target.w : this.width, target ? target.h : this.height);
+  }
+
+  private draw() {
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
+  }
+
+  private bind(tex: WebGLTexture, unit: number) {
+    this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+  }
+
+  private render(t: number) {
+    const { sceneProg, blendProg, brightProg, blurProg, compProg } = this;
+    if (!sceneProg || !blendProg || !brightProg || !blurProg || !compProg) return;
+    const { scene, histA, histB, bloomA, bloomB } = this;
+    if (!scene || !histA || !histB || !bloomA || !bloomB) return;
+    const C = this.props.current;
+
+    this.drawScene(sceneProg, scene, C, t);
+    const shown = this.foldIntoHistory(blendProg, scene, histA, histB);
+    this.drawBloom(brightProg, blurProg, shown, bloomA, bloomB);
+    this.composite(compProg, shown, bloomA, C, t);
+  }
+
+  /** The ray-marched frame itself, into the scene target. */
+  private drawScene(prog: Prog, scene: Target, C: SceneSettings, t: number) {
+    const gl = this.gl;
+    const cam = cameraFrame(C, t);
+    const hot = hexToLinear(C.hotColor);
+    const mid = hexToLinear(C.midColor);
+    const cool = hexToLinear(C.coolColor);
+    const outer = Math.max(C.diskInner + 0.5, C.diskOuter);
+
+    this.pass(prog, scene);
+    const u = prog.u;
+    gl.uniform2f(u.uRes, scene.w, scene.h);
+    gl.uniform1f(u.uTime, t);
+    gl.uniform3f(u.uCamPos, cam.pos[0], cam.pos[1], cam.pos[2]);
+    gl.uniform3f(u.uRight, cam.right[0], cam.right[1], cam.right[2]);
+    gl.uniform3f(u.uUp, cam.up[0], cam.up[1], cam.up[2]);
+    gl.uniform3f(u.uFwd, cam.fwd[0], cam.fwd[1], cam.fwd[2]);
+    gl.uniform1f(u.uTanHalf, Math.tan(Math.max(8, Math.min(110, C.fov)) * 0.5 * RAD));
+    // gl_FragCoord counts up from the bottom; the prop reads from the top.
+    gl.uniform2f(u.uFocus, C.focus[0], 1 - C.focus[1]);
+    gl.uniform1f(u.uSteps, raySteps(C.steps, this.quality, this.software));
+    gl.uniform1f(u.uSkyR, Math.max(cam.dist * 1.35, outer * 2.4));
+    gl.uniform1f(u.uDiskIn, Math.max(1.05, C.diskInner));
+    gl.uniform1f(u.uDiskOut, outer);
+    gl.uniform1f(u.uThick, Math.max(0.02, C.diskThickness));
+    gl.uniform1f(u.uDensity, Math.max(0, C.diskDensity));
+    gl.uniform1f(u.uSpin, C.spinSpeed * 6.2831853);
+    gl.uniform1f(u.uGrain, Math.max(0.02, C.grain));
+    gl.uniform1f(u.uBright, Math.max(0, C.brightness));
+    gl.uniform1f(u.uDoppler, Math.max(0, Math.min(1, C.doppler)));
+    gl.uniform3f(u.uHot, hot[0], hot[1], hot[2]);
+    gl.uniform3f(u.uMid, mid[0], mid[1], mid[2]);
+    gl.uniform3f(u.uCool, cool[0], cool[1], cool[2]);
+    gl.uniform1f(u.uStars, Math.max(0, C.starBrightness));
+    gl.uniform1f(u.uEncode, this.fmt.hdr ? 0 : 1);
+    const h = HALTON[this.settled % HALTON.length];
+    gl.uniform2f(u.uJitter, h[0] - 0.5, h[1] - 0.5);
+    gl.uniform1f(u.uSeed, (this.settled % 64) * 17.13);
+    this.draw();
+  }
+
+  /**
+   * Folds the new frame into the running average and returns the target now
+   * holding it. Weight enough history to bury the noise, but not so much that
+   * the gas drags a tail. The first frame after a resize takes the whole
+   * picture, since there is no history worth keeping.
+   */
+  private foldIntoHistory(prog: Prog, scene: Target, histA: Target, histB: Target): Target {
+    const gl = this.gl;
+    const alpha = this.settled === 0 ? 1 : 0.14;
+    this.pass(prog, histB);
+    this.bind(scene.tex, 0);
+    this.bind(histA.tex, 1);
+    gl.uniform1i(prog.u.uCur, 0);
+    gl.uniform1i(prog.u.uPrev, 1);
+    gl.uniform1f(prog.u.uAlpha, alpha);
+    this.draw();
+    this.histA = histB;
+    this.histB = histA;
+    this.settled++;
+    return histB;
+  }
+
+  /** Bright pass, then two rounds of blur, the second wider. Leaves the bloom in bloomA. */
+  private drawBloom(brightProg: Prog, blurProg: Prog, shown: Target, bloomA: Target, bloomB: Target) {
+    const gl = this.gl;
+    this.pass(brightProg, bloomA);
+    this.bind(shown.tex, 0);
+    gl.uniform1i(brightProg.u.uTex, 0);
+    gl.uniform2f(brightProg.u.uTexel, 1 / shown.w, 1 / shown.h);
+    gl.uniform1f(brightProg.u.uDecode, this.fmt.hdr ? 0 : 1);
+    gl.uniform1f(brightProg.u.uPack, this.fmt.pack);
+    gl.uniform1f(brightProg.u.uThreshold, 0.85);
+    this.draw();
+
+    this.blurStep(blurProg, bloomA, bloomB, 1, 0);
+    this.blurStep(blurProg, bloomB, bloomA, 0, 1);
+    this.blurStep(blurProg, bloomA, bloomB, 2.6, 0);
+    this.blurStep(blurProg, bloomB, bloomA, 0, 2.6);
+  }
+
+  private blurStep(prog: Prog, src: Target, dst: Target, dx: number, dy: number) {
+    this.pass(prog, dst);
+    this.bind(src.tex, 0);
+    this.gl.uniform1i(prog.u.uTex, 0);
+    this.gl.uniform2f(prog.u.uStep, dx / dst.w, dy / dst.h);
+    this.draw();
+  }
+
+  private composite(prog: Prog, shown: Target, bloom: Target, C: SceneSettings, t: number) {
+    const gl = this.gl;
+    this.pass(prog, null);
+    this.bind(shown.tex, 0);
+    this.bind(bloom.tex, 1);
+    gl.uniform1i(prog.u.uScene, 0);
+    gl.uniform1i(prog.u.uBloom, 1);
+    gl.uniform2f(prog.u.uRes, this.width, this.height);
+    gl.uniform1f(prog.u.uDecode, this.fmt.hdr ? 0 : 1);
+    gl.uniform1f(prog.u.uPack, this.fmt.pack);
+    gl.uniform1f(prog.u.uGlow, Math.max(0, C.glow) * 0.26);
+    gl.uniform1f(prog.u.uExposure, Math.max(0.05, C.exposure));
+    gl.uniform1f(prog.u.uVignette, Math.max(0, Math.min(1, C.vignette)));
+    gl.uniform1f(prog.u.uScrimDir, SCRIM_DIR[C.scrim] ?? 0);
+    gl.uniform1f(prog.u.uScrimAmt, Math.max(0, Math.min(1, C.scrimStrength)));
+    gl.uniform1f(prog.u.uSeed, (t * 60) % 1000);
+    this.draw();
+  }
+
+  /**
+   * Draws one still, properly. Nothing is animating in these cases — a
+   * resize while paused, or a reader who has asked for no motion — so the
+   * frames the average would normally be given over time are taken all at
+   * once instead. Each pass aims at a different point inside the pixel, so
+   * what lands on screen is settled rather than speckled.
+   */
+  private settle(passes: number) {
+    for (let i = 0; i < passes; i++) this.render(this.clock);
+  }
+
+  /* --- loop --------------------------------------------------------------- */
+
+  private readonly tick = (now: number): void => {
+    if (!this.running) return;
+    this.raf = requestAnimationFrame(this.tick);
+    if (!this.visible) {
+      this.lastFrame = 0;
+      this.sampleSum = 0;
+      this.sampleCount = 0;
+      return;
+    }
+    const fps = this.props.current.maxFps;
+    const gap = fps > 0 ? 1000 / fps : 0;
+    const since = this.lastFrame ? now - this.lastFrame : 0;
+    // A little under the gap, so a 60 Hz display lands on every second frame
+    // for a 30 cap instead of every third.
+    if (this.lastFrame && since < gap - 4) return;
+    const dt = this.lastFrame ? Math.min(0.05, since / 1000) : 0;
+    this.lastFrame = now;
+    if (!this.props.current.paused && !this.reduced) this.clock += dt;
+    this.render(this.clock);
+    this.sampleFrame(since, gap);
+  };
+
+  /** Adds one frame interval to the window, and judges the window once it is full. */
+  private sampleFrame(since: number, gap: number) {
+    if (since > 0 && since < 400) {
+      this.sampleSum += since;
+      this.sampleCount++;
+      if (this.sampleCount >= 24) this.judgeFrameRate(gap);
+    }
+  }
+
+  private judgeFrameRate(gap: number) {
+    const avg = this.sampleSum / this.sampleCount;
+    this.sampleSum = 0;
+    this.sampleCount = 0;
+    if (avg > Math.max(46, gap * 1.5)) {
+      if (this.quality > 0.55) {
+        this.quality *= 0.75;
+        this.invalidateSize();
+        this.resize();
+      } else {
+        this.stalled = true;
+        this.running = false;
+        cancelAnimationFrame(this.raf);
+        this.host.dataset.webgl = "still";
+        this.settle(6);
+      }
+    }
+  }
+
+  /** Sizes the targets, draws the first frame and, motion allowed, starts the loop. */
+  private begin() {
+    this.resize();
+    this.settle(this.reduced ? 16 : 1);
+    if (!this.reduced) this.raf = requestAnimationFrame(this.tick);
+  }
+
+  /* --- the world ---------------------------------------------------------- */
+
+  start() {
+    this.begin();
+
+    this.ro = new ResizeObserver(this.onResize);
+    this.ro.observe(this.host);
+
+    this.io = new IntersectionObserver(this.onIntersect, { threshold: 0 });
+    this.io.observe(this.host);
+
+    document.addEventListener("visibilitychange", this.onVisibility);
+    this.canvas.addEventListener("webglcontextlost", this.onLost);
+    this.canvas.addEventListener("webglcontextrestored", this.onRestored);
+  }
+
+  private readonly onResize = () => {
+    this.resize();
+    if (this.reduced || this.props.current.paused || this.stalled) this.settle(this.stalled ? 6 : 16);
+  };
+
+  private readonly onIntersect = (entries: IntersectionObserverEntry[]) => {
+    this.visible = entries[0]?.isIntersecting ?? true;
+  };
+
+  private readonly onVisibility = () => {
+    this.visible = !document.hidden;
+    this.lastFrame = 0;
+  };
+
+  private readonly onLost = (event: Event) => {
+    // Asking for the context back is only worth it if it comes back working.
+    // Until it does the canvas is hidden, because a dead one paints white.
+    event.preventDefault();
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    this.canvas.style.display = "none";
+  };
+
+  private readonly onRestored = () => {
+    this.invalidateSize();
+    if (!this.build()) {
+      giveUp(this.host, this.canvas, "lost");
+      return;
+    }
+    this.canvas.style.display = "";
+    this.host.dataset.webgl = "";
+    this.running = true;
+    this.lastFrame = 0;
+    this.begin();
+  };
+
+  dispose() {
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    this.ro?.disconnect();
+    this.io?.disconnect();
+    document.removeEventListener("visibilitychange", this.onVisibility);
+    this.canvas.removeEventListener("webglcontextlost", this.onLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.onRestored);
+    this.dropTargets();
+    if (this.vbo) this.gl.deleteBuffer(this.vbo);
+    for (const p of [this.sceneProg, this.blendProg, this.brightProg, this.blurProg, this.compProg]) {
+      if (p) this.gl.deleteProgram(p.program);
+    }
+    // The context is deliberately left alive. Killing it here with
+    // WEBGL_lose_context looks tidy and is a trap: React's StrictMode runs
+    // every effect twice on the same DOM — setup, cleanup, setup — and a
+    // canvas whose context has been lost hands the same dead context back to
+    // the next getContext call. Every shader then fails to compile with an
+    // empty log, which is a miserable thing to debug. Deleting what was
+    // allocated is enough; the context goes when the canvas does.
+  }
+}
+
+/**
+ * Starts the scene on a canvas and returns its cleanup, or nothing when there
+ * is no working WebGL to start it on.
+ */
+function startBlackHole(
+  host: HTMLDivElement,
+  canvas: HTMLCanvasElement,
+  props: React.RefObject<SceneSettings>
+): (() => void) | undefined {
+  const gl = getContext(canvas);
+  if (!gl) {
+    giveUp(host, canvas, "unsupported");
+    return undefined;
+  }
+  const scene = new BlackHoleScene(host, canvas, gl, props);
+  if (!scene.build()) {
+    giveUp(host, canvas, "build-failed");
+    return undefined;
+  }
+  scene.start();
+  return () => scene.dispose();
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Component                                                                 */
@@ -649,11 +1360,11 @@ export function BlackHoleHeroSection({
   className = "",
   children,
   ...rest
-}: BlackHoleHeroSectionProps) {
+}: Readonly<BlackHoleHeroSectionProps>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const props = useRef({
+  const props = useRef<SceneSettings>({
     distance, elevation, azimuth, orbitSpeed, roll, fov, diskInner, diskOuter,
     diskThickness, diskDensity, brightness, spinSpeed, grain, doppler, hotColor,
     midColor, coolColor, starBrightness, glow, exposure, vignette, steps,
@@ -673,549 +1384,8 @@ export function BlackHoleHeroSection({
   useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
-    if (!host || !canvas) return;
-
-    const reduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const opts: WebGLContextAttributes = {
-      alpha: false,
-      antialias: false,
-      depth: false,
-      stencil: false,
-      powerPreference: "high-performance",
-      preserveDrawingBuffer: false,
-    };
-    const gl = (canvas.getContext("webgl2", opts) ||
-      canvas.getContext("webgl", opts)) as
-      | WebGL2RenderingContext
-      | WebGLRenderingContext
-      | null;
-
-    /**
-     * Take the canvas out of the picture and leave the black background and
-     * whatever copy sits on it. A canvas whose context has died does not go
-     * quietly: it paints white, or the browser's broken-image mark, straight
-     * over the background — which is worse than showing nothing at all.
-     */
-    function giveUp(why: string) {
-      host!.dataset.webgl = why;
-      canvas!.style.display = "none";
-    }
-
-    if (!gl) {
-      giveUp("unsupported");
-      return;
-    }
-
-    // Software renderers — a machine with no GPU, a virtual desktop, the
-    // sandbox a component gallery previews in — run this shader at seconds per
-    // frame, and the browser kills the context for hanging. Spotting one and
-    // dropping to a cheap setting is the difference between a picture and a
-    // dead canvas.
-    const dbg = gl.getExtension("WEBGL_debug_renderer_info");
-    const renderer = dbg
-      ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "")
-      : "";
-    const software = /swiftshader|llvmpipe|softpipe|software|microsoft basic/i.test(renderer);
-    const isGL2 = typeof WebGL2RenderingContext !== "undefined" &&
-      gl instanceof WebGL2RenderingContext;
-
-    /* --- shader plumbing -------------------------------------------------- */
-
-    function compile(type: number, src: string): WebGLShader | null {
-      const sh = gl!.createShader(type);
-      if (!sh) return null;
-      gl!.shaderSource(sh, src);
-      gl!.compileShader(sh);
-      if (!gl!.getShaderParameter(sh, gl!.COMPILE_STATUS)) {
-        // Short and once per shader. When a context dies every shader fails at
-        // the same moment with an empty log, and dumping five listings of GLSL
-        // into the console buries whatever the real problem was.
-        console.error("blackhole: shader failed —", gl!.getShaderInfoLog(sh) || "no log (context lost?)");
-        gl!.deleteShader(sh);
-        return null;
-      }
-      return sh;
-    }
-
-    function link(fragSrc: string): Prog | null {
-      const vs = compile(gl!.VERTEX_SHADER, VERT);
-      const fs = compile(gl!.FRAGMENT_SHADER, fragSrc);
-      if (!vs || !fs) return null;
-      const program = gl!.createProgram();
-      if (!program) return null;
-      gl!.attachShader(program, vs);
-      gl!.attachShader(program, fs);
-      gl!.bindAttribLocation(program, 0, "aPos");
-      gl!.linkProgram(program);
-      gl!.deleteShader(vs);
-      gl!.deleteShader(fs);
-      if (!gl!.getProgramParameter(program, gl!.LINK_STATUS)) {
-        console.error(gl!.getProgramInfoLog(program));
-        return null;
-      }
-      const u: Record<string, WebGLUniformLocation | null> = {};
-      const n = gl!.getProgramParameter(program, gl!.ACTIVE_UNIFORMS) as number;
-      for (let i = 0; i < n; i++) {
-        const info = gl!.getActiveUniform(program, i);
-        if (info) u[info.name] = gl!.getUniformLocation(program, info.name);
-      }
-      return { program, u };
-    }
-
-    /* --- render targets --------------------------------------------------- */
-
-    // Half floats keep the gas bright enough to bloom properly. Where they are
-    // missing the scene is packed with Reinhard into 8 bits instead and
-    // unpacked on the way out — coarser, but it holds the highlights.
-    let hdr = true;
-    let texType: number = gl.UNSIGNED_BYTE;
-    let internal: number = gl.RGBA;
-    if (isGL2) {
-      const g2 = gl as WebGL2RenderingContext;
-      const ok =
-        g2.getExtension("EXT_color_buffer_half_float") ||
-        g2.getExtension("EXT_color_buffer_float");
-      if (ok) {
-        texType = g2.HALF_FLOAT;
-        internal = g2.RGBA16F;
-      } else hdr = false;
-    } else {
-      const hf = gl.getExtension("OES_texture_half_float");
-      const cb = gl.getExtension("EXT_color_buffer_half_float");
-      if (hf && cb) texType = hf.HALF_FLOAT_OES;
-      else hdr = false;
-    }
-    if (!hdr) {
-      texType = gl.UNSIGNED_BYTE;
-      internal = gl.RGBA;
-    }
-    const linearOK =
-      isGL2 ||
-      !!gl.getExtension("OES_texture_half_float_linear") ||
-      !hdr;
-    const filter = linearOK ? gl.LINEAR : gl.NEAREST;
-    /** Bloom is scaled down before it goes into 8 bits, and scaled back after. */
-    const pack = hdr ? 1 : 0.12;
-
-    function makeTarget(w: number, h: number): Target | null {
-      const tex = gl!.createTexture();
-      const fb = gl!.createFramebuffer();
-      if (!tex || !fb) return null;
-      gl!.bindTexture(gl!.TEXTURE_2D, tex);
-      gl!.texImage2D(gl!.TEXTURE_2D, 0, internal, w, h, 0, gl!.RGBA, texType, null);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, filter);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, filter);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
-      gl!.bindFramebuffer(gl!.FRAMEBUFFER, fb);
-      gl!.framebufferTexture2D(
-        gl!.FRAMEBUFFER, gl!.COLOR_ATTACHMENT0, gl!.TEXTURE_2D, tex, 0
-      );
-      const status = gl!.checkFramebufferStatus(gl!.FRAMEBUFFER);
-      gl!.bindFramebuffer(gl!.FRAMEBUFFER, null);
-      if (status !== gl!.FRAMEBUFFER_COMPLETE) {
-        gl!.deleteTexture(tex);
-        gl!.deleteFramebuffer(fb);
-        return null;
-      }
-      return { fb, tex, w, h };
-    }
-
-    /* --- resources -------------------------------------------------------- */
-
-    let sceneProg: Prog | null = null;
-    let blendProg: Prog | null = null;
-    let brightProg: Prog | null = null;
-    let blurProg: Prog | null = null;
-    let compProg: Prog | null = null;
-    let vbo: WebGLBuffer | null = null;
-    let scene: Target | null = null;
-    let histA: Target | null = null;
-    let histB: Target | null = null;
-    let bloomA: Target | null = null;
-    let bloomB: Target | null = null;
-    /** Frames folded into the running average since it was last thrown away. */
-    let settled = 0;
-
-    let width = 0;
-    let height = 0;
-    let sceneW = 0;
-    let sceneH = 0;
-    /**
-     * Multiplier on render scale and ray steps, stepped down when the device
-     * cannot hold its frame rate. 1 is what the props ask for.
-     */
-    let quality = 1;
-    /** Set when even the cheapest setting was too slow: one still, no loop. */
-    let stalled = false;
-
-    function build(): boolean {
-      sceneProg = link(SCENE_FRAG);
-      blendProg = link(BLEND_FRAG);
-      brightProg = link(BRIGHT_FRAG);
-      blurProg = link(BLUR_FRAG);
-      compProg = link(COMPOSITE_FRAG);
-      if (!sceneProg || !blendProg || !brightProg || !blurProg || !compProg) return false;
-
-      // One triangle, big enough to cover the frame. Cheaper than two, and no
-      // seam down the diagonal.
-      vbo = gl!.createBuffer();
-      gl!.bindBuffer(gl!.ARRAY_BUFFER, vbo);
-      gl!.bufferData(
-        gl!.ARRAY_BUFFER,
-        new Float32Array([-1, -1, 3, -1, -1, 3]),
-        gl!.STATIC_DRAW
-      );
-      gl!.enableVertexAttribArray(0);
-      gl!.vertexAttribPointer(0, 2, gl!.FLOAT, false, 0, 0);
-      gl!.disable(gl!.DEPTH_TEST);
-      gl!.disable(gl!.BLEND);
-      return true;
-    }
-
-    function dropTargets() {
-      for (const t of [scene, histA, histB, bloomA, bloomB]) {
-        if (!t) continue;
-        gl!.deleteTexture(t.tex);
-        gl!.deleteFramebuffer(t.fb);
-      }
-      scene = null;
-      histA = null;
-      histB = null;
-      bloomA = null;
-      bloomB = null;
-      settled = 0;
-    }
-
-    function resize() {
-      const rect = host!.getBoundingClientRect();
-      const dpr = software
-        ? 1
-        : Math.min(window.devicePixelRatio || 1, Math.max(1, props.current.maxDpr));
-      const cssW = Math.max(1, Math.round(rect.width));
-      const cssH = Math.max(1, Math.round(rect.height));
-      const scale = software
-        ? 0.34
-        : Math.max(0.28, Math.min(1, Math.max(0.4, props.current.resolution)) * quality);
-      const w = Math.max(2, Math.round(cssW * dpr));
-      const h = Math.max(2, Math.round(cssH * dpr));
-      const sw = Math.max(2, Math.round(w * scale));
-      const sh = Math.max(2, Math.round(h * scale));
-      if (w === width && h === height && sw === sceneW && sh === sceneH) return;
-      width = w;
-      height = h;
-      sceneW = sw;
-      sceneH = sh;
-      canvas!.width = w;
-      canvas!.height = h;
-      canvas!.style.width = cssW + "px";
-      canvas!.style.height = cssH + "px";
-      dropTargets();
-      scene = makeTarget(sw, sh);
-      histA = makeTarget(sw, sh);
-      histB = makeTarget(sw, sh);
-      const bw = Math.max(2, sw >> 2);
-      const bh = Math.max(2, sh >> 2);
-      bloomA = makeTarget(bw, bh);
-      bloomB = makeTarget(bw, bh);
-    }
-
-    /* --- draw ------------------------------------------------------------- */
-
-    /** Simulation clock, in seconds. Advances only while the thing is running. */
-    let clock = reduced ? 6 : 0;
-    let lastFrame = 0;
-    let running = true;
-    let visible = true;
-    let raf = 0;
-
-    function pass(prog: Prog, target: Target | null) {
-      gl!.useProgram(prog.program);
-      gl!.bindFramebuffer(gl!.FRAMEBUFFER, target ? target.fb : null);
-      gl!.viewport(0, 0, target ? target.w : width, target ? target.h : height);
-    }
-
-    function draw() {
-      gl!.drawArrays(gl!.TRIANGLES, 0, 3);
-    }
-
-    function bind(tex: WebGLTexture, unit: number) {
-      gl!.activeTexture(gl!.TEXTURE0 + unit);
-      gl!.bindTexture(gl!.TEXTURE_2D, tex);
-    }
-
-    /**
-     * Sub-pixel aim points, eight of them, from the Halton 2,3 sequence. They
-     * spread across the pixel far more evenly than eight random draws would,
-     * which is the whole job: the average has to cover the pixel, not clump in
-     * one corner of it.
-     */
-    const HALTON: Array<[number, number]> = [
-      [0.5, 0.333], [0.25, 0.667], [0.75, 0.111], [0.125, 0.444],
-      [0.625, 0.778], [0.375, 0.222], [0.875, 0.556], [0.0625, 0.889],
-    ];
-
-    function render(t: number) {
-      if (!sceneProg || !blendProg || !brightProg || !blurProg || !compProg) return;
-      if (!scene || !histA || !histB || !bloomA || !bloomB) return;
-      const C = props.current;
-
-      // Camera: an orbit about the hole, at a fixed height above the disc.
-      const az = (C.azimuth + C.orbitSpeed * t) * RAD;
-      const el = Math.max(-88, Math.min(88, C.elevation)) * RAD;
-      const dist = Math.max(2.2, C.distance);
-      const ce = Math.cos(el);
-      const camX = dist * ce * Math.cos(az);
-      const camY = dist * Math.sin(el);
-      const camZ = dist * ce * Math.sin(az);
-
-      // Look at the hole. Then roll about the line of sight, which changes
-      // nothing in space and only decides how the disc lies across the frame.
-      const fx = -camX / dist, fy = -camY / dist, fz = -camZ / dist;
-      let rx = fz, ry = 0, rz = -fx;          // cross(fwd, worldUp), worldUp = +y
-      const rl = Math.hypot(rx, ry, rz) || 1;
-      rx /= rl; ry /= rl; rz /= rl;
-      const ux = ry * fz - rz * fy;
-      const uy = rz * fx - rx * fz;
-      const uz = rx * fy - ry * fx;
-      const cr = Math.cos(C.roll * RAD);
-      const sr = Math.sin(C.roll * RAD);
-      const RX = rx * cr + ux * sr, RY = ry * cr + uy * sr, RZ = rz * cr + uz * sr;
-      const UX = -rx * sr + ux * cr, UY = -ry * sr + uy * cr, UZ = -rz * sr + uz * cr;
-
-      const hot = hexToLinear(C.hotColor);
-      const mid = hexToLinear(C.midColor);
-      const cool = hexToLinear(C.coolColor);
-      const outer = Math.max(C.diskInner + 0.5, C.diskOuter);
-
-      /* scene ------------------------------------------------------------- */
-      pass(sceneProg, scene);
-      const u = sceneProg.u;
-      gl!.uniform2f(u.uRes!, scene.w, scene.h);
-      gl!.uniform1f(u.uTime!, t);
-      gl!.uniform3f(u.uCamPos!, camX, camY, camZ);
-      gl!.uniform3f(u.uRight!, RX, RY, RZ);
-      gl!.uniform3f(u.uUp!, UX, UY, UZ);
-      gl!.uniform3f(u.uFwd!, fx, fy, fz);
-      gl!.uniform1f(u.uTanHalf!, Math.tan(Math.max(8, Math.min(110, C.fov)) * 0.5 * RAD));
-      // gl_FragCoord counts up from the bottom; the prop reads from the top.
-      gl!.uniform2f(u.uFocus!, C.focus[0], 1 - C.focus[1]);
-      gl!.uniform1f(
-        u.uSteps!,
-        software ? 130 : Math.max(quality < 1 ? 100 : 60, Math.min(460, Math.round(C.steps * (0.55 + 0.45 * quality))))
-      );
-      gl!.uniform1f(u.uSkyR!, Math.max(dist * 1.35, outer * 2.4));
-      gl!.uniform1f(u.uDiskIn!, Math.max(1.05, C.diskInner));
-      gl!.uniform1f(u.uDiskOut!, outer);
-      gl!.uniform1f(u.uThick!, Math.max(0.02, C.diskThickness));
-      gl!.uniform1f(u.uDensity!, Math.max(0, C.diskDensity));
-      gl!.uniform1f(u.uSpin!, C.spinSpeed * 6.2831853);
-      gl!.uniform1f(u.uGrain!, Math.max(0.02, C.grain));
-      gl!.uniform1f(u.uBright!, Math.max(0, C.brightness));
-      gl!.uniform1f(u.uDoppler!, Math.max(0, Math.min(1, C.doppler)));
-      gl!.uniform3f(u.uHot!, hot[0], hot[1], hot[2]);
-      gl!.uniform3f(u.uMid!, mid[0], mid[1], mid[2]);
-      gl!.uniform3f(u.uCool!, cool[0], cool[1], cool[2]);
-      gl!.uniform1f(u.uStars!, Math.max(0, C.starBrightness));
-      gl!.uniform1f(u.uEncode!, hdr ? 0 : 1);
-      const h = HALTON[settled % HALTON.length];
-      gl!.uniform2f(u.uJitter!, h[0] - 0.5, h[1] - 0.5);
-      gl!.uniform1f(u.uSeed!, (settled % 64) * 17.13);
-      draw();
-
-      /* fold into the running average ------------------------------------- */
-      // Weight enough history to bury the noise, but not so much that the gas
-      // drags a tail. The first frame after a resize takes the whole picture,
-      // since there is no history worth keeping.
-      const alpha = settled === 0 ? 1 : 0.14;
-      pass(blendProg, histB);
-      bind(scene.tex, 0);
-      bind(histA.tex, 1);
-      gl!.uniform1i(blendProg.u.uCur!, 0);
-      gl!.uniform1i(blendProg.u.uPrev!, 1);
-      gl!.uniform1f(blendProg.u.uAlpha!, alpha);
-      draw();
-      const shown = histB;
-      const tmp = histA;
-      histA = histB;
-      histB = tmp;
-      settled++;
-
-      /* bright pass ------------------------------------------------------- */
-      pass(brightProg, bloomA);
-      bind(shown.tex, 0);
-      gl!.uniform1i(brightProg.u.uTex!, 0);
-      gl!.uniform2f(brightProg.u.uTexel!, 1 / shown.w, 1 / shown.h);
-      gl!.uniform1f(brightProg.u.uDecode!, hdr ? 0 : 1);
-      gl!.uniform1f(brightProg.u.uPack!, pack);
-      gl!.uniform1f(brightProg.u.uThreshold!, 0.85);
-      draw();
-
-      /* two rounds of blur, the second wider ------------------------------ */
-      const blurStep = (src: Target, dst: Target, dx: number, dy: number) => {
-        pass(blurProg!, dst);
-        bind(src.tex, 0);
-        gl!.uniform1i(blurProg!.u.uTex!, 0);
-        gl!.uniform2f(blurProg!.u.uStep!, dx / dst.w, dy / dst.h);
-        draw();
-      };
-      blurStep(bloomA, bloomB, 1, 0);
-      blurStep(bloomB, bloomA, 0, 1);
-      blurStep(bloomA, bloomB, 2.6, 0);
-      blurStep(bloomB, bloomA, 0, 2.6);
-
-      /* composite --------------------------------------------------------- */
-      pass(compProg, null);
-      bind(shown.tex, 0);
-      bind(bloomA.tex, 1);
-      gl!.uniform1i(compProg.u.uScene!, 0);
-      gl!.uniform1i(compProg.u.uBloom!, 1);
-      gl!.uniform2f(compProg.u.uRes!, width, height);
-      gl!.uniform1f(compProg.u.uDecode!, hdr ? 0 : 1);
-      gl!.uniform1f(compProg.u.uPack!, pack);
-      gl!.uniform1f(compProg.u.uGlow!, Math.max(0, C.glow) * 0.26);
-      gl!.uniform1f(compProg.u.uExposure!, Math.max(0.05, C.exposure));
-      gl!.uniform1f(compProg.u.uVignette!, Math.max(0, Math.min(1, C.vignette)));
-      gl!.uniform1f(
-        compProg.u.uScrimDir!,
-        C.scrim === "left" ? 1 : C.scrim === "right" ? 2 : C.scrim === "top" ? 3 : C.scrim === "bottom" ? 4 : 0
-      );
-      gl!.uniform1f(compProg.u.uScrimAmt!, Math.max(0, Math.min(1, C.scrimStrength)));
-      gl!.uniform1f(compProg.u.uSeed!, (t * 60) % 1000);
-      draw();
-    }
-
-    /**
-     * Draws one still, properly. Nothing is animating in these cases — a
-     * resize while paused, or a reader who has asked for no motion — so the
-     * frames the average would normally be given over time are taken all at
-     * once instead. Each pass aims at a different point inside the pixel, so
-     * what lands on screen is settled rather than speckled.
-     */
-    function settle(passes: number) {
-      for (let i = 0; i < passes; i++) render(clock);
-    }
-
-    /* --- loop ------------------------------------------------------------- */
-
-    // Rendered-frame intervals, summed over a short window. If the average is
-    // far over what was asked for, the device is struggling: quality drops a
-    // step and the window starts again. Out of steps, it settles one still.
-    let sampleSum = 0;
-    let sampleCount = 0;
-
-    function tick(now: number) {
-      if (!running) return;
-      raf = requestAnimationFrame(tick);
-      if (!visible) { lastFrame = 0; sampleSum = sampleCount = 0; return; }
-      const fps = props.current.maxFps;
-      const gap = fps > 0 ? 1000 / fps : 0;
-      const since = lastFrame ? now - lastFrame : 0;
-      // A little under the gap, so a 60 Hz display lands on every second frame
-      // for a 30 cap instead of every third.
-      if (lastFrame && since < gap - 4) return;
-      const dt = lastFrame ? Math.min(0.05, since / 1000) : 0;
-      lastFrame = now;
-      if (!props.current.paused && !reduced) clock += dt;
-      render(clock);
-
-      if (since > 0 && since < 400) {
-        sampleSum += since;
-        sampleCount++;
-        if (sampleCount >= 24) {
-          const avg = sampleSum / sampleCount;
-          sampleSum = sampleCount = 0;
-          if (avg > Math.max(46, gap * 1.5)) {
-            if (quality > 0.55) {
-              quality *= 0.75;
-              width = height = sceneW = sceneH = 0;
-              resize();
-            } else {
-              stalled = true;
-              running = false;
-              cancelAnimationFrame(raf);
-              host!.dataset.webgl = "still";
-              settle(6);
-            }
-          }
-        }
-      }
-    }
-
-    if (!build()) {
-      giveUp("build-failed");
-      return;
-    }
-    resize();
-    settle(reduced ? 16 : 1);
-    if (!reduced) raf = requestAnimationFrame(tick);
-
-    /* --- the world ------------------------------------------------------- */
-
-    const ro = new ResizeObserver(() => {
-      resize();
-      if (reduced || props.current.paused || stalled) settle(stalled ? 6 : 16);
-    });
-    ro.observe(host);
-
-    const io = new IntersectionObserver(
-      (entries) => { visible = entries[0]?.isIntersecting ?? true; },
-      { threshold: 0 }
-    );
-    io.observe(host);
-
-    const onVisibility = () => { visible = !document.hidden; lastFrame = 0; };
-    const onLost = (e: Event) => {
-      // Asking for the context back is only worth it if it comes back working.
-      // Until it does the canvas is hidden, because a dead one paints white.
-      e.preventDefault();
-      running = false;
-      cancelAnimationFrame(raf);
-      canvas.style.display = "none";
-    };
-    const onRestored = () => {
-      width = height = sceneW = sceneH = 0;
-      if (!build()) {
-        giveUp("lost");
-        return;
-      }
-      canvas.style.display = "";
-      host.dataset.webgl = "";
-      resize();
-      running = true;
-      lastFrame = 0;
-      settle(reduced ? 16 : 1);
-      if (!reduced) raf = requestAnimationFrame(tick);
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    canvas.addEventListener("webglcontextlost", onLost);
-    canvas.addEventListener("webglcontextrestored", onRestored);
-
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      io.disconnect();
-      document.removeEventListener("visibilitychange", onVisibility);
-      canvas.removeEventListener("webglcontextlost", onLost);
-      canvas.removeEventListener("webglcontextrestored", onRestored);
-      dropTargets();
-      if (vbo) gl.deleteBuffer(vbo);
-      for (const p of [sceneProg, blendProg, brightProg, blurProg, compProg]) {
-        if (p) gl.deleteProgram(p.program);
-      }
-      // The context is deliberately left alive. Killing it here with
-      // WEBGL_lose_context looks tidy and is a trap: React's StrictMode runs
-      // every effect twice on the same DOM — setup, cleanup, setup — and a
-      // canvas whose context has been lost hands the same dead context back to
-      // the next getContext call. Every shader then fails to compile with an
-      // empty log, which is a miserable thing to debug. Deleting what was
-      // allocated is enough; the context goes when the canvas does.
-    };
+    if (!host || !canvas) return undefined;
+    return startBlackHole(host, canvas, props);
   }, []);
 
   // The three layers are styled in app/styles/marketing.css (.bh-*): this

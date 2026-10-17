@@ -1,6 +1,6 @@
 import type { Browser, Page } from '@playwright/test';
 import type { TestUser } from '../support/env';
-import { expect, openApp, openInvestments, openSettings, openTab, test, TABS } from '../support/fixtures';
+import { expect, openApp, openInvestments, openSettings, openTab, settle, test, TABS } from '../support/fixtures';
 
 // An installed PWA on an iPhone 13: 390x844 CSS px with a 47px notch inset at
 // the top and a 34px home-indicator inset at the bottom. Chromium cannot
@@ -114,7 +114,7 @@ for (const viewport of [IPHONE, SMALL]) {
     ];
     for (const screen of screens) {
       await screen.open();
-      await page.waitForTimeout(400);
+      await settle(page);
       const result = await page.locator('.screen-body').first().evaluate((element) => {
         element.scrollTop = element.scrollHeight;
         const children = [...element.children].filter((child) => child.getBoundingClientRect().height > 0);

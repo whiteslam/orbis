@@ -70,7 +70,7 @@ export function SecuritySettings() {
           <button type="button" className="fd-button ghost" onClick={() => setChanging(true)}>Change PIN</button>
         </div>
       )}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </div>
   );
 }

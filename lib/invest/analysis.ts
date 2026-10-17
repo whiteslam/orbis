@@ -72,6 +72,38 @@ function toPosition(broker: BrokerId, holding: BrokerHolding): Position {
   };
 }
 
+function concentrationStatus(largestShare: number | null): Status {
+  if (largestShare === null || largestShare <= 0.25) return 'good';
+  return largestShare <= 0.4 ? 'warning' : 'critical';
+}
+
+function diversificationStatus(effectiveHoldings: number): Status {
+  if (effectiveHoldings >= 8) return 'good';
+  return effectiveHoldings >= 4 ? 'warning' : 'critical';
+}
+
+function mixStatus(classCount: number): Status {
+  if (classCount >= 3) return 'good';
+  return classCount === 2 ? 'warning' : 'critical';
+}
+
+/**
+ * Only AMFI NAV and exchange quotes carry a previous close; Groww's own LTP
+ * does not. So the day is measured over the positions that report one, and
+ * carries how much of the portfolio that actually was.
+ */
+function dayChange(positions: Position[], total: number): PortfolioAnalysis['dayChange'] {
+  const moved = positions.filter((position) => position.dayChangePercent !== null);
+  const movedValue = moved.reduce((sum, position) => sum + position.value, 0);
+  if (!moved.length || movedValue <= 0) return null;
+  const dayValue = moved.reduce((sum, position) => {
+    const percent = position.dayChangePercent ?? 0;
+    // value already includes today's move, so the opening value is value / (1 + pct).
+    return sum + (position.value - position.value / (1 + percent / 100));
+  }, 0);
+  return { value: dayValue, percent: (dayValue / (movedValue - dayValue)) * 100, coverage: total > 0 ? movedValue / total : 0 };
+}
+
 export function analysePortfolio(portfolios: BrokerPortfolio[]): PortfolioAnalysis {
   const positions = portfolios
     .filter((portfolio) => portfolio.state === 'ok')
@@ -95,17 +127,6 @@ export function analysePortfolio(portfolios: BrokerPortfolio[]): PortfolioAnalys
   const pnlPositions = positions.filter((position) => position.live);
   const liveInvested = pnlPositions.reduce((sum, position) => sum + position.invested, 0);
 
-  // Only AMFI NAV and exchange quotes carry a previous close; Groww's own LTP
-  // does not. So the day is measured over the positions that report one, and
-  // carries how much of the portfolio that actually was.
-  const moved = positions.filter((position) => position.dayChangePercent !== null);
-  const movedValue = moved.reduce((sum, position) => sum + position.value, 0);
-  const dayValue = moved.reduce((sum, position) => {
-    const percent = position.dayChangePercent ?? 0;
-    // value already includes today's move, so the opening value is value / (1 + pct).
-    return sum + (position.value - position.value / (1 + percent / 100));
-  }, 0);
-
   return {
     positions,
     total,
@@ -116,11 +137,9 @@ export function analysePortfolio(portfolios: BrokerPortfolio[]): PortfolioAnalys
     byClass,
     largest,
     effectiveHoldings,
-    concentration: !largest || largest.share <= 0.25 ? 'good' : largest.share <= 0.4 ? 'warning' : 'critical',
-    diversification: effectiveHoldings >= 8 ? 'good' : effectiveHoldings >= 4 ? 'warning' : 'critical',
-    mix: byClass.length >= 3 ? 'good' : byClass.length === 2 ? 'warning' : 'critical',
-    dayChange: moved.length && movedValue > 0
-      ? { value: dayValue, percent: (dayValue / (movedValue - dayValue)) * 100, coverage: total > 0 ? movedValue / total : 0 }
-      : null,
+    concentration: concentrationStatus(largest?.share ?? null),
+    diversification: diversificationStatus(effectiveHoldings),
+    mix: mixStatus(byClass.length),
+    dayChange: dayChange(positions, total),
   };
 }

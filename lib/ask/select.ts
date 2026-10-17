@@ -52,10 +52,10 @@ export function rankJournal(question: string, entries: AskJournal[], limit: numb
     return { entry, hits, index };
   });
   return scored
-    .sort((left, right) => right.hits - left.hits || left.index - right.index)
+    .toSorted((left, right) => right.hits - left.hits || left.index - right.index)
     .slice(0, limit)
     .map((item) => item.entry)
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 }
 
 /** Monday of the week a date falls in: '2026-09-28' → '2026-09-28', '2026-10-01' → '2026-09-28'. */

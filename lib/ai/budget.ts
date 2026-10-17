@@ -21,7 +21,7 @@ export function currentBudget() {
  */
 export async function monthSpendUsd(admin: Admin, now = new Date()): Promise<number | null> {
   const since = monthStartIso(now);
-  if (cached && cached.since === since && Date.now() - cached.at < CACHE_MS) return cached.usd;
+  if (cached?.since === since && Date.now() - cached.at < CACHE_MS) return cached.usd;
   try {
     const { data, error } = await admin.rpc('ai_spend_since', { p_since: since });
     const usd = Number(data);

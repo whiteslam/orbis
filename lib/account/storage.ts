@@ -23,45 +23,61 @@ async function bucketExists(storage: Storage, bucket: string) {
 /** Every object path under `prefix`, walking folders and paging each listing until it runs out. */
 async function walk(storage: Storage, bucket: string, prefix: string, depth = 0): Promise<string[]> {
   if (depth > MAX_DEPTH) return [];
-  const paths: string[] = [];
+  const entries: Array<{ id: string | null; name: string }> = [];
   for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await storage.from(bucket).list(prefix, { limit: PAGE, offset, sortBy: { column: 'name', order: 'asc' } });
+    const { data, error } = await storage.from(bucket).list(prefix, { limit: PAGE, offset, sortBy: { column: 'name', order: 'asc' } }); // NOSONAR: pages are read in turn until one comes back short
     if (error) throw new Error(`Storage listing failed in ${bucket}: ${error.message}`);
-    for (const entry of data ?? []) {
+    entries.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  const found = await Promise.all(
+    entries.map((entry) => {
       const path = `${prefix}/${entry.name}`;
       // Folders come back with no id.
-      if (entry.id === null) paths.push(...(await walk(storage, bucket, path, depth + 1)));
-      else paths.push(path);
-    }
-    if (!data || data.length < PAGE) return paths;
-  }
+      return entry.id === null ? walk(storage, bucket, path, depth + 1) : [path];
+    }),
+  );
+  return found.flat();
 }
 
 /** The paths of every file this person has in each bucket that exists. */
 export async function listUserObjects(storage: Storage, buckets: readonly string[], userId: string) {
-  const found: Array<{ bucket: string; paths: string[] }> = [];
-  for (const bucket of buckets) {
-    if (!(await bucketExists(storage, bucket))) continue;
-    found.push({ bucket, paths: await walk(storage, bucket, userId) });
+  const found = await Promise.all(
+    buckets.map(async (bucket) => ((await bucketExists(storage, bucket)) ? { bucket, paths: await walk(storage, bucket, userId) } : null)),
+  );
+  return found.filter((entry): entry is { bucket: string; paths: string[] } => entry !== null);
+}
+
+/** Removes `paths` from `bucket`, a page at a time. */
+async function removePaths(storage: Storage, bucket: string, paths: string[]) {
+  const pages: string[][] = [];
+  for (let start = 0; start < paths.length; start += PAGE) pages.push(paths.slice(start, start + PAGE));
+  await Promise.all(
+    pages.map(async (page) => {
+      const { error } = await storage.from(bucket).remove(page);
+      if (error) throw new Error(`Storage removal failed in ${bucket}: ${error.message}`);
+    }),
+  );
+}
+
+/** Removes every file under `${userId}/` in one bucket. Throws if any is left. */
+async function clearBucket(storage: Storage, bucket: string, userId: string) {
+  let remaining: string[] = [];
+  for (let pass = 0; pass < MAX_PASSES; pass += 1) {
+    remaining = await walk(storage, bucket, userId); // NOSONAR: each pass re-lists what the previous pass left behind
+    if (remaining.length === 0) break;
+    await removePaths(storage, bucket, remaining); // NOSONAR: a pass must finish removing before the next one lists again
   }
-  return found;
+  if (remaining.length > 0 && (await walk(storage, bucket, userId)).length > 0) {
+    throw new Error(`Storage in ${bucket} still holds files for this account.`);
+  }
 }
 
 /** Removes every file under `${userId}/` in each bucket that exists. Throws if any is left. */
 export async function removeUserObjects(storage: Storage, buckets: readonly string[], userId: string) {
-  for (const bucket of buckets) {
-    if (!(await bucketExists(storage, bucket))) continue;
-    let remaining: string[] = [];
-    for (let pass = 0; pass < MAX_PASSES; pass += 1) {
-      remaining = await walk(storage, bucket, userId);
-      if (remaining.length === 0) break;
-      for (let start = 0; start < remaining.length; start += PAGE) {
-        const { error } = await storage.from(bucket).remove(remaining.slice(start, start + PAGE));
-        if (error) throw new Error(`Storage removal failed in ${bucket}: ${error.message}`);
-      }
-    }
-    if (remaining.length > 0 && (await walk(storage, bucket, userId)).length > 0) {
-      throw new Error(`Storage in ${bucket} still holds files for this account.`);
-    }
-  }
+  await Promise.all(
+    buckets.map(async (bucket) => {
+      if (await bucketExists(storage, bucket)) await clearBucket(storage, bucket, userId);
+    }),
+  );
 }

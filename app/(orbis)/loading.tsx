@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <main className="screen-body field fd-boundary" aria-busy="true">
-      <p className="fd-empty" role="status">Loading…</p>
+      <output className="fd-empty">Loading…</output>
       <div className="fd-skeleton" aria-hidden="true">
         <span className="wide" />
         <span />

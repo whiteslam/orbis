@@ -9,9 +9,9 @@ export default async function globalTeardown() {
   await admin.deleteRows('waitlist', 'email=like.orbis-qa-waitlist-%25*').catch(() => undefined);
   if (!existsSync(USERS_FILE)) return;
   const users = readUsers();
-  for (const user of Object.values(users)) {
+  await Promise.all(Object.values(users).map(async (user) => {
     await admin.deleteUserFiles(user.id);
     await admin.deleteUser(user.id);
-  }
+  }));
   rmSync(AUTH_DIR, { recursive: true, force: true });
 }

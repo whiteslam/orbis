@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Check, LoaderCircle, Plus, SkipForward, Undo2 } from 'lucide-react';
 import { answerRoutineAction } from '@/app/routines/actions';
 import { clockLabel, type RoutineToday } from '@/lib/routines/types';
 import { safeAction } from '@/lib/client/safe-action';
+
+/** What the user said about the routine, in the words the settled row shows. */
+function answerLabel(event: NonNullable<RoutineToday['event']>) {
+  if (event.status === 'done') return 'Done';
+  if (event.status === 'skipped') return 'Skipped';
+  return event.note ?? 'Something else';
+}
 
 /**
  * The half of the brief that listens back.
@@ -15,12 +22,18 @@ import { safeAction } from '@/lib/client/safe-action';
  * about what you did instead — and any of them can be undone, because a mis-tap
  * should not become history.
  */
-export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; onAnswered?: () => void }) {
+export function RoutineCheck({ current, onAnswered }: Readonly<{ current: RoutineToday; onAnswered?: () => void }>) {
   const [writingOther, setWritingOther] = useState(false);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const otherInput = useRef<HTMLInputElement>(null);
   const { routine, event } = current;
+
+  // "Something else" swaps its button for the input, so focus follows it there rather than dropping to the page.
+  useEffect(() => {
+    if (writingOther) otherInput.current?.focus();
+  }, [writingOther]);
 
   function answer(status: 'done' | 'skipped' | 'other' | null, text = '') {
     setMessage(null);
@@ -37,7 +50,7 @@ export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; o
   }
 
   if (event) {
-    const said = event.status === 'done' ? 'Done' : event.status === 'skipped' ? 'Skipped' : event.note ?? 'Something else';
+    const said = answerLabel(event);
     return (
       <div className="rt-check settled">
         <p className="rt-check-head"><span className="rt-check-tick" aria-hidden="true"><Check size={12} strokeWidth={3} /></span>{routine.title}<b>{said}</b></p>
@@ -58,12 +71,12 @@ export function RoutineCheck({ current, onAnswered }: { current: RoutineToday; o
           onSubmit={(submit) => { submit.preventDefault(); if (note.trim()) answer('other', note); }}
         >
           <input
+            ref={otherInput}
             value={note}
             onChange={(change) => setNote(change.currentTarget.value)}
             placeholder="Walked for 30 minutes instead"
             aria-label={`What you did instead of ${routine.title}`}
             maxLength={200}
-            autoFocus
             disabled={isPending}
           />
           <button type="submit" className="fd-button" disabled={isPending || !note.trim()}>

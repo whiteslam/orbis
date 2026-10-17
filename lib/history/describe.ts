@@ -58,6 +58,8 @@ export function textChange(before: string, after: string): string | null {
   return 'edited the text';
 }
 
+const hashtags = (tags: string[]) => tags.map((tag) => `#${tag}`).join(' ');
+
 /** The changes in one journal edit, as short phrases. Empty when nothing visible changed. */
 export function journalChanges(previous: JournalSnapshot | null, snapshot: JournalSnapshot | null): string[] {
   if (!previous || !snapshot) return [];
@@ -67,8 +69,8 @@ export function journalChanges(previous: JournalSnapshot | null, snapshot: Journ
   if (text) changes.push(text);
   const added = snapshot.tags.filter((tag) => !previous.tags.includes(tag));
   const removed = previous.tags.filter((tag) => !snapshot.tags.includes(tag));
-  if (added.length) changes.push(`added ${added.map((tag) => `#${tag}`).join(' ')}`);
-  if (removed.length) changes.push(`removed ${removed.map((tag) => `#${tag}`).join(' ')}`);
+  if (added.length) changes.push(`added ${hashtags(added)}`);
+  if (removed.length) changes.push(`removed ${hashtags(removed)}`);
   return changes;
 }
 

@@ -28,11 +28,11 @@ export function routineSlipping({ today, routines, events }: { today: string; ro
     if (!routine.active || routine.archivedAt) return [];
     const scheduled = lastScheduled(routine, today, MISSED_IN_A_ROW);
     if (scheduled.length < MISSED_IN_A_ROW) return [];
-    const doneDates = events.filter((event) => event.routineId === routine.id && event.status === 'done').map((event) => event.localDate).sort();
+    const doneDates = events.filter((event) => event.routineId === routine.id && event.status === 'done').map((event) => event.localDate).sort((left, right) => left.localeCompare(right));
     if (scheduled.some((date) => doneDates.includes(date))) return [];
     // Keyed on the last time it was done, so one slump is one heads-up however long it lasts.
-    const latest = [routine.lastDoneDate, doneDates[doneDates.length - 1]].filter((date): date is string => Boolean(date)).sort();
-    const lastDone = latest[latest.length - 1] ?? 'never';
+    const latest = [routine.lastDoneDate, doneDates.at(-1)].filter((date): date is string => Boolean(date)).sort((left, right) => left.localeCompare(right));
+    const lastDone = latest.at(-1) ?? 'never';
     return [{
       kind: 'routine.slipping',
       dedupeKey: `routine.slipping:${routine.id}:since:${lastDone}`,

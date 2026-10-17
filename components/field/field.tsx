@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, X } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SettingsButton } from '@/components/shell/settings-context';
 import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
 
 /** Screen title with today's date above it, or a caller-supplied line instead. */
-export function FieldHead({ title, subtitle }: { title: string; subtitle?: string }) {
+export function FieldHead({ title, subtitle }: Readonly<{ title: string; subtitle?: string }>) {
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
   return (
     <header className="fd-head">
@@ -40,7 +40,7 @@ export function useScrollTop(key: unknown) {
  * The top of a view opened from a tab: where it sits (`crumb`), the title, and
  * one way out — back on the left, or close on the right for a form.
  */
-export function FieldSubHead({ crumb, title, lead, onBack, onClose, backLabel }: { crumb: string; title?: string; lead?: ReactNode; onBack?: () => void; onClose?: () => void; backLabel?: string }) {
+export function FieldSubHead({ crumb, title, lead, onBack, onClose, backLabel }: Readonly<{ crumb: string; title?: string; lead?: ReactNode; onBack?: () => void; onClose?: () => void; backLabel?: string }>) {
   return (
     <header className="fd-sub-head">
       <div className={onClose ? 'fd-crumb end' : 'fd-crumb'}>
@@ -55,7 +55,7 @@ export function FieldSubHead({ crumb, title, lead, onBack, onClose, backLabel }:
 }
 
 /** A numbered step: ring, bold line, detail, and an optional footnote. */
-export function FieldStep({ n, title, children, foot }: { n: number; title: ReactNode; children?: ReactNode; foot?: ReactNode }) {
+export function FieldStep({ n, title, children, foot }: Readonly<{ n: number; title: ReactNode; children?: ReactNode; foot?: ReactNode }>) {
   return (
     <div className="fd-step">
       <i aria-hidden="true">{n}</i>
@@ -73,7 +73,7 @@ export function FieldStep({ n, title, children, foot }: { n: number; title: Reac
  * screen has one — the control that acts on it. No container, no caption; the
  * ground carries it.
  */
-export function FocusSurface({ focus, onAction, children }: { focus: Focus; onAction?: (target: FocusTarget) => void; children?: ReactNode }) {
+export function FocusSurface({ focus, onAction, children }: Readonly<{ focus: Focus; onAction?: (target: FocusTarget) => void; children?: ReactNode }>) {
   const action = focus.action;
   return (
     <section className="fd-focus" aria-labelledby={`focus-${focus.id}`}>
@@ -92,7 +92,7 @@ export function FocusSurface({ focus, onAction, children }: { focus: Focus; onAc
 }
 
 /** State, not calls to action: label left, value right, hairline between. */
-export function QuietList({ heading, rows, onOpen }: { heading: string; rows: QuietRow[]; onOpen?: (target: FocusTarget) => void }) {
+export function QuietList({ heading, rows, onOpen }: Readonly<{ heading: string; rows: QuietRow[]; onOpen?: (target: FocusTarget) => void }>) {
   return (
     <section className="fd-quiet">
       <h2>{heading}</h2>
@@ -119,7 +119,7 @@ export function QuietList({ heading, rows, onOpen }: { heading: string; rows: Qu
  * qualifies it, and — where the data supports one — a delta. No container: the
  * ground carries it, as it carries the brief.
  */
-export function FieldHero({ value, label, delta }: { value: string; label: string; delta?: { text: string; tone: 'up' | 'down' | 'flat' } | null }) {
+export function FieldHero({ value, label, delta }: Readonly<{ value: string; label: string; delta?: { text: string; tone: 'up' | 'down' | 'flat' } | null }>) {
   return (
     <div className="fd-hero">
       <p className="fd-hero-value">{value}</p>
@@ -138,6 +138,6 @@ export function FieldHero({ value, label, delta }: { value: string; label: strin
 }
 
 /** Small uppercase label that separates sections without drawing a box. */
-export function FieldLabel({ children }: { children: ReactNode }) {
+export function FieldLabel({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="fd-label">{children}</p>;
 }

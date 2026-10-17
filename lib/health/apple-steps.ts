@@ -9,7 +9,7 @@ export type DailySteps = { date: string; steps: number };
 export type StepImportResult = { days: DailySteps[]; recordCount: number; firstDate: string | null; lastDate: string | null };
 
 function attribute(tag: string, name: string) {
-  const match = tag.match(new RegExp(`\\s${name}="([^"]*)"`));
+  const match = new RegExp(String.raw`\s${name}="([^"]*)"`).exec(tag);
   return match ? match[1] : null;
 }
 
@@ -35,13 +35,13 @@ export function scanStepRecords(chunk: string, carry: string): { samples: StepSa
   }
   // Keep a trailing tag that hasn't closed yet; it may be a step record split across chunks.
   const lastOpen = text.lastIndexOf('<');
-  return { samples, carry: lastOpen !== -1 && text.indexOf('>', lastOpen) === -1 ? text.slice(lastOpen) : '' };
+  return { samples, carry: lastOpen !== -1 && !text.includes('>', lastOpen) ? text.slice(lastOpen) : '' };
 }
 
 // Apple writes dates as "2026-09-21 08:12:03 +0530". Returns the wall-clock time as if it were UTC,
 // plus the real instant, so days line up with what the Health app shows in the local timezone.
 export function parseAppleDate(value: string): { local: number; instant: number } | null {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2}) ?([+-])(\d{2}):?(\d{2})$/);
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2}) ?([+-])(\d{2}):?(\d{2})$/.exec(value);
   if (!match) return null;
   const [, y, mo, d, h, mi, s, sign, oh, om] = match;
   const local = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s));
@@ -51,7 +51,7 @@ export function parseAppleDate(value: string): { local: number; instant: number 
 
 export class StepAggregator {
   // hour bucket (local wall clock) → source → steps
-  private hours = new Map<number, Map<string, number>>();
+  private readonly hours = new Map<number, Map<string, number>>();
   recordCount = 0;
 
   add(sample: StepSample) {
@@ -66,7 +66,10 @@ export class StepAggregator {
     for (let hour = firstHour; hour <= lastHour; hour += 1) {
       const overlap = duration === 0 ? 1 : (Math.min(localEnd, (hour + 1) * HOUR_MS) - Math.max(start.local, hour * HOUR_MS)) / duration;
       let sources = this.hours.get(hour);
-      if (!sources) this.hours.set(hour, (sources = new Map()));
+      if (!sources) {
+        sources = new Map();
+        this.hours.set(hour, sources);
+      }
       sources.set(sample.source, (sources.get(sample.source) ?? 0) + sample.value * overlap);
     }
   }

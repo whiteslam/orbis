@@ -43,7 +43,7 @@ export function HeadsupSettings() {
           setMessage({ text: result.message, success: result.success });
         })}>Clear all heads-ups</button>
       </div>
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </div>
   );
 }

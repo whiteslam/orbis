@@ -6,7 +6,7 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 
 const initialState: AuthActionState = { error: null, message: null };
 
-export function PasswordResetForm({ mode, needsCurrentPassword = false }: { mode: 'request' | 'reset'; needsCurrentPassword?: boolean }) {
+export function PasswordResetForm({ mode, needsCurrentPassword = false }: Readonly<{ mode: 'request' | 'reset'; needsCurrentPassword?: boolean }>) {
   const [state, setState] = useState(initialState);
   const [isPending, startTransition] = useTransition();
   const isReset = mode === 'reset';
@@ -22,6 +22,9 @@ export function PasswordResetForm({ mode, needsCurrentPassword = false }: { mode
       setState(result);
     });
   }
+
+  let submitLabel = isReset ? 'Save new password' : 'Send recovery link';
+  if (isPending) submitLabel = 'Please wait…';
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
@@ -40,10 +43,10 @@ export function PasswordResetForm({ mode, needsCurrentPassword = false }: { mode
       </>}
 
       {state.error && <p id="recovery-feedback" className="auth-feedback error" role="alert">{state.error}</p>}
-      {state.message && <p id="recovery-feedback" className="auth-feedback success" role="status">{state.message}</p>}
+      {state.message && <output id="recovery-feedback" className="auth-feedback success">{state.message}</output>}
 
       <button className="auth-submit" type="submit" disabled={isPending}>
-        {isPending ? 'Please wait…' : isReset ? 'Save new password' : 'Send recovery link'}
+        {submitLabel}
       </button>
     </form>
   );

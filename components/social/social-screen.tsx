@@ -20,6 +20,8 @@ type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: 
 
 const VIEWS: Array<[View, string]> = [['list', 'List'], ['grid', 'Grid']];
 const HASH_PREFIX = '#social/';
+/** The banner class for each connect result; 'info' takes the plain banner. */
+const NOTICE_TONE_CLASS: Record<SocialConnectNotice['tone'], string> = { success: 'success', error: 'error', info: '' };
 
 /** '#social/2026-09' → '2026-09-01', or null. */
 function periodFromHash() {
@@ -35,7 +37,7 @@ function periodFromHash() {
  * The server hands over the current month; other months load on demand. The
  * month lives in the URL hash, so a reload stays where it was.
  */
-export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: { initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }) {
+export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
   const [view, setView] = useState<View>('list');
@@ -126,10 +128,10 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
       <FieldHead title="Social" subtitle="Your own posts, planned for the month" />
 
       {connectNotice && (
-        <div className={`finance-notice ${connectNotice.tone === 'success' ? 'success' : connectNotice.tone === 'error' ? 'error' : ''}`} role="status">
+        <output className={`finance-notice ${NOTICE_TONE_CLASS[connectNotice.tone]}`}>
           <span>{connectNotice.text}</span>
           <button type="button" onClick={clearConnectNotice} aria-label="Dismiss message">×</button>
-        </div>
+        </output>
       )}
 
       {/* The two ways to add a post, side by side under the title. */}
@@ -160,7 +162,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
 
       {ready && (
         <>
-          {notice && <p className={`so-message${notice.error ? ' error' : ''}`} role="status">{notice.text}</p>}
+          {notice && <output className={`so-message${notice.error ? ' error' : ''}`}>{notice.text}</output>}
 
           {!posts.length && !isLoading ? (
             <section className="fd-focus so-empty">

@@ -18,7 +18,7 @@ function readHidden() {
 }
 
 /** What is left to set up, each row opening the Settings section that does it. Hidden for good on this device with "Hide". */
-export function SetupChecklist({ steps }: { steps: SetupStep[] }) {
+export function SetupChecklist({ steps }: Readonly<{ steps: SetupStep[] }>) {
   const settings = useSettings();
   // Starts hidden so the server render and the first client render agree; the
   // saved choice is read after mount.

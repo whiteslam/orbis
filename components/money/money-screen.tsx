@@ -11,7 +11,7 @@ const SpendingScreen = dynamic(() => import('@/components/money/spending-screen'
 const InvestmentsScreen = dynamic(() => import('@/components/money/investments-screen').then((m) => m.InvestmentsScreen), { loading: TabLoading });
 
 /** Spending | Investments, drawn under the Money title by whichever view is open. */
-export function MoneySwitch({ view, onView }: { view: MoneyView; onView: (view: MoneyView) => void }) {
+export function MoneySwitch({ view, onView }: Readonly<{ view: MoneyView; onView: (view: MoneyView) => void }>) {
   return (
     <div className="fd-tabs glass-seg" role="tablist" aria-label="Money">
       <button type="button" role="tab" aria-selected={view === 'spending'} onClick={() => onView('spending')}>Spending</button>
@@ -20,7 +20,7 @@ export function MoneySwitch({ view, onView }: { view: MoneyView; onView: (view: 
   );
 }
 
-export function MoneyScreen({ intent = null, view, onView, summary, savedPortfolioAdvice, brokerNotice, clearBrokerNotice }: {
+export function MoneyScreen({ intent = null, view, onView, summary, savedPortfolioAdvice, brokerNotice, clearBrokerNotice }: Readonly<{
   intent?: HeadsupAction | null;
   view: MoneyView;
   onView: (view: MoneyView) => void;
@@ -28,7 +28,7 @@ export function MoneyScreen({ intent = null, view, onView, summary, savedPortfol
   savedPortfolioAdvice: SavedPortfolioAdvice | null;
   brokerNotice: string | null;
   clearBrokerNotice: () => void;
-}) {
+}>) {
   const switcher = <MoneySwitch view={view} onView={onView} />;
   return view === 'spending'
     ? <SpendingScreen summary={summary} switcher={switcher} intent={intent} />

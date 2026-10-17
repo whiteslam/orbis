@@ -21,21 +21,25 @@ function activityLabel(steps: StepsSummary, todayIso: string) {
   return `Activity: ${count} steps ${when}${average}`;
 }
 
+/** Steps arrive by import, so the count is labelled with its own day unless that day is today. */
+function stepsDayLabel(latest: StepsSummary['latest'], todayIso: string) {
+  if (!latest) return '';
+  if (latest.date === todayIso) return 'today';
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(latest.date));
+}
+
 // The spending widget always draws a week of slots, so two days into a month
 // the bars are still bars rather than two blocks filling the row.
 const BAR_SLOTS = 7;
 
 /** Two square widgets under the brief: today's activity and this month's spending. Each opens its tab. */
-export function TodayWidgets({ steps, month, openTab }: { steps: StepsSummary; month: FinanceSummary['month']; openTab: (target: FocusTarget) => void }) {
+export function TodayWidgets({ steps, month, openTab }: Readonly<{ steps: StepsSummary; month: FinanceSummary['month']; openTab: (target: FocusTarget) => void }>) {
   const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   const today = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
   const bars = month ? recentDays(month.daily, today, BAR_SLOTS) : [];
   const blanks = Math.max(0, BAR_SLOTS - bars.length);
   const latest = steps.latest;
-  // Steps arrive by import, so the count is labelled with its own day unless that day is today.
-  const stepsDay = !latest ? '' : latest.date === todayIso
-    ? 'today'
-    : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(latest.date));
+  const stepsDay = stepsDayLabel(latest, todayIso);
   const perDay = month && month.spent > 0 ? month.spent / Math.max(today, 1) : null;
   const top = month?.categories.reduce<{ category: string; amount: number } | null>((best, item) => (!best || item.amount > best.amount ? item : best), null) ?? null;
   return (

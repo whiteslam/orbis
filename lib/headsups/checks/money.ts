@@ -101,8 +101,9 @@ export function categoryHot({ today, expenses: all }: MoneyInput): Finding[] {
 
 export function loggingGap({ today, expenses }: MoneyInput): Finding[] {
   if (!expenses.length) return [];
-  const days = [...new Set(expenses.map((expense) => expense.localDate))].sort();
-  const last = days[days.length - 1];
+  const days = [...new Set(expenses.map((expense) => expense.localDate))].sort((left, right) => left.localeCompare(right));
+  const last = days.at(-1);
+  if (!last) return [];
   const quiet = daysBetween(last, today);
   if (quiet < GAP_DAYS || quiet > GAP_MAX_DAYS) return [];
   const windowStart = addDays(last, -29);

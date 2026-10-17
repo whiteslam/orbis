@@ -47,12 +47,12 @@ export function supabaseAdmin() {
       const list = await fetch(`${url}/storage/v1/object/list/health-documents`, { method: 'POST', headers, body: JSON.stringify({ prefix: `${id}/`, limit: 1000 }) });
       if (!list.ok) return;
       const folders = await list.json() as Array<{ name: string }>;
-      for (const folder of folders) {
+      await Promise.all(folders.map(async (folder) => {
         const inner = await fetch(`${url}/storage/v1/object/list/health-documents`, { method: 'POST', headers, body: JSON.stringify({ prefix: `${id}/${folder.name}/`, limit: 1000 }) });
         const files = inner.ok ? await inner.json() as Array<{ name: string }> : [];
         const prefixes = files.map((file) => `${id}/${folder.name}/${file.name}`);
         if (prefixes.length) await fetch(`${url}/storage/v1/object/health-documents`, { method: 'DELETE', headers, body: JSON.stringify({ prefixes }) });
-      }
+      }));
     },
     // Deletes rows matching a PostgREST filter (e.g. `user_id=eq.<id>`), to give a test a known starting state.
     async deleteRows(table: string, filter: string) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { deleteIncomePlanAction, saveIncomePlanAction } from '@/app/finance/actions';
 import { INCOME_CATEGORIES } from '@/lib/finance/manual';
@@ -16,10 +16,14 @@ function money(amount: number, currency: string) {
   }
 }
 
-const ordinal = (day: number) => {
-  const suffix = day % 10 === 1 && day !== 11 ? 'st' : day % 10 === 2 && day !== 12 ? 'nd' : day % 10 === 3 && day !== 13 ? 'rd' : 'th';
-  return `${day}${suffix}`;
-};
+function ordinalSuffix(day: number) {
+  if (day % 10 === 1 && day !== 11) return 'st';
+  if (day % 10 === 2 && day !== 12) return 'nd';
+  if (day % 10 === 3 && day !== 13) return 'rd';
+  return 'th';
+}
+
+const ordinal = (day: number) => `${day}${ordinalSuffix(day)}`;
 
 /**
  * What came in this month, and where from.
@@ -31,7 +35,7 @@ const ordinal = (day: number) => {
  * salary you expect and the extra money you did not, and which of those sources
  * each pound came from.
  */
-export function MoneyIn({ summary, shown, onShown }: { summary: FinanceSummary; shown: boolean; onShown: (next: boolean) => void }) {
+export function MoneyIn({ summary, shown, onShown }: Readonly<{ summary: FinanceSummary; shown: boolean; onShown: (next: boolean) => void }>) {
   const month = summary.month;
   const [open, setOpen] = useState(false);
   // What you earn stays covered until you ask for it (the screen owns the
@@ -64,6 +68,47 @@ export function MoneyIn({ summary, shown, onShown }: { summary: FinanceSummary; 
         setDraft({ label: 'Salary', amount: '', currency, payDay: 1, category: 'Salary' });
       }
     });
+  }
+
+  // Without the migration there is nothing to save to; otherwise the form, or
+  // the buttons that open it.
+  let planControls: ReactNode;
+  if (!summary.incomePlanReady) {
+    planControls = <p className="fd-note">Apply the income plan migration in Supabase to set what you expect to earn.</p>;
+  } else if (open) {
+    planControls = (
+      <form
+        className="rt-form"
+        onSubmit={(submit) => { submit.preventDefault(); run(() => safeAction(saveIncomePlanAction)({ ...draft, id: editing ?? undefined })); }}
+      >
+        <label className="fd-field">Name<input value={draft.label} onChange={(change) => setDraft({ ...draft, label: change.currentTarget.value })} placeholder="Salary" maxLength={60} required disabled={isPending} />
+        </label>
+        <div className="rt-form-row">
+          <label className="fd-field">Amount<input value={draft.amount} onChange={(change) => setDraft({ ...draft, amount: change.currentTarget.value })} inputMode="decimal" placeholder="85000" required disabled={isPending} />
+          </label>
+          <label className="fd-field">Day of month<input type="number" min={1} max={31} value={draft.payDay} onChange={(change) => setDraft({ ...draft, payDay: Number(change.currentTarget.value) })} required disabled={isPending} />
+          </label>
+        </div>
+        <label className="fd-field">Counts as<select value={draft.category} onChange={(change) => setDraft({ ...draft, category: change.currentTarget.value })} disabled={isPending}>
+          {INCOME_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        </label>
+        <div className="fd-act">
+          <button type="submit" disabled={isPending || !draft.label.trim() || !draft.amount}>{editing ? 'Save changes' : 'Save'}</button>
+          <button className="fd-link" type="button" onClick={() => { setOpen(false); setEditing(null); }} disabled={isPending}>Cancel</button>
+          {editing && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => { if (window.confirm('Remove this? What you already recorded is kept.')) run(() => safeAction(deleteIncomePlanAction)(editing)); }}><Trash2 size={13} aria-hidden="true" /> Remove</button>}
+        </div>
+      </form>
+    );
+  } else {
+    planControls = (
+      <div className="fd-act">
+        <button className="ghost" type="button" onClick={() => setOpen(true)}><Plus size={14} aria-hidden="true" /> {plan.length ? 'Add another' : 'Set what you earn'}</button>
+        {plan.length === 1 && (
+          <button className="fd-link" type="button" onClick={() => { const entry = plan[0]; setDraft({ label: entry.label, amount: String(entry.amount), currency: entry.currency, payDay: entry.payDay, category: entry.category }); setEditing(entry.id); setOpen(true); }}>Edit</button>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -120,45 +165,9 @@ export function MoneyIn({ summary, shown, onShown }: { summary: FinanceSummary; 
         <p className="fd-note">Nothing has arrived against {plan.length === 1 ? plan[0].label.toLowerCase() : 'your expected income'} this month yet.</p>
       )}
 
-      {!summary.incomePlanReady ? (
-        <p className="fd-note">Apply the income plan migration in Supabase to set what you expect to earn.</p>
-      ) : open ? (
-        <form
-          className="rt-form"
-          onSubmit={(submit) => { submit.preventDefault(); run(() => safeAction(saveIncomePlanAction)({ ...draft, id: editing ?? undefined })); }}
-        >
-          <label className="fd-field">Name
-            <input value={draft.label} onChange={(change) => setDraft({ ...draft, label: change.currentTarget.value })} placeholder="Salary" maxLength={60} required disabled={isPending} />
-          </label>
-          <div className="rt-form-row">
-            <label className="fd-field">Amount
-              <input value={draft.amount} onChange={(change) => setDraft({ ...draft, amount: change.currentTarget.value })} inputMode="decimal" placeholder="85000" required disabled={isPending} />
-            </label>
-            <label className="fd-field">Day of month
-              <input type="number" min={1} max={31} value={draft.payDay} onChange={(change) => setDraft({ ...draft, payDay: Number(change.currentTarget.value) })} required disabled={isPending} />
-            </label>
-          </div>
-          <label className="fd-field">Counts as
-            <select value={draft.category} onChange={(change) => setDraft({ ...draft, category: change.currentTarget.value })} disabled={isPending}>
-              {INCOME_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </label>
-          <div className="fd-act">
-            <button type="submit" disabled={isPending || !draft.label.trim() || !draft.amount}>{editing ? 'Save changes' : 'Save'}</button>
-            <button className="fd-link" type="button" onClick={() => { setOpen(false); setEditing(null); }} disabled={isPending}>Cancel</button>
-            {editing && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => { if (window.confirm('Remove this? What you already recorded is kept.')) run(() => safeAction(deleteIncomePlanAction)(editing)); }}><Trash2 size={13} aria-hidden="true" /> Remove</button>}
-          </div>
-        </form>
-      ) : (
-        <div className="fd-act">
-          <button className="ghost" type="button" onClick={() => setOpen(true)}><Plus size={14} aria-hidden="true" /> {plan.length ? 'Add another' : 'Set what you earn'}</button>
-          {plan.length === 1 && (
-            <button className="fd-link" type="button" onClick={() => { const entry = plan[0]; setDraft({ label: entry.label, amount: String(entry.amount), currency: entry.currency, payDay: entry.payDay, category: entry.category }); setEditing(entry.id); setOpen(true); }}>Edit</button>
-          )}
-        </div>
-      )}
+      {planControls}
 
-      {message && <p className={`gmail-review-message ${message.success ? 'success' : ''}`} role="status">{message.text}</p>}
+      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
     </>
   );
 }

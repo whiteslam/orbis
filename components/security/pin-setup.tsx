@@ -11,7 +11,7 @@ import { PIN_LENGTH, pinProblem } from '@/lib/security/pin-rules';
 import { safeAction } from '@/lib/client/safe-action';
 
 // Required step after sign-in until the account has a device PIN (or after too many wrong PINs).
-export function PinSetup({ reset }: { reset: boolean }) {
+export function PinSetup({ reset }: Readonly<{ reset: boolean }>) {
   const router = useRouter();
   const [step, setStep] = useState<'choose' | 'confirm'>('choose');
   const [first, setFirst] = useState('');
@@ -64,13 +64,13 @@ export function PinSetup({ reset }: { reset: boolean }) {
         {step === 'choose' ? (
           <>
             <label htmlFor="pin-new">Choose a PIN</label>
-            <PinInput key="new" id="pin-new" value={first} onChange={setFirst} onComplete={chosen} autoFocus describedBy={message ? 'pin-feedback' : undefined} keypad />
+            <PinInput key="new" id="pin-new" value={first} onChange={setFirst} onComplete={chosen} focusOnMount describedBy={message ? 'pin-feedback' : undefined} keypad />
           </>
         ) : (
           <>
             <label htmlFor="pin-confirm">Enter it again</label>
-            <PinInput key="confirm" id="pin-confirm" value={second} onChange={setSecond} onComplete={confirmed} disabled={isPending} autoFocus describedBy={message ? 'pin-feedback' : undefined} keypad />
-            {isPending && <p className="lock-pin-status" role="status">Saving…</p>}
+            <PinInput key="confirm" id="pin-confirm" value={second} onChange={setSecond} onComplete={confirmed} disabled={isPending} focusOnMount describedBy={message ? 'pin-feedback' : undefined} keypad />
+            {isPending && <output className="lock-pin-status">Saving…</output>}
           </>
         )}
       </div>

@@ -20,6 +20,24 @@ const embeddingModel = () => process.env.OPENROUTER_EMBEDDING_MODEL?.trim() || '
 
 export class EmbeddingError extends Error {}
 
+async function embedBatch(apiKey: string, batch: string[]): Promise<number[][]> {
+  const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json', 'x-title': 'Orbis Health Library' },
+    body: JSON.stringify({ model: embeddingModel(), input: batch, dimensions: EMBEDDING_DIMENSIONS }),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(30_000),
+  }).catch(() => null);
+  if (!response?.ok) throw new EmbeddingError(response?.status === 402 ? 'The AI account is out of credit, so the document could not be indexed.' : 'The document could not be indexed for AI search right now. Try again shortly.');
+
+  const body = await response.json().catch(() => null) as { data?: Array<{ index: number; embedding: number[] }> } | null;
+  const rows = (body?.data ?? []).slice().sort((left, right) => left.index - right.index);
+  if (rows.length !== batch.length || rows.some((row) => !Array.isArray(row.embedding) || row.embedding.length !== EMBEDDING_DIMENSIONS)) {
+    throw new EmbeddingError('The AI returned an unexpected index for this document. Try again.');
+  }
+  return rows.map((row) => row.embedding);
+}
+
 export async function embedTexts(texts: string[]): Promise<number[][]> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   // Opt-in by name: indexing a document sends its text to a provider the
@@ -31,22 +49,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
 
   const vectors: number[][] = [];
   for (let start = 0; start < texts.length; start += BATCH_SIZE) {
-    const batch = texts.slice(start, start + BATCH_SIZE);
-    const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json', 'x-title': 'Orbis Health Library' },
-      body: JSON.stringify({ model: embeddingModel(), input: batch, dimensions: EMBEDDING_DIMENSIONS }),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
-    }).catch(() => null);
-    if (!response?.ok) throw new EmbeddingError(response?.status === 402 ? 'The AI account is out of credit, so the document could not be indexed.' : 'The document could not be indexed for AI search right now. Try again shortly.');
-
-    const body = await response.json().catch(() => null) as { data?: Array<{ index: number; embedding: number[] }> } | null;
-    const rows = (body?.data ?? []).slice().sort((left, right) => left.index - right.index);
-    if (rows.length !== batch.length || rows.some((row) => !Array.isArray(row.embedding) || row.embedding.length !== EMBEDDING_DIMENSIONS)) {
-      throw new EmbeddingError('The AI returned an unexpected index for this document. Try again.');
-    }
-    vectors.push(...rows.map((row) => row.embedding));
+    vectors.push(...await embedBatch(apiKey, texts.slice(start, start + BATCH_SIZE))); // NOSONAR: one batch at a time against the rate-limited provider, stopping at the first failure
   }
   return vectors;
 }

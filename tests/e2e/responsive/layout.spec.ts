@@ -1,4 +1,4 @@
-import { expect, openApp, openTab, TABS, test } from '../support/fixtures';
+import { expect, openApp, openTab, settle, TABS, test } from '../support/fixtures';
 
 const VIEWPORTS = [
   { width: 320, height: 568 }, { width: 360, height: 640 }, { width: 375, height: 667 }, { width: 390, height: 844 },
@@ -25,7 +25,7 @@ test('no horizontal overflow, input zoom, or console errors on any tab', async (
     const label = `${viewport.width}x${viewport.height}${mobile ? ' touch' : ''}`;
     for (const tab of TABS) {
       await openTab(page, tab);
-      await page.waitForTimeout(700);
+      await settle(page);
       const report = await page.evaluate((mobile) => {
         const width = window.innerWidth;
         const problems: Array<{ kind: string; detail: string }> = [];

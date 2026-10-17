@@ -58,7 +58,10 @@ function handOff(from: NextResponse, to: URL, csp: string) {
 export const config = {
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+      // [.] is a literal dot (Next's path parser dropped the old `\\.` escape, so it
+      // matched any character). The matcher stays a plain string literal, not
+      // String.raw, because Next reads it statically at build time.
+      source: '/((?!_next/static|_next/image|favicon.ico|.*[.](?:svg|png|jpg|jpeg|gif|webp)$).*)',
       // Prefetches from next/link don't render HTML, so they need neither a nonce nor a policy.
       missing: [
         { type: 'header', key: 'next-router-prefetch' },

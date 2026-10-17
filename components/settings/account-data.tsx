@@ -33,15 +33,15 @@ function SocialHistory() {
         </div>
       )}
       {confirming && (
-        <div role="group" aria-label="Confirm deleting social post history">
+        <fieldset aria-label="Confirm deleting social post history">
           <p className="fd-msg">This deletes every earlier version of every post, for good. It can’t be undone.</p>
           <div className="fd-act">
             <button type="button" style={destructive} disabled={isPending} onClick={purge}>{isPending ? 'Deleting…' : 'Delete history'}</button>
             <button type="button" className="ghost" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</button>
           </div>
-        </div>
+        </fieldset>
       )}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </div>
   );
 }
@@ -84,11 +84,11 @@ function DeleteAccount() {
       {open && (
         <form onSubmit={submit} aria-label="Delete account">
           <label className="fd-field wide" htmlFor="delete-password">
-            Password
+            Password{' '}
             <input id="delete-password" type="password" autoComplete="current-password" maxLength={200} value={password} onChange={(event) => setPassword(event.currentTarget.value)} disabled={isPending} placeholder="Not needed if you signed in in the last 10 minutes" />
           </label>
           <label className="fd-field wide" htmlFor="delete-confirm">
-            Type DELETE to confirm
+            Type DELETE to confirm{' '}
             <input id="delete-confirm" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={20} value={confirm} onChange={(event) => setConfirm(event.currentTarget.value)} disabled={isPending} placeholder="DELETE" />
           </label>
           {message && <p className="fd-msg bad" role="alert">{message.text}</p>}
@@ -147,11 +147,11 @@ function ExportData() {
       <div><strong>Your data</strong><p>Download everything Orbis holds for you as a JSON file. Stored files are listed, and you can save them from where they live in Orbis.</p></div>
       {needsPassword && (
         <label className="fd-field wide" htmlFor="export-password">
-          Password
+          Password{' '}
           <input id="export-password" type="password" autoComplete="current-password" maxLength={200} value={password} onChange={(event) => setPassword(event.currentTarget.value)} disabled={isPending} placeholder="Needed if you haven’t signed in in the last 10 minutes" />
         </label>
       )}
-      {message && <p className={`fd-msg ${message.success ? 'ok' : 'bad'}`} role="status">{message.text}</p>}
+      {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
       <div className="fd-act">
         <button type="submit" className="ghost" disabled={isPending}><Download size={13} aria-hidden="true" /> {isPending ? 'Preparing your export…' : 'Export my data'}</button>
       </div>

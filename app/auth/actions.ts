@@ -3,10 +3,11 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
-import { canChangePassword, MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
+import { canChangePassword, MIN_PASSWORD_LENGTH, type PasswordChangeCheck } from '@/lib/security/fresh-auth';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { passwordMatches } from '@/lib/security/verify-password';
 import { ACCESS_DENIED_MESSAGE, SIGNUP_CLOSED_MESSAGE, accessAllowed, signupsOpen } from '@/lib/security/access';
+import { looksLikeEmail } from '@/lib/site';
 
 export type AuthActionState = {
   error: string | null;
@@ -14,11 +15,16 @@ export type AuthActionState = {
 };
 
 const emptyState: AuthActionState = { error: null, message: null };
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** A text field from the form; a missing field or an uploaded file reads as empty. */
+function formText(formData: FormData, name: string) {
+  const value = formData.get(name);
+  return typeof value === 'string' ? value : '';
+}
 
 function readEmail(formData: FormData) {
-  const email = String(formData.get('email') ?? '').trim();
-  return emailPattern.test(email) ? email : null;
+  const email = formText(formData, 'email').trim();
+  return looksLikeEmail(email) ? email : null;
 }
 
 // A fresh sign-in also unlocks Orbis on this device.
@@ -28,7 +34,8 @@ async function unlockForSession(supabase: Awaited<ReturnType<typeof createClient
 }
 
 function siteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
+  let configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  while (configured?.endsWith('/')) configured = configured.slice(0, -1);
   if (configured) return configured;
   return process.env.NODE_ENV === 'production' ? null : 'http://localhost:3000';
 }
@@ -38,8 +45,8 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
   // no such thing here as a self-service new account: the list is the list.
   if (!signupsOpen()) return { error: SIGNUP_CLOSED_MESSAGE, message: null };
   const email = readEmail(formData);
-  const password = String(formData.get('password') ?? '');
-  const confirmPassword = String(formData.get('confirmPassword') ?? '');
+  const password = formText(formData, 'password');
+  const confirmPassword = formText(formData, 'confirmPassword');
 
   if (!email) return { error: 'Enter a valid email address.', message: null };
   if (password.length < MIN_PASSWORD_LENGTH) return { error: `Use a password with at least ${MIN_PASSWORD_LENGTH} characters.`, message: null };
@@ -71,7 +78,7 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
 
 export async function signIn(formData: FormData): Promise<AuthActionState> {
   const email = readEmail(formData);
-  const password = String(formData.get('password') ?? '');
+  const password = formText(formData, 'password');
 
   if (!email || !password) return { error: 'Enter your email and password.', message: null };
   // Checked before the password is, so an unlisted address cannot use sign-in
@@ -130,6 +137,29 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
   };
 }
 
+const WRONG_CURRENT_PASSWORD = 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.';
+
+/** Verifies the current password when the change needs it; answers the check that follows, or an error to show. */
+async function checkWithCurrentPassword(claims: { sub: string; email?: unknown; amr?: unknown }, currentPassword: string, nowSec: number, unlocked: boolean): Promise<PasswordChangeCheck | string> {
+  if (!currentPassword) return 'Enter your current password.';
+  const email = typeof claims.email === 'string' ? claims.email : '';
+  if (!email) return WRONG_CURRENT_PASSWORD;
+  // Counted before every check, so an open session can't be used to guess the password.
+  const limited = await rateLimitRefusal(claims.sub, 'password');
+  if (limited) return limited;
+  const verified = await passwordMatches(email, currentPassword);
+  if (!verified) return WRONG_CURRENT_PASSWORD;
+  return canChangePassword({ amr: claims.amr, nowSec, unlocked, currentPasswordVerified: true });
+}
+
+/** What to tell the person when Supabase refuses the new password. */
+function updateFailure(error: { code?: string; status?: number }) {
+  if (error.code === 'weak_password') return 'Choose a stronger password. Avoid common or previously leaked passwords.';
+  if (error.code === 'same_password') return 'Choose a password you haven’t used for this account.';
+  console.error('updatePassword', error.code ?? error.status);
+  return 'Your password could not be changed. Request a new recovery link and try again.';
+}
+
 /**
  * Sets a new password. A recovery link opened in the last 15 minutes is enough
  * on its own; otherwise Orbis must be unlocked on this device and the current
@@ -137,9 +167,9 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
  * account.
  */
 export async function updatePassword(formData: FormData): Promise<AuthActionState> {
-  const password = String(formData.get('password') ?? '');
-  const confirmPassword = String(formData.get('confirmPassword') ?? '');
-  const currentPassword = String(formData.get('currentPassword') ?? '');
+  const password = formText(formData, 'password');
+  const confirmPassword = formText(formData, 'confirmPassword');
+  const currentPassword = formText(formData, 'currentPassword');
 
   if (password.length < MIN_PASSWORD_LENGTH) return { error: `Use a password with at least ${MIN_PASSWORD_LENGTH} characters.`, message: null };
   if (password !== confirmPassword) return { error: 'Your passwords do not match.', message: null };
@@ -155,15 +185,9 @@ export async function updatePassword(formData: FormData): Promise<AuthActionStat
   const unlocked = await isAppUnlocked(claims);
   let check = canChangePassword({ amr: claims.amr, nowSec, unlocked, currentPasswordVerified: false });
   if (!check.ok && check.needs === 'current-password') {
-    if (!currentPassword) return { error: 'Enter your current password.', message: null };
-    const email = typeof claims.email === 'string' ? claims.email : '';
-    if (!email) return { error: 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.', message: null };
-    // Counted before every check, so an open session can't be used to guess the password.
-    const limited = await rateLimitRefusal(claims.sub, 'password');
-    if (limited) return { error: limited, message: null };
-    const verified = await passwordMatches(email, currentPassword);
-    if (!verified) return { error: 'Your current password isn’t right. Try again, or use “Forgot password” to get a recovery link.', message: null };
-    check = canChangePassword({ amr: claims.amr, nowSec, unlocked, currentPasswordVerified: true });
+    const checked = await checkWithCurrentPassword({ sub: claims.sub, email: claims.email, amr: claims.amr }, currentPassword, nowSec, unlocked);
+    if (typeof checked === 'string') return { error: checked, message: null };
+    check = checked;
   }
   if (!check.ok) {
     return check.needs === 'unlock'
@@ -172,12 +196,7 @@ export async function updatePassword(formData: FormData): Promise<AuthActionStat
   }
 
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) {
-    if (error.code === 'weak_password') return { error: 'Choose a stronger password. Avoid common or previously leaked passwords.', message: null };
-    if (error.code === 'same_password') return { error: 'Choose a password you haven’t used for this account.', message: null };
-    console.error('updatePassword', error.code ?? error.status);
-    return { error: 'Your password could not be changed. Request a new recovery link and try again.', message: null };
-  }
+  if (error) return { error: updateFailure(error), message: null };
 
   redirect('/login?reset=success');
 }

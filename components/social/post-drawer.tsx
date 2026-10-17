@@ -69,10 +69,27 @@ function show(value: unknown) {
   if (value === null || value === undefined || value === '') return '—';
   if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
   if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  return '—';
 }
 
-function HistoryList({ history }: { history: SocialRevision[] }) {
+/** A media path is a storage key, so the history says whether there was a file, not where. */
+function shownBefore(key: string, value: unknown) {
+  if (key === 'mediaPath') return value ? 'A file' : '—';
+  return show(value);
+}
+
+function shownAfter(key: string, value: unknown) {
+  if (key === 'mediaPath') return value ? 'A new file' : 'Removed';
+  return show(value);
+}
+
+const busyLabel = (busy: string | null, key: string, idle: string, working: string) => (busy === key ? working : idle);
+
+type Publishing = { platform: string; link: string };
+
+function HistoryList({ history }: Readonly<{ history: SocialRevision[] }>) {
   if (!history.length) return <p className="fd-empty">No history yet.</p>;
   return (
     <ul>
@@ -92,9 +109,9 @@ function HistoryList({ history }: { history: SocialRevision[] }) {
                     <div key={key}>
                       <dt>{FIELD_LABEL[key] ?? key}</dt>
                       <dd>
-                        <del>{key === 'mediaPath' ? (entry.previous?.[key] ? 'A file' : '—') : show(entry.previous?.[key])}</del>
+                        <del>{shownBefore(key, entry.previous?.[key])}</del>
                         {' → '}
-                        <ins>{key === 'mediaPath' ? (entry.snapshot?.[key] ? 'A new file' : 'Removed') : show(entry.snapshot?.[key])}</ins>
+                        <ins>{shownAfter(key, entry.snapshot?.[key])}</ins>
                       </dd>
                     </div>
                   ))}
@@ -108,6 +125,183 @@ function HistoryList({ history }: { history: SocialRevision[] }) {
   );
 }
 
+function HistoryPanel({ history, loading }: Readonly<{ history: SocialRevision[] | null; loading: boolean }>) {
+  if (history) return <HistoryList history={history} />;
+  return <p className="fd-empty">{loading ? 'Loading…' : 'History could not be loaded.'}</p>;
+}
+
+/** Status, AI mark, format and day, under the post's title. */
+function DrawerLead({ saved }: Readonly<{ saved: SocialPost }>) {
+  const day = saved.plannedFor ? ` · ${dayLabel(saved.plannedFor)}` : ' · no date yet';
+  return (
+    <span className="so-tags">
+      <StatusChip status={saved.status} />
+      {saved.source === 'ai' && <span className="so-ai"><Sparkles size={9} aria-hidden="true" />AI draft</span>}
+      <span>{formatLabel(saved.format)}{day}</span>
+    </span>
+  );
+}
+
+function PublishedNote({ published }: Readonly<{ published: NonNullable<SocialPost['published']> }>) {
+  return (
+    <p className="so-published-note">
+      Published on {platformLabel(published.platform)}, {new Date(published.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}.
+      {published.link && <> <a href={published.link} target="_blank" rel="noopener noreferrer">Open the post</a></>}
+      {' '}Mark it as not published to change it.
+    </p>
+  );
+}
+
+/** Characters used against each chosen platform's caption limit. */
+function CaptionCounter({ platforms, length }: Readonly<{ platforms: SocialPlatform[]; length: number }>) {
+  const used = length.toLocaleString('en-IN');
+  return (
+    <p className="so-counter" aria-live="polite">
+      {platforms.length
+        ? platforms.map((platform) => {
+          const over = length > CAPTION_LIMIT[platform];
+          return (
+            <span key={platform} className={over ? 'over' : undefined}>
+              {platformLabel(platform)} {used} / {CAPTION_LIMIT[platform].toLocaleString('en-IN')}{over ? ' — too long' : ''}
+            </span>
+          );
+        })
+        : <span>{used} characters, hashtags included</span>}
+    </p>
+  );
+}
+
+function MediaPreview({ saved, format }: Readonly<{ saved: SocialPost | null; format: SocialFormat }>) {
+  const emptyNote = format === 'post' ? 'Optional for a post.' : `A ${format} needs one before it can be marked ready.`;
+  return (
+    <div className="so-media-frame">
+      {saved?.mediaUrl && saved.mediaType === 'image' && <img src={saved.mediaUrl} alt={saved.title} />}
+      {saved?.mediaUrl && saved.mediaType === 'video' && (
+        <video src={saved.mediaUrl} controls playsInline preload="metadata">
+          <track kind="captions" />
+        </video>
+      )}
+      {!saved?.mediaPath && <p className="so-media-empty">{emptyNote}</p>}
+      {saved?.mediaPath && !saved.mediaUrl && <p className="so-media-empty">The file is saved but could not be shown right now.</p>}
+    </div>
+  );
+}
+
+function MediaUpload({ hasMedia, busy, onUpload, onRemove }: Readonly<{
+  hasMedia: boolean;
+  busy: string | null;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+}>) {
+  const fileId = useId();
+  return (
+    <div className="fd-act">
+      <label htmlFor={fileId} className="fd-button ghost" aria-disabled={busy === 'media'}>
+        <Upload size={14} aria-hidden="true" />{busyLabel(busy, 'media', hasMedia ? 'Replace' : 'Upload', 'Uploading…')}
+      </label>
+      <input
+        id={fileId}
+        type="file"
+        className="sr-only"
+        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+        disabled={busy === 'media'}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (file) onUpload(file);
+        }}
+      />
+      {hasMedia && <button type="button" className="fd-link" disabled={busy === 'media-remove'} onClick={onRemove}>{busyLabel(busy, 'media-remove', 'Remove', 'Removing…')}</button>}
+    </div>
+  );
+}
+
+function PublishForm({ publishing, busy, onChange, onPublish, onCancel }: Readonly<{
+  publishing: Publishing;
+  busy: string | null;
+  onChange: (next: Publishing) => void;
+  onPublish: () => void;
+  onCancel: () => void;
+}>) {
+  return (
+    <div className="so-publish">
+      <label className="fd-field">Where did it go out?{' '}
+        <select value={publishing.platform} onChange={(event) => onChange({ ...publishing, platform: event.currentTarget.value })}>
+          {PUBLISH_PLACES.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}
+        </select>
+      </label>
+      <label className="fd-field wide">Link (optional){' '}
+        <input type="url" inputMode="url" placeholder="https://" value={publishing.link} onChange={(event) => onChange({ ...publishing, link: event.currentTarget.value })} />
+      </label>
+      <div className="fd-act">
+        <button type="button" disabled={busy === 'publish'} onClick={onPublish}>{busyLabel(busy, 'publish', 'Mark published', 'Saving…')}</button>
+        <button type="button" className="fd-link" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/** The buttons that move a post along: save, ready, published, and back again. */
+function ActionBar({ saved, locked, dirty, busy, publishing, onReady, onStartPublish, onDraft, onUnpublish }: Readonly<{
+  saved: SocialPost | null;
+  locked: boolean;
+  dirty: boolean;
+  busy: string | null;
+  publishing: boolean;
+  onReady: () => void;
+  onStartPublish: (post: SocialPost) => void;
+  onDraft: () => void;
+  onUnpublish: () => void;
+}>) {
+  const canMarkReady = !saved || saved.status === 'idea' || saved.status === 'draft';
+  const isReady = saved?.status === 'ready';
+  return (
+    <div className="so-bar">
+      <div className="fd-act">
+        {!locked && <button type="submit" disabled={busy === 'save' || (!dirty && Boolean(saved))}>{busyLabel(busy, 'save', saved ? 'Save' : 'Add post', 'Saving…')}</button>}
+        {canMarkReady && (
+          <button type="button" className="ghost" disabled={busy === 'ready'} onClick={onReady}>{busyLabel(busy, 'ready', 'Mark ready', 'Checking…')}</button>
+        )}
+        {isReady && !publishing && (
+          <button type="button" className="ghost" onClick={() => onStartPublish(saved)}>Mark published</button>
+        )}
+        {isReady && (
+          <button type="button" className="fd-link" disabled={busy === 'draft'} onClick={onDraft}>{busyLabel(busy, 'draft', 'Back to draft', 'Saving…')}</button>
+        )}
+        {locked && <button type="button" className="ghost" disabled={busy === 'unpublish'} onClick={onUnpublish}>{busyLabel(busy, 'unpublish', 'Mark as not published', 'Saving…')}</button>}
+      </div>
+    </div>
+  );
+}
+
+function MoreMenu({ locked, busy, moveTo, onMoveTo, onDuplicate, onMove, onRemove }: Readonly<{
+  locked: boolean;
+  busy: string | null;
+  moveTo: string;
+  onMoveTo: (month: string) => void;
+  onDuplicate: () => void;
+  onMove: () => void;
+  onRemove: () => void;
+}>) {
+  return (
+    <details className="so-more-menu">
+      <summary>More: copy, move or delete</summary>
+      <div className="fd-act">
+        <button type="button" className="ghost" disabled={busy === 'duplicate'} onClick={onDuplicate}>{busyLabel(busy, 'duplicate', 'Duplicate', 'Copying…')}</button>
+        {!locked && (
+          <>
+            <label className="fd-field">Move to{' '}
+              <input type="month" value={moveTo} onChange={(event) => onMoveTo(event.currentTarget.value)} />
+            </label>
+            <button type="button" className="ghost" disabled={!moveTo || busy === 'move'} onClick={onMove}>{busyLabel(busy, 'move', 'Move', 'Moving…')}</button>
+          </>
+        )}
+        <button type="button" className="fd-link alert" disabled={busy === 'delete'} onClick={onRemove}><Trash2 size={13} aria-hidden="true" />{busyLabel(busy, 'delete', 'Delete', 'Deleting…')}</button>
+      </div>
+    </details>
+  );
+}
+
 /**
  * One post, full screen: write it, attach its picture or video, mark it ready,
  * record where it went out, and read what changed.
@@ -115,7 +309,7 @@ function HistoryList({ history }: { history: SocialRevision[] }) {
  * Each write disables only the button that was pressed. The server makes every
  * status change conditional on what it read, so two taps cannot corrupt a post.
  */
-export function PostDrawer({ period, post, initialDate, initialFormat = 'post', onClose, onChanged, onRemoved }: {
+export function PostDrawer({ period, post, initialDate, initialFormat = 'post', onClose, onChanged, onRemoved }: Readonly<{
   period: string;
   post: SocialPost | null;
   initialDate: string | null;
@@ -124,7 +318,7 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   /** A post was created or changed (it may now belong to another month). */
   onChanged: (post: SocialPost) => void;
   onRemoved: (id: string) => void;
-}) {
+}>) {
   const [saved, setSaved] = useState<SocialPost | null>(post);
   const [form, setForm] = useState<Form>(() => (post ? formOf(post, null) : { ...formOf(null, initialDate), format: initialFormat }));
   // A new post's id is chosen here, so a second tap on Save finds the first post instead of making another.
@@ -133,11 +327,10 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [publishing, setPublishing] = useState<{ platform: string; link: string } | null>(null);
+  const [publishing, setPublishing] = useState<Publishing | null>(null);
   const [history, setHistory] = useState<SocialRevision[] | null>(null);
   const [moveTo, setMoveTo] = useState('');
   const [, startTransition] = useTransition();
-  const fileId = useId();
 
   const locked = saved?.status === 'published';
   const postPeriod = saved?.period ?? period;
@@ -304,8 +497,6 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
     platforms: current.platforms.includes(platform) ? current.platforms.filter((item) => item !== platform) : [...current.platforms, platform],
   }));
 
-  const label = (key: string, idle: string, working: string) => (busy === key ? working : idle);
-
   return (
     <div className="so-drawer">
       <FieldSubHead
@@ -313,13 +504,7 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
         title={saved ? saved.title : 'New post'}
         onClose={onClose}
         backLabel="Close post"
-        lead={saved && (
-          <span className="so-tags">
-            <StatusChip status={saved.status} />
-            {saved.source === 'ai' && <span className="so-ai"><Sparkles size={9} aria-hidden="true" />AI draft</span>}
-            <span>{formatLabel(saved.format)}{saved.plannedFor ? ` · ${dayLabel(saved.plannedFor)}` : ' · no date yet'}</span>
-          </span>
-        )}
+        lead={saved && <DrawerLead saved={saved} />}
       />
 
       {saved && (
@@ -331,17 +516,11 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
 
       {tab === 'history' && saved ? (
         <section className="so-history">
-          {history ? <HistoryList history={history} /> : <p className="fd-empty">{busy === 'history' ? 'Loading…' : 'History could not be loaded.'}</p>}
+          <HistoryPanel history={history} loading={busy === 'history'} />
         </section>
       ) : (
         <form className="fd-form" onSubmit={(event) => { event.preventDefault(); save(); }}>
-          {locked && saved?.published && (
-            <p className="so-published-note">
-              Published on {platformLabel(saved.published.platform)}, {new Date(saved.published.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}.
-              {saved.published.link && <> <a href={saved.published.link} target="_blank" rel="noopener noreferrer">Open the post</a></>}
-              {' '}Mark it as not published to change it.
-            </p>
-          )}
+          {locked && saved?.published && <PublishedNote published={saved.published} />}
 
           <div className="fd-seg" role="radiogroup" aria-label="Format">
             {SOCIAL_FORMATS.map((format) => (
@@ -350,11 +529,11 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
           </div>
 
           <div className="so-row-2">
-            <label className="fd-field wide">Day
+            <label className="fd-field wide">Day{' '}
               <input type="date" value={form.plannedFor} min={postPeriod} max={lastDay} disabled={locked} onChange={(event) => setForm({ ...form, plannedFor: event.currentTarget.value })} />
             </label>
             {saved && saved.status !== 'ready' && saved.status !== 'published' ? (
-              <label className="fd-field wide">Stage
+              <label className="fd-field wide">Stage{' '}
                 <select value={saved.status} disabled={busy !== null} onChange={(event) => setDraftStatus(event.currentTarget.value as 'idea' | 'draft')}>
                   <option value="idea">Idea</option>
                   <option value="draft">Draft</option>
@@ -363,25 +542,17 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
             ) : <span />}
           </div>
 
-          <label className="fd-field wide">Title
+          <label className="fd-field wide">Title{' '}
             <input value={form.title} maxLength={SOCIAL_CAPS.title} required disabled={locked} placeholder="What this post is about" onChange={(event) => setForm({ ...form, title: event.currentTarget.value })} />
           </label>
           <label className="fd-field wide">Headline <span>(optional, the words on the image)</span>
             <input value={form.headline} maxLength={SOCIAL_CAPS.headline} disabled={locked} onChange={(event) => setForm({ ...form, headline: event.currentTarget.value })} />
           </label>
-          <label className="fd-field wide">Caption
+          <label className="fd-field wide">Caption{' '}
             <textarea rows={7} value={form.caption} maxLength={SOCIAL_CAPS.caption} disabled={locked} onChange={(event) => setForm({ ...form, caption: event.currentTarget.value })} />
           </label>
-          <p className="so-counter" aria-live="polite">
-            {form.platforms.length
-              ? form.platforms.map((platform) => (
-                <span key={platform} className={length > CAPTION_LIMIT[platform] ? 'over' : undefined}>
-                  {platformLabel(platform)} {length.toLocaleString('en-IN')} / {CAPTION_LIMIT[platform].toLocaleString('en-IN')}{length > CAPTION_LIMIT[platform] ? ' — too long' : ''}
-                </span>
-              ))
-              : <span>{length.toLocaleString('en-IN')} characters, hashtags included</span>}
-          </p>
-          <label className="fd-field wide">Hashtags
+          <CaptionCounter platforms={form.platforms} length={length} />
+          <label className="fd-field wide">Hashtags{' '}
             <input value={form.hashtags} disabled={locked} placeholder="#autumn #recipes" onChange={(event) => setForm({ ...form, hashtags: event.currentTarget.value })} />
           </label>
 
@@ -396,89 +567,32 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
 
           <section className={`so-media so-fmt-${form.format}`}>
             <FieldLabel>Picture or video</FieldLabel>
-            <div className="so-media-frame">
-              {saved?.mediaUrl && saved.mediaType === 'image' && <img src={saved.mediaUrl} alt={`Picture for ${saved.title}`} />}
-              {saved?.mediaUrl && saved.mediaType === 'video' && <video src={saved.mediaUrl} controls playsInline preload="metadata" />}
-              {!saved?.mediaPath && (
-                <p className="so-media-empty">{form.format === 'post' ? 'Optional for a post.' : `A ${form.format} needs one before it can be marked ready.`}</p>
-              )}
-              {saved?.mediaPath && !saved.mediaUrl && <p className="so-media-empty">The file is saved but could not be shown right now.</p>}
-            </div>
-            {!locked && (
-              <div className="fd-act">
-                <label htmlFor={fileId} className="fd-button ghost" aria-disabled={busy === 'media'}>
-                  <Upload size={14} aria-hidden="true" />{label('media', saved?.mediaPath ? 'Replace' : 'Upload', 'Uploading…')}
-                </label>
-                <input
-                  id={fileId}
-                  type="file"
-                  className="sr-only"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
-                  disabled={busy === 'media'}
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    event.currentTarget.value = '';
-                    if (file) upload(file);
-                  }}
-                />
-                {saved?.mediaPath && <button type="button" className="fd-link" disabled={busy === 'media-remove'} onClick={removeMedia}>{label('media-remove', 'Remove', 'Removing…')}</button>}
-              </div>
-            )}
+            <MediaPreview saved={saved} format={form.format} />
+            {!locked && <MediaUpload hasMedia={Boolean(saved?.mediaPath)} busy={busy} onUpload={upload} onRemove={removeMedia} />}
             <p className="fd-note tight">Up to 50 MB. JPG, PNG, WebP, GIF, MP4, MOV or WebM. Only you can see it.</p>
           </section>
 
           {problem && <p className="so-problem" role="alert">{problem}</p>}
-          {message && <p className={`so-message${message.error ? ' error' : ''}`} role="status">{message.text}</p>}
+          {message && <output className={`so-message${message.error ? ' error' : ''}`}>{message.text}</output>}
 
           {publishing && saved && (
-            <div className="so-publish">
-              <label className="fd-field">Where did it go out?
-                <select value={publishing.platform} onChange={(event) => setPublishing({ ...publishing, platform: event.currentTarget.value })}>
-                  {PUBLISH_PLACES.map((place) => <option key={place.id} value={place.id}>{place.label}</option>)}
-                </select>
-              </label>
-              <label className="fd-field wide">Link (optional)
-                <input type="url" inputMode="url" placeholder="https://" value={publishing.link} onChange={(event) => setPublishing({ ...publishing, link: event.currentTarget.value })} />
-              </label>
-              <div className="fd-act">
-                <button type="button" disabled={busy === 'publish'} onClick={publish}>{label('publish', 'Mark published', 'Saving…')}</button>
-                <button type="button" className="fd-link" onClick={() => setPublishing(null)}>Cancel</button>
-              </div>
-            </div>
+            <PublishForm publishing={publishing} busy={busy} onChange={setPublishing} onPublish={publish} onCancel={() => setPublishing(null)} />
           )}
 
-          <div className="so-bar">
-            <div className="fd-act">
-              {!locked && <button type="submit" disabled={busy === 'save' || (!dirty && Boolean(saved))}>{label('save', saved ? 'Save' : 'Add post', 'Saving…')}</button>}
-              {(!saved || saved.status === 'idea' || saved.status === 'draft') && (
-                <button type="button" className="ghost" disabled={busy === 'ready'} onClick={markReady}>{label('ready', 'Mark ready', 'Checking…')}</button>
-              )}
-              {saved?.status === 'ready' && !publishing && (
-                <button type="button" className="ghost" onClick={() => setPublishing({ platform: saved.platforms[0] ?? 'instagram', link: '' })}>Mark published</button>
-              )}
-              {saved?.status === 'ready' && (
-                <button type="button" className="fd-link" disabled={busy === 'draft'} onClick={() => setDraftStatus('draft')}>{label('draft', 'Back to draft', 'Saving…')}</button>
-              )}
-              {locked && <button type="button" className="ghost" disabled={busy === 'unpublish'} onClick={unpublish}>{label('unpublish', 'Mark as not published', 'Saving…')}</button>}
-            </div>
-          </div>
+          <ActionBar
+            saved={saved}
+            locked={locked}
+            dirty={dirty}
+            busy={busy}
+            publishing={publishing !== null}
+            onReady={markReady}
+            onStartPublish={(ready) => setPublishing({ platform: ready.platforms[0] ?? 'instagram', link: '' })}
+            onDraft={() => setDraftStatus('draft')}
+            onUnpublish={unpublish}
+          />
 
           {saved && (
-            <details className="so-more-menu">
-              <summary>More: copy, move or delete</summary>
-              <div className="fd-act">
-                <button type="button" className="ghost" disabled={busy === 'duplicate'} onClick={duplicate}>{label('duplicate', 'Duplicate', 'Copying…')}</button>
-                {!locked && (
-                  <>
-                    <label className="fd-field">Move to
-                      <input type="month" value={moveTo} onChange={(event) => setMoveTo(event.currentTarget.value)} />
-                    </label>
-                    <button type="button" className="ghost" disabled={!moveTo || busy === 'move'} onClick={move}>{label('move', 'Move', 'Moving…')}</button>
-                  </>
-                )}
-                <button type="button" className="fd-link alert" disabled={busy === 'delete'} onClick={remove}><Trash2 size={13} aria-hidden="true" />{label('delete', 'Delete', 'Deleting…')}</button>
-              </div>
-            </details>
+            <MoreMenu locked={locked} busy={busy} moveTo={moveTo} onMoveTo={setMoveTo} onDuplicate={duplicate} onMove={move} onRemove={remove} />
           )}
         </form>
       )}

@@ -76,7 +76,7 @@ async function inBatches<T>(items: T[], limit: number, task: (item: T) => Promis
     while (next < items.length) {
       const item = items[next];
       next += 1;
-      await task(item);
+      await task(item); // NOSONAR: each worker runs its share one at a time; that is what caps how many are in flight
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));

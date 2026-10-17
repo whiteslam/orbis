@@ -25,9 +25,17 @@ function nowInIndia() {
   return { date: `${part('year')}-${part('month')}-${part('day')}`, time: `${part('hour')}:${part('minute')}` };
 }
 
+type Kind = 'expense' | 'income' | 'investment';
+
+// What each kind of entry offers and calls things.
+const KIND_COPY: Record<Kind, { label: string; categories: readonly string[]; counterparty: string; placeholder: string }> = {
+  expense: { label: 'Expense', categories: EXPENSE_CATEGORIES, counterparty: 'Paid to', placeholder: 'Merchant, shop, or person (optional)' },
+  income: { label: 'Income', categories: INCOME_CATEGORIES, counterparty: 'Received from', placeholder: 'Employer, client, or person (optional)' },
+  investment: { label: 'Investment', categories: INVESTMENT_CATEGORIES, counterparty: 'Invested with', placeholder: 'Bank, fund house, or broker (optional)' },
+};
+
 /** The manual entry view. `onClose` leaves it; `onSaved` leaves it after a save, with the result to show. */
-export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { onClose: () => void; onSaved: (message: string) => void; initialCategory?: string }) {
-  type Kind = 'expense' | 'income' | 'investment';
+export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Readonly<{ onClose: () => void; onSaved: (message: string) => void; initialCategory?: string }>) {
   const [direction, setDirection] = useState<Kind>(() => isInvestmentCategory(initialCategory) ? 'investment' : 'expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('INR');
@@ -40,11 +48,12 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const categories: readonly string[] = direction === 'investment' ? INVESTMENT_CATEGORIES : direction === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const copy = KIND_COPY[direction];
+  const categories = copy.categories;
   const today = nowInIndia().date;
   const isIncome = direction === 'income';
   const isInvestment = direction === 'investment';
-  const noun = isIncome ? 'income' : isInvestment ? 'investment' : 'expense';
+  const noun = direction;
 
   function changeDirection(next: Kind) {
     setDirection(next);
@@ -82,7 +91,7 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
         <div className="fd-seg" role="radiogroup" aria-label="Transaction type">
           {(['expense', 'income', 'investment'] as const).map((value) => (
             <button key={value} type="button" role="radio" aria-checked={direction === value} onClick={() => changeDirection(value)} disabled={isPending}>
-              {value === 'expense' ? 'Expense' : value === 'income' ? 'Income' : 'Investment'}
+              {KIND_COPY[value].label}
             </button>
           ))}
         </div>
@@ -106,8 +115,8 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
 
         {isInvestment && <p className="fd-hint">Kept out of what you spent, and listed under Investments.</p>}
 
-        <label className="fd-field wide">{isIncome ? 'Received from' : isInvestment ? 'Invested with' : 'Paid to'}
-          <input maxLength={100} value={merchant} onChange={(event) => setMerchant(event.currentTarget.value)} disabled={isPending} placeholder={isIncome ? 'Employer, client, or person (optional)' : isInvestment ? 'Bank, fund house, or broker (optional)' : 'Merchant, shop, or person (optional)'} />
+        <label className="fd-field wide">{copy.counterparty}
+          <input maxLength={100} value={merchant} onChange={(event) => setMerchant(event.currentTarget.value)} disabled={isPending} placeholder={copy.placeholder} />
         </label>
         <div className="fd-grid">
           <label className="fd-field">Date<input type="date" required max={today} min="2000-01-01" value={date} onChange={(event) => setDate(event.currentTarget.value)} disabled={isPending} /></label>
@@ -123,8 +132,7 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: { o
           </div>
         </fieldset>
 
-        <label className="fd-field wide">Note
-          <textarea rows={2} maxLength={MANUAL_NOTE_MAX_LENGTH} value={note} onChange={(event) => setNote(event.currentTarget.value)} disabled={isPending} placeholder="What was it for? (optional)" />
+        <label className="fd-field wide">Note<textarea rows={2} maxLength={MANUAL_NOTE_MAX_LENGTH} value={note} onChange={(event) => setNote(event.currentTarget.value)} disabled={isPending} placeholder="What was it for? (optional)" />
         </label>
         <p className="fd-count">{note.length}/{MANUAL_NOTE_MAX_LENGTH}</p>
 

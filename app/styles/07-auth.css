@@ -7,7 +7,7 @@
 .auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 40px; }
 .auth-brand strong { font-size: 20px; font-weight: 700; letter-spacing: -.04em; }
 .auth-heading { margin-bottom: 26px; }
-.auth-heading .eyebrow { margin: 0; color: var(--fd-accent) !important; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.auth-heading .eyebrow { margin: 0; color: var(--fd-accent); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .auth-heading h1 { margin: 10px 0 0; font-size: 31px; font-weight: 700; letter-spacing: -.035em; line-height: 1.14; }
 .auth-heading > p:last-child { margin: 9px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
 .auth-mode { display: flex; gap: 6px; padding: 4px; margin: 0 0 26px; border-radius: var(--r-pill); background: var(--fd-rule); }
@@ -131,8 +131,10 @@
 .keyboard-open .bottom-nav { display: none; }
 .keyboard-open .screen-body { --screen-pad-bottom: 24px; }
 @media (pointer: coarse) {
-  /* iOS zooms into any field under 16px and stays zoomed; 16px on touch devices prevents it. */
-  input, select, textarea { font-size: 16px !important; }
+  /* iOS zooms into any field under 16px and stays zoomed; 16px on touch devices prevents it.
+     :not(#_) lifts this above every class-scoped field rule without !important. The amount
+     field in manual entry is already larger and keeps its own size. */
+  :is(input, select, textarea):not(#_, .fd-amount input) { font-size: 16px; }
   /* Comfortable touch targets for text buttons (Apple HIG / WCAG 2.5.5). */
   .finance-button { min-height: 44px; }
   /* The compact iOS-style pills keep their look; an invisible layer extends the tap area to 44px. */

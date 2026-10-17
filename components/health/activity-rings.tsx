@@ -6,7 +6,7 @@ export type Ring = { label: string; value: number; color: string; track: string 
 const STROKE = 14;
 const GAP = 3;
 
-export function ActivityRings({ rings, size = 132 }: { rings: Ring[]; size?: number }) {
+export function ActivityRings({ rings, size = 132 }: Readonly<{ rings: Ring[]; size?: number }>) {
   const center = size / 2;
   return (
     <svg className="activity-rings" width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={rings.map((ring) => `${ring.label} ${Math.round(ring.value * 100)}%`).join(', ')}>

@@ -23,7 +23,13 @@ const SHOWN_CATEGORIES = 5;
  * month, then one hairline row per category with its share drawn inline, so
  * every amount is legible at once without touching anything.
  */
-export function SpendingSummary({ month, highlight = null, incomeShown = true }: { month: Month; highlight?: string | null; incomeShown?: boolean }) {
+// Today's bar is marked, and the days still to come are drawn as future.
+function dayClass(day: number, today: number) {
+  if (day === today) return 'today';
+  return day > today ? 'future' : undefined;
+}
+
+export function SpendingSummary({ month, highlight = null, incomeShown = true }: Readonly<{ month: Month; highlight?: string | null; incomeShown?: boolean }>) {
   // A heads-up about one category brings its row into view.
   const focusRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { focusRef.current?.scrollIntoView({ block: 'center' }); }, []);
@@ -52,7 +58,7 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
     <>
       <div className="fd-bars" role="img" aria-label={`Spending each day in ${monthName}. Busiest day ${money(peak, month.currency)}, averaging ${money(dailyAverage, month.currency)} a day.`}>
         {month.daily.map((day) => (
-          <span key={day.day} className={day.day === today ? 'today' : day.day > today ? 'future' : undefined}>
+          <span key={day.day} className={dayClass(day.day, today)}>
             <i style={{ height: day.amount ? `${Math.max((day.amount / peak) * 100, 4)}%` : 0 }} />
           </span>
         ))}

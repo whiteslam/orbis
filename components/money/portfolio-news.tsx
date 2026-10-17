@@ -28,7 +28,7 @@ export function PortfolioNewsCard() {
   }, []);
 
   if (state === 'loading') {
-    return <p className="fd-weather-quiet" role="status"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news against your holdings…</p>;
+    return <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news against your holdings…</output>;
   }
   if (state === 'failed') return <p className="fd-weather-quiet"><Newspaper size={14} aria-hidden="true" /> The news brief couldn’t be loaded. Opening Investments again tries once more.</p>;
   if (state.state === 'empty') return null;

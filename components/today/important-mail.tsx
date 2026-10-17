@@ -72,7 +72,7 @@ export function ImportantMail() {
   }, []);
 
   if (state.status === 'loading') {
-    return <p className="fd-weather-quiet" role="status"><LoaderCircle className="workbook-spinner" size={14} /> Checking important mail…</p>;
+    return <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Checking important mail…</output>;
   }
   if (state.status === 'error') {
     return <p className="fd-weather-quiet"><Mail size={14} aria-hidden="true" /> Gmail couldn’t be reached. Opening Home again tries once more.</p>;

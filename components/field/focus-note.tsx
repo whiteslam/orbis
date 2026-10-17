@@ -37,7 +37,7 @@ const SOURCE_MARK: Record<SourceId, { icon: LucideIcon; label: string }> = {
  * It sits on the ground with no fill, no border and no shadow, like every other
  * statement in this layout.
  */
-export function FocusNote({ note }: { note: HomeNote }) {
+export function FocusNote({ note }: Readonly<{ note: HomeNote }>) {
   return (
     <section className="fd-note-brief" aria-label="Your brief">
       {/* The greeting and the day both depend on the hour, which can differ

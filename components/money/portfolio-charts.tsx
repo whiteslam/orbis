@@ -18,7 +18,7 @@ const CLASS_COLOR: Record<AssetClass, string> = {
 // can't use the colour, so the status is never colour alone.
 const STATUS_LABEL: Record<Status, string> = { good: 'Healthy', warning: 'Worth watching', critical: 'High risk' };
 
-function Reading({ title, value, status, detail }: { title: string; value: string; status: Status; detail: string }) {
+function Reading({ title, value, status, detail }: Readonly<{ title: string; value: string; status: Status; detail: string }>) {
   return (
     <div className={`invest-reading ${status}`}>
       <i aria-hidden="true" />
@@ -34,7 +34,7 @@ function Reading({ title, value, status, detail }: { title: string; value: strin
  * ground rather than as cards: the screen already carries a total, a list and
  * an allocation, and boxing these made four competing surfaces out of one page.
  */
-export function PortfolioHealth({ analysis }: { analysis: PortfolioAnalysis }) {
+export function PortfolioHealth({ analysis }: Readonly<{ analysis: PortfolioAnalysis }>) {
   const classes = analysis.byClass.map((item) => item.assetClass);
   return (
     <div className="invest-health">
@@ -63,7 +63,7 @@ export function PortfolioHealth({ analysis }: { analysis: PortfolioAnalysis }) {
 }
 
 /** Where the money sits: by class as one strip, then the holdings that fill it. */
-export function AllocationBreakdown({ analysis }: { analysis: PortfolioAnalysis }) {
+export function AllocationBreakdown({ analysis }: Readonly<{ analysis: PortfolioAnalysis }>) {
   const top = analysis.positions.slice(0, 6);
   const rest = analysis.positions.slice(6).reduce((sum, position) => sum + position.value, 0);
   const rows = rest > 0

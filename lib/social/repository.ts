@@ -23,6 +23,15 @@ function queryFailed(error: { code?: string }, message: string) {
 /** An error whose message is safe to show as-is. */
 export class SocialError extends Error {}
 
+function publishedOf(row: Record<string, unknown>): SocialPost['published'] {
+  if (typeof row.published_at !== 'string') return null;
+  return {
+    at: row.published_at,
+    platform: typeof row.published_platform === 'string' ? row.published_platform : 'other',
+    link: typeof row.published_link === 'string' ? row.published_link : null,
+  };
+}
+
 function toPost(row: Record<string, unknown>): SocialPost {
   return {
     id: String(row.id),
@@ -38,9 +47,7 @@ function toPost(row: Record<string, unknown>): SocialPost {
     mediaPath: typeof row.media_path === 'string' ? row.media_path : null,
     mediaType: row.media_type === 'image' || row.media_type === 'video' ? row.media_type : null,
     mediaUrl: null,
-    published: typeof row.published_at === 'string'
-      ? { at: row.published_at, platform: String(row.published_platform ?? 'other'), link: typeof row.published_link === 'string' ? row.published_link : null }
-      : null,
+    published: publishedOf(row),
     source: row.source === 'ai' ? 'ai' : 'manual',
     position: Number(row.position) || 0,
     updatedAt: String(row.updated_at),
@@ -179,6 +186,33 @@ const PATCH_COLUMN: Record<keyof PostPatch, string> = {
 
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
 
+/** The fields the patch actually changes. */
+function changesFrom(patch: PostPatch, before: SocialPost): Partial<SocialPost> {
+  const changes: Partial<SocialPost> = {};
+  for (const key of Object.keys(patch) as (keyof PostPatch)[]) {
+    if (patch[key] === undefined || same(patch[key], before[key])) continue;
+    (changes as Record<string, unknown>)[key] = patch[key];
+  }
+  return changes;
+}
+
+/** The status rules for an edit to a ready post, applied to `changes` in place. */
+function settleStatus(before: SocialPost, changes: Partial<SocialPost>) {
+  if (before.status !== 'ready') return;
+  // Idea/draft moves through here; a ready post leaves ready only by an edit or unready.
+  if (changes.status) delete changes.status;
+  // An edit that un-approves, or one that leaves the post failing the ready check
+  // (its day cleared or moved out of its month), sends it back to draft.
+  if (editUnreadies(before, changes) || readyProblem({ ...before, ...changes })) changes.status = 'draft';
+}
+
+/** Why an edit could not be saved, as the error to throw. */
+function saveFailed(error: { code?: string; message: string }) {
+  // A check failed: either the day is outside the month, or the post changed in another tab so this edit would leave a ready post incomplete.
+  if (error.code !== '23514') return queryFailed(error, 'That post could not be saved.');
+  return new SocialError(error.message.includes('social_posts_date_in_period') ? 'Pick a day inside the post’s month.' : 'This post changed somewhere else. Refresh and try again.');
+}
+
 /**
  * Saves an edit. Nothing changed means nothing is written, history included.
  *
@@ -191,24 +225,14 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
   const before = await mustRead(supabase, userId, id);
   if (before.status === 'published') throw new SocialError('This post is published. Mark it as not published to change it.');
 
-  const changes: Partial<SocialPost> = {};
-  for (const key of Object.keys(patch) as (keyof PostPatch)[]) {
-    if (patch[key] === undefined || same(patch[key], before[key])) continue;
-    (changes as Record<string, unknown>)[key] = patch[key];
-  }
+  const changes = changesFrom(patch, before);
   if (!Object.keys(changes).length) return (await withMedia(supabase, [before]))[0];
-  if (changes.status && before.status === 'ready') {
-    // Idea/draft moves through here; a ready post leaves ready only by an edit or unready.
-    delete changes.status;
-  }
-  // An edit that un-approves, or one that leaves the post failing the ready check
-  // (its day cleared or moved out of its month), sends it back to draft.
-  if (before.status === 'ready' && (editUnreadies(before, changes) || readyProblem({ ...before, ...changes }))) changes.status = 'draft';
-  const touchedWords = changes.title !== undefined || changes.caption !== undefined;
+  settleStatus(before, changes);
 
   const row: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(changes)) row[PATCH_COLUMN[key as keyof PostPatch]] = value;
-  if (touchedWords && before.source === 'ai') row.source = 'manual';
+  // An AI draft becomes the user's once they touch its title or caption.
+  if (before.source === 'ai' && (changes.title !== undefined || changes.caption !== undefined)) row.source = 'manual';
   if (!Object.keys(row).length) return (await withMedia(supabase, [before]))[0];
 
   // Only while it is still what we read: a post published in another tab is not overwritten.
@@ -220,15 +244,38 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
     .eq('status', before.status)
     .select(COLUMNS)
     .maybeSingle();
-  if (error) {
-    // A check failed: either the day is outside the month, or the post changed in another tab so this edit would leave a ready post incomplete.
-    if (error.code === '23514') throw new SocialError(error.message.includes('social_posts_date_in_period') ? 'Pick a day inside the post’s month.' : 'This post changed somewhere else. Refresh and try again.');
-    throw queryFailed(error, 'That post could not be saved.');
-  }
+  if (error) throw saveFailed(error);
   if (!data) throw new SocialError('This post changed somewhere else. Refresh and try again.');
   const after = toPost(data);
   await record(supabase, userId, after, action ?? (changes.period ? 'moved' : 'edited'), before, after);
   return (await withMedia(supabase, [after]))[0];
+}
+
+/** The row to write and the history action for a move from `before.status` to `status`. Throws when the move is not allowed. */
+function statusChange(before: SocialPost, status: SocialStatus, published?: { platform: string; link: string | null }): { row: Record<string, unknown>; action: HistoryAction } {
+  if (status === 'published') {
+    if (before.status !== 'ready') throw new SocialError('Mark the post ready before recording where it went out.');
+    if (!published) throw new SocialError('Choose where it was published.');
+    return { row: { status, published_at: new Date().toISOString(), published_platform: published.platform, published_link: published.link }, action: 'published' };
+  }
+  if (before.status === 'published') {
+    if (status !== 'ready') throw new SocialError('Mark it as not published first.');
+    return { row: { status: 'ready', published_at: null, published_platform: null, published_link: null }, action: 'unpublished' };
+  }
+  if (status === 'ready') {
+    const problem = readyProblem(before);
+    if (problem) throw new SocialError(problem);
+    return { row: { status }, action: 'ready' };
+  }
+  return { row: { status }, action: before.status === 'ready' ? 'unready' : 'edited' };
+}
+
+/** Why a status change could not be saved, as the error to throw. */
+async function statusFailed(supabase: Supabase, userId: string, id: string, error: { code?: string }) {
+  if (error.code !== '23514') return queryFailed(error, 'That post could not be updated.');
+  // The database holds the ready rule too. If it refused, the post changed after it was checked: say what is missing now.
+  const now = await readPost(supabase, userId, id);
+  return new SocialError((now && readyProblem(now)) || 'This post is not complete yet. Refresh and try again.');
 }
 
 /**
@@ -243,26 +290,7 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
   const before = await mustRead(supabase, userId, id);
   if (before.status === status) return (await withMedia(supabase, [before]))[0];
 
-  let row: Record<string, unknown>;
-  let action: HistoryAction;
-  if (status === 'published') {
-    if (before.status !== 'ready') throw new SocialError('Mark the post ready before recording where it went out.');
-    if (!published) throw new SocialError('Choose where it was published.');
-    row = { status, published_at: new Date().toISOString(), published_platform: published.platform, published_link: published.link };
-    action = 'published';
-  } else if (before.status === 'published') {
-    if (status !== 'ready') throw new SocialError('Mark it as not published first.');
-    row = { status: 'ready', published_at: null, published_platform: null, published_link: null };
-    action = 'unpublished';
-  } else if (status === 'ready') {
-    const problem = readyProblem(before);
-    if (problem) throw new SocialError(problem);
-    row = { status };
-    action = 'ready';
-  } else {
-    row = { status };
-    action = before.status === 'ready' ? 'unready' : 'edited';
-  }
+  const { row, action } = statusChange(before, status, published);
 
   const { data, error } = await supabase
     .from('social_posts')
@@ -272,14 +300,7 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
     .eq('status', before.status)
     .select(COLUMNS)
     .maybeSingle();
-  if (error) {
-    // The database holds the ready rule too. If it refused, the post changed after it was checked: say what is missing now.
-    if (error.code === '23514') {
-      const now = await readPost(supabase, userId, id);
-      throw new SocialError((now && readyProblem(now)) || 'This post is not complete yet. Refresh and try again.');
-    }
-    throw queryFailed(error, 'That post could not be updated.');
-  }
+  if (error) throw await statusFailed(supabase, userId, id, error);
   if (!data) {
     // Someone (another tab, a second tap) got there first. If it already has the status asked for, that is success.
     const now = await mustRead(supabase, userId, id);

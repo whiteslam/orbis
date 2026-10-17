@@ -15,7 +15,7 @@ const finding: Finding = {
 test('the prompt carries the kind, the evidence and the fallback, and nothing else', () => {
   const { user } = wordingPrompt(finding);
   const sent = JSON.parse(user);
-  assert.deepEqual(Object.keys(sent).sort(), ['evidence', 'fallback', 'kind']);
+  assert.deepEqual(Object.keys(sent).sort((a, b) => a.localeCompare(b)), ['evidence', 'fallback', 'kind']);
   assert.deepEqual(sent.evidence, finding.evidence);
   assert.equal(user.includes('dedupe'), false);
 });

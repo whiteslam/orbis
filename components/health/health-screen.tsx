@@ -49,7 +49,83 @@ type HealthView = { name: 'main' | 'ask' | 'advice' | 'docs' } | { name: 'plans'
 // Main shows the first few documents; the Documents view has the rest.
 const HEALTH_DOCS_ON_MAIN = 3;
 
-export function HealthScreen({ intent = null, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: { intent?: HeadsupAction | null; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }) {
+type TodaysWorkout = NonNullable<ReturnType<typeof todaysWorkout>>;
+
+/** Today's session from the running plan; tapping it opens that plan. */
+function TodayWorkout({ today, onOpen }: Readonly<{ today: TodaysWorkout; onOpen: () => void }>) {
+  return (
+    <button className="hl-today" type="button" onClick={onOpen} suppressHydrationWarning>
+      <span className="hl-today-head">
+        <strong>{today.day.focus}</strong>
+        <small>{today.day.day}{today.day.durationMinutes ? ` · ${today.day.durationMinutes} min` : ''}</small>
+      </span>
+      {today.day.rest || !today.day.exercises.length ? (
+        <span className="hl-today-rest">{today.day.rest ? 'Rest or light movement: a walk, stretching or mobility.' : 'No exercises listed for today.'}</span>
+      ) : (
+        <span className="hl-today-list">
+          {today.day.exercises.map((exercise, index) => (
+            <span key={`${exercise.name}-${index}`}><b>{exercise.name}</b><i>{dose(exercise)}</i></span>
+          ))}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** What the last Documents tile says: see them all, manage the few, or add the first. */
+function documentsTileLabel(count: number) {
+  if (count > HEALTH_DOCS_ON_MAIN) return `All ${count} documents`;
+  return count ? 'Add or manage' : 'Add a file';
+}
+
+/** The first few documents as tiles, then a tile into the Documents view. */
+function DocumentTiles({ documents, onOpen }: Readonly<{ documents: LibraryState['documents']; onOpen: () => void }>) {
+  return (
+    <section className="fd-quiet">
+      <h2>Documents</h2>
+      <div className="hl-bento">
+        {documents.slice(0, HEALTH_DOCS_ON_MAIN).map((document) => (
+          <button className="hl-tile" type="button" key={document.id} onClick={onOpen}>
+            <span className="fd-tile" aria-hidden="true">{document.kind === 'pdf' ? <FileText size={17} strokeWidth={1.8} /> : <FileSpreadsheet size={17} strokeWidth={1.8} />}</span>
+            <strong>{document.fileName}</strong>
+            <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small>
+          </button>
+        ))}
+        <button className="hl-tile add" type="button" onClick={onOpen}>
+          <span className="fd-tile" aria-hidden="true"><Plus size={17} strokeWidth={2} /></span>
+          <strong>{documentsTileLabel(documents.length)}</strong>
+          <small>Files Orbis reads when it builds a plan</small>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** The coaching row's action word: close it when open, else open or set it. */
+function coachingAction(coaching: boolean, persona: string | null) {
+  if (coaching) return 'Close';
+  return persona ? 'Open' : 'Set';
+}
+
+/** Coaching style is set once and rarely touched, so it stays one row until opened. */
+function CoachingSection({ fitnessPersona, coaching, onToggle }: Readonly<{ fitnessPersona: FitnessPersonaSummary; coaching: boolean; onToggle: () => void }>) {
+  return (
+    <section className="fd-quiet">
+      <h2>Coaching style</h2>
+      <button className="fd-line" type="button" aria-expanded={coaching} onClick={onToggle}>
+        <span className="fd-two hl-clip">{fitnessPersona.persona ? fitnessPersona.persona.trim().split('\n')[0].replace(/^#+\s*/, '') : 'Not set'}<small>Optional: how Orbis coaches you when you ask for advice</small></span>
+        <b className="fd-yes">{coachingAction(coaching, fitnessPersona.persona)}</b>
+      </button>
+      {coaching && (
+        <div className="hl-coach">
+          <FitnessPersonaEditor key={fitnessPersona.persona ? 'persona-saved' : 'persona-empty'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function HealthScreen({ intent = null, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: Readonly<{ intent?: HeadsupAction | null; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }>) {
   // A heads-up about a finished plan opens that plan; the steps one lands on main, where steps come first.
   const [view, setView] = useState<HealthView>(() => intent?.type === 'open_health_plan' ? { name: 'plans', planId: intent.planId } : { name: 'main' });
   // Advice lives here rather than in the Ask view, so a fresh answer survives
@@ -101,23 +177,7 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
           line, so each row carries its bar; a row opens its own view. */}
       <section className="fd-quiet">
         <h2>{today ? 'Today’s workout' : 'Plans'}</h2>
-        {today && (
-          <button className="hl-today" type="button" onClick={() => setView({ name: 'plans', planId: today.plan.id })} suppressHydrationWarning>
-            <span className="hl-today-head">
-              <strong>{today.day.focus}</strong>
-              <small>{today.day.day}{today.day.durationMinutes ? ` · ${today.day.durationMinutes} min` : ''}</small>
-            </span>
-            {today.day.rest || !today.day.exercises.length ? (
-              <span className="hl-today-rest">{today.day.rest ? 'Rest or light movement: a walk, stretching or mobility.' : 'No exercises listed for today.'}</span>
-            ) : (
-              <span className="hl-today-list">
-                {today.day.exercises.map((exercise, index) => (
-                  <span key={`${exercise.name}-${index}`}><b>{exercise.name}</b><i>{dose(exercise)}</i></span>
-                ))}
-              </span>
-            )}
-          </button>
-        )}
+        {today && <TodayWorkout today={today} onOpen={() => setView({ name: 'plans', planId: today.plan.id })} />}
         {plans.map((plan) => {
           const { week, total, done } = planWeek(plan);
           return (
@@ -138,23 +198,7 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
           rings repeated directly below it. */}
       <StepsCard summary={stepsSummary} stepGoal={STEP_TARGET} />
 
-      <section className="fd-quiet">
-        <h2>Documents</h2>
-        <div className="hl-bento">
-          {documents.slice(0, HEALTH_DOCS_ON_MAIN).map((document) => (
-            <button className="hl-tile" type="button" key={document.id} onClick={() => setView({ name: 'docs' })}>
-              <span className="fd-tile" aria-hidden="true">{document.kind === 'pdf' ? <FileText size={17} strokeWidth={1.8} /> : <FileSpreadsheet size={17} strokeWidth={1.8} />}</span>
-              <strong>{document.fileName}</strong>
-              <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small>
-            </button>
-          ))}
-          <button className="hl-tile add" type="button" onClick={() => setView({ name: 'docs' })}>
-            <span className="fd-tile" aria-hidden="true"><Plus size={17} strokeWidth={2} /></span>
-            <strong>{documents.length > HEALTH_DOCS_ON_MAIN ? `All ${documents.length} documents` : documents.length ? 'Add or manage' : 'Add a file'}</strong>
-            <small>Files Orbis reads when it builds a plan</small>
-          </button>
-        </div>
-      </section>
+      <DocumentTiles documents={documents} onOpen={() => setView({ name: 'docs' })} />
 
       {advice && (
         <section className="fd-quiet">
@@ -166,18 +210,7 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
         </section>
       )}
 
-      <section className="fd-quiet">
-        <h2>Coaching style</h2>
-        <button className="fd-line" type="button" aria-expanded={coaching} onClick={() => setCoaching(!coaching)}>
-          <span className="fd-two hl-clip">{fitnessPersona.persona ? fitnessPersona.persona.trim().split('\n')[0].replace(/^#+\s*/, '') : 'Not set'}<small>Optional: how Orbis coaches you when you ask for advice</small></span>
-          <b className="fd-yes">{coaching ? 'Close' : fitnessPersona.persona ? 'Open' : 'Set'}</b>
-        </button>
-        {coaching && (
-          <div className="hl-coach">
-            <FitnessPersonaEditor key={fitnessPersona.persona ? 'persona-saved' : 'persona-empty'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
-          </div>
-        )}
-      </section>
+      <CoachingSection fitnessPersona={fitnessPersona} coaching={coaching} onToggle={() => setCoaching(!coaching)} />
 
       <div className="hl-ask">
         <span>Ask about a file. Orbis reads only what you pick, and shows it first.</span>

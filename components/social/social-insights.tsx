@@ -68,7 +68,7 @@ export function SocialInsights() {
   );
 }
 
-function PlatformCard({ item, onReconnect }: { item: PlatformInsights; onReconnect: (() => void) | null }) {
+function PlatformCard({ item, onReconnect }: Readonly<{ item: PlatformInsights; onReconnect: (() => void) | null }>) {
   const name = NAMES[item.platform];
   const reconnect = onReconnect && <button type="button" className="fd-link" onClick={onReconnect}>Reconnect {name}</button>;
 
@@ -118,7 +118,7 @@ function PlatformCard({ item, onReconnect }: { item: PlatformInsights; onReconne
   );
 }
 
-function RecentPost({ post }: { post: InsightPost }) {
+function RecentPost({ post }: Readonly<{ post: InsightPost }>) {
   // An expired CDN link shows a quiet placeholder, not the browser's broken-image icon.
   const [broken, setBroken] = useState(false);
   const date = when(post.timestamp);

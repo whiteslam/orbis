@@ -17,6 +17,21 @@ function validDate(value: unknown, latest: number): value is string {
   return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === value && time >= Date.UTC(2007, 0, 1) && time <= latest;
 }
 
+/** The imported days, checked and in date order; null when any day is invalid or repeated. */
+function readDays(rawDays: unknown[]) {
+  // Exports use the phone's local date, which can be a day ahead of UTC.
+  const latest = Date.now() + 2 * 86_400_000;
+  const seen = new Set<string>();
+  const days: { date: string; steps: number }[] = [];
+  for (const day of rawDays) {
+    if (!isRecord(day) || !validDate(day.date, latest) || !Number.isInteger(day.steps) || (day.steps as number) < 0 || (day.steps as number) > 200_000 || seen.has(day.date)) return null;
+    seen.add(day.date);
+    days.push({ date: day.date, steps: day.steps as number });
+  }
+  days.sort((a, b) => a.date.localeCompare(b.date));
+  return days;
+}
+
 export async function importAppleHealthStepsAction(input: unknown) {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to import your step data.', dayCount: 0 };
@@ -24,16 +39,8 @@ export async function importAppleHealthStepsAction(input: unknown) {
   if (!input.days.length) return { success: false, message: 'No step records were found in this export.', dayCount: 0 };
   if (input.days.length > MAX_DAYS) return { success: false, message: 'This export has more days than Orbis can import at once.', dayCount: 0 };
 
-  // Exports use the phone's local date, which can be a day ahead of UTC.
-  const latest = Date.now() + 2 * 86_400_000;
-  const seen = new Set<string>();
-  const days: { date: string; steps: number }[] = [];
-  for (const day of input.days) {
-    if (!isRecord(day) || !validDate(day.date, latest) || !Number.isInteger(day.steps) || (day.steps as number) < 0 || (day.steps as number) > 200_000 || seen.has(day.date)) return { success: false, message: 'The imported step data is invalid.', dayCount: 0 };
-    seen.add(day.date);
-    days.push({ date: day.date, steps: day.steps as number });
-  }
-  days.sort((a, b) => a.date.localeCompare(b.date));
+  const days = readDays(input.days);
+  if (!days) return { success: false, message: 'The imported step data is invalid.', dayCount: 0 };
 
   const fileName = input.fileName.trim().slice(0, 200) || 'export.zip';
   const { data: batch, error: batchError } = await auth.supabase

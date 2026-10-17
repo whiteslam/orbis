@@ -26,7 +26,7 @@ function ago(iso: string) {
   return hours < 24 ? `${hours} h ago` : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
 }
 
-function Headline({ article, line }: { article: NewsArticle; line?: string }) {
+function Headline({ article, line }: Readonly<{ article: NewsArticle; line?: string }>) {
   const ask = () => openAsk(
     { kind: 'news', title: article.title, detail: [line, article.description, `Source: ${article.source}`].filter(Boolean).join(' '), url: article.url },
     'What does this mean, and could it affect my money or investments?',
@@ -69,7 +69,7 @@ export function NewsCard() {
   }, []);
 
   if (state.status === 'loading') {
-    return <p className="fd-weather-quiet" role="status"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news…</p>;
+    return <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news…</output>;
   }
   if (state.status === 'error' || state.digest.state === 'unavailable') {
     return <p className="fd-weather-quiet"><Newspaper size={14} aria-hidden="true" /> The news couldn’t be reached. Opening Home again tries once more.</p>;

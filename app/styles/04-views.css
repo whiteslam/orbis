@@ -36,7 +36,7 @@
 .fd-seg button[aria-checked="true"] { background: var(--fd-btn); color: var(--fd-btn-ink); font-weight: 650; }
 .fd-amount { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-bottom: 12px; border-bottom: 1.5px solid var(--fd-hairline); }
 .fd-amount select { flex: none; min-height: 40px; padding: 0 8px; border: 0; border-radius: 10px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 650; }
-.fd-amount input { flex: 1; min-width: 0; border: 0; background: none; color: var(--fd-ink); font-family: var(--rounded); font-size: 40px !important; font-weight: 650; letter-spacing: -.04em; text-align: right; font-variant-numeric: tabular-nums; outline: none; }
+.fd-amount input { flex: 1; min-width: 0; border: 0; background: none; color: var(--fd-ink); font-family: var(--rounded); font-size: 40px; font-weight: 650; letter-spacing: -.04em; text-align: right; font-variant-numeric: tabular-nums; outline: none; }
 .fd-amount:focus-within { border-bottom-color: var(--fd-accent); }
 .fd-chips { margin: 24px 0 0; padding: 0; border: 0; min-width: 0; }
 .fd-chips > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
@@ -83,13 +83,14 @@
 .fd-step > i { width: 22px; height: 22px; flex: none; display: grid; place-items: center; box-sizing: border-box; border: 1.5px solid var(--fd-accent); border-radius: 50%; color: var(--fd-accent); font-size: 11px; font-style: normal; font-weight: 700; }
 .fd-step > div { min-width: 0; }
 .fd-step strong { display: block; font-size: 14px; font-weight: 650; line-height: 1.35; }
-.fd-step p { margin: 5px 0 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
+.fd-step p { margin: 4px 0 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
 .fd-step small { display: block; margin-top: 7px; color: var(--fd-faint); font-size: 11px; line-height: 1.5; }
 .fd-step a { color: var(--fd-accent); font-weight: 600; }
 .fd-shield { display: flex; align-items: flex-start; gap: 7px; margin: 16px 0 0; color: var(--fd-faint); font-size: 11.5px; line-height: 1.6; }
 .fd-shield svg { flex: none; margin-top: 2px; color: var(--fd-accent); }
 .broker-connect .fd-field.wide:first-of-type { margin-top: 24px; }
-.fd-two { display: flex; flex-direction: column; gap: 2px; color: var(--fd-ink) !important; }
+/* .fd-line .fd-two outranks .fd-line span, which would otherwise soften the title. */
+.fd-two, .fd-line .fd-two { display: flex; flex-direction: column; gap: 2px; color: var(--fd-ink); }
 .fd-two small { color: var(--fd-faint); font-size: 11px; }
 .fd-line .fd-link { flex: none; }
 .fd-line b.fd-yes { color: var(--fd-accent); }
@@ -100,7 +101,8 @@
 
 /* Suggestions: the advice itself */
 .fd-advice { margin-top: 18px; }
-.fd-kicker { margin: 0 !important; color: var(--fd-accent) !important; font-size: 10px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+/* .fd-focus .fd-kicker outranks .fd-focus p, which would otherwise give it body-text spacing and colour. */
+.fd-kicker, .fd-focus .fd-kicker { margin: 0; color: var(--fd-accent); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .fd-advice h1 { margin: 9px 0 0; font-size: 25px; font-weight: 650; letter-spacing: -.03em; line-height: 1.2; color: var(--fd-ink); text-wrap: balance; }
 .fd-advice .fd-src { display: flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--fd-faint); font-size: 10.5px; }
 
@@ -137,11 +139,7 @@
 .field .invest-ai-item { padding: 10px 0 10px 11px; border-radius: 0; background: transparent; border-bottom: 1px solid var(--fd-rule); }
 .field .invest-ai-item:last-of-type { border-bottom: 0; }
 
-/* Advice reads as a short sequence of steps, each carrying the observation it came from. */
-.fd-step { display: flex; gap: 13px; padding: 16px 0; border-bottom: 1px solid var(--fd-rule); }
-.fd-step > i { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--fd-accent); color: var(--fd-accent); display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; }
-.fd-step strong { display: block; font-size: 14px; font-weight: 650; }
-.fd-step p { margin: 4px 0 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
+/* Advice reads as a short sequence of .fd-step rows (above), each carrying the observation it came from. */
 .fd-src { display: block; margin-top: 6px; color: var(--fd-faint); font-size: 11px; line-height: 1.5; }
 
 

@@ -11,7 +11,7 @@ const toMinutes = (value: string) => {
 };
 
 // 24-hour bar with the sleep window shaded (wraps past midnight).
-function SleepClock({ bedtime, wakeTime }: { bedtime: string; wakeTime: string }) {
+function SleepClock({ bedtime, wakeTime }: Readonly<{ bedtime: string; wakeTime: string }>) {
   const start = toMinutes(bedtime);
   const end = toMinutes(wakeTime);
   if (start === null || end === null) return null;
@@ -27,9 +27,9 @@ function SleepClock({ bedtime, wakeTime }: { bedtime: string; wakeTime: string }
   );
 }
 
-function TargetChart({ metric, unit, points }: HealthPlan['targets'][number]) {
+function TargetChart({ metric, unit, points }: Readonly<HealthPlan['targets'][number]>) {
   const first = points[0];
-  const last = points[points.length - 1];
+  const last = points.at(-1) ?? first;
   return (
     <div className="hl-target">
       <div className="hl-target-head">
@@ -49,7 +49,7 @@ function TargetChart({ metric, unit, points }: HealthPlan['targets'][number]) {
   );
 }
 
-function Section({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+function Section({ icon, title, children }: Readonly<{ icon: ReactNode; title: string; children: ReactNode }>) {
   return (
     <section className="hl-plan-section">
       <h2 className="hl-section-label">{icon}{title}</h2>
@@ -58,7 +58,7 @@ function Section({ icon, title, children }: { icon: ReactNode; title: string; ch
   );
 }
 
-function Stats({ items }: { items: Array<{ label: string; value: string }> }) {
+function Stats({ items }: Readonly<{ items: Array<{ label: string; value: string }> }>) {
   return (
     <dl className="hl-stats">
       {items.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
@@ -69,7 +69,7 @@ function Stats({ items }: { items: Array<{ label: string; value: string }> }) {
 const ICON = { size: 13, strokeWidth: 2, 'aria-hidden': true } as const;
 
 /** A generated plan, read top to bottom on the ground: no cards except the day picker and the figures. */
-export function PlanView({ plan }: { plan: HealthPlan }) {
+export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
   const firstTraining = Math.max(0, plan.workout.week.findIndex((day) => !day.rest));
   const [dayIndex, setDayIndex] = useState(firstTraining);
   const day = plan.workout.week[dayIndex];

@@ -16,7 +16,7 @@ const BlackHole = dynamic(
 function useNarrow(query = '(max-width: 767px)') {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
-    const m = window.matchMedia(query);
+    const m = globalThis.matchMedia(query);
     const sync = () => setNarrow(m.matches);
     sync();
     m.addEventListener('change', sync);
@@ -42,7 +42,9 @@ function useTier(narrow: boolean): Tier {
 // Device hints do not change while the page is open, so there is nothing to
 // subscribe to. useSyncExternalStore is just the way to read them without a
 // server/client mismatch: the server snapshot is `false`.
-const subscribeNever = () => () => {};
+const subscribeNever = () => () => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
 
 function isWeakDevice(): boolean {
   const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };

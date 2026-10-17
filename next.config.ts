@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   },
   // Static security headers. The Content-Security-Policy carries a per-request nonce,
   // so proxy.ts sets it instead.
-  async headers() {
+  headers() {
     return [{
       source: '/(.*)',
       headers: [

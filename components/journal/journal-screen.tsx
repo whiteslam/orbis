@@ -7,7 +7,7 @@ import type { JournalSummary } from '@/lib/journal/types';
 import type { ContextNote } from '@/lib/memory/notes';
 
 /** Today's entry and its history, and the notes you asked Orbis to remember. */
-export function JournalScreen({ journal, contextNotes }: { journal: JournalSummary; contextNotes: { ready: boolean; notes: ContextNote[] } }) {
+export function JournalScreen({ journal, contextNotes }: Readonly<{ journal: JournalSummary; contextNotes: { ready: boolean; notes: ContextNote[] } }>) {
   return (
     <div className="screen-body field pf-screen">
       <FieldHead title="Journal" />

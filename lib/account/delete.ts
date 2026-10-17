@@ -61,7 +61,7 @@ export async function deleteAccount(userId: string, email: string) {
 
   for (const step of deletionSteps()) {
     try {
-      await run(step, admin, userId);
+      await run(step, admin, userId); // NOSONAR: steps run in order; a later step must not start if an earlier one failed
     } catch (cause) {
       console.error(`deleteAccount: ${step} failed`, cause);
       throw new UserFacingError(FAILED[step]);

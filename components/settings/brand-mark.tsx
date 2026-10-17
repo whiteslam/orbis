@@ -18,7 +18,7 @@ const BRAND_FILES: Record<string, string> = {
   zerodha: '/brands/zerodha.svg',
 };
 
-export function BrandMark({ id, size = 20 }: { id: string; size?: number }) {
+export function BrandMark({ id, size = 20 }: Readonly<{ id: string; size?: number }>) {
   const file = BRAND_FILES[id];
   if (!file) return null;
   return <Image src={file} alt="" width={size} height={size} unoptimized />;

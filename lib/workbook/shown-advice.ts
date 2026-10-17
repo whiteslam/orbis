@@ -33,7 +33,11 @@ export function savedWhen(iso: string) {
 
 /** Splits the model's summary into a headline sentence and whatever follows it. */
 export function splitSummary(summary: string) {
-  const match = summary.match(/^([\s\S]+?[.!?])\s+([\s\S]*)$/);
-  if (!match || match[1].length > 120) return { headline: summary, rest: '' };
-  return { headline: match[1], rest: match[2].trim() };
+  // The first . ! or ? after the opening character that is followed by whitespace ends the headline.
+  for (let end = 1; end < summary.length - 1; end += 1) {
+    if (!'.!?'.includes(summary[end]) || !/\s/.test(summary[end + 1])) continue;
+    if (end + 1 > 120) break;
+    return { headline: summary.slice(0, end + 1), rest: summary.slice(end + 1).trim() };
+  }
+  return { headline: summary, rest: '' };
 }
