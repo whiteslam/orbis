@@ -51,8 +51,11 @@ const job = (over: Partial<Job> = {}): Job => ({
 test('trusted company domains: a low-trust address counts only if the site agrees', () => {
   assert.deepEqual(trustedCompanyDomains(job(), 'jobs@acme.io'), ['acme.io']);
   assert.deepEqual(trustedCompanyDomains(job(), 'jobs@acme-careers.com'), ['acme-careers.com', 'acme.io']);
-  assert.deepEqual(trustedCompanyDomains(job({ source: 'hn' }), 'jobs@acme-hiring.io'), ['acme.io']);
-  assert.deepEqual(trustedCompanyDomains(job({ source: 'hn' }), 'jobs@careers.acme.io'), ['acme.io']);
+  // A low-trust job's own pages name no domain; the company's own board seen later does.
+  const hn = job({ source: 'hn', url: 'https://news.ycombinator.com/item?id=1', seenOn: [{ source: 'lever', url: 'https://acme.io/careers/2', attribution: null }] });
+  assert.deepEqual(trustedCompanyDomains(hn, 'jobs@acme-hiring.io'), ['acme.io']);
+  assert.deepEqual(trustedCompanyDomains(hn, 'jobs@careers.acme.io'), ['acme.io']);
+  assert.deepEqual(trustedCompanyDomains(job({ source: 'hn' }), 'jobs@careers.acme.io'), []);
   assert.deepEqual(trustedCompanyDomains(job({ source: 'gmail_alerts', applyUrl: null }), 'jobs@acme-hiring.io'), []);
   // Free mail never names a company.
   assert.deepEqual(trustedCompanyDomains(job(), 'acme.hr@gmail.com'), ['acme.io']);
@@ -72,6 +75,19 @@ test('a low-trust sighting never names a company mail domain', () => {
   // A remote board's job keeps a later sighting from the company's own board.
   const remote = job({ source: 'remotive', url: 'https://remotive.com/jobs/1', applyUrl: null, seenOn: [seen('ashby', 'https://acme.io/jobs/1')] });
   assert.deepEqual(knownCompanyDomains(remote), ['acme.io']);
+  // A job first stored from an alert keeps the alert's page after the real listing
+  // merges in as a sighting; that page still names no domain.
+  const seeded = job({
+    source: 'gmail_alerts', url: 'https://attacker.example/jobs/sse-1', applyUrl: 'https://attacker.example/apply',
+    seenOn: [seen('gmail_alerts', 'https://attacker.example/jobs/sse-1'), seen('greenhouse', 'https://boards.greenhouse.io/acme/jobs/1')],
+  });
+  assert.deepEqual(knownCompanyDomains(seeded), []);
+  assert.deepEqual(trustedCompanyDomains(seeded, 'hr@attacker.example'), []);
+  assert.equal((applyRecipient({ ...seeded, applyEmail: 'hr@attacker.example' }, 'email', []) as { domainMatches: boolean }).domainMatches, false);
+  // A trusted sighting on that row still names the company's domain.
+  const pasted = job({ ...seeded, seenOn: [...seeded.seenOn, seen('pasted', 'https://acme.io/careers/1')] });
+  assert.deepEqual(knownCompanyDomains(pasted), ['acme.io']);
+  assert.equal((applyRecipient({ ...pasted, applyEmail: 'jobs@acme.io' }, 'email', []) as { domainMatches: boolean }).domainMatches, true);
   // The Send bar's check agrees: an alert's site doesn't vouch for an address there.
   const alerted = job({ applyUrl: null, applyEmail: 'hr@attacker.example', seenOn: [seen('gmail_alerts', 'https://attacker.example/jobs/sse-1')] });
   assert.equal((applyRecipient(alerted, 'email', []) as { domainMatches: boolean }).domainMatches, false);

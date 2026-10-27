@@ -55,6 +55,24 @@ test('a job alert merged into an applied job can’t add its site to the reply d
   assert.equal(linkReply({ company: 'Acme' }, { threadId: 't', from: 'HR <hr@attacker.example>' }, open), null);
 });
 
+test('a job first stored from a job alert keeps no reply domain after the real listing merges in', () => {
+  const seeded = job({
+    source: 'gmail_alerts', url: 'https://attacker.example/jobs/sse-1', applyUrl: null,
+    seenOn: [
+      { source: 'gmail_alerts', url: 'https://attacker.example/jobs/sse-1', attribution: 'Job alert' },
+      { source: 'pasted', url: 'https://boards.greenhouse.io/acme/jobs/1', attribution: null },
+    ],
+  });
+  const open = openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', seeded]]));
+  assert.deepEqual(open[0].domains, []);
+  assert.equal(replyCandidate({ threadId: 't', from: 'HR <hr@attacker.example>', subject: 'x', snippet: 'x' }, open, new Set()), null);
+  // A trusted sighting on the company's own site still links its replies.
+  const owned = job({ ...seeded, seenOn: [...seeded.seenOn, { source: 'greenhouse', url: 'https://acme.io/careers/1', attribution: null }] });
+  const trusted = openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', owned]]));
+  assert.deepEqual(trusted[0].domains, ['acme.io']);
+  assert.deepEqual(replyCandidate({ threadId: 't', from: 'HR <hr@acme.io>', subject: 'x', snippet: 'x' }, trusted, new Set()), { applicationId: 'a', reason: 'domain' });
+});
+
 test('an unclassified reply waits for another try until it is 60 hours old', () => {
   const now = new Date('2026-10-27T12:00:00Z');
   assert.equal(retryClassification('2026-10-27T10:00:00Z', now), true);

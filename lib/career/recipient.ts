@@ -93,10 +93,16 @@ function sightingNamesDomain(job: Pick<CareerJob, 'source'>, seen: CareerJob['se
   return !isLowTrust(seen.source) && SOURCE_TRUST[seen.source] >= SOURCE_TRUST[job.source];
 }
 
-/** The company's domains as its listing pages show them (boards, ATSs and free mail excluded). */
+/**
+ * The company's domains as its listing pages show them (boards, ATSs and free
+ * mail excluded). A job first stored from a low-trust source keeps that
+ * listing's pages even after a trusted listing merges in, so its own pages
+ * name no domain; only trusted sightings do.
+ */
 export function knownCompanyDomains(job: JobUrls): string[] {
+  const own = isLowTrust(job.source) ? [] : [job.url, job.applyUrl];
   const sightings = job.seenOn.filter((seen) => sightingNamesDomain(job, seen)).map((seen) => seen.url);
-  return companyDomains({ applyEmail: null, urls: [job.url, job.applyUrl, ...sightings] });
+  return companyDomains({ applyEmail: null, urls: [...own, ...sightings] });
 }
 
 /**
