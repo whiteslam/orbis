@@ -1,0 +1,12 @@
+# The Research desk worker: TradingAgents (pinned in requirements.txt) with
+# Orbis's India setup, run by the private repo's GitHub Actions workflow
+# (private-repo/.github/workflows/research-desk.yml). Not a package to publish:
+# it runs from this folder as `python -m research_desk`.
+[project]
+name = "orbis-research-desk"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

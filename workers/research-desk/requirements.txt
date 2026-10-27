@@ -1,0 +1,5 @@
+# TradingAgents v0.7.1, pinned to the tag's commit so a moved tag can't change
+# what runs. Upgrade on purpose, with a smoke run (the spec's Risks).
+tradingagents @ git+https://github.com/TauricResearch/TradingAgents.git@3e44faafa042daf953f6ec2422ae36bb1fd4f50f
+# Only for the worker's own tests; TradingAgents is not needed to run them.
+pytest>=8.0
