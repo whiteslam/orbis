@@ -70,3 +70,11 @@ test('only listed addresses get the desk, whatever their case', () => {
   assert.equal(researchDeskAllowed(null), false);
   assert.equal(researchDeskAllowed(''), false);
 });
+
+test('the desk only shows when the worker is set up as well', async () => {
+  const { researchDeskAvailable } = await import('./access');
+  process.env.ORBIS_RESEARCH_DESK_EMAILS = 'owner@example.com';
+  assert.equal(researchDeskAvailable('owner@example.com', true), true);
+  assert.equal(researchDeskAvailable('owner@example.com', false), false);
+  assert.equal(researchDeskAvailable('stranger@example.com', true), false);
+});

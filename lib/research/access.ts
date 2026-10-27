@@ -19,3 +19,13 @@ export function researchDeskAllowed(email: string | null | undefined): boolean {
   const address = email?.trim().toLowerCase();
   return Boolean(address) && researchDeskEmails().includes(address as string);
 }
+
+/**
+ * Whether the desk shows at all: the owner, on a deployment whose worker is
+ * set up (the dispatch env vars). Until both are true nothing appears and no
+ * Research desk table is queried, so a deployment without the migration or
+ * the worker is unaffected.
+ */
+export function researchDeskAvailable(email: string | null | undefined, workerConfigured: boolean): boolean {
+  return workerConfigured && researchDeskAllowed(email);
+}

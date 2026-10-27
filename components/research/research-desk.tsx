@@ -22,17 +22,16 @@ const RECENT = 5;
  * renders nothing. `brokers` is what the Investments screen already loaded.
  */
 export function ResearchDeskSection({ brokers }: Readonly<{ brokers: BrokerPortfolio[] }>) {
-  const { desk, problem, reload } = useResearchDesk();
+  const { desk, reload } = useResearchDesk();
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
   const holdings = useMemo(() => deskHoldings(brokers), [brokers]);
 
-  if (desk === false) return null;
-  if (desk === null) {
-    return problem ? <p className="fd-weather-quiet">{problem}</p> : null;
-  }
+  // Not this account's, still loading, or not loadable (a deployment without the
+  // migration): Investments shows nothing new rather than an error.
+  if (!desk) return null;
 
   const activeByTicker = new Map(desk.runs.filter((run) => ACTIVE_STATUSES.includes(run.status)).map((run) => [run.ticker, run]));
   const latestByTicker = new Map<string, ResearchRun>();

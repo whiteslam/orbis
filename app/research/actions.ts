@@ -14,7 +14,7 @@ import { isUuid } from '@/lib/validate/id';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadLivePortfolio } from '@/lib/invest/live';
-import { researchDeskAllowed } from '@/lib/research/access';
+import { researchDeskAvailable } from '@/lib/research/access';
 import { deskHoldings, portfolioContextFor } from '@/lib/research/context';
 import { dispatchConfig, dispatchRuns } from '@/lib/research/dispatch';
 import { cancelRun, istMonthStart, queueRuns } from '@/lib/research/queue';
@@ -41,7 +41,9 @@ async function owner(): Promise<Owner | 'signed-out' | 'not-allowed'> {
   const signedIn = await requireUser();
   if (!signedIn) return 'signed-out';
   const email = claimsEmail(signedIn.claims);
-  if (!researchDeskAllowed(email)) return 'not-allowed';
+  // Owner only, and only on a deployment whose worker is set up: otherwise the
+  // desk doesn't exist here and none of its tables is touched.
+  if (!researchDeskAvailable(email, dispatchConfig() !== null)) return 'not-allowed';
   return { userId: signedIn.userId, email, db: signedIn.supabase };
 }
 
@@ -83,7 +85,7 @@ export async function loadResearchDeskAction(): Promise<Result<ResearchDesk | nu
       getSettings(me.db, me.userId),
       countRunsSince(me.db, me.userId, istMonthStart(new Date())),
     ]);
-    return ok({ runs: withStatus(runs), settlements, settings, configured: dispatchConfig() !== null, monthUsed });
+    return ok({ runs: withStatus(runs), settlements, settings, configured: true, monthUsed });
   } catch (error) {
     return fail(messageOf(error, 'The Research desk couldn’t be loaded. Try again in a little while.'));
   }

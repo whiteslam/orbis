@@ -122,3 +122,8 @@
   .rd-panel .rd-grid { grid-template-columns: 320px minmax(0, 1fr); align-items: start; }
   .rd-run.is-wide .rd-sides { grid-template-columns: 1fr 1fr; align-items: start; }
 }
+
+.rd-panel .cp-frame { padding-left: 32px; }
+.rd-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 84px; }
+.rd-side, .rd-main { display: grid; gap: var(--cp-gap); min-width: 0; }
+@media (max-width: 899px) { .rd-panel .cp-frame { padding: 0 16px 48px; } }
