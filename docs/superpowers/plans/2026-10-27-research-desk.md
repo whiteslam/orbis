@@ -1,5 +1,41 @@
 # Research desk Implementation Plan
 
+## Resume here (checkpoint 2026-10-27)
+
+**Done (Tasks 1-10, most of 12 and 13):** the migration, owner allowlist, ticker mapping, dispatch and queue, server
+actions, the Investments section, the live run view with Cancel and Try again, the `/active/research` panel with
+settings, and the whole Python worker (Supabase writer, India config, Indian news vendor, event differ, decision
+parser, usage meter with token cap and `ai_generation_events` rows, memory log download/merge/upload, settlement
+sync, `run`/`settle` CLI) plus the private repo's workflow. `.env.example` documents the five new env vars.
+
+**Production-safe as committed:** nothing appears and no research table is queried unless BOTH
+`ORBIS_RESEARCH_DESK_EMAILS` lists the signed-in owner AND `ORBIS_RESEARCH_GITHUB_TOKEN` + `ORBIS_RESEARCH_GITHUB_REPO`
+are set (`researchDeskAvailable` in `lib/research/access.ts`, used by every action and by the panel page, which
+404s otherwise). The Investments section renders nothing while loading, when not available, or when loading fails.
+
+**Next task: Task 11 (weekly run and Monday heads-up).** Then Task 12's `lib/research/flow.test.ts` and Task 13's
+export/deletion coverage. Nothing is half-done or known broken; `pnpm typecheck`, `pnpm lint` (4 pre-existing
+warnings, none in research code), `pnpm test` (823 passed), `pnpm build` and the worker's pytest (51 passed) pass.
+
+**Not yet verified (needs a real run):** OpenRouter accepting `anthropic/claude-sonnet-5.5` and
+`anthropic/claude-haiku-5.5`; `UpstreamGraph` against TradingAgents v0.7.1 (`create_run_state`, `stream_run`,
+`record_decision`, `settle_all_pending`, `memory_log.load_entries`); `_pin_openrouter` setting `extra_body`
+(data collection denied, usage cost included) on the tier clients; the three RSS feed URLs in
+`research_desk/news.py`; NewsData's `q` search; the panel and section layout in a browser.
+
+**Python on a fresh machine:**
+```
+cd workers/research-desk
+python -m venv .venv            # Python 3.11+; the workflow uses 3.13
+.venv/Scripts/python -m pip install pytest      # Windows; .venv/bin/python elsewhere
+.venv/Scripts/python -m pytest  # the tests need neither TradingAgents nor network
+```
+To run the worker for real: `pip install -r requirements.txt` (TradingAgents pinned to commit
+`3e44faafa042daf953f6ec2422ae36bb1fd4f50f` = v0.7.1), set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`OPENROUTER_API_KEY` (optional `NEWSDATA_API_KEY`), then `python -m research_desk run --run-ids <uuid>`.
+
+---
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Owner-only "Deep analysis" in Money → Investments: Orbis queues a TradingAgents v0.7.1 run, a Python worker on a private GitHub Actions repo runs it with an India setup, writes progress and the final call into Supabase, and Orbis shows the run live, the final call with its label, and a track record against Nifty.
@@ -76,8 +112,8 @@ Python (worker, `workers/research-desk/`):
 
 Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, source `manual|weekly`, status, portfolio_context, config, decision, cost_usd, input_tokens, output_tokens, tokens, error, dispatched_at, started_at, finished_at, created_at, updated_at, unique(user_id,id)); `research_events` (bigint id, user_id, run_id, seq, agent, kind, content ≤ 60000, at; unique(run_id, seq); FK (user_id, run_id) cascade); `research_settlements` (id, user_id, run_id unique, ticker, trade_date, benchmark, holding_days, return_pct, benchmark_pct, alpha_pct, reflection, settled_at); `research_settings` (user_id pk, enabled default true, weekly_enabled default false, weekly_top_n default 5 between 1 and 15, deep_model, quick_model, run_token_cap default 600000, monthly_run_cap default 40, updated_at). All: RLS, `grant select … to authenticated` with an owner policy, `grant select, insert, update, delete … to service_role`. Private Storage bucket `research-memory` (text/markdown, text/plain, 5 MB), service role only.
 
-- [ ] Write `rows.test.ts`: a row with a bad status is dropped; `decision` with an unknown rating reads as null; `readSettings(null)` equals defaults; `effectiveStatus` turns a 46-minute-old unclaimed queued run into `failed` and leaves a 10-minute one `queued`.
-- [ ] Run `pnpm test lib/research/rows.test.ts` → FAIL; implement; → PASS. Commit.
+- [x] Write `rows.test.ts`: a row with a bad status is dropped; `decision` with an unknown rating reads as null; `readSettings(null)` equals defaults; `effectiveStatus` turns a 46-minute-old unclaimed queued run into `failed` and leaves a 10-minute one `queued`.
+- [x] Run `pnpm test lib/research/rows.test.ts` → FAIL; implement; → PASS. Commit.
 
 ### Task 2: Allowlist and ticker mapping
 
@@ -87,7 +123,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `researchTarget({ symbol, isin, assetClass }): { ok: true; ticker; exchange: 'NSE'|'BSE'; symbol } | { ok: false; reason: 'fund'|'unsupported' }`.
 - `parseTypedTicker(text): same union` (accepts `RELIANCE`, `reliance.ns`, `NSE:RELIANCE`, `BSE:500325`, `500325`).
 - Rules: upper-case; strip a Zerodha series suffix `-(EQ|BE|BZ|BL|SM|ST|IL|IV|GB|GS)`; six digits → `.BO`; else `.NS`; result must match `^[A-Z0-9&-]{1,20}\.(NS|BO)$`; `assetClass === 'Mutual funds'`, or an `INF` ISIN whose symbol is not exchange-shaped → `fund`.
-- [ ] Tests: `SBIN-BE`→`SBIN.NS`; `M&M`→`M&M.NS`; `BAJAJ-AUTO`→`BAJAJ-AUTO.NS`; `500325`→`500325.BO`; `NSE:INFY`→`INFY.NS`; `GOLDBEES` (ETF) ok; Mutual funds → fund; `../x`, `a b`, 30 chars → unsupported. Allowlist: empty denies, case-insensitive match. FAIL → implement → PASS. Commit.
+- [x] Tests: `SBIN-BE`→`SBIN.NS`; `M&M`→`M&M.NS`; `BAJAJ-AUTO`→`BAJAJ-AUTO.NS`; `500325`→`500325.BO`; `NSE:INFY`→`INFY.NS`; `GOLDBEES` (ETF) ok; Mutual funds → fund; `../x`, `a b`, 30 chars → unsupported. Allowlist: empty denies, case-insensitive match. FAIL → implement → PASS. Commit.
 
 ### Task 3: Dispatch and queue
 
@@ -98,7 +134,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `queueRun(deps: { db: QueueDb; dispatch }, input: { userId; target; context; settings; source; today }): Promise<{ ok: true; runId } | { ok: false; message }>` – refuses when `settings.enabled` is false, when the month's runs ≥ `monthly_run_cap`, or when the ticker already has a queued/running run; inserts, dispatches, on failure marks the row `failed` with the reason.
 - `cancelRun(deps, { userId, runId })` – only `queued|running` → `cancelled` (conditional update).
 - `portfolioContextFor(holdings, ticker)` → `{ currency: 'INR', cash: null, positions: [{ ticker, quantity, average_price }] }` over supported holdings only.
-- [ ] Tests with a fake `QueueDb` and fake `fetch`: happy path dispatches once with the run id; 401 → run marked failed, message "The research worker couldn't be started…"; not configured → no insert at all; cap reached → refused, no insert; duplicate active ticker → refused; cancel of a `done` run → refused. FAIL → implement → PASS. Commit.
+- [x] Tests with a fake `QueueDb` and fake `fetch`: happy path dispatches once with the run id; 401 → run marked failed, message "The research worker couldn't be started…"; not configured → no insert at all; cap reached → refused, no insert; duplicate active ticker → refused; cancel of a `done` run → refused. FAIL → implement → PASS. Commit.
 
 ### Task 4: Repository, actions and the minimal card
 
@@ -107,7 +143,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `loadResearchDeskAction(): Promise<Result<ResearchDesk | null>>` – null when not allowlisted (the card renders nothing). `ResearchDesk = { holdings: DeskHolding[]; runs: ResearchRun[]; settlements: ResearchSettlement[]; settings: ResearchSettings; configured: boolean; monthUsed: number }`.
 - `startResearchAction(input: { holdingKey?: string; ticker?: string }): Promise<Result<{ runId }>>` – allowlist, rate limit, mapping, live holdings for context, `queueRun`.
 - Card: one row per stock/ETF holding with **Deep analysis**, funds shown with "Not supported for funds", a typed-ticker field, the latest runs with status, the decision card for a finished run.
-- [ ] `pnpm typecheck && pnpm lint` pass. Commit.
+- [x] `pnpm typecheck && pnpm lint` pass. Commit.
 
 ### Task 5: Worker skeleton: Supabase REST, writer, safe logging
 
@@ -115,7 +151,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 
 - `SupabaseRest(url, key, opener=urllib.request.urlopen)` with `select(table, params)`, `insert(table, rows)`, `update(table, params, patch, returning)`, `storage_download(bucket, path) -> bytes|None`, `storage_upload(bucket, path, data, content_type)`; `apikey` header always, `Authorization: Bearer` only for a JWT-shaped key.
 - `RunWriter(db, run)` – `claim() -> bool` (conditional `queued → running`), `emit(agent, kind, content)` (seq increments, content trimmed to 60000), `cancelled() -> bool`, `finish(decision, usage)` (conditional on `status=running`), `fail(message)`.
-- [ ] Tests with a recording fake: claim sends `status=eq.queued`; emit numbers events 1, 2, 3; finish never overwrites a cancelled run; a JWT key sends Authorization, an `sb_secret_` key doesn't; `safe_log` refuses to format anything but ids, stage names and exception class names. FAIL → implement → PASS. Commit.
+- [x] Tests with a recording fake: claim sends `status=eq.queued`; emit numbers events 1, 2, 3; finish never overwrites a cancelled run; a JWT key sends Authorization, an `sb_secret_` key doesn't; `safe_log` refuses to format anything but ids, stage names and exception class names. FAIL → implement → PASS. Commit.
 
 ### Task 6: India config, tickers and the news vendor
 
@@ -125,9 +161,9 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `analysts_for(ticker) -> list[str]` → `['market','fundamentals','news']` for `.NS/.BO`.
 - `build_config(settings: dict, base: dict, home: str) -> dict` – `llm_provider='openrouter'`, models from settings, `max_debate_rounds=1`, `max_risk_discuss_rounds=1`, `llm_max_retries=4`, `output_language='English'`, `data_vendors.news_data='orbis_india,yfinance'`, `tool_vendors.get_insider_transactions='yfinance'`, `macro_data` left (optional), India `global_news_queries` (RBI repo rate inflation; Nifty Sensex market outlook; rupee INR dollar; FII DII flows India; Indian banking IT pharma auto sector), memory/results/cache paths under `home`.
 - `news.py`: `parse_newsdata(payload) -> list[Article]`, `parse_rss(xml_bytes, source) -> list[Article]`, `in_window(...)`, `get_news_india(ticker, start_date, end_date, *, fetch=...) -> str`, `get_global_news_india(as_of_date, look_back_days=None, limit=None, *, fetch=...) -> str`, `register()` adds `orbis_india` to the router's `VENDOR_METHODS['get_news']` and `['get_global_news']`. RSS feeds: Moneycontrol business, ET Markets, Mint markets. Company match on the bare symbol and the instrument's name when known. Errors raise `VendorUnavailableError` (so `yfinance` is tried next); nothing in window returns an explicit "no Indian headlines found" line.
-- [ ] Tests: NewsData sample parses title/source/date and drops items without a link; RSS with an HTML error page returns `[]`; out-of-window items excluded; config has no `social` and the news chain starts with `orbis_india`. FAIL → implement → PASS. Commit.
+- [x] Tests: NewsData sample parses title/source/date and drops items without a link; RSS with an HTML error page returns `[]`; out-of-window items excluded; config has no `social` and the news chain starts with `orbis_india`. FAIL → implement → PASS. Commit.
 
-### Task 7: The run: events, decision, orchestration, workflow
+### Task 7: The run: events, decision, orchestration, workflow (done; also `merge_logs` so parallel jobs don't overwrite the memory log, and no concurrency group in the workflow)
 
 **Files:** `research_desk/events.py`, `decision.py`, `run.py`, `__main__.py`, `private-repo/.github/workflows/research-desk.yml`, tests.
 
@@ -135,7 +171,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `parse_decision(final_text, trader_text, rating) -> ResearchDecision dict` reading `**Rating**`, `**Executive Summary**`, `**Investment Thesis**`, `**Price Target**`, `**Time Horizon**`, trader `**Action**`, `**Entry Price**`, `**Stop Loss**`, `**Position Sizing**`; "not provided" → None.
 - `run_one(run_row, deps)` – claim, settings, memory download, `TradingAgentsGraph(analysts_for(t), config, callbacks=[usage])`, `create_run_state` + `stream_run`, emit diffs, check `cancelled()` after each step (raise `Cancelled`), `record_decision`, finish, memory upload, settlement sync. `main(argv)` – `run --run-ids a,b` and `settle --user-id u`.
 - Workflow: `workflow_dispatch` inputs `mode`, `run_ids`, `user_id`; checks out `whiteslam/orbis` at `vars.ORBIS_WORKER_REF` (must be a 40-char SHA) with sparse checkout of `workers/research-desk`; Python 3.13; `pip install -r requirements.txt`; runs `python -m research_desk "$MODE" …` with inputs passed through `env`, never interpolated into the script; `concurrency: research-desk`; `timeout-minutes: 120`; `permissions: contents: read`.
-- [ ] Tests: differ on a scripted sequence of states yields market, bull, bear, research_manager, trader, three risk turns, decision in that order with no repeats; parse_decision on the upstream markdown shape; `run_one` with a fake graph and a writer whose `cancelled()` flips true mid-run ends `cancelled` and never calls finish; invalid run ids are rejected before any network. FAIL → implement → PASS. Commit.
+- [x] Tests: differ on a scripted sequence of states yields market, bull, bear, research_manager, trader, three risk turns, decision in that order with no repeats; parse_decision on the upstream markdown shape; `run_one` with a fake graph and a writer whose `cancelled()` flips true mid-run ends `cancelled` and never calls finish; invalid run ids are rejected before any network. FAIL → implement → PASS. Commit.
 
 ## Phase 2: Live view
 
@@ -146,7 +182,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `groupEvents(events) -> { reports; debate; trader; risk; decision }` (pure, tested): debate turns in order alternating bull/bear, risk turns tagged by stance.
 - `useResearchRun(runId)` polls every 4 s while `queued|running`, appends events, stops on a final status.
 - View: analyst reports as collapsible sections as they finish, the debate as a conversation, trader proposal, risk debate, final-call card (rating chip, thesis, target, horizon, entry, stop, what it means for the current position), Cancel while active.
-- [ ] Test `groupEvents`; typecheck, lint. Commit.
+- [x] Test `groupEvents`; typecheck, lint. Commit.
 
 ## Phase 3: Memory and track record
 
@@ -157,7 +193,7 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `settlements_from_entries(entries, runs) -> list[dict]` – resolved entries (`raw`, `alpha` strings like `+1.2%`) matched to `done` runs by `(ticker, trade_date)`; `benchmark_pct = raw - alpha`; benchmark `^NSEI` for `.NS`, `^BSESN` for `.BO`; skips already-settled runs.
 - `trackRecord(settlements) -> { count; beat; averageAlpha; lastN }` over the last 12, newest first.
 - Card copy: "Last 12 calls: 7 beat Nifty, average alpha +1.4%." beside every decision.
-- [ ] Python tests for the mapping (percent parsing, unmatched entries ignored, BSE uses Sensex); vitest for `trackRecord` (empty → count 0; average to one decimal). Commit.
+- [x] Python tests for the mapping (percent parsing, unmatched entries ignored, BSE uses Sensex); vitest for `trackRecord` (empty → count 0; average to one decimal). Commit.
 
 ## Phase 4: Panel page and weekly runs
 
@@ -167,9 +203,9 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - Same door as Career (`appGate()`), then `researchDeskAllowed(gate.email)` else `notFound()`; `robots: noindex`.
 - Layout in the Career panel's style (`cp-panel`, `cp-wall`, `cp-frame`, `PanelCard`): left column runs list + track record, main column the selected run as an agent timeline with the bull/bear debate side by side on wide screens; settings card (weekly on/off, top-N, models, caps).
 - `saveResearchSettingsAction(patch)` validates every field.
-- [ ] typecheck, lint. Commit.
+- [x] typecheck, lint. Commit.
 
-### Task 11: Weekly run and Monday heads-up
+### Task 11: Weekly run and Monday heads-up (OPEN, next)
 
 **Files:** `lib/research/weekly.ts` (+test), `app/api/research/weekly/route.ts`, `supabase/cron/research_schedule.sql`, modify `lib/headsups/types.ts`, `components/app-shell.tsx`.
 - `weeklyPicks(holdings, n)` – supported stock/ETF holdings by value, top n.
@@ -179,18 +215,19 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 
 ## Phase 5: Hardening
 
-### Task 12: Cost logging, caps, retries, mocked end-to-end
+### Task 12: Cost logging, caps, retries, mocked end-to-end (usage meter, caps and retries done; flow test open)
 
 **Files:** `research_desk/usage.py` (+test), `lib/research/flow.test.ts`.
 - `UsageMeter(prices, token_cap, sink)` – LangChain callback (`on_llm_end`): adds prompt/completion tokens, cost from OpenRouter's `usage.cost` when present else from the per-model price table (Sonnet 5.5 $2/$10, Haiku 5.5 $0.10/$0.50 per million), writes one `ai_generation_events` row per call (`feature='research_desk'`, `provider_id='openrouter'`, `sensitivity='personal'`, `outcome='succeeded'`), raises `TokenCapReached` past `run_token_cap`.
 - Retries: `llm_max_retries=4` in config; dispatch retries once (Task 3); failed runs show **Try again**, which queues a fresh run.
 - `flow.test.ts`: queue → fake GitHub → a fake worker writes events and a decision into the fake DB → `groupEvents` + `trackRecord` give the card what it shows. (The Playwright suite needs a live Supabase, so this is the mocked end-to-end.)
-- [ ] Python: cap raises after the threshold; cost prefers `usage.cost`; rows carry no prompt text. Commit.
+- [x] Python: cap raises after the threshold; cost prefers `usage.cost`; rows carry no prompt text. Commit.
+- [ ] OPEN: `lib/research/flow.test.ts` (mocked end-to-end).
 
-### Task 13: Export, deletion, env, final checks
+### Task 13: Export, deletion, env, final checks (`.env.example` done; export/deletion coverage OPEN)
 
-- Add the four tables to `EXPORT_TABLES` (`research_settings` keyed by `user_id`), `research-memory` to `STORAGE_BUCKETS` and `FILE_HELP`; extend `deletion-plan.test.ts`.
-- `.env.example`: `ORBIS_RESEARCH_DESK_EMAILS`, `ORBIS_RESEARCH_GITHUB_TOKEN`, `ORBIS_RESEARCH_GITHUB_REPO`, `ORBIS_RESEARCH_WORKFLOW`, `ORBIS_RESEARCH_GITHUB_REF`.
+- [ ] OPEN: Add the four tables to `EXPORT_TABLES` (`research_settings` keyed by `user_id`), `research-memory` to `STORAGE_BUCKETS` and `FILE_HELP`; extend `deletion-plan.test.ts`.
+- [x] `.env.example`: `ORBIS_RESEARCH_DESK_EMAILS`, `ORBIS_RESEARCH_GITHUB_TOKEN`, `ORBIS_RESEARCH_GITHUB_REPO`, `ORBIS_RESEARCH_WORKFLOW`, `ORBIS_RESEARCH_GITHUB_REF`.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, worker `pytest`; `git checkout -- next-env.d.ts`. Commit.
 
 ## Owner go-live (filled in by the final report)
