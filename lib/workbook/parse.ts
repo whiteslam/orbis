@@ -5,6 +5,7 @@ import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import { UserFacingError } from '@/lib/errors';
+import { expandedRangeCells } from '@/lib/workbook/ranges';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -15,6 +16,21 @@ const MAX_CELLS = 20_000;
 const MAX_PREVIEW_BYTES = 24 * 1024;
 const MAX_ARCHIVE_EXPANDED_BYTES = 12_000_000;
 const MAX_ARCHIVE_ENTRIES = 1_024;
+// ExcelJS builds one object per cell of every merge and data validation range while loading, before the row and
+// cell limits above can run. No range needs to be bigger than the largest sheet Orbis reads.
+const MAX_RANGE_CELLS = MAX_ROWS * MAX_COLUMNS;
+const MAX_TOTAL_RANGE_CELLS = 250_000;
+// The same (unanchored) pattern ExcelJS uses to decide which entries are worksheets.
+const WORKSHEET_ENTRY = /xl\/worksheets\/sheet(\d+)[.]xml/;
+
+function checkWorksheetRanges(xml: string, totalRangeCells: number) {
+  const cells = expandedRangeCells(xml);
+  const total = totalRangeCells + cells.total;
+  if (cells.largest > MAX_RANGE_CELLS || total > MAX_TOTAL_RANGE_CELLS) {
+    throw new UserFacingError('This workbook has merged or validated ranges too large to process safely. Remove whole-column merges or data validation and try again.');
+  }
+  return total;
+}
 const MAX_PDF_PAGES = 50;
 const MAX_PDF_TEXT_ITEMS = 20_000;
 const MAX_PDF_TEXT_CHARS = 120_000;
@@ -24,6 +40,7 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
   let declaredExpandedBytes = 0;
   let streamedExpandedBytes = 0;
   let entryCount = 0;
+  let totalRangeCells = 0;
 
   try {
     for await (const entry of archive.eachEntry()) {
@@ -35,6 +52,8 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
         throw new UserFacingError('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
       }
 
+      const isWorksheet = WORKSHEET_ENTRY.test(entry.fileName);
+      const worksheetChunks: Buffer[] = [];
       const stream = await archive.openReadStreamPromise(entry);
       for await (const chunk of stream) {
         streamedExpandedBytes += Buffer.byteLength(chunk);
@@ -43,11 +62,14 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
           archive.close();
           throw new UserFacingError('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
         }
+        if (isWorksheet) worksheetChunks.push(chunk);
       }
+      // Worksheets are held whole only within the expanded-bytes budget above, then measured before ExcelJS loads them.
+      if (isWorksheet) totalRangeCells = checkWorksheetRanges(Buffer.concat(worksheetChunks).toString('utf8'), totalRangeCells);
     }
   } catch (error) {
     archive.close();
-    if (error instanceof Error && error.message.includes('safe processing limit')) throw error;
+    if (error instanceof UserFacingError) throw error;
     throw new UserFacingError('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
   }
 }
@@ -237,8 +259,9 @@ async function loadWorkbook(bytes: Buffer) {
   try {
     await checkXlsxArchiveSize(bytes);
     await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
-  } catch {
-    // Whatever failed inside the archive check or ExcelJS, the only fix open to the person is a cleaner file.
+  } catch (error) {
+    if (error instanceof UserFacingError) throw error;
+    // Whatever else failed inside the archive check or ExcelJS, the only fix open to the person is a cleaner file.
     throw new UserFacingError('Orbis could not read this file. Check that it is a valid, unprotected .xlsx workbook.');
   }
   return workbook;
