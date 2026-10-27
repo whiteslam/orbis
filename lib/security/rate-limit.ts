@@ -39,16 +39,19 @@ export async function rateLimitRefusal(userId: string, bucket: RateBucket): Prom
   return outcome === 'limited' ? rateLimitMessage(bucket) : RATE_LIMIT_UNAVAILABLE_MESSAGE;
 }
 
-/**
- * Counts one signed-out use of `bucket` against the caller's address key, then
- * against everyone, so a refused address doesn't go on spending the global
- * budget. True only when both allow it; fails closed.
- */
 // PostgREST's 'function not found' (PGRST202) or Postgres's undefined_function (42883).
 function missingFunction(error: { code?: unknown }) {
   return error.code === 'PGRST202' || error.code === '42883';
 }
 
+/**
+ * Counts one signed-out use of `bucket` against the caller's address key, then
+ * against everyone, so a refused address doesn't go on spending the global
+ * budget. True when both allow it. Deliberately fails open while the
+ * consume_anon_rate_limit function is missing (its migration not yet applied):
+ * every request is then allowed, unthrottled, with a warning logged. Any other
+ * error, or a thrown call, refuses.
+ */
 export async function anonRateLimitAllows(addressKey: string, bucket: AnonRateBucket): Promise<boolean> {
   const { perAddress, global } = anonLimitsFor(bucket);
   for (const [key, { limit, windowSeconds }] of [[addressKey, perAddress], [ANON_GLOBAL_KEY, global]] as const) {
