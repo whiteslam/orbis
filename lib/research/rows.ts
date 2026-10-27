@@ -9,8 +9,6 @@ import {
   type ResearchSettlement, type RunStatus,
 } from '@/lib/research/types';
 
-type Row = Record<string, unknown>;
-
 const str = (value: unknown) => (typeof value === 'string' ? value : null);
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null);
 /** Numbers, including Postgres numerics, which PostgREST sends as strings. */

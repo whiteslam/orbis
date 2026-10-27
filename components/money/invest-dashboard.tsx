@@ -14,6 +14,7 @@ import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 import type { OwnInvestments } from '@/lib/finance/types';
 import { OwnInvestmentsList } from '@/components/money/own-investments';
 import { PortfolioNewsCard } from '@/components/money/portfolio-news';
+import { ResearchDeskSection } from '@/components/research/research-desk';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
 import { FieldHead, FieldHero, FieldLabel, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { inr } from '@/components/money/format';
@@ -154,6 +155,9 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
       {ownInvestments && <OwnInvestmentsList own={ownInvestments} />}
 
       {hasData && <PortfolioAiRow advice={advice} onOpen={() => setView({ name: 'advice' })} />}
+
+      {/* Owner only: renders nothing for anyone the Research desk isn't for. */}
+      {live && <ResearchDeskSection brokers={live.brokers} />}
     </>
   );
 }
