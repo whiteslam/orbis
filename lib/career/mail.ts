@@ -9,6 +9,7 @@
 import { REPLY_KINDS } from './types.ts';
 import type { OfferTerms, ReplyClassification, ReplyKind, SalaryPeriod } from './types.ts';
 import { cleanNullable, readJsonObject } from '../ai/json.ts';
+import { mailboxOf } from '../gmail/mailbox.ts';
 
 // ─── Text normalising ────────────────────────────────────────────────────
 
@@ -95,18 +96,17 @@ export function isNonCompanyDomain(domain: string): boolean {
   return NON_COMPANY_DOMAINS.has(lower) || NON_COMPANY_DOMAINS.has(baseDomain(lower));
 }
 
-/** The domain of an address, from "Name <a@b.com>" or a bare "a@b.com"; null when there is none. */
+/**
+ * The domain of an address, from "Name <a@b.com>" or a bare "a@b.com"; null
+ * when there is none. Comments and quoted names are read past (mailboxOf), so a
+ * "(<hr@acme.com>)" after the real address can't claim acme.com.
+ */
 export function domainOf(address: string): string | null {
-  let mailbox = address.trim();
-  const open = mailbox.lastIndexOf('<');
-  if (open >= 0) {
-    const close = mailbox.indexOf('>', open);
-    mailbox = mailbox.slice(open + 1, close < 0 ? undefined : close);
-  }
+  const mailbox = mailboxOf(address);
   const at = mailbox.lastIndexOf('@');
   if (at < 1) return null;
-  const domain = mailbox.slice(at + 1).trim().toLowerCase();
-  if (!domain.includes('.') || domain.includes(' ')) return null;
+  const domain = mailbox.slice(at + 1).trim();
+  if (!domain.includes('.') || /[\s<>()"[\],;:\\]/.test(domain)) return null;
   return domain;
 }
 

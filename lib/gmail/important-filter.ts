@@ -3,6 +3,8 @@
 // bank and card alerts, OTPs, sign-in notices and other machine-sent mail.
 // No server-only import, so the unit tests can load it directly.
 
+import { mailboxOf } from './mailbox.ts';
+
 export type MailHeaders = {
   from: string;
   subject: string;
@@ -46,12 +48,9 @@ function angleBrackets(from: string, start = 0) {
   return close === -1 ? null : { open, close };
 }
 
-/** The bare address out of a From header, lower-cased. */
+/** The bare address out of a From header, lower-cased (comments and quoted names read past). */
 export function senderAddress(from: string) {
-  let brackets = angleBrackets(from);
-  // An empty `<>` is skipped, as if it were not there.
-  while (brackets && brackets.close === brackets.open + 1) brackets = angleBrackets(from, brackets.close + 1);
-  return (brackets ? from.slice(brackets.open + 1, brackets.close) : from).trim().toLowerCase();
+  return mailboxOf(from);
 }
 
 /** The display name out of a From header, falling back to the address. */

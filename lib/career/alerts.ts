@@ -13,6 +13,7 @@ import type { NormalizedJob } from './types.ts';
 import { clipText, collapseWhitespace, decodeEntities, htmlToText } from './text.ts';
 import { parseSalaryText } from './sources/salary.ts';
 import { cleanText, isRecord, readJson } from '../ai/json.ts';
+import { mailboxOf } from '../gmail/mailbox.ts';
 
 // ─── Senders ─────────────────────────────────────────────────────────────
 
@@ -50,14 +51,6 @@ export function alertGmailQuery(): string {
   return `{from:(${senders.join(' OR ')}) subject:(${subjects})} newer_than:3d`;
 }
 
-/** "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>" → the bare address, lowercased. */
-function addressOf(from: string) {
-  const open = from.lastIndexOf('<');
-  const close = from.indexOf('>', open);
-  const address = open !== -1 && close > open ? from.slice(open + 1, close) : from;
-  return address.trim().toLowerCase();
-}
-
 function matchesPattern(address: string, pattern: string) {
   if (pattern.includes('@')) return address === pattern;
   const domain = address.slice(address.indexOf('@') + 1);
@@ -66,7 +59,7 @@ function matchesPattern(address: string, pattern: string) {
 
 /** The alert sender this From header belongs to, or null. */
 export function alertSenderFor(from: string): AlertSender | null {
-  const address = addressOf(from);
+  const address = mailboxOf(from);
   if (!address.includes('@')) return null;
   return ALERT_SENDERS.find((sender) => sender.patterns.some((pattern) => matchesPattern(address, pattern))) ?? null;
 }
