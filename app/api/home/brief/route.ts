@@ -1,5 +1,5 @@
 import { loadHomeBrief } from '@/lib/home/brief-service';
-import { homeRequester, NO_STORE } from '@/lib/home/route-auth';
+import { homeRequest, NO_STORE } from '@/lib/home/route-auth';
 
 // The weather Home already has, as JSON. Anything longer than a weather reading
 // is not one, so it is ignored rather than parsed.
@@ -18,8 +18,8 @@ function readWeatherParam(raw: string | null): unknown {
 // A route handler rather than a server action: actions run one at a time per
 // page, so a slow brief would hold up whatever the user taps next.
 export async function GET(request: Request) {
-  const requester = await homeRequester();
-  if (!requester) return Response.json({ state: 'off' }, { status: 401, headers: NO_STORE });
+  const { requester, status } = await homeRequest();
+  if (!requester) return Response.json({ state: 'off' }, { status, headers: NO_STORE });
   const weather = readWeatherParam(new URL(request.url).searchParams.get('weather'));
   try {
     return Response.json(await loadHomeBrief(requester.userId, { weather }), { headers: NO_STORE });

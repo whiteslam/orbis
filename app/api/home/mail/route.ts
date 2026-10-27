@@ -1,12 +1,12 @@
 import { getImportantMail } from '@/lib/gmail/important';
-import { homeRequester, NO_STORE } from '@/lib/home/route-auth';
+import { homeRequest, NO_STORE } from '@/lib/home/route-auth';
 
 // GET /api/home/mail → the important mail Home lists, read live from Gmail.
 // A route handler rather than a server action, so a slow Gmail never holds up
 // an action the user started.
 export async function GET() {
-  const requester = await homeRequester();
-  if (!requester) return Response.json(null, { status: 401, headers: NO_STORE });
+  const { requester, status } = await homeRequest();
+  if (!requester) return Response.json(null, { status, headers: NO_STORE });
   try {
     return Response.json(await getImportantMail(requester.userId), { headers: NO_STORE });
   } catch (error) {
