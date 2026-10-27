@@ -49,3 +49,21 @@ export function rateLimitMessage(bucket: RateBucket) {
 
 /** Shown when the limit itself can't be checked; the action is refused rather than let through. */
 export const RATE_LIMIT_UNAVAILABLE_MESSAGE = 'This isn’t available right now. Try again in a little while.';
+
+// Signed-out writes, keyed by a hash of the caller's address (anon-rate-key.ts)
+// and by one global count, since an address header can be faked off Vercel.
+export type AnonRateBucket = 'waitlist';
+
+type Limit = { limit: number; windowSeconds: number };
+
+export const ANON_RATE_LIMITS: Record<AnonRateBucket, { perAddress: Limit; global: Limit }> = {
+  // A person joins once; a household or an office shares an address. The global
+  // cap is far above a real launch day's hourly sign-ups and stops a script
+  // from filling the table.
+  waitlist: { perAddress: { limit: 5, windowSeconds: 3_600 }, global: { limit: 300, windowSeconds: 3_600 } },
+};
+
+export function anonLimitsFor(bucket: AnonRateBucket) {
+  const { perAddress, global } = ANON_RATE_LIMITS[bucket];
+  return { perAddress: { ...perAddress }, global: { ...global } };
+}

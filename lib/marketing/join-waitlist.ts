@@ -13,6 +13,8 @@ export const WAITLIST_INVALID = 'Enter a valid email address.';
 export const WAITLIST_UNAVAILABLE = 'We couldn’t save that right now. Try again in a moment.';
 
 export type WaitlistDeps = {
+  /** True when this caller may sign up now. Refusal and failure look the same. */
+  allow: () => Promise<boolean>;
   /** Inserts the address, leaving an existing row as it is. */
   add: (email: string) => Promise<{ error: unknown }>;
 };
@@ -27,6 +29,9 @@ export async function joinWaitlist(input: unknown, deps: WaitlistDeps): Promise<
   if (email.length > 254 || !looksLikeEmail(email)) return { ok: false, message: WAITLIST_INVALID };
 
   try {
+    // Before the write, so a refused caller adds nothing. A throttle that can't
+    // be checked refuses too, with the same friendly words.
+    if (!(await deps.allow())) return { ok: false, message: WAITLIST_UNAVAILABLE };
     const { error } = await deps.add(email);
     if (error) {
       console.error('waitlist insert failed', error);
