@@ -147,3 +147,38 @@ export function effectiveStatus(run: ResearchRun, now: Date): RunStatus {
   if (run.status === 'running' && since(run.startedAt) > STALLED_AFTER_MS) return 'failed';
   return run.status;
 }
+
+/**
+ * The owner's change to the settings, checked field by field: anything not a
+ * known setting, or out of range, refuses the whole patch rather than saving
+ * half of it.
+ */
+export function applySettingsPatch(current: ResearchSettings, patch: unknown): ResearchSettings | null {
+  if (!isRecord(patch)) return null;
+  const next = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    switch (key) {
+      case 'enabled':
+      case 'weeklyEnabled':
+        if (typeof value !== 'boolean') return null;
+        next[key] = value;
+        break;
+      case 'weeklyTopN':
+      case 'runTokenCap':
+      case 'monthlyRunCap': {
+        const limits = SETTINGS_LIMITS[key];
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < limits.min || value > limits.max) return null;
+        next[key] = value;
+        break;
+      }
+      case 'deepModel':
+      case 'quickModel':
+        if (!isModelId(value)) return null;
+        next[key] = value;
+        break;
+      default:
+        return null;
+    }
+  }
+  return next;
+}

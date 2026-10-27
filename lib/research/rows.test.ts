@@ -78,3 +78,15 @@ test('a run nobody picked up, or one that never finished, reads as failed', () =
   assert.equal(effectiveStatus(running, new Date('2026-10-27T06:02:00Z')), 'failed');
   assert.equal(effectiveStatus(readRun(baseRun)!, new Date('2030-01-01T00:00:00Z')), 'done');
 });
+
+test('a settings change is checked field by field and refused whole when any field is wrong', async () => {
+  const { applySettingsPatch } = await import('./rows');
+  const current = DEFAULT_RESEARCH_SETTINGS;
+  assert.deepEqual(applySettingsPatch(current, { weeklyEnabled: true, weeklyTopN: 3 }), { ...current, weeklyEnabled: true, weeklyTopN: 3 });
+  assert.equal(applySettingsPatch(current, { weeklyTopN: 99 }), null);
+  assert.equal(applySettingsPatch(current, { weeklyTopN: 2.5 }), null);
+  assert.equal(applySettingsPatch(current, { deepModel: 'not a model' }), null);
+  assert.equal(applySettingsPatch(current, { deepModel: 'anthropic/claude-opus-5.5' })?.deepModel, 'anthropic/claude-opus-5.5');
+  assert.equal(applySettingsPatch(current, { weeklyEnabled: true, admin: true }), null);
+  assert.equal(applySettingsPatch(current, 'yes'), null);
+});

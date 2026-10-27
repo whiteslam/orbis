@@ -1,7 +1,7 @@
 // How often each costly action may run per person, and what they are told when
 // they reach the limit. Pure so it can be tested without the server.
 
-export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights' | 'career_ai' | 'career_send' | 'career_search';
+export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights' | 'career_ai' | 'career_send' | 'career_search' | 'research_run';
 
 export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: number }> = {
   uploads: { limit: 20, windowSeconds: 86_400 },
@@ -21,6 +21,10 @@ export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: num
   career_send: { limit: 60, windowSeconds: 3_600 },
   // "Run a search now": a full fetch of every source plus scoring.
   career_search: { limit: 6, windowSeconds: 3_600 },
+  // Research desk presses that queue a run (each is 15-25 paid model calls).
+  // The monthly run cap in its settings is the real budget; this stops a
+  // stuck button from queueing a dozen runs in a minute.
+  research_run: { limit: 12, windowSeconds: 3_600 },
 };
 
 export function limitFor(bucket: RateBucket) {
@@ -36,6 +40,7 @@ const MESSAGES: Record<RateBucket, string> = {
   career_ai: 'Career has asked AI for a lot in the last hour. Try again in a little while.',
   career_send: 'Career has sent a lot in the last hour. Try again in a little while.',
   career_search: 'A search has run several times in the last hour. Try again in an hour.',
+  research_run: 'The Research desk has started a lot of runs in the last hour. Try again in an hour.',
 };
 
 export function rateLimitMessage(bucket: RateBucket) {
