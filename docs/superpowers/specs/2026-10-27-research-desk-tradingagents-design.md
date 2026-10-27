@@ -1,6 +1,6 @@
 # Research desk: TradingAgents inside Orbis Money
 
-Date: 2026-10-27 · Status: **plan for the owner's review, not approved, nothing built** · Scope: product and architecture for bringing TauricResearch's TradingAgents into Money → Investments.
+Date: 2026-10-27 · Status: **approved by the owner 2026-10-27 (decisions below)** · Scope: product and architecture for bringing TauricResearch's TradingAgents into Money → Investments.
 
 ## Why
 
@@ -101,16 +101,20 @@ All tables follow the same conventions as Career (RLS, owner reads, service-role
 - **No backtest performance claims** on any page another person could see.
 - The existing portfolio-advice prompt ("never tell the user to buy or sell a named security") stays as it is for that feature. The Research desk is a separate, owner-only, opt-in feature.
 
-## Decisions the owner needs to make
+## Decisions (made 2026-10-27)
 
-1. **Only you, or your waitlist users too?**
-   - Security-specific Buy/Sell calls with targets and stop losses, given to *other* people, very likely count as research-analyst or investment-adviser activity under SEBI rules and would need registration.
-   - For your own use, no registration is needed.
-   - **Recommendation: you only.** (Not legal advice. Confirm with a professional before opening it to anyone.)
-2. **Where the worker runs:** GitHub Actions (free, slower to start) or Modal (pay per use, faster). **Recommendation: GitHub Actions to start.** That needs a private repo, a fine-grained token for Orbis to dispatch runs, and the OpenRouter and Supabase service keys as repo secrets.
-3. **Models and cost:** Claude Sonnet-class for deep thinking and Haiku-class for the rest (about $0.30–1.50 a run), or all-Opus for the best reasoning (a few dollars a run).
-4. **Weekly desk run:** on or off, and how many holdings.
-5. **Sentiment for Indian stocks:** leave it off (recommended, since the sources are US forums), or add r/IndianStreetBets and r/IndiaInvestments through Reddit RSS (noisy).
+1. **Owner only.** The owner chose it for themselves alone. Security-specific Buy/Sell calls given to *other* people very likely count as research-analyst or investment-adviser activity under SEBI rules; this is not legal advice, and opening it to anyone else needs a professional's confirmation first. The feature sits behind an allowlist holding the owner's email.
+2. **Worker on GitHub Actions** (the owner's choice). The app repo `whiteslam/orbis` is **public**, and Actions logs in a public repo are public, so runs must not execute there. *Claude's call:* the worker's Python code lives in this repo under `workers/research-desk/` (it holds no secrets), and a separate **private** repo (`orbis-research-worker`) holds only a workflow that checks out that folder at a pinned commit and runs it, plus the secrets (OpenRouter key, Supabase URL and service key). Orbis starts a run with `workflow_dispatch` on the private repo using a fine-grained token (Actions: write on that repo only). Logs must still never print portfolio values or decisions.
+3. **Models: Sonnet + Haiku** (the owner's choice), through OpenRouter: a Claude Sonnet model for the deep tier, a Claude Haiku model for the quick tier. Expected about $0.30–1.50 a run, checked on the first real runs.
+4. **Weekly desk run: off for now** (Claude's call). Phase 4 builds it behind a setting that defaults to off.
+5. **Indian sentiment: off** (Claude's call, following the recommendation). The `social` analyst is not used for `.NS`/`.BO` tickers.
+
+## Owner actions before the first live run
+
+- Create the private repo `orbis-research-worker` and add the workflow file this branch provides (`workers/research-desk/private-repo/`).
+- Add its secrets: `OPENROUTER_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Create a fine-grained GitHub token with Actions: write on that repo only, and set it in Vercel with the repo name (the env var names are in `.env.example`).
+- Run this branch's Supabase migrations.
 
 ## Phases
 
