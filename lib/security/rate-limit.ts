@@ -44,6 +44,11 @@ export async function rateLimitRefusal(userId: string, bucket: RateBucket): Prom
  * against everyone, so a refused address doesn't go on spending the global
  * budget. True only when both allow it; fails closed.
  */
+// PostgREST's 'function not found' (PGRST202) or Postgres's undefined_function (42883).
+function missingFunction(error: { code?: unknown }) {
+  return error.code === 'PGRST202' || error.code === '42883';
+}
+
 export async function anonRateLimitAllows(addressKey: string, bucket: AnonRateBucket): Promise<boolean> {
   const { perAddress, global } = anonLimitsFor(bucket);
   for (const [key, { limit, windowSeconds }] of [[addressKey, perAddress], [ANON_GLOBAL_KEY, global]] as const) {
@@ -55,6 +60,13 @@ export async function anonRateLimitAllows(addressKey: string, bucket: AnonRateBu
         p_window_seconds: windowSeconds,
       });
       if (error) {
+        // Until migration 202610280001_anon_rate_limits is applied the function
+        // does not exist. Let sign-ups through then rather than shut the public
+        // waitlist; every other failure still refuses.
+        if (missingFunction(error)) {
+          console.warn('consume_anon_rate_limit is not deployed yet; waitlist is unthrottled');
+          return true;
+        }
         console.error('consume_anon_rate_limit failed', error);
         return false;
       }
