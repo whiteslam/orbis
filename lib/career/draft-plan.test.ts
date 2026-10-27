@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion } from './draft-plan.ts';
+import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion, ownerGone } from './draft-plan.ts';
 
 test('email wins when there is an address, then Recruitee, then the link', () => {
   const said = 'Apply: hr@acme.io';
@@ -39,4 +39,13 @@ test('the attempt that lost fewer bullets is kept', () => {
   assert.equal(betterAttempt({ failedShare: 0.5, id: 1 }, { failedShare: 0.2, id: 2 }).id, 2);
   assert.equal(betterAttempt({ failedShare: 0.4, id: 1 }, { failedShare: 0.4, id: 2 }).id, 1);
   assert.equal(betterAttempt({ failedShare: 0.4, id: 1 }, null).id, 1);
+});
+
+test('an owner is gone only when the lookup says so for certain', () => {
+  assert.equal(ownerGone({ user: { id: 'u1' }, error: null }), false);
+  assert.equal(ownerGone({ user: null, error: null }), true);
+  assert.equal(ownerGone({ user: null, error: { status: 404 } }), true);
+  // A failed lookup (the network, the auth server) is not proof the account is gone.
+  assert.equal(ownerGone({ user: null, error: { status: 500 } }), false);
+  assert.equal(ownerGone({ user: null, error: {} }), false);
 });

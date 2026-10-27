@@ -55,3 +55,17 @@ export function draftBlocker(job: Pick<CareerJob, 'thin' | 'description'>, exist
 export function betterAttempt<T extends { failedShare: number }>(first: T, second: T | null): T {
   return second && second.failedShare < first.failedShare ? second : first;
 }
+
+/** What `auth.admin.getUserById` answered: a user, or an error with an HTTP status. */
+export type OwnerLookup = { user: unknown; error: { status?: number } | null };
+
+/**
+ * Whether the owner is certainly gone (their account was deleted while a draft
+ * was being made), so its files must not be written. Only a definite answer
+ * counts: a lookup that failed for another reason lets the upload go ahead, and
+ * account deletion's final storage sweep is the backstop.
+ */
+export function ownerGone(lookup: OwnerLookup): boolean {
+  if (lookup.error) return lookup.error.status === 404;
+  return !lookup.user;
+}

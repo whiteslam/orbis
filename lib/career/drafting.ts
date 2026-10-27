@@ -2,7 +2,7 @@ import 'server-only';
 
 import { careerAiGate, tailorApplication } from '@/lib/career/ai';
 import { atsCheck } from '@/lib/career/ats';
-import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion, REGENERATE_ABOVE } from '@/lib/career/draft-plan';
+import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion, ownerGone, REGENERATE_ABOVE } from '@/lib/career/draft-plan';
 import { outcomesOf } from '@/lib/career/history';
 import { scoreMatch } from '@/lib/career/match';
 import { predictApplication, train } from '@/lib/career/predict';
@@ -18,6 +18,8 @@ import {
 import { careerToday, ensureRequirements } from '@/lib/career/scoring';
 import { mergeAnswers, type TailorInput } from '@/lib/career/tailor';
 import { checkTailored, type TruthResult } from '@/lib/career/truth';
+import { CAREER_BUCKET } from '@/lib/storage/upload-rules';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type {
   ApplyRoute, AtsReport, CareerApplication, CareerJob, CareerProfile, CareerSpec, Prediction, Requirements, TailoredDraft,
 } from '@/lib/career/types';
@@ -49,6 +51,7 @@ const AI_UNAVAILABLE = 'No AI model can draft right now. Try again in a little w
 const NOT_WRITTEN = 'The tailored resume couldn’t be written. Try again in a little while.';
 const NO_REQUIREMENTS = 'This job’s requirements couldn’t be read yet. Try again in a little while.';
 const NOT_RENDERED = 'The resume files couldn’t be made. Try again in a little while.';
+const GONE = 'This application is no longer there.';
 
 /** A failure whose message is the owner's to read. */
 class DraftFailure extends Error {}
@@ -117,8 +120,49 @@ export async function renderAndStore(
   const version = Math.max(nextFileVersion(files?.pdfPath ?? null), nextFileVersion(files?.docxPath ?? null));
   const pdfPath = applicationFilePath(userId, input.applicationId, version, 'pdf');
   const docxPath = applicationFilePath(userId, input.applicationId, version, 'docx');
+  // The cron drafts with the service role over model calls lasting seconds; the
+  // account (or the application) may have been deleted meanwhile, and its files
+  // must not come back under the deleted owner's prefix.
+  const [owner, application] = await Promise.all([isOwnerGone(userId), isApplicationGone(client, userId, input.applicationId)]);
+  if (owner || application) throw new CareerError(GONE);
   await Promise.all([uploadCareerFile(client, userId, pdfPath, pdf, PDF_TYPE), uploadCareerFile(client, userId, docxPath, docx, DOCX_TYPE)]);
+  if (await isOwnerGone(userId)) {
+    // Deleted between the check and the upload: take the files back out.
+    await removeStoredFiles([pdfPath, docxPath]);
+    throw new CareerError(GONE);
+  }
   return { pdfPath, docxPath, ats };
+}
+
+/** True only when the owner's account is certainly deleted. Best effort: a failed lookup counts as present. */
+async function isOwnerGone(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await createAdminClient().auth.admin.getUserById(userId);
+    return ownerGone({ user: data?.user ?? null, error });
+  } catch (error) {
+    console.error('Checking a draft’s owner failed', error);
+    return false;
+  }
+}
+
+/** True only when the application row is certainly gone. Best effort: a failed read counts as present. */
+async function isApplicationGone(client: CareerDb, userId: string, applicationId: string): Promise<boolean> {
+  const { data, error } = await client.from('career_applications').select('id').eq('user_id', userId).eq('id', applicationId).maybeSingle();
+  if (error) {
+    console.error('Checking a draft’s application failed', error.code);
+    return false;
+  }
+  return !data;
+}
+
+/** Removes files just written for an account deleted meanwhile. Best effort: deletion's final sweep is the backstop. */
+async function removeStoredFiles(paths: string[]) {
+  try {
+    const { error } = await createAdminClient().storage.from(CAREER_BUCKET).remove(paths);
+    if (error) console.error('Removing a deleted account’s draft files failed', error.message);
+  } catch (error) {
+    console.error('Removing a deleted account’s draft files failed', error);
+  }
 }
 
 /**
