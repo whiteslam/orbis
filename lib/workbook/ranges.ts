@@ -43,21 +43,101 @@ export function rangeArea(ref: string): number {
 
 export type RangeCells = { largest: number; total: number };
 
-const EXPANDED_TAGS = /<(?:[\w.-]+:)?(mergeCell|dataValidation)(?=[\s/>])((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
-const ATTRIBUTE = /([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+type Attribute = [name: string, value: string];
+type StartTag = { name: string; attributes: Attribute[]; end: number; selfClosing: boolean };
+
+const NAME_CHAR = /[\w.:-]/;
+const SPACE = /\s/;
+
+function isQuote(char: string | undefined) {
+  return char === '"' || char === "'";
+}
+
+/** The attributes between a tag's name and its closing `>`, read once from left to right. */
+function tagAttributes(source: string): Attribute[] {
+  const attributes: Attribute[] = [];
+  let index = 0;
+  while (index < source.length) {
+    if (isQuote(source[index])) {
+      // A stray quoted value with no name in front of it: skip it whole.
+      const close = source.indexOf(source[index], index + 1);
+      if (close === -1) break;
+      index = close + 1;
+      continue;
+    }
+    if (!NAME_CHAR.test(source[index])) {
+      index += 1;
+      continue;
+    }
+    const nameStart = index;
+    while (index < source.length && NAME_CHAR.test(source[index])) index += 1;
+    const name = source.slice(nameStart, index);
+    while (index < source.length && SPACE.test(source[index])) index += 1;
+    if (source[index] !== '=') continue;
+    index += 1;
+    while (index < source.length && SPACE.test(source[index])) index += 1;
+    if (!isQuote(source[index])) continue;
+    const close = source.indexOf(source[index], index + 1);
+    if (close === -1) break;
+    attributes.push([name, source.slice(index + 1, close)]);
+    index = close + 1;
+  }
+  return attributes;
+}
+
+/**
+ * Every start tag named one of `names` (with or without a namespace prefix), found in one left-to-right pass.
+ * Quoted attribute values may hold `>`. A tag still open at the end of the input ends the scan, and a `<` inside a
+ * tag abandons that tag and resumes from the `<`, so no character is read more than a fixed number of times
+ * however broken the XML is. (A backtracking regex here was quadratic on unterminated tags.)
+ */
+function* startTags(xml: string, names: ReadonlySet<string>): Generator<StartTag> {
+  let position = 0;
+  while (position < xml.length) {
+    const open = xml.indexOf('<', position);
+    if (open === -1) return;
+    let nameEnd = open + 1;
+    while (nameEnd < xml.length && NAME_CHAR.test(xml[nameEnd])) nameEnd += 1;
+    position = nameEnd;
+    const qualified = xml.slice(open + 1, nameEnd);
+    const name = qualified.slice(qualified.lastIndexOf(':') + 1);
+    const next = xml[nameEnd] ?? '';
+    if (!names.has(name) || qualified.split(':').length > 2 || (next !== '>' && next !== '/' && !SPACE.test(next))) continue;
+
+    let index = nameEnd;
+    while (index < xml.length && xml[index] !== '>' && xml[index] !== '<') {
+      if (isQuote(xml[index])) {
+        const close = xml.indexOf(xml[index], index + 1);
+        if (close === -1) return;
+        index = close + 1;
+      } else {
+        index += 1;
+      }
+    }
+    if (index >= xml.length) return;
+    position = index;
+    if (xml[index] === '<') continue;
+    const selfClosing = xml[index - 1] === '/';
+    yield { name, attributes: tagAttributes(xml.slice(nameEnd, index)), end: index + 1, selfClosing };
+    position = index + 1;
+  }
+}
+
+function addArea(cells: RangeCells, area: number) {
+  cells.largest = Math.max(cells.largest, area);
+  cells.total += area;
+}
+
+const EXPANDED_TAGS: ReadonlySet<string> = new Set(['mergeCell', 'dataValidation']);
 
 /** The largest single range and the total cells across every merge and data validation range in a sheet's XML. */
 export function expandedRangeCells(xml: string): RangeCells {
   const cells: RangeCells = { largest: 0, total: 0 };
-  for (const [, tag, attributes] of xml.matchAll(EXPANDED_TAGS)) {
-    const wanted = tag === 'mergeCell' ? 'ref' : 'sqref';
-    for (const [, name, doubleQuoted, singleQuoted] of attributes.matchAll(ATTRIBUTE)) {
+  for (const tag of startTags(xml, EXPANDED_TAGS)) {
+    const wanted = tag.name === 'mergeCell' ? 'ref' : 'sqref';
+    for (const [name, value] of tag.attributes) {
       if (name !== wanted) continue;
-      for (const ref of (doubleQuoted ?? singleQuoted ?? '').split(/\s+/).filter(Boolean)) {
-        const area = rangeArea(ref);
-        cells.largest = Math.max(cells.largest, area);
-        cells.total += area;
-      }
+      for (const ref of value.split(/\s+/).filter(Boolean)) addArea(cells, rangeArea(ref));
     }
   }
   return cells;

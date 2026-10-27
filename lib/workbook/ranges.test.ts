@@ -54,3 +54,18 @@ test('selections, conditional formatting and other attributes are not counted', 
     <dataValidation ref="A:A" sqref="C1"/>`;
   assert.deepEqual(expandedRangeCells(xml), { largest: 2, total: 3 });
 });
+
+test('unterminated merge and validation tags are scanned in linear time', () => {
+  for (const xml of ['<mergeCell '.repeat(200_000), '<dataValidation sqref="A1" '.repeat(100_000), '<x:mergeCell ref="'.repeat(100_000)]) {
+    const started = performance.now();
+    assert.deepEqual(expandedRangeCells(xml), { largest: 0, total: 0 });
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 1_000, `took ${elapsed} ms`);
+  }
+});
+
+test('a broken tag does not hide the well-formed tag after it', () => {
+  assert.equal(expandedRangeCells('<mergeCell ref="A1:B2" <mergeCell ref="A1:XFD1048576"/>').largest, WHOLE_SHEET);
+  assert.equal(expandedRangeCells('<mergeCells><mergeCell ref="C1:C3"/></mergeCells>').total, 3);
+  assert.equal(expandedRangeCells('<mergeCellX ref="A:A"/><dataValidations sqref="A:A"/><a:b:mergeCell ref="A:A"/>').total, 0);
+});
