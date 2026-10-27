@@ -5,17 +5,29 @@ import { rateLimitMessage } from '@/lib/security/rate-limit-rules';
 import { hasFreshAuth } from '@/lib/security/unlock-token';
 import { indiaToday } from '@/lib/social/month';
 
-export type DeletionStep = 'revoke-connections' | 'stop-research' | 'remove-storage' | 'delete-user';
+export type DeletionStep = 'revoke-connections' | 'remove-research' | 'remove-storage' | 'delete-user' | 'sweep-storage';
+
+/** The Research desk's tables, children first, so no delete is blocked by a foreign key. */
+export const RESEARCH_TABLES: readonly string[] = ['research_events', 'research_settlements', 'research_runs', 'research_settings'];
 
 /**
  * Third-party connections are revoked first, while their tokens can still be
- * read; queued and running Research desk runs are cancelled, so a worker job in
- * flight stops before it can put the memory log back; then every stored file goes; the auth user goes last, and its removal
- * cascades to every row that references it. Anything that fails before the last
- * step leaves the account itself in place, so it can be tried again.
+ * read. The Research desk's rows are deleted next, not just cancelled: a worker
+ * in flight checks that its run (or, when settling, any of the owner's rows)
+ * still exists before it puts the memory log back, and a cancelled row would
+ * pass that check. Then every stored file goes; then the auth user, whose
+ * removal cascades to every row that references it. Anything that fails before
+ * `delete-user` leaves the account itself in place, so it can be tried again.
+ * Last, the buckets are swept once more, best effort, for a file a worker or
+ * cron wrote between its own check and the first wipe.
  */
 export function deletionSteps(): DeletionStep[] {
-  return ['revoke-connections', 'stop-research', 'remove-storage', 'delete-user'];
+  return ['revoke-connections', 'remove-research', 'remove-storage', 'delete-user', 'sweep-storage'];
+}
+
+/** A step after the account is gone: its failure is logged, never shown, since there is nothing left to retry. */
+export function deletionStepIsBestEffort(step: DeletionStep) {
+  return step === 'sweep-storage';
 }
 
 /** Every private bucket that holds files under `${userId}/`. */
@@ -40,8 +52,8 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * personal. The career-documents bucket (the resume and tailored files) is
  * listed and emptied like the other buckets, and so is research-memory (the
  * Research desk's memory log, written only by its worker). The research tables
- * go with the account by cascade: every one references auth.users, and
- * research_events and research_settlements also cascade from their run.
+ * are deleted outright before storage is emptied (see `deletionSteps`); every
+ * one also references auth.users on delete cascade.
  */
 export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_personal_profiles',

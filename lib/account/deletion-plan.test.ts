@@ -6,6 +6,8 @@ import {
   EXPORT_TABLES,
   STORAGE_BUCKETS,
   deletionConfirmed,
+  RESEARCH_TABLES,
+  deletionStepIsBestEffort,
   deletionSteps,
   exportFilename,
   isMissingBucketError,
@@ -14,12 +16,19 @@ import {
   sensitiveAuthCheck,
 } from './deletion-plan';
 
-test('the auth user is deleted last, after connections and files', () => {
-  assert.deepEqual(deletionSteps(), ['revoke-connections', 'stop-research', 'remove-storage', 'delete-user']);
+test('the auth user is deleted after connections, research rows and files, then storage is swept once more', () => {
+  assert.deepEqual(deletionSteps(), ['revoke-connections', 'remove-research', 'remove-storage', 'delete-user', 'sweep-storage']);
 });
-test('research runs are stopped before the memory log is removed', () => {
+test('research rows are deleted, not just cancelled, before the memory log is removed', () => {
+  // The worker's guards before it re-uploads the log check that rows exist; a cancelled row would pass.
   const steps = deletionSteps();
-  assert.ok(steps.indexOf('stop-research') < steps.indexOf('remove-storage'));
+  assert.ok(steps.indexOf('remove-research') < steps.indexOf('remove-storage'));
+  assert.ok(!(steps as string[]).includes('stop-research'));
+});
+test('only the sweep after the account is gone is best effort', () => {
+  const steps = deletionSteps();
+  assert.deepEqual(steps.filter(deletionStepIsBestEffort), ['sweep-storage']);
+  assert.ok(steps.indexOf('sweep-storage') > steps.indexOf('delete-user'));
 });
 test('every private bucket is emptied', () => {
   for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
@@ -102,8 +111,6 @@ test('the export includes heads-ups and their settings', () => {
   assert.equal(byTable.get('headsup_preferences')?.key, 'user_id');
 });
 
-const RESEARCH_TABLES = ['research_runs', 'research_events', 'research_settlements', 'research_settings'];
-
 test('the export includes the Research desk, its settings keyed by person', () => {
   const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
   for (const table of ['research_runs', 'research_events', 'research_settlements']) assert.equal(byTable.get(table)?.key, 'id', table);
@@ -111,8 +118,12 @@ test('the export includes the Research desk, its settings keyed by person', () =
 });
 
 test('deleting the account removes every Research desk row and its memory log', () => {
-  // Rows go when the auth user is deleted (the last step), by cascade; the
-  // memory log in research-memory is emptied with the other buckets before that.
+  // Rows are deleted outright in remove-research, children before the runs they
+  // reference, and the auth user's cascade backs that up; the memory log in
+  // research-memory is emptied with the other buckets in between.
+  assert.deepEqual([...RESEARCH_TABLES].sort(), ['research_events', 'research_runs', 'research_settings', 'research_settlements']);
+  assert.ok(RESEARCH_TABLES.indexOf('research_events') < RESEARCH_TABLES.indexOf('research_runs'));
+  assert.ok(RESEARCH_TABLES.indexOf('research_settlements') < RESEARCH_TABLES.indexOf('research_runs'));
   const sql = readFileSync(new URL('../../supabase/migrations/202610270003_research_desk.sql', import.meta.url), 'utf8');
   const tableSql = (table: string) => {
     const match = new RegExp(`create table if not exists public\\.${table} \\(([\\s\\S]*?)\\n\\);`).exec(sql);
@@ -126,6 +137,6 @@ test('deleting the account removes every Research desk row and its memory log', 
   for (const table of ['research_events', 'research_settlements']) {
     assert.match(tableSql(table), /foreign key \(user_id, run_id\) references public\.research_runs \(user_id, id\) on delete cascade/, table);
   }
-  assert.deepEqual(deletionSteps().slice(-2), ['remove-storage', 'delete-user']);
+  assert.deepEqual(deletionSteps().slice(-4), ['remove-research', 'remove-storage', 'delete-user', 'sweep-storage']);
   assert.ok(STORAGE_BUCKETS.includes('research-memory'));
 });

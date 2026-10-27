@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { STORAGE_BUCKETS, deletionSteps, type DeletionStep } from '@/lib/account/deletion-plan';
+import { RESEARCH_TABLES, STORAGE_BUCKETS, deletionStepIsBestEffort, deletionSteps, type DeletionStep } from '@/lib/account/deletion-plan';
 import { removeUserObjects } from '@/lib/account/storage';
 import { UserFacingError } from '@/lib/errors';
 import { disconnectGmail } from '@/lib/gmail/connection';
@@ -14,9 +14,11 @@ type Admin = ReturnType<typeof createAdminClient>;
 // and its rows are all still there; only what the earlier steps removed is gone.
 const FAILED: Record<DeletionStep, string> = {
   'revoke-connections': 'Your account wasn’t deleted. A connected app may already be disconnected; everything else is still there.',
-  'stop-research': 'Your account wasn’t deleted. A connected app may already be disconnected; everything else is still there.',
-  'remove-storage': 'Your account wasn’t deleted yet. Your connected apps are disconnected and some of your stored files may already be gone, but everything else is still there. Try again in a moment.',
-  'delete-user': 'Your connected apps and stored files were removed, but the account itself couldn’t be deleted. Try again in a moment, or ask us for help from the support page.',
+  'remove-research': 'Your account wasn’t deleted yet. Your connected apps are disconnected and some of your Research desk history may already be gone, but everything else is still there. Try again in a moment.',
+  'remove-storage': 'Your account wasn’t deleted yet. Your connected apps are disconnected, your Research desk history is gone and some of your stored files may already be gone, but everything else is still there. Try again in a moment.',
+  'delete-user': 'Your connected apps, Research desk history and stored files were removed, but the account itself couldn’t be deleted. Try again in a moment, or ask us for help from the support page.',
+  // Never shown: this step runs after the account is gone, and its failures are only logged.
+  'sweep-storage': 'Your account was deleted.',
 };
 
 const NOTHING_REMOVED = 'Your account wasn’t deleted, and nothing in it has been removed. Try again in a moment.';
@@ -29,20 +31,27 @@ async function revokeConnections(userId: string) {
   await deleteZerodhaConnection(userId);
 }
 
-/** Cancels queued and running Research desk runs. Best effort: the worker also stops once the runs are gone. */
-async function stopResearch(admin: Admin, userId: string) {
-  const { error } = await admin.from('research_runs').update({ status: 'cancelled', finished_at: new Date().toISOString() })
-    .eq('user_id', userId).in('status', ['queued', 'running']);
-  if (error) console.error('deleteAccount: cancelling research runs failed', error.code);
+/**
+ * Deletes every Research desk row, children first. A worker in flight sees its
+ * run gone: it stops at its next check and, before it puts the memory log
+ * back, finds nothing of the owner left and skips the upload.
+ */
+async function removeResearch(admin: Admin, userId: string) {
+  for (const table of RESEARCH_TABLES) {
+    const { error } = await admin.from(table).delete().eq('user_id', userId); // NOSONAR: children go before the rows they reference
+    if (error) throw new Error(`Deleting ${table} failed: ${error.code ?? error.message}`);
+  }
 }
 
 async function run(step: DeletionStep, admin: Admin, userId: string) {
   switch (step) {
     case 'revoke-connections':
       return revokeConnections(userId);
-    case 'stop-research':
-      return stopResearch(admin, userId);
+    case 'remove-research':
+      return removeResearch(admin, userId);
     case 'remove-storage':
+    case 'sweep-storage':
+      // The sweep catches a file a worker or the career cron wrote between its own existence check and the first wipe.
       return removeUserObjects(admin.storage, STORAGE_BUCKETS, userId);
     case 'delete-user': {
       // Every user table references auth.users on delete cascade, so this removes the rows too.
@@ -74,6 +83,7 @@ export async function deleteAccount(userId: string, email: string) {
       await run(step, admin, userId); // NOSONAR: steps run in order; a later step must not start if an earlier one failed
     } catch (cause) {
       console.error(`deleteAccount: ${step} failed`, cause);
+      if (deletionStepIsBestEffort(step)) continue;
       throw new UserFacingError(FAILED[step]);
     }
   }
