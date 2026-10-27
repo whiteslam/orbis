@@ -6,6 +6,11 @@ export type NewsArticle = {
   url: string;
   source: string;
   publishedAt: string;
+  /**
+   * The article's lead picture, https only. Optional: NewsData often has none,
+   * and batches cached before it was kept have none either.
+   */
+  imageUrl?: string;
   /** 'india' for Indian business news, 'world' for everything else. */
   desk: 'india' | 'world';
 };

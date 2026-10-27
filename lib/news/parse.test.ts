@@ -27,6 +27,15 @@ test('NewsData articles keep only what a headline needs, with markup stripped', 
   });
 });
 
+test('an article keeps its https picture, and drops one that is missing, not https or not a URL', () => {
+  const [withPhoto] = parseNewsData(raw([item({ image_url: 'https://cdn.example.com/it.jpg' })]), 'india');
+  assert.equal(withPhoto.imageUrl, 'https://cdn.example.com/it.jpg');
+  for (const image_url of [null, '', 'http://cdn.example.com/it.jpg', 'data:image/png;base64,AAAA', 'javascript:alert(1)', 'not a url', 42]) {
+    const [article] = parseNewsData(raw([item({ image_url })]), 'india');
+    assert.equal('imageUrl' in article, false, String(image_url));
+  }
+});
+
 test('half-formed articles and error replies are dropped, not shown', () => {
   assert.equal(parseNewsData(raw([item({ link: 'javascript:alert(1)' }), item({ title: '' }), null]), 'world').length, 0);
   assert.deepEqual(parseNewsData({ status: 'error', results: { message: 'bad key' } }, 'world'), []);

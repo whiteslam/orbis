@@ -274,7 +274,10 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
             <DesktopRail tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />
             <DesktopHeader name={personalProfile.profile?.preferredName ?? null} onSearch={() => setPalette(true)} onHeadsup={openHeadsup} />
             {screen}
-            {settings && (
+            {/* Its own boundary, like the palette's: on first open only the sheet
+                waits for its code, so the app is not hidden and the button that
+                opened it keeps focus to be given back on close. */}
+            {settings && <Suspense fallback={null}>
               <SettingsSheet
                 section={settings}
                 onClose={() => { setSettings(null); setIntent(null); }}
@@ -284,7 +287,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 clearGoogleNotice={() => setGmailNotice(null)}
                 data={{ personalProfile, notificationSettings, aiPreferences, routines, appConnections, socialConnections, homeLocation, integrations, stepsSummary }}
               />
-            )}
+            </Suspense>}
             <TalkToOrbis />
             <nav className="bottom-nav">
               {TABS.map(({ id, label }) => {

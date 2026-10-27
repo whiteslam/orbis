@@ -31,3 +31,10 @@ test('supabase is reachable for data, realtime, images and media', () => {
 test('inline style attributes keep working (the UI uses style={…})', () => {
   assert.match(directive('style-src'), /'unsafe-inline'/);
 });
+
+test('the app may show https pictures (news photos), never http ones; the public pages may not', () => {
+  assert.match(directive('img-src'), / https:$/);
+  assert.doesNotMatch(directive('img-src'), /http:/);
+  const publicImg = buildCsp({ nonce: 'n', supabaseUrl: 'https://proj.supabase.co', isDev: false, scope: 'public' }).split(';').map((part) => part.trim()).find((part) => part.startsWith('img-src ')) ?? '';
+  assert.equal(publicImg, "img-src 'self' data:");
+});

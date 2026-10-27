@@ -14,19 +14,22 @@
 
 **Switch:** everything desktop is off unless the build has `NEXT_PUBLIC_DESKTOP_LAYOUT=1` (`lib/shell/desktop.ts` `DESKTOP_LAYOUT`; every rule in `app/styles/desktop.css` is scoped under `.stage[data-desktop]`, which `components/app-shell.tsx` sets only then). With it off, screenshots of every tab at 390×844 and 1440×900 match the pre-change build pixel for pixel (only seeded data and the brief's clock differ). Turn it on locally with `NEXT_PUBLIC_DESKTOP_LAYOUT=1 pnpm dev`. Remove the switch (and its `.env.example` entry) when Task 10 is done.
 
-**Done:** Tasks 1–4 (logic + tests, shared palette, frame/rail/header/palette/Ask docked, Settings dialog). Tasks 5–8 have a first pass (Today grid, Money/Health/Journal two balanced columns, Social full-width planner) that looks right in screenshots; they still need the polish listed below.
+**Done:** Tasks 1–9. Tasks 5–8 are polished (second session, 2026-10-28), and the owner's first look at Today on a wide window changed the frame:
+- The frame is fluid up to 1920px (it was a centred 1440). `.stage[data-desktop]` resets `place-items`: Chrome now applies the phone's `place-items: center` in block layout, which had shrunk the frame to its content.
+- Today is a 12-column home dashboard: the brief with the weather beside it; the day's two numbers as the lifted cards; heads-ups the only other card (beside the brief when there are any); mail, Career and setup as open sections on hairlines; News as a spread (a lead story with its picture, four picture tiles, the market read beside them; a story without a picture gets a tile with its source).
+- News pictures: `NewsArticle.imageUrl` (optional, https only, from NewsData's `image_url`). The app's CSP `img-src` gained `https:` (the public pages' did not): any news site can see a viewer's IP when its picture loads. The owner should confirm that trade. The photo element only renders with the switch on and is `display: none` below the breakpoint, so the phone fetches none. The shared cache's current batch (`news:articles:v1`) predates `imageUrl`, so the pictures appear from its next three-hourly refresh after deploy; until then every story shows the fallback tile.
+- Settings: the keyboard pass ran in a real browser (first open by keyboard, heading focused, 100 Tabs never leave the dialog, Escape returns focus to the opener, veil closes, `?tab=settings` lands on Connections). A first-open bug was fixed: the sheet is `dynamic()` and had no Suspense boundary, so React hid the whole app while its chunk loaded and focus fell to `<body>`; it now has its own `<Suspense fallback={null}>` in `app-shell.tsx`, as the palette has. The dialog no longer scrolls as a whole (only the section card does), the card is at most 680px at the start of its column, and the focused heading draws no ring.
+- Journal is a grid (entries left, saved notes right). Social's subtitle reads under its title, the month planner has roomy day cells with the chosen day marked, and the empty state's note and insights share a row.
 
 **Next task:** Task 10's final screenshots and a full e2e run against a production build. Task 9 is done; `desktop.spec.ts` and the `openTab` fixture change are committed and pass against a dev build with the switch on.
 
 **Changed after owner feedback (2026-10-27):** icon-only rails mixing navigation and Career's actions were confusing. Both rails (`.dk-rail` and the panel's `.cp-rail` with the switch on) are now navigation only, with a name under every icon (`.cp-rail-labelled`, `--cp-rail-w: 84px`). On the Career panel, the five actions moved onto the page as labelled buttons (`PanelActions`, `.cp-actions`) and light/dark moved beside the bell. Below 900px the panel's bottom bar is unchanged.
 
 **Known rough edges (switch on):**
-- Settings dialog: the "Settings" heading shows the browser's focus box when it opens (it is focused programmatically, as on the phone); give `.settings-head h1:focus` no outline on desktop. The chosen section's card sits in a wide right column; consider `justify-self: start` and a narrower first column.
-- Today with no heads-ups is two columns with nothing on the right; with heads-ups it is three. Widgets were squares on a phone; on desktop they are `min-height: 196px`.
-- Social's subtitle row is kept on desktop (others drop their date row); the empty state's insights span the full width.
+- Investments with real holdings has not been seen (the test users have no broker); only its first-run view (two cards side by side) is checked.
+- At 1920 Money, Health and Journal are two wide columns; acceptable, but a third column at very wide sizes could be considered once there is real data.
 - The 1440 shots are full-page; the fixed wallpaper only paints the first viewport in a full-page capture (a screenshot artefact, not a layout bug).
-- `tests/e2e` still assumes the bottom nav at 1440 in some specs (`responsive/*`, `openTab('Career')`); with the switch on they need Task 10's fixture change. With it off nothing changes.
-- Not done: the e2e `desktop.spec.ts` and a keyboard pass on the palette/rail/heads-up popover in a real browser.
+- `tests/e2e` still assumes the bottom nav at 1440 in some specs; Task 10 covers it.
 
 **Screenshot harness (not committed, it lived in the ignored `.superpowers/shots/`):** a Playwright config with `globalSetup`/`globalTeardown` pointing at `tests/e2e/support/global-setup.ts`/`global-teardown.ts` (needs `.env.local`), `use.baseURL` = the server (`pnpm start -p 3101` with `ORBIS_ALLOWED_EMAILS=''`; port 3000 is taken on the owner's machine), a seed test (three expenses, one journal entry, three social posts through the UI), then each of `/active`, `#money`, `#money/investments`, `#health`, `#journal`, `#social`, `#career`, `#profile` and Ask opened, at 390×844 (isMobile) and 1440×900, dark and light.
 
@@ -36,7 +39,7 @@
 - Below the breakpoint nothing changes: no phone selector is edited, desktop rules live only inside the desktop media query in `desktop.css`, and new markup is `display: none` there.
 - No branching on `window` during render. JS reads `matchMedia(DESKTOP_QUERY)` only inside event handlers.
 - Hash routing stays: `hashFor`, `openingFromUrl`, `#social/2026-11`, `?tab=`, `?gmail=`, `?zerodha=`, `?social=` (`lib/shell/tabs.test.ts` stays green).
-- Centred frame, max width 1440px; at 1440×900 no tab is a single narrow or stretched column and nothing scrolls sideways.
+- Fluid frame, max width 1920px (the owner asked for the window to be used; it was a centred 1440); at 1440×900 and 1920×1080 no tab is a single narrow or stretched column and nothing scrolls sideways.
 - Light and dark themes; the rail is a real `nav`; palette and Settings trap focus and give it back.
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` green. Restore `next-env.d.ts` after a build.
 
@@ -112,31 +115,31 @@
 
 - [x] **Step 1:** `const [shown, setShown] = useState(section)`, re-synced when `section` changes; jump buttons set it and still `jumpTo`; `aria-current="true"` on the shown one; each `Group` gets `data-shown` when it is the shown one. A `<div className="settings-veil" onClick={onClose} aria-hidden="true">` rendered beside the dialog. On Tab inside the dialog, if `isDesktop()`, keep focus inside (same loop as `useDialogFocus`). Phone: the veil is `display: none`, unknown attributes change nothing, the trap never runs.
 - [x] **Step 2:** Desktop CSS: veil fixed and dim; `.settings-sheet` fixed, `inset: 40px`, `max-width: 1080px`, centred, radius 24px, grid `220px 1fr` — header across, `.settings-jump` a vertical sticky list on the left, groups on the right with `.pf-group:not([data-shown])` hidden.
-- [ ] **Step 3:** Check open/close, Escape, Tab loop, `?tab=settings` landing on Connections. (Opening at a section is seen in screenshots; the keyboard checks have not been run in a real browser yet.)
+- [x] **Step 3:** Check open/close, Escape, Tab loop, `?tab=settings` landing on Connections. (Run in Chromium at 1440: all pass after giving the sheet its own Suspense boundary; see Resume here.)
 
-### Task 5: Today (first pass done, polish open)
-
-**Files:** `app/styles/desktop.css`.
-
-- [ ] Grid on `[data-tab="today"] .screen-body`: `minmax(0,1fr) minmax(0,1fr) 340px`, rows `repeat(12, auto) 1fr` (the trailing `1fr` row lets the side column span without opening gaps in the main ones). Brief (`.fd-note-brief`/focus note), passkey prompt and routine check across columns 1–2; `.hu-card` and `.setup-list` in column 3 from row 1 down; widgets across 1–2; career row, weather, mail, news auto-placed into the two main columns. Screenshot at 1440 light + dark. Commit.
-
-### Task 6: Money (first pass done, polish open)
+### Task 5: Today (done)
 
 **Files:** `app/styles/desktop.css`.
 
-- [ ] Spending (`[data-money="spending"]`): two columns `minmax(0,1.1fr) minmax(0,1fr)`; title, switch, hero row and notices across; month summary, money in and currency on the left; the latest-transactions block on the right spanning down. Investments: hero, focus, positions and news left; health of the mix, allocation, accounts, own investments and AI row right (label + body pairs stay together by placing labels and bodies in the same column). First-run views fall back to the centred column. Screenshot both views. Commit.
+- [x] Grid on `[data-tab="today"] .screen-body`: `minmax(0,1fr) minmax(0,1fr) 340px`, rows `repeat(12, auto) 1fr` (the trailing `1fr` row lets the side column span without opening gaps in the main ones). Brief (`.fd-note-brief`/focus note), passkey prompt and routine check across columns 1–2; `.hu-card` and `.setup-list` in column 3 from row 1 down; widgets across 1–2; career row, weather, mail, news auto-placed into the two main columns. Screenshot at 1440 light + dark. Commit. (Superseded by the owner's dashboard brief: a 12-column grid, the news spread with pictures, a fluid frame up to 1920; see Resume here.)
 
-### Task 7: Health and Journal (first pass done, polish open)
-
-**Files:** `app/styles/desktop.css`.
-
-- [ ] Health: title across; two columns — workouts/plans and steps left, documents, saved advice, coaching and Ask right. Journal: the entry form and history left (`minmax(0,1.4fr)`), saved notes right. Screenshot. Commit.
-
-### Task 8: Social (first pass done, polish open)
+### Task 6: Money (done)
 
 **Files:** `app/styles/desktop.css`.
 
-- [ ] Title, notices and the two add actions across; the month planner (`.so-cal*` card) across the full width so the month view has its room; posts and insights side by side below. Screenshot week and month views. Commit.
+- [x] Spending (`[data-money="spending"]`): two columns `minmax(0,1.1fr) minmax(0,1fr)`; title, switch, hero row and notices across; month summary, money in and currency on the left; the latest-transactions block on the right spanning down. Investments: hero, focus, positions and news left; health of the mix, allocation, accounts, own investments and AI row right (label + body pairs stay together by placing labels and bodies in the same column). First-run views fall back to the centred column. Screenshot both views. Commit.
+
+### Task 7: Health and Journal (done)
+
+**Files:** `app/styles/desktop.css`.
+
+- [x] Health: title across; two columns — workouts/plans and steps left, documents, saved advice, coaching and Ask right. Journal: the entry form and history left (`minmax(0,1.4fr)`), saved notes right. Screenshot. Commit.
+
+### Task 8: Social (done)
+
+**Files:** `app/styles/desktop.css`.
+
+- [x] Title, notices and the two add actions across; the month planner (`.so-cal*` card) across the full width so the month view has its room; posts and insights side by side below. Screenshot week and month views. Commit.
 
 ### Task 9: Career link-up (done)
 
