@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ClipboardPaste, Radar, Search, Star, ThumbsDown } from 'lucide-react';
+import { Check, ClipboardPaste, Radar, Search, Star, ThumbsDown } from 'lucide-react';
 import { listJobsAction, pasteJobAction, runSearchNowAction, setJobStateAction } from '@/app/career/actions';
 import { BusyIcon, NoticeLine } from '@/components/career/bits';
 import { JobCard } from '@/components/career/job-card';
 import { useRun } from '@/components/career/use-run';
+import { PASTED_ATS_LABEL, pastedUrlKind } from '@/lib/career/sources/pasted';
 import type { CareerJob } from '@/lib/career/types';
 import type { JobView } from '@/lib/career/view';
 
@@ -64,14 +65,39 @@ export function JobActions({ job, onOpen, onChanged }: Readonly<{ job: CareerJob
   );
 }
 
-/** A job from anywhere: a link (Greenhouse, Lever, Ashby and Recruitee are read directly) or the pasted text. */
+/** What the paste form needs besides the link and text: whether the title and company are asked for, and must be given. */
+export function pasteNeeds(url: string, text: string): { ats: string | null; names: 'hidden' | 'optional' | 'required' } {
+  const link = url.trim();
+  const ref = link ? pastedUrlKind(link) : null;
+  const ats = ref ? PASTED_ATS_LABEL[ref.kind] : null;
+  // An ATS link is read from its API; the names only matter if that read fails and the text stands in.
+  if (ats) return { ats, names: text.trim() ? 'optional' : 'hidden' };
+  return { ats: null, names: link || text.trim() ? 'required' : 'hidden' };
+}
+
+/**
+ * A job from anywhere: a link (Greenhouse, Lever, Ashby and Recruitee are
+ * read directly) or the pasted text. Any other link, or text alone, needs the
+ * job title and company as well (pasteJobAction refuses without them).
+ */
 export function PasteJob({ onPasted, onClose }: Readonly<{ onPasted: (jobId: string) => void; onClose: () => void }>) {
   const urlId = useId();
   const textId = useId();
+  const titleId = useId();
+  const companyId = useId();
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
+  const [title, setTitle] = useState('');
+  const [company, setCompany] = useState('');
   const { busy, notice, run } = useRun();
-  const paste = () => run('paste', () => pasteJobAction({ url: url.trim() || undefined, text: text.trim() || undefined }), (data) => {
+  const needs = pasteNeeds(url, text);
+  const missingNames = needs.names === 'required' && (!title.trim() || !company.trim());
+  const paste = () => run('paste', () => pasteJobAction({
+    url: url.trim() || undefined,
+    text: text.trim() || undefined,
+    title: needs.names === 'hidden' ? undefined : title.trim() || undefined,
+    company: needs.names === 'hidden' ? undefined : company.trim() || undefined,
+  }), (data) => {
     onPasted(data.jobId);
   });
   return (
@@ -81,13 +107,36 @@ export function PasteJob({ onPasted, onClose }: Readonly<{ onPasted: (jobId: str
         Link to the listing
         <input id={urlId} type="url" inputMode="url" value={url} placeholder="https://jobs.lever.co/…" onChange={(event) => setUrl(event.currentTarget.value)} />
       </label>
+      {needs.ats && <p className="cr-paste-ats"><Check size={13} strokeWidth={2.6} aria-hidden="true" />A {needs.ats} link: Orbis reads the listing from it.</p>}
       <label className="fd-field wide" htmlFor={textId}>
-        Or the description
+        {needs.ats ? 'The description (only if the link can’t be read)' : 'The description'}
         <textarea id={textId} rows={5} value={text} placeholder="Paste everything from the role to the benefits." onChange={(event) => setText(event.currentTarget.value)} />
       </label>
-      <p className="fd-hint cr-gap-top">Greenhouse, Lever, Ashby and Recruitee links are read directly. For any other site, paste the text too; the link becomes the apply page.</p>
+      {needs.names !== 'hidden' && (
+        <fieldset className="cr-paste-names">
+          <legend className="sr-only">The job</legend>
+          <div className="fd-grid">
+            <label className="fd-field" htmlFor={titleId}>
+              Job title{needs.names === 'optional' && <span className="fd-hint"> (optional)</span>}
+              <input id={titleId} value={title} maxLength={300} autoComplete="off" placeholder="Frontend Engineer" aria-required={needs.names === 'required'} onChange={(event) => setTitle(event.currentTarget.value)} />
+            </label>
+            <label className="fd-field" htmlFor={companyId}>
+              Company{needs.names === 'optional' && <span className="fd-hint"> (optional)</span>}
+              <input id={companyId} value={company} maxLength={200} autoComplete="organization" placeholder="Razorpay" aria-required={needs.names === 'required'} onChange={(event) => setCompany(event.currentTarget.value)} />
+            </label>
+          </div>
+          <p className="fd-hint cr-gap-top">
+            {needs.names === 'required'
+              ? 'Orbis doesn’t read other sites, so say what the job is and who it’s with. The link becomes the apply page.'
+              : 'Used only if the link can’t be read and your pasted text stands in for it.'}
+          </p>
+        </fieldset>
+      )}
+      {needs.names === 'hidden' && !needs.ats && (
+        <p className="fd-hint cr-gap-top">Greenhouse, Lever, Ashby and Recruitee links are read directly. For any other site, add the title and company (and the description if you can); the link becomes the apply page.</p>
+      )}
       <div className="fd-act pf-act">
-        <button type="button" onClick={paste} disabled={busy !== null || (!url.trim() && !text.trim())}>
+        <button type="button" onClick={paste} disabled={busy !== null || (!url.trim() && !text.trim()) || missingNames}>
           <BusyIcon on={busy === 'paste'} />
           {busy === 'paste' ? 'Reading and scoring…' : 'Add and score'}
         </button>

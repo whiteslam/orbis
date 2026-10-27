@@ -31,7 +31,7 @@
 .talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }
 
 /* ─── Buttons, pills and chat bubbles ───────────────────────────────── */
-.fd-button:not(.ghost), .fd-act button:not(.ghost), .finance-button:not(.secondary), .pf-pill.primary, .auth-submit {
+.fd-button:not(.ghost), .fd-act button:not(.ghost, .fd-link), .finance-button:not(.secondary), .pf-pill.primary, .auth-submit {
   background: var(--brand-gradient);
   color: var(--brand-on-accent);
   font-weight: 600;

@@ -153,7 +153,15 @@ export function OfferSection({ applicationId, offer, onDetail }: Readonly<{ appl
       <p className="cr-block-note">
         {offer?.confirmed ? 'Your confirmed terms. Change anything that’s off and save again.' : 'Check the terms Orbis read from the email. Advice waits until you confirm them.'}
       </p>
-      <TermsForm applicationId={applicationId} offer={offer} onDetail={onDetail} />
+      <TermsForm
+        applicationId={applicationId}
+        offer={offer}
+        onDetail={(detail) => {
+          // Saving the terms clears the server's advice (saveOfferTermsAction): it was for the old terms.
+          setAdvice(detail.offer?.advice ?? null);
+          onDetail(detail);
+        }}
+      />
       {offer?.confirmed && !advice && (
         <div className="fd-act">
           <button type="button" onClick={advise} disabled={busy !== null}>

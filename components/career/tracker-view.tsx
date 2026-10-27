@@ -19,12 +19,13 @@ export function nextStep(card: ApplicationCard, interviewAt: string | null): str
     case 'sending': return 'Sending now';
     case 'sent':
     case 'acknowledged':
+      if (application.followUpDraft) return 'Follow-up drafted. Review and send';
       return application.followUpDue ? `Follow up on ${dayMonth(application.followUpDue)} if quiet` : 'Waiting for a reply';
     case 'replied': return 'They wrote back. Read and answer';
     case 'assessment': return 'Complete their assessment';
     case 'interview': return interviewAt ? `Interview ${dayTime(interviewAt)}` : 'Prepare with the prep pack';
     case 'offer': return 'Confirm the terms, then get advice';
-    case 'ghosted': return 'No reply. A late one revives it';
+    case 'ghosted': return application.followUpDraft ? 'No reply yet. A follow-up is drafted' : 'No reply. A late one revives it';
     default: return null;
   }
 }

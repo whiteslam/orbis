@@ -53,6 +53,21 @@ function CareerTabs({ tab, onTab, queue }: Readonly<{ tab: CareerTab; onTab: (ta
   );
 }
 
+/**
+ * The line for the ?gmail= result Career's "Allow sending" came back with
+ * (app/auth/gmail/callback/route.ts), and whether it is good news.
+ */
+export function careerGmailNotice(status: string): { text: string; ok: boolean } {
+  switch (status) {
+    case 'connected': return { text: 'Sending is on: Orbis can now send applications you approve.', ok: true };
+    case 'send-declined': return { text: 'Sending stayed off: Google didn’t grant it. Email applications will open a Gmail draft instead.', ok: false };
+    case 'cancelled': return { text: 'Sending stayed off: the Google sign-in was cancelled. Email applications will open a Gmail draft instead.', ok: false };
+    case 'expired': return { text: 'That Google sign-in took too long or started on a different address. Press “Allow sending applications” in Setup to try again.', ok: false };
+    case 'setup-error': return { text: 'Gmail can’t be connected right now. Try again later.', ok: false };
+    default: return { text: 'Sending couldn’t be turned on just now. Try “Allow sending applications” in Setup again.', ok: false };
+  }
+}
+
 /** Before a resume and a spec, every view leads to Setup. */
 function FirstRun({ onSetup, hasProfile }: Readonly<{ onSetup: () => void; hasProfile: boolean }>) {
   return (
@@ -95,9 +110,12 @@ function ViewBody({ tab, home, context, openJobId, openCard, onSetup, reload, pa
  * the application sheet over it. CareerScreen below loads the data; the web
  * panel or a preview can render this directly.
  */
-export function CareerView({ home, intent = null, onReload, onHome, initialTab = 'for_you', initialSheet = null }: Readonly<{
+export function CareerView({ home, intent = null, onReload, onHome, initialTab = 'for_you', initialSheet = null, gmailNotice = null, clearGmailNotice }: Readonly<{
   home: CareerHome;
   intent?: HeadsupAction | null;
+  /** The ?gmail= result of Setup's "Allow sending", shown once until dismissed. */
+  gmailNotice?: string | null;
+  clearGmailNotice?: () => void;
   onReload: () => void;
   onHome: (update: (home: CareerHome) => CareerHome) => void;
   initialTab?: CareerTab;
@@ -141,6 +159,7 @@ export function CareerView({ home, intent = null, onReload, onHome, initialTab =
           <a className="cr-panel-link" href="/active/career">Open full panel<ArrowUpRight size={13} aria-hidden="true" /></a>
         </div>
         {state.profile && state.spec && <WeekLine week={home.week} />}
+        {gmailNotice && <NoticeLine notice={careerGmailNotice(gmailNotice)} onDismiss={clearGmailNotice} />}
         {intentMiss && <NoticeLine notice={{ text: 'That application couldn’t be found. It may have been closed.', ok: false }} onDismiss={() => setIntentMiss(false)} />}
         <CareerTabs tab={tab} onTab={setTab} queue={home.counts.queue} />
         <div id="cr-panel" role="tabpanel" aria-labelledby={`cr-tab-${tab}`}>
@@ -172,7 +191,7 @@ function HomeProblem({ message, onRetry, busy }: Readonly<{ message: string; onR
  * Loads the home on mount with one action; `intent` carries a heads-up's
  * `open_career_application`, read once.
  */
-export function CareerScreen({ intent }: Readonly<{ intent: HeadsupAction | null }>) {
+export function CareerScreen({ intent, gmailNotice = null, clearGmailNotice }: Readonly<{ intent: HeadsupAction | null; gmailNotice?: string | null; clearGmailNotice?: () => void }>) {
   const [home, setHome] = useState<CareerHome | null>(null);
   const { busy, notice, run } = useRun();
   const load = useCallback(() => {
@@ -188,7 +207,20 @@ export function CareerScreen({ intent }: Readonly<{ intent: HeadsupAction | null
       </div>
     );
   }
-  if (home) return <CareerView home={home} intent={intent} onReload={load} onHome={(update) => setHome((current) => (current ? update(current) : current))} />;
+  if (home) {
+    return (
+      <CareerView
+        home={home}
+        intent={intent}
+        onReload={load}
+        onHome={(update) => setHome((current) => (current ? update(current) : current))}
+        // "Allow sending" is pressed in Setup, so the round trip lands back there.
+        initialTab={gmailNotice ? 'setup' : 'for_you'}
+        gmailNotice={gmailNotice}
+        clearGmailNotice={clearGmailNotice}
+      />
+    );
+  }
   if (notice) return <HomeProblem message={notice.text} onRetry={load} busy={busy !== null} />;
   return <div className="screen-body field cr-screen"><FieldHead title="Career" /><p className="fd-empty">Loading…</p></div>;
 }

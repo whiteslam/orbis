@@ -107,6 +107,12 @@ test('organisations that are not in the profile are removed; the job\'s company 
   assert.equal(result.coverNote.text, 'I want to join Stripe.');
 });
 
+test('prose keeps its paragraph breaks, even around a removed sentence', () => {
+  const text = 'I want to join Stripe.\n\nBefore Acme Payments I consulted for Infosys. At Acme Payments I cut checkout latency from 900 ms to 250 ms.\n\nThank you.';
+  const result = checkTailored(input({ coverNote: { text, factIds: ['f_acme0001'] } }));
+  assert.equal(result.coverNote.text, 'I want to join Stripe.\n\nAt Acme Payments I cut checkout latency from 900 ms to 250 ms.\n\nThank you.');
+});
+
 test('known names pass: employers, skills, schools, teams', () => {
   const result = checkTailored(input({
     outreach: 'I work with Product and Design at Acme Payments, with React and Next.js, and studied at Anna University.',

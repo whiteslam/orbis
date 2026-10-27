@@ -52,6 +52,8 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   const [tab, setTab] = useState<TabId>('today');
   const [money, setMoney] = useState<MoneyView>('spending');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
+  // Career's "Allow sending" returns to the Career tab with its own result; Today keeps its own notices.
+  const [careerGmailNotice, setCareerGmailNotice] = useState<string | null>(null);
   const [zerodhaNotice, setZerodhaNotice] = useState<string | null>(null);
   const [socialNotice, setSocialNotice] = useState<SocialConnectNotice | null>(null);
   // Which Settings section is open, or null. Task 6 renders the sheet.
@@ -123,7 +125,8 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       pendingTab.current = opening.tab;
       setTab(opening.tab);
     }
-    if (notice) setGmailNotice(notice);
+    if (notice && opening?.tab === 'career' && !opening.settings) setCareerGmailNotice(notice);
+    else if (notice) setGmailNotice(notice);
     if (brokerNotice) setZerodhaNotice(brokerNotice);
     if (socialResult) setSocialNotice(socialConnectNotice(socialResult, url.searchParams.get('why')));
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -197,10 +200,10 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (tab === 'money') return <MoneyScreen intent={intent} view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
     if (tab === 'health') return <HealthScreen intent={intent} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
-    if (tab === 'career') return <CareerScreen intent={intent} />;
+    if (tab === 'career') return <CareerScreen intent={intent} gmailNotice={careerGmailNotice} clearGmailNotice={() => setCareerGmailNotice(null)} />;
     return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} connectNotice={socialNotice} clearConnectNotice={() => setSocialNotice(null)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
-  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
+  }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, careerGmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
 
   return (
     <main className="stage">

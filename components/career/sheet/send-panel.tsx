@@ -9,8 +9,12 @@ import { useRun } from '@/components/career/use-run';
 import type { CareerApplication } from '@/lib/career/types';
 import type { ApplicationDetail } from '@/lib/career/view';
 
-/** What Send left to do: a page or a Gmail window the owner finishes by hand. */
-export type HandOff = { kind: 'opened' | 'compose'; url: string };
+/**
+ * What Send left to do: a page or a Gmail window the owner finishes by hand.
+ * `message` says why, when a direct send (Recruitee, or an email with no
+ * address to send to) fell back to the apply page.
+ */
+export type HandOff = { kind: 'opened' | 'compose'; url: string; message?: string };
 
 function openTab(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -32,6 +36,7 @@ export function ApplyKit({ application, detail, handOff, onDetail }: Readonly<{ 
   return (
     <section className="cr-block cr-kit" aria-labelledby="cr-kit-title">
       <h2 className="fd-label" id="cr-kit-title">{compose ? 'Finish in Gmail' : 'Finish on their site'}</h2>
+      {handOff?.message && <output className="fd-msg cr-kit-why">{handOff.message}</output>}
       <p className="cr-block-note">
         {compose
           ? 'A ready email opened in Gmail. Download the PDF below, attach it, send, then come back and press “I applied”.'
@@ -71,7 +76,14 @@ export function ApplyKit({ application, detail, handOff, onDetail }: Readonly<{ 
  * button is disabled while it runs). Sent: the sheet updates. Opened or
  * compose: the page opens in a new tab and the kit takes over.
  */
-export function SendBar({ application, canSend, onDetail, onHandOff }: Readonly<{ application: CareerApplication; canSend: boolean; onDetail: (detail: ApplicationDetail) => void; onHandOff: (handOff: HandOff) => void }>) {
+export function SendBar({ application, canSend, onDetail, onHandOff, onSent }: Readonly<{
+  application: CareerApplication;
+  canSend: boolean;
+  onDetail: (detail: ApplicationDetail) => void;
+  onHandOff: (handOff: HandOff) => void;
+  /** Sent: the bar goes with the status, so the sheet keeps the confirmation. */
+  onSent: (text: string) => void;
+}>) {
   const { busy, notice, run } = useRun();
   const [why, setWhy] = useState(false);
   const route = routeText(application.route, canSend);
@@ -79,10 +91,14 @@ export function SendBar({ application, canSend, onDetail, onHandOff }: Readonly<
   const sending = busy === 'send' || application.status === 'sending';
 
   const send = () => run('send', () => sendApplicationAction(application.id), (outcome) => {
-    onDetail(outcome.detail);
-    if (outcome.kind === 'sent') return 'Sent. Orbis will tell you when they reply.';
+    if (outcome.kind === 'sent') {
+      onSent('Sent. Orbis will tell you when they reply.');
+      onDetail(outcome.detail);
+      return;
+    }
     openTab(outcome.url);
-    onHandOff({ kind: outcome.kind, url: outcome.url });
+    onHandOff(outcome.kind === 'opened' && outcome.message ? { kind: 'opened', url: outcome.url, message: outcome.message } : { kind: outcome.kind, url: outcome.url });
+    onDetail(outcome.detail);
   });
 
   let label = 'Send';

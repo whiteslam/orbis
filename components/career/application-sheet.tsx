@@ -35,13 +35,14 @@ function originalOf(application: CareerApplication | null) {
 }
 
 /** The application's own sections, in the order a review reads them. */
-function ApplicationSections({ detail, application, context, original, handOff, setHandOff, onDetail }: Readonly<{
+function ApplicationSections({ detail, application, context, original, handOff, setHandOff, onSent, onDetail }: Readonly<{
   detail: ApplicationDetail;
   application: CareerApplication;
   context: SheetContext;
   original: ReturnType<typeof originalOf>;
   handOff: HandOff | null;
   setHandOff: (handOff: HandOff) => void;
+  onSent: (text: string) => void;
   onDetail: (detail: ApplicationDetail) => void;
 }>) {
   const showKit = application.status === 'opened' || handOff !== null;
@@ -53,13 +54,13 @@ function ApplicationSections({ detail, application, context, original, handOff, 
       {application.prep && <PrepPack prep={application.prep} profile={context.profile} />}
       <FollowUp application={application} job={detail.job} events={detail.events} name={context.profile?.contact.name ?? ''} onDetail={onDetail} />
       {application.draft && <ResumePreview draft={application.draft} profile={context.profile} />}
-      <DraftEditor application={application} profile={context.profile} original={original} onDetail={onDetail} />
+      <DraftEditor application={application} profile={context.profile} original={original} highlights={detail.highlights} onDetail={onDetail} />
       <RemovedList removed={application.removed} />
       <AtsCard report={application.ats} />
       <FilesRow files={detail.files} />
       <Timeline events={detail.events} />
       <OwnerMoves applicationId={application.id} onDetail={onDetail} />
-      {SEND_STATES.has(application.status) && <SendBar application={application} canSend={context.canSend} onDetail={onDetail} onHandOff={setHandOff} />}
+      {SEND_STATES.has(application.status) && <SendBar application={application} canSend={context.canSend} onDetail={onDetail} onHandOff={setHandOff} onSent={onSent} />}
     </>
   );
 }
@@ -73,14 +74,16 @@ function ApplicationSections({ detail, application, context, original, handOff, 
 export function ApplicationDetailView({ detail, context, onDetail }: Readonly<{ detail: ApplicationDetail; context: SheetContext; onDetail: (detail: ApplicationDetail) => void }>) {
   const [original] = useState(() => originalOf(detail.application));
   const [handOff, setHandOff] = useState<HandOff | null>(null);
+  const [sentNote, setSentNote] = useState<string | null>(null);
   const { application, job } = detail;
   const setJob = (next: CareerJob) => onDetail({ ...detail, job: next });
 
   return (
     <div className="cr-detail">
       <MatchSummary job={job} threshold={context.threshold} prediction={application?.prediction ?? null} />
+      {sentNote && <NoticeLine notice={{ text: sentNote, ok: true }} onDismiss={() => setSentNote(null)} />}
       {application ? (
-        <ApplicationSections detail={detail} application={application} context={context} original={original} handOff={handOff} setHandOff={setHandOff} onDetail={onDetail} />
+        <ApplicationSections detail={detail} application={application} context={context} original={original} handOff={handOff} setHandOff={setHandOff} onSent={setSentNote} onDetail={onDetail} />
       ) : (
         <DraftStart job={job} onDetail={onDetail} onJob={setJob} />
       )}

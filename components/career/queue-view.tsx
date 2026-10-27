@@ -50,7 +50,13 @@ export function QueueView({ queue, followUps, threshold, onOpen }: Readonly<{ qu
           <h2 className="fd-label" id="cr-follow-list">Follow-ups due</h2>
           {followUps.map((card) => (
             <button key={card.application.id} type="button" className="fd-line" onClick={() => onOpen(card)}>
-              <span className="fd-two"><b>{card.job.company}</b><small>{card.job.title}, sent {dayMonth(card.application.sentAt ?? card.application.updatedAt)}</small></span>
+              <span className="fd-two">
+                <b>{card.job.company}</b>
+                <small>
+                  {card.job.title}, sent {dayMonth(card.application.sentAt ?? card.application.updatedAt)}
+                  {card.application.followUpDraft ? '. Draft ready to review' : ''}
+                </small>
+              </span>
               <ChevronRight size={16} aria-hidden="true" />
             </button>
           ))}

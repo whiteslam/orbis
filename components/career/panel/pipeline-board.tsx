@@ -115,7 +115,11 @@ function dropProps(lane: Lane, drag: DragState | null, drop: DropHandlers) {
   };
 }
 
-/** The kanban: five stage columns, then the two drop zones. */
+/**
+ * The kanban: five stage columns, then the two drop zones in a slim column of
+ * their own. Only the columns scroll sideways when the window is too narrow
+ * for them, so Accepted and Closed are always in view to drop on.
+ */
 export function PipelineBoard({ cards, drag, over, moving, flash, handlers, drop, onZone }: Readonly<{
   cards: BoardCard[];
   drag: DragState | null;
@@ -129,25 +133,27 @@ export function PipelineBoard({ cards, drag, over, moving, flash, handlers, drop
   const columns = LANES.filter((lane) => !lane.zone);
   const zones = LANES.filter((lane) => lane.zone);
   return (
-    <div className={`cp-board${drag ? ' dragging' : ''}`}>
-      {columns.map((lane) => {
-        const inLane = cards.filter((card) => lane.statuses.includes(card.status));
-        return (
-          <section key={lane.id} className={`cp-lane cp-stage-${lane.id}${laneState(lane, drag)}${over === lane.id ? ' over' : ''}`} aria-labelledby={`cp-lane-${lane.id}`} {...dropProps(lane, drag, drop)}>
-            <header className="cp-lane-head">
-              <i className={`cp-dot cp-fill-${lane.id}`} aria-hidden="true" />
-              <h2 id={`cp-lane-${lane.id}`}>{lane.label}</h2>
-              <span className="cp-lane-n">{inLane.length}</span>
-              <LaneHint lane={lane} drag={drag} />
-            </header>
-            {inLane.length === 0 ? <p className="cp-lane-empty">Nothing here</p> : (
-              <ol className="cp-lane-list">
-                {inLane.map((card) => <PipelineCard key={card.application.id} card={card} handlers={handlers} moving={moving === card.application.id} flash={flash === card.application.id} />)}
-              </ol>
-            )}
-          </section>
-        );
-      })}
+    <div className={`cp-board-wrap${drag ? ' dragging' : ''}`}>
+      <div className="cp-board">
+        {columns.map((lane) => {
+          const inLane = cards.filter((card) => lane.statuses.includes(card.status));
+          return (
+            <section key={lane.id} className={`cp-lane cp-stage-${lane.id}${laneState(lane, drag)}${over === lane.id ? ' over' : ''}`} aria-labelledby={`cp-lane-${lane.id}`} {...dropProps(lane, drag, drop)}>
+              <header className="cp-lane-head">
+                <i className={`cp-dot cp-fill-${lane.id}`} aria-hidden="true" />
+                <h2 id={`cp-lane-${lane.id}`}>{lane.label}</h2>
+                <span className="cp-lane-n">{inLane.length}</span>
+                <LaneHint lane={lane} drag={drag} />
+              </header>
+              {inLane.length === 0 ? <p className="cp-lane-empty">Nothing here</p> : (
+                <ol className="cp-lane-list">
+                  {inLane.map((card) => <PipelineCard key={card.application.id} card={card} handlers={handlers} moving={moving === card.application.id} flash={flash === card.application.id} />)}
+                </ol>
+              )}
+            </section>
+          );
+        })}
+      </div>
       <div className="cp-zones">
         {zones.map((lane) => {
           const count = cards.filter((card) => lane.statuses.includes(card.status)).length;

@@ -319,11 +319,29 @@ function checkBullets(bullets: CitedText[], where: string, allowed: (fact: Caree
   });
 }
 
-const sentences = (text: string) => text.split(/(?<=[.!?])\s+/).filter((part) => part.trim());
-
-/** Prose checked sentence by sentence, so one bad claim doesn't cost the whole paragraph. */
+/**
+ * Prose checked sentence by sentence, so one bad claim doesn't cost the whole
+ * paragraph. The kept sentences keep the spacing that came before them, so a
+ * cover note's paragraph breaks survive the check (and an owner's edit comes
+ * back as they typed it).
+ */
 function checkProse(text: string, where: string, backing: string[], context: Context, verdicts: Verdicts): string {
-  return sentences(text).filter((sentence) => verdicts.keep(where, sentence, problem(sentence, backing, context))).join(' ');
+  // Odd entries are the whitespace between sentences.
+  const parts = text.split(/(?<=[.!?])(\s+)/);
+  let kept = '';
+  // A paragraph break before a dropped sentence still separates what's left around it.
+  let carried = '';
+  for (let index = 0; index < parts.length; index += 2) {
+    const sentence = parts[index];
+    const gap = carried.includes('\n') ? carried : parts[index - 1] ?? '';
+    if (!sentence.trim() || !verdicts.keep(where, sentence, problem(sentence, backing, context))) {
+      carried = gap;
+      continue;
+    }
+    kept += kept ? `${gap || ' '}${sentence}` : sentence;
+    carried = '';
+  }
+  return kept;
 }
 
 /** Cited prose (summary, cover note): unknown ids are dropped, then each sentence is checked against what's left. */
