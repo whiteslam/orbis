@@ -5,16 +5,17 @@ import { rateLimitMessage } from '@/lib/security/rate-limit-rules';
 import { hasFreshAuth } from '@/lib/security/unlock-token';
 import { indiaToday } from '@/lib/social/month';
 
-export type DeletionStep = 'revoke-connections' | 'remove-storage' | 'delete-user';
+export type DeletionStep = 'revoke-connections' | 'stop-research' | 'remove-storage' | 'delete-user';
 
 /**
  * Third-party connections are revoked first, while their tokens can still be
- * read; then every stored file goes; the auth user goes last, and its removal
+ * read; queued and running Research desk runs are cancelled, so a worker job in
+ * flight stops before it can put the memory log back; then every stored file goes; the auth user goes last, and its removal
  * cascades to every row that references it. Anything that fails before the last
  * step leaves the account itself in place, so it can be tried again.
  */
 export function deletionSteps(): DeletionStep[] {
-  return ['revoke-connections', 'remove-storage', 'delete-user'];
+  return ['revoke-connections', 'stop-research', 'remove-storage', 'delete-user'];
 }
 
 /** Every private bucket that holds files under `${userId}/`. */

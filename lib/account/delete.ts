@@ -14,6 +14,7 @@ type Admin = ReturnType<typeof createAdminClient>;
 // and its rows are all still there; only what the earlier steps removed is gone.
 const FAILED: Record<DeletionStep, string> = {
   'revoke-connections': 'Your account wasn’t deleted. A connected app may already be disconnected; everything else is still there.',
+  'stop-research': 'Your account wasn’t deleted. A connected app may already be disconnected; everything else is still there.',
   'remove-storage': 'Your account wasn’t deleted yet. Your connected apps are disconnected and some of your stored files may already be gone, but everything else is still there. Try again in a moment.',
   'delete-user': 'Your connected apps and stored files were removed, but the account itself couldn’t be deleted. Try again in a moment, or ask us for help from the support page.',
 };
@@ -28,10 +29,19 @@ async function revokeConnections(userId: string) {
   await deleteZerodhaConnection(userId);
 }
 
+/** Cancels queued and running Research desk runs. Best effort: the worker also stops once the runs are gone. */
+async function stopResearch(admin: Admin, userId: string) {
+  const { error } = await admin.from('research_runs').update({ status: 'cancelled', finished_at: new Date().toISOString() })
+    .eq('user_id', userId).in('status', ['queued', 'running']);
+  if (error) console.error('deleteAccount: cancelling research runs failed', error.code);
+}
+
 async function run(step: DeletionStep, admin: Admin, userId: string) {
   switch (step) {
     case 'revoke-connections':
       return revokeConnections(userId);
+    case 'stop-research':
+      return stopResearch(admin, userId);
     case 'remove-storage':
       return removeUserObjects(admin.storage, STORAGE_BUCKETS, userId);
     case 'delete-user': {

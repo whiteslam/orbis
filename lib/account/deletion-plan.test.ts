@@ -15,7 +15,11 @@ import {
 } from './deletion-plan';
 
 test('the auth user is deleted last, after connections and files', () => {
-  assert.deepEqual(deletionSteps(), ['revoke-connections', 'remove-storage', 'delete-user']);
+  assert.deepEqual(deletionSteps(), ['revoke-connections', 'stop-research', 'remove-storage', 'delete-user']);
+});
+test('research runs are stopped before the memory log is removed', () => {
+  const steps = deletionSteps();
+  assert.ok(steps.indexOf('stop-research') < steps.indexOf('remove-storage'));
 });
 test('every private bucket is emptied', () => {
   for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
