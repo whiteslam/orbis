@@ -1,4 +1,5 @@
 import { cronAuthorized } from '@/lib/cron/auth';
+import { admittedUserIds } from '@/lib/security/admission';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
 import { dueSlots, SLOT_IDS, type SlotPreferences } from '@/lib/notifications/schedule';
@@ -17,8 +18,11 @@ export async function POST(request: Request) {
   const { data: rows, error } = await admin.from('notification_preferences').select('*').eq('enabled', true);
   if (error) return Response.json({ error: 'Preferences could not be loaded.' }, { status: 500 });
 
-  const counts = { users: rows?.length ?? 0, sent: 0, skipped: 0, duplicate: 0, failed: 0, deferred: 0 };
-  for (const row of rows ?? []) {
+  // Anyone signed in can turn their own reminders on; only admitted accounts are sent them.
+  const admitted = await admittedUserIds(admin, (rows ?? []).map((row) => String(row.user_id)));
+  const people = (rows ?? []).filter((row) => admitted.has(String(row.user_id)));
+  const counts = { users: people.length, sent: 0, skipped: 0, duplicate: 0, failed: 0, deferred: 0 };
+  for (const row of people) {
     const prefs: SlotPreferences = {
       enabled: row.enabled,
       timezone: row.timezone,

@@ -12,6 +12,7 @@ import { wordFinding } from '@/lib/headsups/word';
 import { SCAN_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
 import { localClock } from '@/lib/notifications/schedule';
 import { pushToUser } from '@/lib/notifications/push';
+import { admittedUserIds } from '@/lib/security/admission';
 
 type Admin = ReturnType<typeof createAdminClient>;
 const INDIA = 'Asia/Kolkata';
@@ -168,7 +169,9 @@ export async function scanDue(admin: Admin, now: Date, deadline: number) {
   ]);
   if (prefs.error) throw new Error('Heads-up preferences could not be loaded.');
   const zones = new Map((notify.data ?? []).map((row) => [row.user_id as string, row.timezone as string]));
-  const people = (prefs.data ?? []).map((row) => ({ userId: row.user_id as string, timeZone: zones.get(row.user_id) ?? INDIA, lastScanDate: row.last_scan_date as string | null, disabled: (row.disabled_kinds ?? []) as string[] }));
+  // Anyone signed in can write their own heads-up preferences; only admitted accounts are scanned.
+  const admitted = await admittedUserIds(admin, (prefs.data ?? []).map((row) => row.user_id as string));
+  const people = (prefs.data ?? []).filter((row) => admitted.has(row.user_id as string)).map((row) => ({ userId: row.user_id as string, timeZone: zones.get(row.user_id) ?? INDIA, lastScanDate: row.last_scan_date as string | null, disabled: (row.disabled_kinds ?? []) as string[] }));
   const disabledBy = new Map(people.map((person) => [person.userId, person.disabled]));
   const lastScanBy = new Map(people.map((person) => [person.userId, person.lastScanDate]));
   const counts: ScanCounts = { scanned: 0, findings: 0, failed: 0 };
@@ -236,7 +239,9 @@ export async function pushWaiting(admin: Admin, now: Date, deadline: number) {
   const { data: waiting } = await admin.from('headsups').select('id,user_id,kind,action,urgency,status,title,body,worded_by,created_at,pushed_at,snoozed_until')
     .eq('urgency', 'urgent').eq('status', 'new').is('pushed_at', null).gte('created_at', new Date(now.getTime() - 86_400_000).toISOString()).order('created_at').limit(50);
   const counts = { sent: 0, held: 0 };
-  for (const headsup of (waiting ?? []) as WaitingHeadsup[]) {
+  const rows = (waiting ?? []) as WaitingHeadsup[];
+  const admitted = await admittedUserIds(admin, rows.map((headsup) => headsup.user_id));
+  for (const headsup of rows.filter((item) => admitted.has(item.user_id))) {
     if (Date.now() > deadline) break;
     const outcome = await pushOne(admin, headsup, now); // NOSONAR: one at a time, so a person's daily push cap is read after their previous push is logged
     if (outcome === 'sent') counts.sent += 1;

@@ -20,6 +20,7 @@ import { isWatched, isWatchedNow, statusFromReply } from '@/lib/career/status';
 import { htmlToText } from '@/lib/career/text';
 import { APPLICATION_STATUSES } from '@/lib/career/types';
 import type { CareerApplication, CareerEvent, CareerJob, CareerProfile, CareerSpec, NormalizedJob, OfferTerms, ReplyClassification } from '@/lib/career/types';
+import { admittedUserIds } from '@/lib/security/admission';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery, retryClassification,
@@ -412,7 +413,10 @@ export async function watchDue(admin: CareerDb, now: Date, deadline: number): Pr
   const summary: WatchRunSummary = { ...EMPTY, users: 0, failed: 0 };
   await pruneCareerMail(admin);
   const staleBefore = new Date(now.getTime() - CLAIM_STALE_MS).toISOString();
-  for (const person of await listCareerUsers(admin, 'mail')) {
+  // Anyone signed in can write a career profile; only admitted accounts are watched.
+  const people = await listCareerUsers(admin, 'mail');
+  const admitted = await admittedUserIds(admin, people.map((person) => person.userId));
+  for (const person of people.filter((item) => admitted.has(item.userId))) {
     if (timeLeft(deadline) < 10_000) break;
     if (!(await claimCareerRun(admin, person.userId, 'mail', now.toISOString(), staleBefore))) continue; // NOSONAR: one person at a time, so the run stops cleanly at the deadline
     try {

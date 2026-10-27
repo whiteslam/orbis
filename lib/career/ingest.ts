@@ -16,6 +16,7 @@ import {
 import { careerToday, needsRequirements, readableJob, scoreJob } from '@/lib/career/scoring';
 import { sourcesDue, type SourceQuery } from '@/lib/career/sources';
 import type { CareerJob, CareerProfile, CareerSpec, NormalizedJob, SourceId } from '@/lib/career/types';
+import { admittedUserIds } from '@/lib/security/admission';
 
 // The job search, every 3 hours and on "Run a search now": fetch the sources
 // that are due, save what's new, score it, and draft the best few. Each step
@@ -142,7 +143,10 @@ export type IngestRunSummary = IngestSummary & { users: number; failed: number }
 export async function ingestDue(admin: CareerDb, now: Date, deadline: number): Promise<IngestRunSummary> {
   const summary: IngestRunSummary = { users: 0, failed: 0, found: 0, scored: 0, drafted: 0 };
   const staleBefore = new Date(now.getTime() - CLAIM_STALE_MS).toISOString();
-  for (const person of await listCareerUsers(admin, 'ingest')) {
+  // Anyone signed in can write a career profile and AI consent; only admitted accounts are searched for.
+  const people = await listCareerUsers(admin, 'ingest');
+  const admitted = await admittedUserIds(admin, people.map((person) => person.userId));
+  for (const person of people.filter((item) => admitted.has(item.userId))) {
     if (deadline - Date.now() < SOURCE_TIMEOUT_MS) break;
     // Claim first, so an overlapping run skips this person.
     if (!(await claimCareerRun(admin, person.userId, 'ingest', now.toISOString(), staleBefore))) continue; // NOSONAR: one person at a time, so the run stops cleanly at the deadline
