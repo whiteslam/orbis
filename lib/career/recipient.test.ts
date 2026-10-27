@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
-  applyRecipient, isFirstRecipient, listingPatch, offerReplyTarget, recipientKey, recipientText, trustedCompanyDomains,
+  applyRecipient, isFirstRecipient, knownCompanyDomains, listingPatch, offerReplyTarget, recipientKey, recipientText, trustedCompanyDomains,
   type StoredListing,
 } from './recipient.ts';
 import type { CareerEvent, CareerJob, NormalizedJob } from './types.ts';
@@ -56,6 +56,25 @@ test('trusted company domains: a low-trust address counts only if the site agree
   assert.deepEqual(trustedCompanyDomains(job({ source: 'gmail_alerts', applyUrl: null }), 'jobs@acme-hiring.io'), []);
   // Free mail never names a company.
   assert.deepEqual(trustedCompanyDomains(job(), 'acme.hr@gmail.com'), ['acme.io']);
+});
+
+test('a low-trust sighting never names a company mail domain', () => {
+  const seen = (source: CareerJob['seenOn'][number]['source'], url: string) => ({ source, url, attribution: null });
+  const merged = job({
+    applyUrl: null,
+    seenOn: [seen('gmail_alerts', 'https://attacker.example/jobs/sse-1'), seen('hn', 'https://evil.example/jobs/1'), seen('greenhouse', 'https://boards.greenhouse.io/acme/jobs/1')],
+  });
+  assert.deepEqual(knownCompanyDomains(merged), []);
+  assert.deepEqual(trustedCompanyDomains(merged, null), []);
+  // A board less trusted than the job's own listing doesn't either; the company's own does.
+  assert.deepEqual(knownCompanyDomains(job({ applyUrl: null, seenOn: [seen('adzuna', 'https://bought.example/jobs/1')] })), []);
+  assert.deepEqual(knownCompanyDomains(job({ applyUrl: null, seenOn: [seen('lever', 'https://acme.io/careers/2')] })), ['acme.io']);
+  // A remote board's job keeps a later sighting from the company's own board.
+  const remote = job({ source: 'remotive', url: 'https://remotive.com/jobs/1', applyUrl: null, seenOn: [seen('ashby', 'https://acme.io/jobs/1')] });
+  assert.deepEqual(knownCompanyDomains(remote), ['acme.io']);
+  // The Send bar's check agrees: an alert's site doesn't vouch for an address there.
+  const alerted = job({ applyUrl: null, applyEmail: 'hr@attacker.example', seenOn: [seen('gmail_alerts', 'https://attacker.example/jobs/sse-1')] });
+  assert.equal((applyRecipient(alerted, 'email', []) as { domainMatches: boolean }).domainMatches, false);
 });
 
 test('the email recipient says where it came from, whether it matches, and if it is new', () => {

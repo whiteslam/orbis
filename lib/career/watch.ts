@@ -98,6 +98,9 @@ type AlertRead = { id: string; jobs: NormalizedJob[]; done: boolean };
 async function readOneAlert(person: Person, token: string, id: string, deadline: number): Promise<AlertRead> {
   const message = await getMessageFull(token, id);
   if (!message) return { id, jobs: [], done: true };
+  // Anyone can send a "Job alert": an unknown sender's jobs are credited as a
+  // generic "Job alert", and like every alert sighting (low trust) they never
+  // say which company a mail domain belongs to (lib/career/recipient.ts).
   const label = alertSenderFor(message.from)?.label ?? 'Job';
   const links = extractLinks(message.html);
   const spotted = spotJobLinks(label, links);

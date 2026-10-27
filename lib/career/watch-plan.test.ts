@@ -2,6 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery, retryClassification } from './watch-plan.ts';
 import type { ReplyClassification } from './types.ts';
+import { linkReply, replyCandidate } from './mail.ts';
 
 test('the reply search skips the owner’s own mail, promotions and the alert senders', () => {
   const query = replyGmailQuery();
@@ -38,6 +39,20 @@ test('an apply address from Hacker News doesn’t make its domain the company’
   // From the company's own board it does.
   const own = job({ applyEmail: 'jobs@acme-careers.com' });
   assert.deepEqual(openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', own]]))[0].domains, ['acme-careers.com', 'acme.io']);
+});
+
+test('a job alert merged into an applied job can’t add its site to the reply domains', () => {
+  const merged = job({
+    applyUrl: null,
+    seenOn: [
+      { source: 'gmail_alerts', url: 'https://attacker.example/jobs/sse-1', attribution: 'Job alert' },
+      { source: 'greenhouse', url: 'https://boards.greenhouse.io/acme/jobs/1', attribution: null },
+    ],
+  });
+  const open = openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', merged]]));
+  assert.deepEqual(open[0].domains, []);
+  assert.equal(replyCandidate({ threadId: 't', from: 'HR <hr@attacker.example>', subject: 'x', snippet: 'x' }, open, new Set()), null);
+  assert.equal(linkReply({ company: 'Acme' }, { threadId: 't', from: 'HR <hr@attacker.example>' }, open), null);
 });
 
 test('an unclassified reply waits for another try until it is 60 hours old', () => {

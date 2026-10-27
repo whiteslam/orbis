@@ -81,11 +81,22 @@ export function listingPatch(incoming: NormalizedJob, stored: StoredListing): Li
 
 // ─── Company domains ─────────────────────────────────────────────────────
 
-type JobUrls = Pick<CareerJob, 'url' | 'applyUrl' | 'seenOn'>;
+type JobUrls = Pick<CareerJob, 'source' | 'url' | 'applyUrl' | 'seenOn'>;
+
+/**
+ * Whether a sighting's page may say where the company's mail comes from: not
+ * from a low-trust source, and not from one less trusted than the listing the
+ * job was stored from. Anyone can post a Hacker News comment or mail a "job
+ * alert" that shares a stored job's dedupe key and links their own site.
+ */
+function sightingNamesDomain(job: Pick<CareerJob, 'source'>, seen: CareerJob['seenOn'][number]) {
+  return !isLowTrust(seen.source) && SOURCE_TRUST[seen.source] >= SOURCE_TRUST[job.source];
+}
 
 /** The company's domains as its listing pages show them (boards, ATSs and free mail excluded). */
 export function knownCompanyDomains(job: JobUrls): string[] {
-  return companyDomains({ applyEmail: null, urls: [job.url, job.applyUrl, ...job.seenOn.map((seen) => seen.url)] });
+  const sightings = job.seenOn.filter((seen) => sightingNamesDomain(job, seen)).map((seen) => seen.url);
+  return companyDomains({ applyEmail: null, urls: [job.url, job.applyUrl, ...sightings] });
 }
 
 /**
