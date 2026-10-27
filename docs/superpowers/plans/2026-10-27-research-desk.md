@@ -2,20 +2,22 @@
 
 ## Resume here (checkpoint 2026-10-27)
 
-**Done (Tasks 1-10, most of 12 and 13):** the migration, owner allowlist, ticker mapping, dispatch and queue, server
+**Done (Tasks 1-10, 12 and 13):** the migration, owner allowlist, ticker mapping, dispatch and queue, server
 actions, the Investments section, the live run view with Cancel and Try again, the `/active/research` panel with
 settings, and the whole Python worker (Supabase writer, India config, Indian news vendor, event differ, decision
 parser, usage meter with token cap and `ai_generation_events` rows, memory log download/merge/upload, settlement
-sync, `run`/`settle` CLI) plus the private repo's workflow. `.env.example` documents the five new env vars.
+sync, `run`/`settle` CLI) plus the private repo's workflow. `.env.example` documents the five new env vars. `lib/research/flow.test.ts` is the
+mocked end-to-end (queue → fake GitHub → fake worker → `groupEvents`/`trackRecord`), and the four research tables and
+the `research-memory` bucket are in the data export and account deletion (`lib/account/deletion-plan.ts`).
 
 **Production-safe as committed:** nothing appears and no research table is queried unless BOTH
 `ORBIS_RESEARCH_DESK_EMAILS` lists the signed-in owner AND `ORBIS_RESEARCH_GITHUB_TOKEN` + `ORBIS_RESEARCH_GITHUB_REPO`
 are set (`researchDeskAvailable` in `lib/research/access.ts`, used by every action and by the panel page, which
 404s otherwise). The Investments section renders nothing while loading, when not available, or when loading fails.
 
-**Next task: Task 11 (weekly run and Monday heads-up).** Then Task 12's `lib/research/flow.test.ts` and Task 13's
-export/deletion coverage. Nothing is half-done or known broken; `pnpm typecheck`, `pnpm lint` (4 pre-existing
-warnings, none in research code), `pnpm test` (823 passed), `pnpm build` and the worker's pytest (51 passed) pass.
+**Next task: Task 11 (weekly run and Monday heads-up)**, the only one left. Nothing is half-done or known broken;
+`pnpm typecheck`, `pnpm lint` (4 pre-existing warnings, none in research code), `pnpm test` (837 passed), `pnpm build`
+and the worker's pytest (51 passed) pass. (Those counts are without Task 11.)
 
 **Not yet verified (needs a real run):** OpenRouter accepting `anthropic/claude-sonnet-5.5` and
 `anthropic/claude-haiku-5.5`; `UpstreamGraph` against TradingAgents v0.7.1 (`create_run_state`, `stream_run`,
@@ -215,20 +217,20 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 
 ## Phase 5: Hardening
 
-### Task 12: Cost logging, caps, retries, mocked end-to-end (usage meter, caps and retries done; flow test open)
+### Task 12: Cost logging, caps, retries, mocked end-to-end (done)
 
 **Files:** `research_desk/usage.py` (+test), `lib/research/flow.test.ts`.
 - `UsageMeter(prices, token_cap, sink)` – LangChain callback (`on_llm_end`): adds prompt/completion tokens, cost from OpenRouter's `usage.cost` when present else from the per-model price table (Sonnet 5.5 $2/$10, Haiku 5.5 $0.10/$0.50 per million), writes one `ai_generation_events` row per call (`feature='research_desk'`, `provider_id='openrouter'`, `sensitivity='personal'`, `outcome='succeeded'`), raises `TokenCapReached` past `run_token_cap`.
 - Retries: `llm_max_retries=4` in config; dispatch retries once (Task 3); failed runs show **Try again**, which queues a fresh run.
 - `flow.test.ts`: queue → fake GitHub → a fake worker writes events and a decision into the fake DB → `groupEvents` + `trackRecord` give the card what it shows. (The Playwright suite needs a live Supabase, so this is the mocked end-to-end.)
 - [x] Python: cap raises after the threshold; cost prefers `usage.cost`; rows carry no prompt text. Commit.
-- [ ] OPEN: `lib/research/flow.test.ts` (mocked end-to-end).
+- [x] `lib/research/flow.test.ts` (mocked end-to-end): the full run, a run stopped mid-way, a refused dispatch and an unclaimed run.
 
-### Task 13: Export, deletion, env, final checks (`.env.example` done; export/deletion coverage OPEN)
+### Task 13: Export, deletion, env, final checks (done)
 
-- [ ] OPEN: Add the four tables to `EXPORT_TABLES` (`research_settings` keyed by `user_id`), `research-memory` to `STORAGE_BUCKETS` and `FILE_HELP`; extend `deletion-plan.test.ts`.
+- [x] Add the four tables to `EXPORT_TABLES` (`research_settings` keyed by `user_id`), `research-memory` to `STORAGE_BUCKETS` and `FILE_HELP`; extend `deletion-plan.test.ts` (rows go by cascade when the auth user is deleted; the test checks the migration's cascades, events and settlements from their run included).
 - [x] `.env.example`: `ORBIS_RESEARCH_DESK_EMAILS`, `ORBIS_RESEARCH_GITHUB_TOKEN`, `ORBIS_RESEARCH_GITHUB_REPO`, `ORBIS_RESEARCH_WORKFLOW`, `ORBIS_RESEARCH_GITHUB_REF`.
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, worker `pytest`; `git checkout -- next-env.d.ts`. Commit.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, worker `pytest`; `git checkout -- next-env.d.ts`. Commit. (Run again after Task 11 lands.)
 
 ## Owner go-live (filled in by the final report)
 
