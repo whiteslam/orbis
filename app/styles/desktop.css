@@ -284,14 +284,31 @@
   .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > .fd-tabs { max-width: 420px; }
 
   /* Money · Spending: the month on the left, the transactions on the right. */
-  .stage[data-desktop][data-money="spending"] .screen-body > .fd-label-row { break-before: column; }
+  .stage[data-desktop][data-money="spending"] .screen-body > .fd-label-row { break-before: column; margin-top: 0; }
   .stage[data-desktop][data-money="spending"] .screen-body > .mn-top { margin-bottom: var(--dk-gap); }
   /* Money · Investments: the holdings and the news on the left; the mix, the accounts and advice on the right. */
   .stage[data-desktop][data-money="investments"] .screen-body > .fd-label:not(.fd-label ~ .fd-label) { break-before: column; }
   .stage[data-desktop][data-money="investments"] .screen-body > .fd-focus { margin-bottom: var(--dk-gap); }
 
-  /* Journal: today's entry on the left; past entries and saved notes on the right. */
-  .stage[data-desktop][data-tab="journal"] .screen-body > .fd-label { break-before: column; }
+  /* Journal: today's entry and the past ones down the left; saved notes down the right.
+     A grid rather than the balanced columns, so the notes stay on their own side
+     whatever the entries' length. The trailing 1fr row takes the notes' height,
+     so the left column never opens gaps to match it. */
+  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) {
+    display: grid;
+    columns: auto;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: repeat(12, auto) 1fr;
+    column-gap: calc(var(--dk-gap-wide) + 16px);
+    align-items: start;
+    align-content: start;
+  }
+  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > * { grid-column: 1; min-width: 0; }
+  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > :is(.fd-head, .fd-hero) { grid-column: 1 / -1; }
+  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > .pf-group { grid-column: 2; grid-row: 3 / -1; }
+  .stage[data-desktop][data-tab="journal"] .screen-body > .fd-hero { margin-bottom: 28px; }
+  .stage[data-desktop][data-tab="journal"] .screen-body > .pf-today > :first-child { margin-top: 0; }
+  .stage[data-desktop][data-tab="journal"] .screen-body > .pf-more { justify-self: start; }
 
   /* ─── Social: the month planner gets the full width; posts and insights share the row below ─── */
   .stage[data-desktop][data-tab="social"] .screen-body:not(:has(> .fd-sub-head)) {
@@ -304,7 +321,25 @@
   .stage[data-desktop][data-tab="social"] .screen-body > * { grid-column: 1 / -1; min-width: 0; }
   .stage[data-desktop][data-tab="social"] .screen-body > .mn-card:not(.so-calcard) { grid-column: 1; }
   .stage[data-desktop][data-tab="social"] .screen-body:has(> .mn-card:not(.so-calcard)) > .so-insights { grid-column: 2; }
+  /* Nothing planned yet: the empty note and the insights share the row, rather than each running edge to edge. */
+  .stage[data-desktop][data-tab="social"] .screen-body > .so-empty { grid-column: 1; margin-top: var(--dk-gap); }
+  .stage[data-desktop][data-tab="social"] .screen-body:has(> .so-empty) > .so-insights { grid-column: 2; margin-top: var(--dk-gap); }
   .stage[data-desktop][data-tab="social"] .so-actions { max-width: 560px; }
+  /* The planner at full width reads as a wall calendar: roomy day cells, the date top left. */
+  .stage[data-desktop][data-tab="social"] :is(.so-cal-head, .so-cal-week) { gap: 8px; }
+  .stage[data-desktop][data-tab="social"] .so-cal-week + .so-cal-week { margin-top: 8px; }
+  .stage[data-desktop][data-tab="social"] .so-cal-head span { padding: 0 12px 8px; text-align: left; }
+  .stage[data-desktop][data-tab="social"] .so-day { align-items: flex-start; justify-content: space-between; min-height: 84px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--fd-ink) 4%, transparent); }
+  .stage[data-desktop][data-tab="social"] .so-day:not(.out):hover { background: color-mix(in srgb, var(--fd-ink) 8%, transparent); }
+  .stage[data-desktop][data-tab="social"] .so-day.out { background: transparent; }
+  .stage[data-desktop][data-tab="social"] .so-day b { font-size: 14px; }
+  .stage[data-desktop][data-tab="social"] .so-dots { justify-content: flex-start; gap: 4px; }
+  .stage[data-desktop][data-tab="social"] .so-dot { width: 9px; height: 9px; }
+  .stage[data-desktop][data-tab="social"] .so-day[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fd-accent) 60%, transparent); }
+  /* Social keeps its subtitle (the other tabs' date row is the header's job); it reads under the title. */
+  .stage[data-desktop][data-tab="social"] .fd-head { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
+  .stage[data-desktop][data-tab="social"] .fd-head h1 { margin-top: 0; }
+  .stage[data-desktop][data-tab="social"] .fd-head-row .fd-date { margin: 0; color: var(--fd-soft); font-size: 15px; }
 
   /* ─── Career: the tab still opens by URL (?tab=career, #career); it reads in one centred column ─── */
   .stage[data-desktop][data-tab="career"] .screen-body { max-width: 880px; }
