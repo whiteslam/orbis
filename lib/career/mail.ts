@@ -103,6 +103,8 @@ export function isNonCompanyDomain(domain: string): boolean {
  */
 export function domainOf(address: string): string | null {
   const mailbox = mailboxOf(address);
+  // An ambiguous header names no domain.
+  if (mailbox === null) return null;
   const at = mailbox.lastIndexOf('@');
   if (at < 1) return null;
   const domain = mailbox.slice(at + 1).trim();

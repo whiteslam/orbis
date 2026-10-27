@@ -10,16 +10,23 @@
  */
 
 /**
- * The bare address in a header, lowercased: the first non-empty `<…>` outside
+ * The bare address in a header, lowercased: the one non-empty `<…>` outside
  * comments and quoted strings, else the whole value with its comments taken
  * out. An empty `<>` is skipped, as if it were not there.
+ *
+ * Null when the header is ambiguous: more than one `<…>`, or an unquoted `@`
+ * outside it (a decoded display name such as `HR <hr@acme.com> <a@evil.example>`).
+ * Which address the provider authenticated can't be told, so no sender is
+ * trusted.
  */
-export function mailboxOf(header: string): string {
+export function mailboxOf(header: string): string | null {
   let bare = '';
   let angle: string | null = null;
   let current: string | null = null;
   let depth = 0;
   let quoted = false;
+  let ambiguous = false;
+  let phraseAt = false;
   const put = (text: string) => {
     if (current === null) bare += text;
     else current += text;
@@ -43,12 +50,24 @@ export function mailboxOf(header: string): string {
       quoted = true;
       put(char);
     } else if (current !== null && char === '>') {
-      if (angle === null && current.trim()) angle = current;
+      if (current.trim()) {
+        if (angle !== null) ambiguous = true;
+        angle = current;
+      }
       current = null;
-    } else if (current === null && char === '<') current = '';
-    else put(char);
+    } else if (char === '<') {
+      if (current !== null) ambiguous = true;
+      current = '';
+    } else {
+      if (current === null && char === '@') phraseAt = true;
+      put(char);
+    }
   }
   // An unclosed "<" still says where the address starts.
-  if (angle === null && current?.trim()) angle = current;
+  if (current?.trim()) {
+    if (angle !== null) ambiguous = true;
+    angle = current;
+  }
+  if (ambiguous || (angle !== null && phraseAt)) return null;
   return (angle ?? bare).trim().toLowerCase();
 }

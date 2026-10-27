@@ -96,7 +96,8 @@ function validAddress(address: string): boolean {
 
 /** "Asha Rao <asha@gmail.com>", from the connected Gmail address. */
 function fromHeader(name: string, email: string) {
-  const clean = oneLine(name, 80).replaceAll(/[<>"]/g, '');
+  // formatAddress refuses a comment, so a name's brackets go too.
+  const clean = oneLine(name, 80).replaceAll(/[<>"()]/g, '');
   return clean ? `${clean} <${email}>` : email;
 }
 

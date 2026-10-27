@@ -146,10 +146,11 @@ export type SendRecipient =
 /**
  * What counts as "the same recipient" for the first-use check: the company
  * domain, or the whole address at a free-mail or ATS domain (anyone can have
- * a gmail.com address).
+ * a gmail.com address). An ambiguous header is only ever the same as itself.
  */
 export function recipientKey(address: string): string {
   const mailbox = senderAddress(address);
+  if (mailbox === null) return address.trim().toLowerCase();
   const domain = domainOf(mailbox);
   if (!domain || isNonCompanyDomain(domain)) return mailbox;
   return baseDomain(domain);
@@ -170,11 +171,13 @@ type RecipientJob = Pick<CareerJob, 'source' | 'company' | 'url' | 'applyUrl' | 
  * went to.
  */
 export function applyRecipient(job: RecipientJob, route: ApplyRoute, usedAddresses: readonly string[]): SendRecipient {
-  const address = route === 'email' ? applyEmailFor(job, job.requirements) : null;
+  const listed = route === 'email' ? applyEmailFor(job, job.requirements) : null;
+  // An address that doesn't read as one mailbox is no address to send to.
+  const address = listed ? senderAddress(listed) : null;
   if (address) {
     return {
       kind: 'email',
-      address: senderAddress(address),
+      address,
       source: job.source,
       domainMatches: addressAtDomains(address, knownCompanyDomains(job)),
       firstTime: isFirstRecipient(address, usedAddresses),
@@ -241,6 +244,7 @@ export function offerReplyTarget(input: { events: readonly CareerEvent[]; appThr
     : null);
   if (offer && from && offerIsTrusted(offer, input.appThreadId, input.trustedDomains, from)) return fromOffer(true);
   const sent = lastSentMessage(input.events);
-  if (sent?.to && input.appThreadId) return { to: senderAddress(sent.to), gmailId: sent.gmailId, threadId: input.appThreadId, via: 'sent', verified: true };
+  const sentTo = sent?.to ? senderAddress(sent.to) : null;
+  if (sent && sentTo && input.appThreadId) return { to: sentTo, gmailId: sent.gmailId, threadId: input.appThreadId, via: 'sent', verified: true };
   return fromOffer(false);
 }

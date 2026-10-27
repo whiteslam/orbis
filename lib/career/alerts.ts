@@ -60,7 +60,7 @@ function matchesPattern(address: string, pattern: string) {
 /** The alert sender this From header belongs to, or null. */
 export function alertSenderFor(from: string): AlertSender | null {
   const address = mailboxOf(from);
-  if (!address.includes('@')) return null;
+  if (!address?.includes('@')) return null;
   return ALERT_SENDERS.find((sender) => sender.patterns.some((pattern) => matchesPattern(address, pattern))) ?? null;
 }
 

@@ -4,6 +4,7 @@ import { mailboxOf } from './mailbox.ts';
 import { senderAddress } from './important-filter.ts';
 import { domainOf, linkReply, replyCandidate, type OpenApp } from '../career/mail.ts';
 import { alertSenderFor } from '../career/alerts.ts';
+import { formatAddress } from './mime.ts';
 
 test('ordinary headers read as before', () => {
   assert.equal(mailboxOf('Jane Doe <Jane@Acme.com>'), 'jane@acme.com');
@@ -48,4 +49,33 @@ test('a comment claiming the company domain doesn’t link a reply', () => {
     assert.equal(linkReply({ company: 'Acme' }, { threadId: 't1', from }, apps), null, from);
   }
   assert.deepEqual(replyCandidate({ threadId: 't1', from: 'HR <hr@acme.com>', subject: 'x', snippet: 'x' }, apps, new Set()), { applicationId: 'app1', reason: 'domain' });
+});
+
+test('a header with two addresses, or an address in its name, names no sender', () => {
+  const headers = [
+    'HR <hr@acme.com> <a@attacker.example>',
+    'hr@acme.com <a@attacker.example>',
+    'HR hr@acme.com <a@attacker.example>',
+    '<a@attacker.example> hr@acme.com',
+    'HR <hr@acme.com <a@attacker.example>>',
+    'HR <hr@acme.com> <a@attacker.example',
+    'LinkedIn <jobalerts-noreply@linkedin.com> <a@attacker.example>',
+  ];
+  const apps: OpenApp[] = [{ id: 'app1', company: 'Acme', domains: ['acme.com'], threadId: null }];
+  for (const header of headers) {
+    assert.equal(mailboxOf(header), null, header);
+    assert.equal(senderAddress(header), null, header);
+    assert.equal(domainOf(header), null, header);
+    assert.equal(alertSenderFor(header), null, header);
+    assert.equal(replyCandidate({ threadId: 't1', from: header, subject: 'x', snippet: 'x' }, apps, new Set()), null, header);
+    assert.equal(linkReply({ company: 'Acme' }, { threadId: 't1', from: header }, apps), null, header);
+    // Nor can one be sent to: what's sent is always what was shown.
+    assert.throws(() => formatAddress(header), header);
+  }
+  // A quoted name may hold an "@"; a comment or a second "<" can't reach a recipient.
+  assert.equal(mailboxOf('"hr@acme.com" <a@attacker.example>'), 'a@attacker.example');
+  assert.equal(formatAddress('"hr@acme.com" <a@attacker.example>'), '"hr@acme.com" <a@attacker.example>');
+  assert.throws(() => formatAddress('a@attacker.example (<hr@acme.com>)'));
+  assert.throws(() => formatAddress('"Acme <hr@acme.com>" <a@attacker.example>'));
+  assert.equal(formatAddress('Jane Doe <jane@acme.com>'), 'Jane Doe <jane@acme.com>');
 });

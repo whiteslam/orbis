@@ -49,7 +49,8 @@ function angleBrackets(from: string, start = 0) {
 }
 
 /** The bare address out of a From header, lower-cased (comments and quoted names read past). */
-export function senderAddress(from: string) {
+/** The sender's bare address, or null when the header is ambiguous (mailboxOf). */
+export function senderAddress(from: string): string | null {
   return mailboxOf(from);
 }
 
@@ -58,11 +59,11 @@ export function senderName(from: string) {
   const brackets = angleBrackets(from);
   const withoutAddress = brackets ? from.slice(0, brackets.open) + from.slice(brackets.close + 1) : from;
   const name = withoutAddress.trim().replace(/^"|"$/g, '').trim();
-  return name || senderAddress(from);
+  return name || (senderAddress(from) ?? '');
 }
 
 export function isAlertMail(headers: MailHeaders) {
-  if (isAutomatedSender(senderAddress(headers.from))) return true;
+  if (isAutomatedSender(senderAddress(headers.from) ?? '')) return true;
   if (alertSubject.test(headers.subject)) return true;
   if (headers.autoSubmitted && headers.autoSubmitted.toLowerCase() !== 'no') return true;
   if (headers.precedence && /^(bulk|list|junk)$/i.test(headers.precedence.trim())) return true;

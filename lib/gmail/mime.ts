@@ -101,7 +101,12 @@ export function encodeWord(text: string): string {
 
 const SPECIALS = /[()<>[\]:;@\\,."]/;
 
-/** One address, "Name <a@b.com>" or "a@b.com", with the display name encoded or quoted as it needs. */
+/**
+ * One address, "Name <a@b.com>" or "a@b.com", with the display name encoded or
+ * quoted as it needs. A value mailboxOf would call ambiguous (two "<", a
+ * comment, an unquoted "@" beside the angle-addr) is refused, so the address
+ * sent to is always the one shown.
+ */
 export function formatAddress(input: string): string {
   const value = safe('address', input).trim();
   const open = value.lastIndexOf('<');
@@ -110,7 +115,11 @@ export function formatAddress(input: string): string {
   // Internationalised addresses need SMTPUTF8, which this builder doesn't speak.
   if (!isAscii(address) || !/^[^\s@<>()",;]+@[^\s@<>()",;]+$/.test(address)) throw new Error('That email address is not valid.');
   if (open < 0) return address;
-  const name = value.slice(0, open).trim().replace(/^"(.*)"$/, '$1');
+  const phrase = value.slice(0, open).trim();
+  const ambiguous = value.indexOf('<') !== open || value.includes('(') || value.slice(close + 1).trim() !== ''
+    || (!/^".*"$/.test(phrase) && phrase.includes('@'));
+  if (ambiguous) throw new Error('That email address is not valid.');
+  const name = phrase.replace(/^"(.*)"$/, '$1');
   if (!name) return address;
   if (!isAscii(name)) return `${encodeWord(name)} <${address}>`;
   return SPECIALS.test(name) ? `"${name.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}" <${address}>` : `${name} <${address}>`;
