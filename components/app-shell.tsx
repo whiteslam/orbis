@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { OrbisMark } from '@/components/brand/orbis-mark';
@@ -291,7 +291,11 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 );
               })}
             </nav>
-            {palette && <AppPalette onGo={goPalette} onClose={closePalette} />}
+            {/* Its own boundary: while the palette's code loads on first use, only
+                the palette waits. Without it React hides the whole app behind the
+                nearest boundary up the tree, which also drops focus from whatever
+                opened it, so Escape had nowhere to give it back to. */}
+            {palette && <Suspense fallback={null}><AppPalette onGo={goPalette} onClose={closePalette} /></Suspense>}
           </SettingsProvider>
         </div>
       </div>
