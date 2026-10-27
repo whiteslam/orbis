@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Check out the worker
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, the same pin as Orbis's own CI
         with:
           repository: whiteslam/orbis
           ref: ${{ vars.ORBIS_WORKER_REF }}
@@ -70,6 +70,8 @@ jobs:
           path: orbis
 
       - name: Set up Python
+        # TODO: pin to the full commit SHA of a v5 release (look it up on github.com/actions/setup-python/releases
+        # and keep the tag as a comment). Left on the tag because the SHA could not be checked when this was written.
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
