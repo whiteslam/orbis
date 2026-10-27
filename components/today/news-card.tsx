@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, LoaderCircle, Newspaper, Sparkles } from 'lucide-react';
 import { openAsk } from '@/lib/ask/about';
+import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import type { NewsArticle, NewsDigest, Outlook } from '@/lib/news/types';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; digest: NewsDigest };
@@ -26,6 +27,31 @@ function ago(iso: string) {
   return hours < 24 ? `${hours} h ago` : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
 }
 
+/**
+ * The story's picture, for the desktop's news grid only: the phone's list has
+ * no pictures, and app/styles/desktop.css keeps this hidden below the desktop
+ * breakpoint (a lazy image that is never shown is never fetched). A story with
+ * no picture, or one that fails to load, gets a quiet tile with its source.
+ */
+function NewsPhoto({ article }: Readonly<{ article: NewsArticle }>) {
+  const [failed, setFailed] = useState(false);
+  if (!article.imageUrl || failed) {
+    return (
+      <span className="fd-news-photo is-blank" aria-hidden="true">
+        <Newspaper size={22} strokeWidth={1.6} />
+        <span>{article.source}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="fd-news-photo" aria-hidden="true">
+      {/* A plain img on purpose: the picture is on another site, and next/image would fetch it through this server. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={article.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+    </span>
+  );
+}
+
 function Headline({ article, line }: Readonly<{ article: NewsArticle; line?: string }>) {
   const ask = () => openAsk(
     { kind: 'news', title: article.title, detail: [line, article.description, `Source: ${article.source}`].filter(Boolean).join(' '), url: article.url },
@@ -34,6 +60,7 @@ function Headline({ article, line }: Readonly<{ article: NewsArticle; line?: str
   return (
     <div className="fd-news-item">
       <a className="fd-news-row" href={article.url} target="_blank" rel="noopener noreferrer">
+        {DESKTOP_LAYOUT && <NewsPhoto article={article} />}
         <span className="fd-news-title">{article.title}</span>
         {line && <span className="fd-news-line">{line}</span>}
         <span className="fd-news-meta" suppressHydrationWarning>{article.source} · {ago(article.publishedAt)}</span>

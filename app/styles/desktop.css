@@ -23,6 +23,8 @@
 
 /* The rail and the header are always in the page; only the desktop shows them. */
 .dk-rail, .dk-header, .settings-veil { display: none; }
+/* Today's news pictures are the desktop's alone (components/today/news-card.tsx). */
+.fd-news-photo { display: none; }
 
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   .stage[data-desktop] {
@@ -32,8 +34,11 @@
     --cp-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 18px 40px -24px rgba(0, 0, 0, .7);
     --cp-rail-w: 60px;
     --dk-gap: 20px;
+    --dk-gap-wide: clamp(20px, 1.6vw, 32px);
     --dk-ask-w: 420px;
     display: block;
+    /* The phone centres its mock-up with place-items; Chrome now honours that in block layout too, which would shrink the frame to its content. */
+    place-items: normal;
     min-height: 100vh;
     min-height: 100dvh;
     padding: 0;
@@ -52,12 +57,12 @@
   .stage[data-desktop] .phone { position: static; width: auto; height: auto; min-height: 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
   .stage[data-desktop] .phone-screen {
     position: relative;
-    max-width: 1440px;
+    max-width: 1920px;
     height: auto;
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0 auto;
-    padding: 0 32px 72px calc(var(--cp-rail-w) + 64px);
+    padding: 0 clamp(32px, 3vw, 56px) 72px calc(var(--dk-rail-w, var(--cp-rail-w)) + 56px);
     border-radius: 0;
     overflow: visible;
     background: none;
@@ -87,7 +92,7 @@
   .stage[data-desktop] .fd-head h1 { margin-top: 4px; font-size: clamp(34px, 3vw, 44px); font-weight: 600; letter-spacing: -.04em; line-height: 1.02; }
 
   /* ─── Rail ─── */
-  .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 720px + 24px)); z-index: 30; }
+  .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 960px + 24px)); z-index: 30; }
   .stage[data-desktop] .dk-rail .cp-rail-btn { width: 46px; height: 46px; }
   .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
   .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
@@ -160,29 +165,104 @@
   /* Ask Orbis can still open over Settings, as on the phone. */
   .stage[data-desktop]:has(.settings-sheet) .talk-sheet { z-index: 60; }
 
-  /* ─── Today: the brief on top, cards in two columns, heads-ups down the side ─── */
+  /* ─── Today: a home dashboard ───
+     A 12-column grid. The brief leads on the left with the weather beside it;
+     the day's two numbers are the lifted cards, heads-ups the only other one;
+     mail, Career and setup are open sections on hairlines; the news is a
+     magazine spread across the full width. Dense flow lets a short side
+     section fill the hole beside a main one instead of starting a new row. */
   .stage[data-desktop][data-tab="today"] .screen-body {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--dk-gap);
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-flow: row dense;
+    gap: 32px var(--dk-gap-wide);
     align-items: start;
-    align-content: start;
     max-width: none;
   }
-  /* With heads-ups, a third column holds them. The trailing 1fr row takes
-     their height, so the two main columns never open gaps to match it. */
-  .stage[data-desktop][data-tab="today"] .screen-body:has(> .hu-card) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(300px, 380px);
-    grid-template-rows: repeat(12, auto) 1fr;
+  .stage[data-desktop][data-tab="today"] .screen-body > * { grid-column: 1 / -1; min-width: 0; margin: 0; }
+  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-note-brief, .passkey-prompt, .rt-check, .finance-notice, .today-widgets, .fd-quiet:not(.fd-mail, .fd-news)) { grid-column: 1 / 9; }
+  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-weather, .fd-weather-quiet, .fd-mail, .fd-mail-connect, .hu-card) { grid-column: 9 / -1; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .hu-card { grid-row: span 2; }
+  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-news, .setup-list:not(.fd-mail-connect), .fd-note) { grid-column: 1 / -1; }
+
+  /* The brief: the page's headline, set large on the ground. */
+  .stage[data-desktop][data-tab="today"] .fd-note-greet { font-size: clamp(30px, 2.4vw, 40px); font-weight: 600; letter-spacing: -.035em; }
+  .stage[data-desktop][data-tab="today"] .fd-note-brief .fd-note-line { max-width: 62ch; font-size: clamp(18px, 1.3vw, 21px); line-height: 1.55; }
+
+  /* The weather beside it: a big number and a line, no box. */
+  .stage[data-desktop][data-tab="today"] .screen-body > .fd-weather { align-self: center; gap: 18px; padding-left: 28px; border-left: 1px solid var(--fd-rule); }
+  .stage[data-desktop][data-tab="today"] .fd-weather b { font-size: 52px; font-weight: 500; letter-spacing: -.05em; }
+  .stage[data-desktop][data-tab="today"] .fd-weather p { font-size: 15px; }
+  .stage[data-desktop][data-tab="today"] .fd-weather .fd-weather-meta { font-size: 12.5px; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .fd-weather-quiet { align-self: center; font-size: 13px; }
+
+  /* The two numbers: the lifted cards. */
+  .stage[data-desktop][data-tab="today"] .today-widgets { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--dk-gap-wide); }
+  .stage[data-desktop][data-tab="today"] .today-widget { aspect-ratio: auto; min-height: 188px; padding: 20px 22px; border-radius: 24px; border: var(--cp-card-edge); background: var(--cp-card); box-shadow: var(--cp-shadow); }
+  .stage[data-desktop][data-tab="today"] .today-widget-cap { font-size: 13px; }
+  .stage[data-desktop][data-tab="today"] .today-widget-value { font-size: 40px; }
+  .stage[data-desktop][data-tab="today"] .today-widget-value.small { font-size: 30px; }
+  .stage[data-desktop][data-tab="today"] .today-widget-sub { font-size: 12.5px; }
+  /* A week of bars, each a slim column at the card's right; full-width bars at this size read as blocks. */
+  .stage[data-desktop][data-tab="today"] .today-widget-bars { justify-content: flex-end; gap: 6px; height: 56px; }
+  .stage[data-desktop][data-tab="today"] .today-widget-bars i { flex: 0 0 16px; border-radius: 5px; }
+  .stage[data-desktop][data-tab="today"] .today-widget:hover { background: var(--gl-fill-strong); }
+
+  /* Heads-ups keep their card; everything else is an open section on a hairline. */
+  .stage[data-desktop][data-tab="today"] .hu-card { padding: 18px 22px; border: var(--cp-card-edge); background: var(--cp-card); box-shadow: var(--cp-shadow); }
+  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-quiet, .setup-list, .rt-check) {
+    padding: 18px 0 0;
+    border: 0;
+    border-top: 1px solid var(--fd-rule);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
-  .stage[data-desktop][data-tab="today"] .screen-body > * { min-width: 0; }
-  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-note-brief, .passkey-prompt, .rt-check, .today-widgets, .finance-notice, .setup-list:not(.fd-mail-connect), .fd-note) { grid-column: 1 / 3; }
-  .stage[data-desktop][data-tab="today"] .screen-body > .hu-card { grid-column: 3; grid-row: 1 / -1; margin-top: 4px; }
-  .stage[data-desktop][data-tab="today"] .fd-note-brief { margin: 4px 0 8px; }
-  .stage[data-desktop][data-tab="today"] .fd-note-brief .fd-note-line { font-size: 19px; line-height: 1.55; max-width: 62ch; }
-  .stage[data-desktop][data-tab="today"] .today-widgets { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--dk-gap); }
-  /* Square on a phone; at this width a square would be a wall. */
-  .stage[data-desktop][data-tab="today"] .today-widget { aspect-ratio: auto; min-height: 196px; padding: 18px 20px; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .fd-quiet > h2 { margin: 0 0 6px; font-size: 11px; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .setup-list { padding: 12px 0 0; }
+  .stage[data-desktop][data-tab="today"] .fd-mail-row:last-of-type { border-bottom: 0; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .fd-note { margin-top: -12px; }
+
+  /* ─── News: a lead story with its picture, four tiles, and the market read beside them ─── */
+  .stage[data-desktop][data-tab="today"] .fd-news {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) repeat(2, minmax(0, 1fr)) minmax(250px, .95fr);
+    gap: 28px var(--dk-gap-wide);
+    align-items: start;
+    padding-top: 22px;
+  }
+  .stage[data-desktop][data-tab="today"] .fd-news:not(:has(> .fd-news-market)) { grid-template-columns: minmax(0, 1.7fr) repeat(2, minmax(0, 1fr)); }
+  .stage[data-desktop][data-tab="today"] .fd-news > h2 { grid-column: 1 / -1; margin: 0 0 -6px; }
+  .stage[data-desktop][data-tab="today"] .fd-news > .fd-news-foot { grid-column: 1 / -1; margin: -4px 0 0; font-size: 11.5px; }
+
+  .stage[data-desktop][data-tab="today"] .fd-news-market { grid-column: -2; grid-row: 2 / span 2; align-self: stretch; padding: 20px 22px; border: 0; border-radius: 22px; background: color-mix(in srgb, var(--fd-ink) 4.5%, transparent); }
+  .stage[data-desktop][data-tab="today"] .fd-news-market-head { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fd-faint); }
+  .stage[data-desktop][data-tab="today"] .fd-news-summary { font-size: 15px; line-height: 1.5; font-weight: 500; }
+  .stage[data-desktop][data-tab="today"] .fd-news-sectors { gap: 0; margin: 14px 0 12px; }
+  .stage[data-desktop][data-tab="today"] .fd-news-sector { gap: 2px; padding: 10px 0; border-top: 1px solid var(--fd-rule); }
+  .stage[data-desktop][data-tab="today"] .fd-news-sector-name { font-size: 13px; text-transform: capitalize; }
+  .stage[data-desktop][data-tab="today"] .fd-news-sector-why { font-size: 12px; }
+
+  .stage[data-desktop][data-tab="today"] .fd-news-item { position: relative; display: block; align-self: stretch; border: 0; }
+  .stage[data-desktop][data-tab="today"] .fd-news-row { height: 100%; gap: 6px; padding: 0; border: 0; }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo { position: relative; display: block; flex: none; aspect-ratio: 16 / 10; margin-bottom: 6px; overflow: hidden; border-radius: 18px; background: color-mix(in srgb, var(--fd-ink) 6%, transparent); }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+  .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-photo img { transform: scale(1.03); }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(140deg, color-mix(in srgb, var(--brand-teal) 20%, transparent), color-mix(in srgb, var(--fd-ink) 5%, transparent) 70%); color: var(--fd-soft); }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank span { max-width: 80%; overflow: hidden; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+  .stage[data-desktop][data-tab="today"] .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.35; letter-spacing: -.01em; }
+  .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .stage[data-desktop][data-tab="today"] .fd-news-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; }
+  .stage[data-desktop][data-tab="today"] .fd-news-meta { padding-top: 2px; font-size: 12px; }
+  .stage[data-desktop][data-tab="today"] .fd-news-item > .fd-ask.icon { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border: 0; background: color-mix(in srgb, var(--sys-bg) 72%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fd-ink); }
+  .stage[data-desktop][data-tab="today"] .fd-news-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 4px; border-radius: 18px; }
+  /* The lead: the first story, two tiles tall, its picture filling the room. */
+  .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item { grid-column: 1; grid-row: 2 / span 2; }
+  .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-photo { flex: 1 1 auto; min-height: 260px; aspect-ratio: auto; border-radius: 22px; }
+  .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-title { font-size: clamp(22px, 1.6vw, 28px); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
+  .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-line { -webkit-line-clamp: 3; font-size: 15px; }
 
   /* ─── Two balanced columns: Money, Health, Journal ───
      The title and anything that leads the page span both; the cards then flow
