@@ -111,7 +111,9 @@
 .cp-actions, .cp-head-theme { display: none; }
 @media (min-width: 900px) {
   .cp-panel:has(.cp-rail-labelled) { --cp-rail-w: 84px; }
-  .cp-rail.cp-rail-labelled { width: var(--cp-rail-w, 84px); padding: 10px 0; border-radius: 30px; }
+  /* The same frame as /active's desktop layout: the window, up to 1920px. */
+  .cp-panel:has(.cp-rail-labelled) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); padding-left: calc(var(--cp-rail-w) + 56px); }
+  .cp-rail.cp-rail-labelled { left: max(24px, calc(50vw - 960px + 24px)); width: var(--cp-rail-w, 84px); padding: 10px 0; border-radius: 30px; }
   .cp-rail-labelled ul { gap: 2px; }
   .cp-rail-labelled .cp-rail-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 70px; height: auto; min-height: 56px; padding: 8px 2px 7px; box-sizing: border-box; border-radius: 18px; }
   .cp-rail-label { font-size: 10.5px; font-weight: 600; line-height: 1.15; letter-spacing: .01em; text-align: center; }
