@@ -48,10 +48,11 @@ export async function isAppUnlocked(claims: LockClaims | null | undefined) {
   return verifyUnlockToken(token, { ...who, nowSec: nowSec() }, lockSecret()) !== null;
 }
 
-// Unlocks only when the session's JWT shows the user authenticated within the last minute.
-export async function unlockWithFreshAuth(claims: LockClaims | null | undefined) {
+// Unlocks only when the session's JWT shows the user authenticated within the last minute,
+// by one of the methods this caller's screen produces (UNLOCK_METHODS).
+export async function unlockWithFreshAuth(claims: LockClaims | null | undefined, methods: readonly string[]) {
   const who = identity(claims);
-  if (!who || !hasFreshAuth(claims?.amr, nowSec(), FRESH_AUTH_SECONDS)) return false;
+  if (!who || !hasFreshAuth(claims?.amr, nowSec(), FRESH_AUTH_SECONDS, methods)) return false;
   await writeCookie(who.userId, who.sessionId);
   return true;
 }

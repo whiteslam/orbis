@@ -5,6 +5,7 @@ import { isPinFormat, PIN_LENGTH, pinProblem } from '@/lib/security/pin';
 import { checkPin, savePin } from '@/lib/security/pin-store';
 import { createClient } from '@/lib/supabase/server';
 import { accessAllowed } from '@/lib/security/access';
+import { UNLOCK_METHODS } from '@/lib/security/unlock-token';
 
 export type UnlockResult = { success: boolean; message: string | null; pinLocked?: boolean };
 
@@ -35,7 +36,7 @@ export async function lockAppAction(): Promise<void> {
 export async function confirmUnlockAction(): Promise<UnlockResult> {
   const { claims } = await currentClaims();
   if (!claims) return { success: false, message: 'Your session ended. Sign in again.' };
-  if (await unlockWithFreshAuth(claims)) return { success: true, message: null };
+  if (await unlockWithFreshAuth(claims, UNLOCK_METHODS.passkey)) return { success: true, message: null };
   return { success: false, message: 'Orbis could not confirm your device authentication. Try again or use your password.' };
 }
 
@@ -51,7 +52,7 @@ export async function unlockWithPasswordAction(password: string): Promise<Unlock
   if (error || !data.session) return { success: false, message: 'Unlock is temporarily unavailable. Please try again shortly.' };
 
   const fresh = await supabase.auth.getClaims(data.session.access_token);
-  if (await unlockWithFreshAuth(fresh.data?.claims)) return { success: true, message: null };
+  if (await unlockWithFreshAuth(fresh.data?.claims, UNLOCK_METHODS.password)) return { success: true, message: null };
   return { success: false, message: 'Unlock is temporarily unavailable. Please try again shortly.' };
 }
 

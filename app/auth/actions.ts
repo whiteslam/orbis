@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
+import { UNLOCK_METHODS } from '@/lib/security/unlock-token';
 import { canChangePassword, MIN_PASSWORD_LENGTH, type PasswordChangeCheck } from '@/lib/security/fresh-auth';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { passwordMatches } from '@/lib/security/verify-password';
@@ -30,7 +31,7 @@ function readEmail(formData: FormData) {
 // A fresh sign-in also unlocks Orbis on this device.
 async function unlockForSession(supabase: Awaited<ReturnType<typeof createClient>>, accessToken: string) {
   const { data } = await supabase.auth.getClaims(accessToken);
-  await unlockWithFreshAuth(data?.claims);
+  await unlockWithFreshAuth(data?.claims, UNLOCK_METHODS.password);
 }
 
 function siteUrl() {

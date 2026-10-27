@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { hasFreshAuth, signUnlockToken, verifyUnlockToken } from './unlock-token.ts';
+import { hasFreshAuth, signUnlockToken, UNLOCK_METHODS, verifyUnlockToken } from './unlock-token.ts';
 
 const secret = 'test-secret-that-is-long-enough-for-hmac';
 const userId = '5b0c1f3e-7a2d-4c1e-9f7a-1234567890ab';
@@ -42,4 +42,25 @@ test('hasFreshAuth accepts only recent timestamped amr entries', () => {
   assert.equal(hasFreshAuth([{ method: 'password', timestamp: now + 600 }], now, 60), false);
   assert.equal(hasFreshAuth(['password'], now, 60), false);
   assert.equal(hasFreshAuth(undefined, now, 60), false);
+});
+
+test('a passkey unlock does not count a freshly verified MFA factor', () => {
+  const { passkey, password, emailLink } = UNLOCK_METHODS;
+  // An old password sign-in plus a TOTP factor enrolled and verified from the locked session.
+  const mfa = [{ method: 'password', timestamp: now - 3600 }, { method: 'totp', timestamp: now - 5 }];
+  assert.equal(hasFreshAuth(mfa, now, 60, passkey), false);
+  for (const method of ['mfa/totp', 'mfa/phone', 'mfa/webauthn', 'mfa/recovery_code']) {
+    assert.equal(hasFreshAuth([{ method, timestamp: now - 5 }], now, 60, passkey), false, method);
+  }
+  assert.equal(hasFreshAuth([{ method: 'passkey', timestamp: now - 5 }], now, 60, passkey), true);
+  assert.equal(hasFreshAuth([{ method: 'webauthn', timestamp: now - 5 }], now, 60, passkey), true);
+  assert.equal(hasFreshAuth([{ method: 'password', timestamp: now - 5 }], now, 60, passkey), false);
+  assert.equal(hasFreshAuth([{ timestamp: now - 5 }], now, 60, passkey), false);
+  // Each path keeps its own method.
+  assert.equal(hasFreshAuth([{ method: 'password', timestamp: now - 5 }], now, 60, password), true);
+  assert.equal(hasFreshAuth([{ method: 'totp', timestamp: now - 5 }], now, 60, password), false);
+  for (const method of ['otp', 'magiclink', 'email/signup']) {
+    assert.equal(hasFreshAuth([{ method, timestamp: now - 5 }], now, 60, emailLink), true, method);
+  }
+  assert.equal(hasFreshAuth([{ method: 'totp', timestamp: now - 5 }], now, 60, emailLink), false);
 });

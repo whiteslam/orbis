@@ -32,13 +32,30 @@ export function verifyUnlockToken(token: string | undefined, { userId, sessionId
   return expiresAt;
 }
 
-// True when the JWT's `amr` claim records any authentication within the last maxAgeSec seconds.
-// Only timestamped entries count: a token refresh keeps the original timestamps, so it can never look fresh.
-export function hasFreshAuth(amr: unknown, nowSec: number, maxAgeSec: number) {
+// The sign-in methods each unlock path produces, so an unlock only counts the
+// kind of authentication its own screen asked for. Without this, any fresh amr
+// entry would do, including a TOTP or other MFA factor enrolled straight at
+// Supabase from a locked session (enrolment needs only the session token).
+// Passkey sign-in has no fixed name in auth-js's AMR list, so both names GoTrue
+// may use are accepted; the mfa/* factors never are.
+export const UNLOCK_METHODS = {
+  // The lock screen's and the sign-in form's passkey button (confirmUnlockAction).
+  passkey: ['passkey', 'webauthn'],
+  // The password unlock, and signing in or up with a password.
+  password: ['password'],
+  // A confirmation or sign-in link opened through /auth/callback.
+  emailLink: ['otp', 'magiclink', 'email/signup', 'invite'],
+} as const satisfies Record<string, readonly string[]>;
+
+// True when the JWT's `amr` claim records an authentication within the last maxAgeSec seconds,
+// by one of `methods` when given. Only timestamped entries count: a token refresh keeps the
+// original timestamps, so it can never look fresh.
+export function hasFreshAuth(amr: unknown, nowSec: number, maxAgeSec: number, methods?: readonly string[]) {
   if (!Array.isArray(amr)) return false;
   return amr.some((entry) => {
     if (!entry || typeof entry !== 'object') return false;
-    const timestamp = (entry as { timestamp?: unknown }).timestamp;
+    const { method, timestamp } = entry as { method?: unknown; timestamp?: unknown };
+    if (methods && (typeof method !== 'string' || !methods.includes(method))) return false;
     return typeof timestamp === 'number' && timestamp <= nowSec + 5 && nowSec - timestamp <= maxAgeSec;
   });
 }
