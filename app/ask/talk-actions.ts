@@ -1,6 +1,6 @@
 'use server';
 
-import { answerFromRecords, askBlockedMessage } from '@/lib/ask/answer';
+import { answerFromRecords, askBlockedMessage, claimAskCredit } from '@/lib/ask/answer';
 import { pickSources, type AskSource, type Citation } from '@/lib/ask/select';
 import { requireUser } from '@/lib/auth/session';
 import { speak, transcribe } from '@/lib/voice/sarvam';
@@ -41,8 +41,8 @@ export async function talkAvailableAction(): Promise<boolean> {
 /**
  * One spoken turn: hear it, answer it from the user's records, say it back.
  *
- * The recording goes to Sarvam only after the AI consent check passes, and is
- * never stored: it exists for this request and nowhere else.
+ * The recording goes to Sarvam only after the AI consent check passes and
+ * today's Ask credit is claimed, and is never stored: it exists for this request and nowhere else.
  */
 export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
   const userId = (await requireUser())?.userId;
@@ -74,6 +74,9 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
 
   const blocked = await askBlockedMessage(userId);
   if (blocked) return { success: false, message: blocked };
+  // Transcribing is paid, so today's credit is claimed first; the answer below doesn't claim another.
+  const refused = await claimAskCredit(userId);
+  if (refused) return { success: false, message: refused };
 
   const heard = await transcribe(file, { apiKey });
   if (!heard) return { success: false, message: 'Orbis didn’t catch that. Try again.' };
@@ -81,7 +84,7 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
   if (transcript.length < 2) return { success: false, message: 'Orbis didn’t catch that. Try again.' };
 
   const language = ttsLanguage(heard.language);
-  const result = await answerFromRecords({ userId, question: transcript, sources, earlier, spokenLanguage: languageName(language) });
+  const result = await answerFromRecords({ userId, question: transcript, sources, earlier, spokenLanguage: languageName(language), credited: true });
   if (!result.success || !result.answer) return { ...result, transcript };
 
   const audio = await speak(result.answer, language, { apiKey });

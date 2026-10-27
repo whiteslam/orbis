@@ -30,12 +30,30 @@ export async function askBlockedMessage(userId: string): Promise<string | null> 
 }
 
 /**
+ * Claims one of today's Ask credits, or says why not. Every paid call an
+ * answer makes (speech-to-text, Jev, the model) comes after this, so a used-up
+ * allowance stops the spending too, not just the answer.
+ */
+export async function claimAskCredit(userId: string): Promise<string | null> {
+  try {
+    const { data: allowed, error } = await createAdminClient().rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: DAILY_ASK_LIMIT });
+    if (error) return 'Ask Orbis is not set up yet. Apply the Ask Orbis migration in Supabase.';
+    if (!allowed) return `You have asked ${DAILY_ASK_LIMIT} questions today. Try again tomorrow.`;
+    return null;
+  } catch {
+    return 'Ask Orbis is not available right now. Try again later.';
+  }
+}
+
+/**
  * Answers a checked question from the user's own data, typed or spoken.
  *
  * Only the given sources are read, and the request is always 'personal', so it
  * can only reach a model that will not train on it; when no such model is
  * available the user is told so rather than silently downgraded. Typed and
- * spoken questions share the one daily allowance.
+ * spoken questions share the one daily allowance: the records are loaded and
+ * checked first (no credit is spent on an empty request), then the credit is
+ * claimed, and only then does anything paid run.
  */
 export async function answerFromRecords(input: {
   userId: string;
@@ -45,15 +63,13 @@ export async function answerFromRecords(input: {
   spokenLanguage?: string;
   /** A headline, market reading or holding the question is about. */
   about?: AskAbout | null;
+  /** Today's credit is already claimed (the spoken path claims it before transcribing). */
+  credited?: boolean;
 }): Promise<AskResult> {
   const { userId, question, sources } = input;
   const blocked = await askBlockedMessage(userId);
   if (blocked) return { success: false, message: blocked };
 
-  const feature = input.spokenLanguage ? 'talk_orbis' : 'ask_orbis';
-  // Jev reads only the question, while the records load, so it adds no wait:
-  // whether this needs reasoning decides if Claude or a free model goes first.
-  const reasoning = needsReasoning(userId, question, feature).catch(() => undefined);
   let context: Awaited<ReturnType<typeof buildAskContext>>;
   try {
     context = await buildAskContext(userId, question, sources);
@@ -66,16 +82,14 @@ export async function answerFromRecords(input: {
   const user = askPayload(question, context.data, input.earlier, input.about ?? null);
   if (Buffer.byteLength(user, 'utf8') > MAX_INPUT_BYTES) return { success: false, message: 'That is more data than Orbis can read at once. Untick a source and try again.' };
 
-  try {
-    const { data: allowed, error } = await createAdminClient().rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: DAILY_ASK_LIMIT });
-    if (error) return { success: false, message: 'Ask Orbis is not set up yet. Apply the Ask Orbis migration in Supabase.' };
-    if (!allowed) return { success: false, message: `You have asked ${DAILY_ASK_LIMIT} questions today. Try again tomorrow.` };
-  } catch {
-    return { success: false, message: 'Ask Orbis is not available right now. Try again later.' };
-  }
+  const refused = input.credited ? null : await claimAskCredit(userId);
+  if (refused) return { success: false, message: refused };
 
+  const feature = input.spokenLanguage ? 'talk_orbis' : 'ask_orbis';
+  // Jev reads only the question: whether this needs reasoning decides if Claude or a free model goes first.
+  const reasoning = await needsReasoning(userId, question, feature).catch(() => undefined);
   const system = askSystem({ spokenLanguage: input.spokenLanguage, about: input.about ?? null });
-  const result = await routeJson({ userId, feature, sensitivity: 'personal', system, user, maxTokens: 700, temperature: 0.2, timeoutMs: 25_000, accept: (text) => readAnswer(text) !== null, escalate: await reasoning });
+  const result = await routeJson({ userId, feature, sensitivity: 'personal', system, user, maxTokens: 700, temperature: 0.2, timeoutMs: 25_000, accept: (text) => readAnswer(text) !== null, escalate: reasoning });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
 
   const parsed = readAnswer(result.text);
