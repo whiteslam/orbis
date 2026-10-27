@@ -51,6 +51,9 @@ class FakeDb:
         self.events = []
         self.inserts = []
         self.updates = []
+        self.settlements = []
+        self.ai_events = []
+        self.storage = {}
 
     @staticmethod
     def _matches(row, filters):
@@ -70,6 +73,8 @@ class FakeDb:
         if table == "research_events":
             rows = [e for e in self.events if self._matches(e, params)]
             return sorted(rows, key=lambda e: -e["seq"])[: int(params.get("limit", 1000))]
+        if table == "research_settlements":
+            return [dict(r) for r in self.settlements if self._matches(r, params)]
         return []
 
     def insert(self, table, rows, **kwargs):
@@ -77,7 +82,17 @@ class FakeDb:
         self.inserts.append((table, rows))
         if table == "research_events":
             self.events.extend(rows)
+        if table == "research_settlements":
+            self.settlements.extend(rows)
+        if table == "ai_generation_events":
+            self.ai_events.extend(rows)
         return rows
+
+    def storage_download(self, bucket, path):
+        return self.storage.get((bucket, path))
+
+    def storage_upload(self, bucket, path, data, content_type="text/markdown"):
+        self.storage[(bucket, path)] = data
 
     def update(self, table, filters, patch):
         self.updates.append((table, filters, patch))
