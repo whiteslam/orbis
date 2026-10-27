@@ -70,8 +70,20 @@ export async function openApp(page: Page, path = APP_PATH) {
   await expect(nav).toBeVisible({ timeout: 30_000 });
 }
 
+/**
+ * Switches tab from whichever navigation is showing: the bottom nav, or the
+ * desktop rail when the build has the desktop layout on. The rail's Career is a
+ * link that leaves for the full panel, so there Career is opened by its hash,
+ * which still shows the Career tab.
+ */
 export async function openTab(page: Page, tab: Tab) {
-  await page.getByRole('navigation').getByRole('button', { name: tab, exact: true }).click();
+  const nav = page.getByRole('navigation');
+  if (tab === 'Career' && await nav.getByRole('link', { name: tab, exact: true }).isVisible()) {
+    await page.goto(appPath('/#career'));
+    await expect(page.locator('.stage')).toHaveAttribute('data-tab', 'career');
+    return;
+  }
+  await nav.getByRole('button', { name: tab, exact: true }).click();
 }
 
 /** Every tab, in nav order. Specs that visit all tabs use this, so a layout change is one edit. */
