@@ -174,7 +174,14 @@ function readSources(value: unknown): Record<SourceId, boolean> {
   return sources;
 }
 
-/** Stored settings over the defaults; any value out of range falls back to its default. */
+// The same caps saveSettingsAction applies (app/career/actions.ts), re-applied on read: settings written
+// straight through PostgREST skip that action, and the ingest cron fetches once per watched company.
+const MAX_WATCHLIST = 50;
+const MAX_SYNONYM_GROUPS = 50;
+const MAX_SYNONYMS_PER_GROUP = 10;
+const MAX_ADZUNA_COUNTRIES = 10;
+
+/** Stored settings over the defaults; any value out of range falls back to its default, and long lists are cut. */
 export function readSettings(value: unknown): CareerSettings {
   const stored = isRecord(value) ? value : {};
   const d = DEFAULT_SETTINGS;
@@ -186,10 +193,12 @@ export function readSettings(value: unknown): CareerSettings {
     ghostDays: wholeIn(stored.ghostDays, 1, 365, d.ghostDays),
     sources: readSources(stored.sources),
     watchlist: Array.isArray(stored.watchlist)
-      ? listOf<WatchedCompany>(stored.watchlist, (item) => hasStrings(item, ['slug', 'name']) && oneOf(item.ats, WATCH_ATS) !== null)
+      ? listOf<WatchedCompany>(stored.watchlist.slice(0, MAX_WATCHLIST), (item) => hasStrings(item, ['slug', 'name']) && oneOf(item.ats, WATCH_ATS) !== null)
       : d.watchlist,
-    synonyms: Array.isArray(stored.synonyms) ? stored.synonyms.map(strings).filter((group) => group.length > 1) : d.synonyms,
-    adzunaCountries: Array.isArray(stored.adzunaCountries) ? strings(stored.adzunaCountries) : d.adzunaCountries,
+    synonyms: Array.isArray(stored.synonyms)
+      ? stored.synonyms.slice(0, MAX_SYNONYM_GROUPS).map((group) => strings(group).slice(0, MAX_SYNONYMS_PER_GROUP)).filter((group) => group.length > 1)
+      : d.synonyms,
+    adzunaCountries: Array.isArray(stored.adzunaCountries) ? strings(stored.adzunaCountries.slice(0, MAX_ADZUNA_COUNTRIES)) : d.adzunaCountries,
   };
 }
 
