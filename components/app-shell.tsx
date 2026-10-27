@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { BookOpen, HeartPulse, Home, Megaphone, WalletCards, type LucideIcon } from 'lucide-react';
+import { BookOpen, Briefcase, HeartPulse, Home, Megaphone, WalletCards, type LucideIcon } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { TabLoading } from '@/components/shell/loading';
 import { SettingsProvider } from '@/components/shell/settings-context';
@@ -37,6 +37,7 @@ const MoneyScreen = dynamic(() => import('@/components/money/money-screen').then
 const HealthScreen = dynamic(() => import('@/components/health/health-screen').then((m) => m.HealthScreen), { loading: TabLoading });
 const JournalScreen = dynamic(() => import('@/components/journal/journal-screen').then((m) => m.JournalScreen), { loading: TabLoading });
 const SocialScreen = dynamic(() => import('@/components/social/social-screen').then((m) => m.SocialScreen), { loading: TabLoading });
+const CareerScreen = dynamic(() => import('@/components/career/career-screen').then((m) => m.CareerScreen), { loading: TabLoading });
 // The mic shows on every screen but is not needed to draw Today, so it follows it.
 const TalkToOrbis = dynamic(() => import('@/components/assistant/talk-to-orbis').then((m) => m.TalkToOrbis));
 const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet').then((m) => m.SettingsSheet));
@@ -44,7 +45,7 @@ const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;
 
-const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone };
+const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone, career: Briefcase };
 
 export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
   const router = useRouter();
@@ -83,6 +84,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       setMoney('spending');
       return setTab('money');
     }
+    if (action.type === 'open_career_application') return setTab('career');
     setTab('health');
   };
 
@@ -195,6 +197,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (tab === 'money') return <MoneyScreen intent={intent} view={money} onView={setMoney} summary={financeSummary} savedPortfolioAdvice={savedPortfolioAdvice} brokerNotice={zerodhaNotice} clearBrokerNotice={() => setZerodhaNotice(null)} />;
     if (tab === 'health') return <HealthScreen intent={intent} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
+    if (tab === 'career') return <CareerScreen intent={intent} />;
     return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} connectNotice={socialNotice} clearConnectNotice={() => setSocialNotice(null)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
   }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);

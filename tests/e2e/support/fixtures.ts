@@ -1,7 +1,7 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test';
 import { readUsers, TEST_PIN, type TestUser } from './env';
 
-export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social';
+export type Tab = 'Today' | 'Money' | 'Health' | 'Journal' | 'Social' | 'Career';
 
 /** Where the app lives. Not '/': that is the public waitlist, which bounces a signed-in visitor here. */
 export const APP_PATH = '/active';
@@ -75,7 +75,7 @@ export async function openTab(page: Page, tab: Tab) {
 }
 
 /** Every tab, in nav order. Specs that visit all tabs use this, so a layout change is one edit. */
-export const TABS: Tab[] = ['Today', 'Money', 'Health', 'Journal', 'Social'];
+export const TABS: Tab[] = ['Today', 'Money', 'Health', 'Journal', 'Social', 'Career'];
 
 /** Money opens on Spending; this switches it to Investments. */
 export async function openInvestments(page: Page) {

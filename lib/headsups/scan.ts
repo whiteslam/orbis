@@ -9,7 +9,7 @@ import { addDays } from '@/lib/headsups/dates';
 import { AI_WORDED_PER_DAY, dueForScan, localNow, mergeAction, pruneBefore, runChecks, staleIds } from '@/lib/headsups/plan';
 import { mayPush } from '@/lib/headsups/push-rules';
 import { wordFinding } from '@/lib/headsups/word';
-import { HEADSUP_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
+import { SCAN_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
 import { localClock } from '@/lib/notifications/schedule';
 import { pushToUser } from '@/lib/notifications/push';
 
@@ -148,7 +148,8 @@ async function scanPerson(
     ], disabled);
     counts.findings += await saveFindings(admin, person.userId, findings, now, deadline);
     counts.failed += failed.length;
-    await withdrawStale(admin, person.userId, findings, HEADSUP_KINDS.filter((kind) => !disabled.includes(kind) && !failed.includes(kind)));
+    // Only the scan's own kinds: career heads-ups come from the watcher and stay until acted on.
+    await withdrawStale(admin, person.userId, findings, SCAN_KINDS.filter((kind) => !disabled.includes(kind) && !failed.includes(kind)));
     await prune(admin, person.userId, now);
     counts.scanned += 1;
   } catch (error) {

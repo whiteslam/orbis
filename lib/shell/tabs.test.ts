@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { hashFor, openingFromUrl, SETTINGS_SECTIONS, TABS } from '@/lib/shell/tabs';
 
 describe('TABS', () => {
-  it('lists the five tabs in order, one name each', () => {
-    expect(TABS.map((tab) => tab.id)).toEqual(['today', 'money', 'health', 'journal', 'social']);
-    expect(TABS.map((tab) => tab.label)).toEqual(['Today', 'Money', 'Health', 'Journal', 'Social']);
+  it('lists the six tabs in order, one name each', () => {
+    expect(TABS.map((tab) => tab.id)).toEqual(['today', 'money', 'health', 'journal', 'social', 'career']);
+    expect(TABS.map((tab) => tab.label)).toEqual(['Today', 'Money', 'Health', 'Journal', 'Social', 'Career']);
   });
 });
 
@@ -20,6 +20,7 @@ describe('openingFromUrl', () => {
     expect(openingFromUrl('#money/investments', null)).toEqual({ tab: 'money', money: 'investments' });
     expect(openingFromUrl('#journal', null)).toEqual({ tab: 'journal' });
     expect(openingFromUrl('#social/2026-09', null)).toEqual({ tab: 'social' });
+    expect(openingFromUrl('#career', null)).toEqual({ tab: 'career' });
   });
 
   it('keeps every hash from the six-tab layout working', () => {
@@ -36,6 +37,7 @@ describe('openingFromUrl', () => {
     expect(openingFromUrl('', 'finance')).toEqual({ tab: 'money', money: 'spending' });
     expect(openingFromUrl('', 'invest')).toEqual({ tab: 'money', money: 'investments' });
     expect(openingFromUrl('', 'investments')).toEqual({ tab: 'money', money: 'investments' });
+    expect(openingFromUrl('#today', 'career')).toEqual({ tab: 'career' });
   });
 
   it('ignores anything it does not know', () => {
@@ -60,5 +62,6 @@ describe('hashFor', () => {
     expect(hashFor('health')).toBe('#health');
     expect(hashFor('journal')).toBe('#journal');
     expect(hashFor('social')).toBe('#social');
+    expect(hashFor('career')).toBe('#career');
   });
 });

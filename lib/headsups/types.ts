@@ -1,6 +1,7 @@
 // Heads-ups: what Orbis noticed, and the one step it has ready. Client-safe.
 
-export const HEADSUP_KINDS = [
+/** What the daily scan checks for (lib/headsups/scan.ts). */
+export const SCAN_KINDS = [
   'money.big_spend',
   'money.category_hot',
   'money.logging_gap',
@@ -8,6 +9,14 @@ export const HEADSUP_KINDS = [
   'health.steps_down',
   'health.plan_finished',
 ] as const;
+
+/**
+ * Raised by the career watcher as mail arrives, not by the daily scan, so the
+ * scan must never withdraw them as stale.
+ */
+export const CAREER_KINDS = ['career.interview', 'career.offer', 'career.question', 'career.follow_up'] as const;
+
+export const HEADSUP_KINDS = [...SCAN_KINDS, ...CAREER_KINDS] as const;
 export type HeadsupKind = (typeof HEADSUP_KINDS)[number];
 
 /** How Settings names each check. */
@@ -18,6 +27,10 @@ export const KIND_LABELS: Record<HeadsupKind, string> = {
   'routine.slipping': 'A routine missed several times in a row',
   'health.steps_down': 'Steps well below your usual',
   'health.plan_finished': 'A health plan that has finished',
+  'career.interview': 'An interview invite for a job you applied to',
+  'career.offer': 'A job offer',
+  'career.question': 'A recruiter asking you something',
+  'career.follow_up': 'A follow-up ready for an application with no reply',
 };
 
 /** Fixed in code: the model words a heads-up, it never decides how loud it is. */
@@ -28,6 +41,10 @@ export const URGENCY: Record<HeadsupKind, 'normal' | 'urgent'> = {
   'routine.slipping': 'urgent',
   'health.steps_down': 'normal',
   'health.plan_finished': 'normal',
+  'career.interview': 'urgent',
+  'career.offer': 'urgent',
+  'career.question': 'urgent',
+  'career.follow_up': 'normal',
 };
 
 export type HeadsupAction =
@@ -35,7 +52,8 @@ export type HeadsupAction =
   | { type: 'review_category'; category: string }
   | { type: 'adjust_routine'; routineId: string }
   | { type: 'open_health_plan'; planId: string }
-  | { type: 'open_steps' };
+  | { type: 'open_steps' }
+  | { type: 'open_career_application'; applicationId: string };
 
 export type Evidence = Record<string, string | number>;
 
@@ -85,6 +103,8 @@ export function parseAction(value: unknown): HeadsupAction | null {
       return text(action.planId, 64) ? { type: 'open_health_plan', planId: action.planId as string } : null;
     case 'open_steps':
       return { type: 'open_steps' };
+    case 'open_career_application':
+      return text(action.applicationId, 64) ? { type: 'open_career_application', applicationId: action.applicationId as string } : null;
     default:
       return null;
   }

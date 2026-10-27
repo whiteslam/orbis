@@ -1,10 +1,10 @@
 /**
  * The app's tabs, its settings sections, and how a URL maps onto them. Pure,
- * so the routing rules, including every link from the six-tab layout, are
+ * so the routing rules, including every link from the older six-tab layout, are
  * tested rather than remembered.
  */
 
-export type TabId = 'today' | 'money' | 'health' | 'journal' | 'social';
+export type TabId = 'today' | 'money' | 'health' | 'journal' | 'social' | 'career';
 export type MoneyView = 'spending' | 'investments';
 export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'security' | 'data';
 
@@ -14,6 +14,7 @@ export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'health', label: 'Health' },
   { id: 'journal', label: 'Journal' },
   { id: 'social', label: 'Social' },
+  { id: 'career', label: 'Career' },
 ];
 
 export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
@@ -44,6 +45,7 @@ const BY_HASH: Map<string, Opening> = new Map([
   ['health', { tab: 'health' }],
   ['journal', { tab: 'journal' }],
   ['social', { tab: 'social' }],
+  ['career', { tab: 'career' }],
   ['profile', { tab: 'today', settings: 'you' }],
 ]);
 
@@ -56,6 +58,8 @@ const BY_PARAM: Map<string, Opening> = new Map([
   ['invest', { tab: 'money', money: 'investments' }],
   ['investments', { tab: 'money', money: 'investments' }],
   ['settings', { tab: 'today', settings: 'connections' }],
+  // Career's Gmail "Allow sending" round trip lands back on the tab.
+  ['career', { tab: 'career' }],
 ]);
 
 /** Where a URL asks the app to open, or null for the default. `?tab=` wins over the hash. */

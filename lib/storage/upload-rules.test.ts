@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { MAX_UPLOAD_BYTES, isStagedPath, stagedInput, uploadProblem } from './upload-rules';
+import { MAX_CAREER_UPLOAD_BYTES, MAX_UPLOAD_BYTES, careerUploadExtension, careerUploadProblem, contentTypeFor, isStagedPath, stagedInput, uploadExtension, uploadProblem } from './upload-rules';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const user = '11111111-2222-3333-4444-555555555555';
@@ -36,4 +36,24 @@ test('an action input is accepted only for a staged path of this user', () => {
   assert.equal(stagedInput(user, { path: `${user}/other.pdf`, name: 'x.pdf' }), null);
   assert.equal(stagedInput(user, null), null);
   assert.equal(stagedInput(user, `${user}/${object}.pdf`), null);
+});
+
+test('career documents accept pdf and docx up to 10 MB', () => {
+  assert.equal(careerUploadExtension('CV.DOCX'), 'docx');
+  assert.equal(careerUploadExtension('cv.pdf'), 'pdf');
+  assert.equal(careerUploadExtension('cv.doc'), null);
+  assert.equal(careerUploadExtension(undefined), null);
+  assert.equal(careerUploadProblem({ name: 'cv.docx', type: '', size: 10 }), null);
+  assert.equal(careerUploadProblem({ name: 'cv.pdf', type: 'application/pdf', size: MAX_CAREER_UPLOAD_BYTES }), null);
+  assert.match(careerUploadProblem({ name: 'cv.doc', type: 'application/msword', size: 10 }) ?? '', /docx/);
+  assert.match(careerUploadProblem({ name: 'cv.pdf', type: 'application/pdf', size: 0 }) ?? '', /empty/);
+  assert.match(careerUploadProblem({ name: 'cv.pdf', type: 'application/pdf', size: MAX_CAREER_UPLOAD_BYTES + 1 }) ?? '', /10 MB/);
+  assert.ok(careerUploadProblem(null));
+  assert.equal(contentTypeFor('docx'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+});
+
+test('a staged upload still refuses docx: only the career bucket takes it', () => {
+  assert.equal(uploadExtension('cv.docx'), null);
+  assert.match(uploadProblem({ name: 'cv.docx', type: '', size: 10 }) ?? '', /xlsx/);
+  assert.equal(isStagedPath(user, `${user}/${object}.docx`), false);
 });

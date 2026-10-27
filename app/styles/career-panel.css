@@ -1,0 +1,5 @@
+/* ─── Career web panel ───────────────────────────────────────────────────
+   The full-width panel at /active/career (components/career/panel/). Imported
+   from app/(orbis)/layout.tsx. Dark by default, light following the theme
+   switch; stage colours come from the brand tokens. It reflows to one column
+   below 900px with no sideways scrolling. Prefix: .cp- */

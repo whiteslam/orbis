@@ -14,13 +14,18 @@ export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const CONTENT_TYPES = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 } as const;
 
 export type UploadExtension = keyof typeof CONTENT_TYPES;
 
-export function uploadExtension(name: unknown): UploadExtension | null {
-  if (typeof name !== 'string') return null;
-  const extension = name.toLowerCase().split('.').pop();
+function extensionOf(name: unknown) {
+  return typeof name === 'string' ? name.toLowerCase().split('.').pop() : undefined;
+}
+
+/** A staged upload's extension: a workbook or a PDF. */
+export function uploadExtension(name: unknown): 'xlsx' | 'pdf' | null {
+  const extension = extensionOf(name);
   return extension === 'xlsx' || extension === 'pdf' ? extension : null;
 }
 
@@ -60,4 +65,33 @@ export function stagedInput(userId: string, input: unknown): { path: string; nam
   const { path, name } = input as { path?: unknown; name?: unknown };
   if (!isStagedPath(userId, path)) return null;
   return { path, name: typeof name === 'string' ? name : '' };
+}
+
+// ─── Career documents ──────────────────────────────────────────────────────
+// The resume and tailored files live in their own private bucket, where each
+// person may write under `${userId}/` with their own session (the bucket's
+// storage policy), so a resume goes there straight from the browser.
+
+export const CAREER_BUCKET = 'career-documents';
+/** Matches the bucket's file_size_limit (202610270001_career.sql). */
+export const MAX_CAREER_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+export type CareerUploadExtension = 'pdf' | 'docx';
+
+export function careerUploadExtension(name: unknown): CareerUploadExtension | null {
+  const extension = extensionOf(name);
+  return extension === 'pdf' || extension === 'docx' ? extension : null;
+}
+
+const WRONG_CAREER_TYPE = 'Use a .pdf or .docx file. Older .doc files and images are not supported.';
+
+/** A plain reason a resume can't be uploaded, or null when it can. */
+export function careerUploadProblem(file: { name?: unknown; type?: unknown; size?: unknown } | null | undefined): string | null {
+  if (!file || typeof file !== 'object') return 'Choose a PDF or Word (.docx) file.';
+  if (!careerUploadExtension(file.name)) return WRONG_CAREER_TYPE;
+  // As above: the name decides, and the stored content type is set from it.
+  if (file.type !== undefined && typeof file.type !== 'string') return WRONG_CAREER_TYPE;
+  if (typeof file.size !== 'number' || !Number.isFinite(file.size) || file.size <= 0) return 'This file is empty. Choose your resume and try again.';
+  if (file.size > MAX_CAREER_UPLOAD_BYTES) return 'This file is larger than 10 MB. Choose a smaller file and try again.';
+  return null;
 }

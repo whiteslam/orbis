@@ -18,13 +18,13 @@ export function deletionSteps(): DeletionStep[] {
 }
 
 /** Every private bucket that holds files under `${userId}/`. */
-export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads'];
+export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents'];
 
 /** `key` is the column each table's rows are paged by: its primary key. */
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
 
 // One row per person, keyed by user_id; every other table has its own id.
-const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences']);
+const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles']);
 
 /**
  * The person's own content, read through their own session so row-level
@@ -33,8 +33,11 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * user_app_pins, push_subscriptions), and service internals that are not
  * content (gmail_sync_messages, health_document_chunks, rate_limit_buckets,
  * staged_upload_claims, workbook_ai_usage, ai_feature_usage, social_ai_usage, ask_orbis_usage,
- * ai_generation_events). Shared tables with no user_id (api_*, ai_providers,
- * ai_models) hold nothing personal.
+ * ai_generation_events, and career_mail, the career watcher's record of which
+ * Gmail messages it has handled, which goes with the account by cascade).
+ * Shared tables with no user_id (api_*, ai_providers, ai_models) hold nothing
+ * personal. The career-documents bucket (the resume and tailored files) is
+ * listed and emptied like the other buckets.
  */
 export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_personal_profiles',
@@ -65,6 +68,11 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'headsups',
   'headsup_preferences',
   'mail_acknowledgements',
+  'career_profiles',
+  'career_jobs',
+  'career_applications',
+  'career_events',
+  'career_offers',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */

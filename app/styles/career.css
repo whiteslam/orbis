@@ -1,0 +1,4 @@
+/* ─── Career tab ─────────────────────────────────────────────────────────
+   The phone app's Career tab (components/career/). Imported from
+   app/(orbis)/layout.tsx. Brand tokens are in brand.css; every colour here is a
+   token so light and dark both keep their contrast. Prefix: .cr- */

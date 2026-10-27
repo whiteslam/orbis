@@ -19,6 +19,8 @@ import '../styles/settings.css';
 import '../styles/glass.css';
 import '../styles/glass-dark.css';
 import '../styles/headsups.css';
+import '../styles/career.css';
+import '../styles/career-panel.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
 

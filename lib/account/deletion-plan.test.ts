@@ -17,17 +17,17 @@ test('the auth user is deleted last, after connections and files', () => {
   assert.deepEqual(deletionSteps(), ['revoke-connections', 'remove-storage', 'delete-user']);
 });
 test('every private bucket is emptied', () => {
-  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
+  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
 });
 test('the export never includes stored credentials', () => {
   const tables = EXPORT_TABLES.map((entry) => entry.table);
   for (const secret of ['gmail_connections', 'groww_connections', 'zerodha_connections', 'user_app_pins', 'push_subscriptions']) assert.ok(!tables.includes(secret), secret);
-  for (const table of ['transactions', 'social_posts', 'routines']) assert.ok(tables.includes(table), table);
+  for (const table of ['transactions', 'social_posts', 'routines', 'career_profiles', 'career_jobs', 'career_applications', 'career_events', 'career_offers']) assert.ok(tables.includes(table), table);
 });
 
 test('the export leaves out service internals and lists each table once', () => {
   const tables = EXPORT_TABLES.map((entry) => entry.table);
-  for (const internal of ['gmail_sync_messages', 'rate_limit_buckets', 'staged_upload_claims', 'health_document_chunks', 'social_ai_usage', 'workbook_ai_usage', 'ai_generation_events']) {
+  for (const internal of ['gmail_sync_messages', 'rate_limit_buckets', 'staged_upload_claims', 'health_document_chunks', 'social_ai_usage', 'workbook_ai_usage', 'ai_generation_events', 'career_mail']) {
     assert.ok(!tables.includes(internal), internal);
   }
   assert.equal(new Set(tables).size, tables.length);
@@ -35,6 +35,8 @@ test('the export leaves out service internals and lists each table once', () => 
   // Rows are paged by primary key; the one-row-per-person tables have no id.
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'user_personal_profiles')?.key, 'user_id');
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'transactions')?.key, 'id');
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'career_profiles')?.key, 'user_id');
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'career_jobs')?.key, 'id');
 });
 
 test('deletion needs the word DELETE typed exactly', () => {
