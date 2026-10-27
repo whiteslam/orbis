@@ -13,6 +13,15 @@ test('finds the newest "Who is hiring?" thread, not "Who wants to be hired?"', (
   assert.equal(latestHiringThread({ hits: [{ objectID: '1', title: 'Ask HN: Who wants to be hired? (October 2026)' }] }), null);
 });
 
+test('a thread or post id that is not a number is never put into a URL', () => {
+  const title = 'Ask HN: Who is hiring? (October 2026)';
+  assert.equal(latestHiringThread({ hits: [{ objectID: '../users/x?y=1', title }] }), null);
+  assert.equal(latestHiringThread({ hits: [{ objectID: '', title }] }), null);
+  const post = { text: 'Acme | Engineer | Remote<p>Apply.', created_at_i: NOW.getTime() / 1000 };
+  assert.equal(parseHn({ children: [{ ...post, id: 42 }] }, NOW).length, 1);
+  assert.equal(parseHn({ children: [{ ...post, id: '42#x' }] }, NOW).length, 0);
+});
+
 test('reads each top-level post of a real thread', () => {
   const jobs = parseHn(thread, NOW);
   assert.equal(jobs.length, 5);

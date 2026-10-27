@@ -170,11 +170,13 @@ function applyLink(html: string) {
   return url.startsWith('http') && isApplyPage(url) ? url : null;
 }
 
+const HN_ID = /^\d+$/;
+
 function toJob(comment: Raw, cutoff: number): NormalizedJob | null {
   const html = str(comment.text);
   const id = str(comment.id);
   const createdMs = typeof comment.created_at_i === 'number' ? comment.created_at_i * 1000 : Date.parse(str(comment.created_at));
-  if (!html || !id || Number.isNaN(createdMs) || createdMs < cutoff) return null;
+  if (!html || !HN_ID.test(id) || Number.isNaN(createdMs) || createdMs < cutoff) return null;
   const firstBreak = html.indexOf('<p>');
   const header = parseHnHeader(collapseWhitespace(htmlToText(firstBreak === -1 ? html : html.slice(0, firstBreak))));
   if (!header.company) return null;
@@ -202,7 +204,10 @@ function toJob(comment: Raw, cutoff: number): NormalizedJob | null {
 export function latestHiringThread(raw: unknown): string | null {
   for (const hit of asArray(asRecord(raw)?.hits)) {
     const record = asRecord(hit);
-    if (record && str(record.title).toLowerCase().startsWith(THREAD_TITLE)) return str(record.objectID) || null;
+    if (!record || !str(record.title).toLowerCase().startsWith(THREAD_TITLE)) continue;
+    // The id goes into the item URL as is, so it must be the number HN ids always are.
+    const id = str(record.objectID);
+    return HN_ID.test(id) ? id : null;
   }
   return null;
 }
