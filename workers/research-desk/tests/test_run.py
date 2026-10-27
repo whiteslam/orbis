@@ -7,6 +7,7 @@ from research_desk import __main__ as cli
 from research_desk.memory import MEMORY_BUCKET, memory_path
 from research_desk.run import Deps, run_one, settle_user
 from research_desk.usage import TokenCapReached
+from research_desk.writer import RunWriter
 from tests.fakes import FakeDb
 from tests.test_events import PM, TRADER
 
@@ -197,9 +198,56 @@ def test_settle_mode_settles_and_syncs_without_a_run(tmp_path):
 
 
 def delete_account(db):
-    """What deleteAccount leaves behind: the memory log removed, then the runs cascaded away with the user."""
-    db.storage.clear()
+    """What deleteAccount does: the research rows deleted first, then the memory log removed."""
+    db.events.clear()
+    db.settlements.clear()
     db.runs.clear()
+    db.storage.clear()
+
+
+def test_a_run_the_owner_cancels_still_saves_the_log(tmp_path):
+    # Settlements made during the run are real whatever became of it, so a plain
+    # cancel (the row is still there) puts the log back; only a deleted row stops that.
+    db = FakeDb([queued_run()])
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = f"[2026-10-01 | TCS.NS | Buy | pending]\n\nDECISION:\ny{ENTRY_END}".encode()
+
+    def cancel_at(index):
+        if index == 2:
+            db.runs[RUN_ID]["status"] = "cancelled"
+
+    deps, _ = make_deps(db, tmp_path, on_state=cancel_at)
+    assert run_one(RUN_ID, deps) == "cancelled"
+    assert "TCS.NS" in db.storage[(MEMORY_BUCKET, memory_path(USER_ID))].decode()
+
+
+def test_a_run_whose_rows_go_after_it_finishes_never_saves_the_log(tmp_path, monkeypatch):
+    # The rows are deleted after the last cancel check, between finish and the upload.
+    db = FakeDb([queued_run()])
+    deps, built = make_deps(db, tmp_path)
+    finish = RunWriter.finish
+
+    def finish_then_delete(self, decision, usage):
+        done = finish(self, decision, usage)
+        delete_account(db)
+        return done
+
+    monkeypatch.setattr(RunWriter, "finish", finish_then_delete)
+    assert run_one(RUN_ID, deps) == "done"
+    assert built["graph"].recorded is not None
+    assert db.storage == {}
+    assert db.settlements == []
+
+
+def test_settle_mode_never_saves_the_log_of_an_owner_with_no_rows(tmp_path):
+    # A log left behind with no research rows at all: the account is gone, or going.
+    db = FakeDb([])
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = b"[2026-10-01 | RELIANCE.NS | Buy | pending]\n"
+    entries = [{"date": "2026-10-01", "ticker": "RELIANCE.NS", "rating": "Buy", "pending": False, "raw": "-1.0%", "alpha": "-1.5%",
+                "holding": "5d", "resolved": "2026-10-09", "decision": "", "reflection": ""}]
+    deps, _ = make_deps(db, tmp_path, entries=entries, on_settle=lambda: db.storage.clear())
+    assert settle_user(USER_ID, deps) == 0
+    assert db.storage == {}
+    assert db.settlements == []
 
 
 def test_a_run_whose_account_is_deleted_midway_stops_and_never_saves_the_log(tmp_path):
