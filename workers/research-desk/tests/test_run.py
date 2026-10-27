@@ -10,6 +10,7 @@ from research_desk.usage import TokenCapReached
 from tests.fakes import FakeDb
 from tests.test_events import PM, TRADER
 
+ENTRY_END = "\n\n<!-- ENTRY_END -->\n\n"
 RUN_ID = "11111111-1111-4111-8111-111111111111"
 USER_ID = "22222222-2222-4222-8222-222222222222"
 
@@ -51,7 +52,7 @@ class FakeGraph:
         self.recorded = (ticker, trade_date, final_state.get("final_trade_decision"))
         os.makedirs(os.path.dirname(self.config["memory_log_path"]), exist_ok=True)
         with open(self.config["memory_log_path"], "a", encoding="utf-8") as handle:
-            handle.write(f"[{trade_date} | {ticker} | Overweight | pending]\n")
+            handle.write(f"[{trade_date} | {ticker} | Overweight | pending]\n\nDECISION:\nx{ENTRY_END}")
 
     def rating(self, final_state):
         return "Overweight"
@@ -87,7 +88,7 @@ def make_deps(db, tmp_path, **graph_kwargs):
 
 def test_a_run_streams_its_events_and_finishes_with_the_call(tmp_path):
     db = FakeDb([queued_run()])
-    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = b"[2026-10-01 | TCS.NS | Buy | pending]\n"
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = f"[2026-10-01 | TCS.NS | Buy | pending]\n\nDECISION:\ny{ENTRY_END}".encode()
     deps, built = make_deps(db, tmp_path)
     assert run_one(RUN_ID, deps) == "done"
     graph = built["graph"]

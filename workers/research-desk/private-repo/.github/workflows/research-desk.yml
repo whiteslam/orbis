@@ -36,11 +36,9 @@ on:
         required: false
         default: ''
 
-# One worker at a time: runs queue behind each other instead of racing for
-# OpenRouter's rate limit or the same memory log.
-concurrency:
-  group: research-desk
-  cancel-in-progress: false
+# No concurrency group on purpose: GitHub cancels a pending run when a newer
+# one joins the same group, which would strand a queued analysis. Jobs may run
+# side by side; the worker merges the memory log on upload so none is lost.
 
 permissions:
   contents: read

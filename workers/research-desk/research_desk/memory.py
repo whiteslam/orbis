@@ -37,11 +37,47 @@ def download_memory(db, user_id: str, local_path: str) -> bool:
     return True
 
 
+# Upstream's entry delimiter (TradingMemoryLog._SEPARATOR).
+SEPARATOR = "\n\n<!-- ENTRY_END -->\n\n"
+
+
+def _blocks(text: str) -> list[str]:
+    return [block.strip() for block in (text or "").split(SEPARATOR) if block.strip()]
+
+
+def _key(block: str) -> tuple[str, str]:
+    fields = [part.strip() for part in block.splitlines()[0].strip("[] ").split("|")]
+    return (fields[0], fields[1]) if len(fields) > 1 else (block, "")
+
+
+def _settled(block: str) -> bool:
+    fields = [part.strip() for part in block.splitlines()[0].strip("[] ").split("|")]
+    return len(fields) > 3 and fields[3] != "pending"
+
+
+def merge_logs(remote: str, local: str) -> str:
+    """Both logs' entries, once each by (date, ticker), the settled version over the pending one.
+
+    Two jobs can run at once (GitHub would cancel a queued one rather than keep
+    it waiting), each with its own copy of the log; merging on upload means the
+    second upload doesn't erase the first one's decision or settlement.
+    """
+    merged: dict[tuple[str, str], str] = {}
+    for block in _blocks(remote) + _blocks(local):
+        key = _key(block)
+        if key not in merged or (_settled(block) and not _settled(merged[key])):
+            merged[key] = block
+    return "".join(block + SEPARATOR for block in merged.values())
+
+
 def upload_memory(db, user_id: str, local_path: str) -> bool:
     if not os.path.exists(local_path):
         return False
-    with open(local_path, "rb") as handle:
-        db.storage_upload(MEMORY_BUCKET, memory_path(user_id), handle.read(), "text/markdown")
+    with open(local_path, encoding="utf-8") as handle:
+        local = handle.read()
+    remote = db.storage_download(MEMORY_BUCKET, memory_path(user_id))
+    text = merge_logs(remote.decode("utf-8", "replace") if remote else "", local)
+    db.storage_upload(MEMORY_BUCKET, memory_path(user_id), text.encode("utf-8"), "text/markdown")
     return True
 
 

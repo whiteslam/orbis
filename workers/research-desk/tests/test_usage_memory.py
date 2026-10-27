@@ -120,3 +120,21 @@ def test_settled_entries_become_settlements_for_the_runs_that_made_them():
     assert second["benchmark"] == "^BSESN"
     assert first["user_id"] == USER_ID and first["reflection"] == "Momentum held."
     assert settlements_from_entries(entries, runs, USER_ID, already_settled={"run-a", "run-b"}) == []
+
+
+SEP = "\n\n<!-- ENTRY_END -->\n\n"
+
+
+def test_two_jobs_writing_the_same_log_lose_nothing():
+    from research_desk.memory import merge_logs
+
+    remote = "[2026-10-01 | TCS.NS | Buy | pending]\n\nDECISION:\nA" + SEP + "[2026-10-02 | INFY.NS | Hold | pending]\n\nDECISION:\nB" + SEP
+    local = ("[2026-10-01 | TCS.NS | Buy | +1.0% | +0.2% | 5d | resolved:2026-10-09]\n\nDECISION:\nA\n\nREFLECTION:\nOk" + SEP
+             + "[2026-10-27 | RELIANCE.NS | Overweight | pending]\n\nDECISION:\nC" + SEP)
+    merged = merge_logs(remote, local)
+    blocks = [b for b in merged.split(SEP) if b.strip()]
+    assert [b.splitlines()[0].split("|")[1].strip() for b in blocks] == ["TCS.NS", "INFY.NS", "RELIANCE.NS"]
+    # The settled version of an entry wins over the pending one, whichever side has it.
+    assert "resolved:2026-10-09" in blocks[0]
+    assert merge_logs(local, remote).count("resolved:2026-10-09") == 1
+    assert merge_logs("", local) == local
