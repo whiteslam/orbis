@@ -12,9 +12,10 @@ const LTP_BATCH_SIZE = 50;
 
 export type GrowwCredentials = { apiKey: string; apiSecret: string };
 
-// Access tokens per API key, so several connected users never share one.
+// Access tokens per key and secret pair, so several connected users never share
+// one and a right key with a wrong secret never finds a cached token.
 const tokenCache = new Map<string, { value: string; expiresAt: number }>();
-const tokenCacheKey = (credentials: GrowwCredentials) => createHash('sha256').update(credentials.apiKey).digest('hex');
+const tokenCacheKey = (credentials: GrowwCredentials) => createHash('sha256').update(`${credentials.apiKey}\0${credentials.apiSecret}`).digest('hex');
 // Groww answers 403 when the API plan has no live data; don't ask every load.
 let livePricesBlockedUntil = 0;
 
@@ -37,9 +38,10 @@ export function growwOwnerEmail() {
   return process.env.GROWW_OWNER_EMAIL?.trim().toLowerCase() || null;
 }
 
-export async function getAccessToken(credentials: GrowwCredentials) {
+/** `fresh` skips the cache: checking new credentials must always ask Groww. */
+export async function getAccessToken(credentials: GrowwCredentials, options: { fresh?: boolean } = {}) {
   const cacheKey = tokenCacheKey(credentials);
-  const cached = tokenCache.get(cacheKey);
+  const cached = options.fresh ? undefined : tokenCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
   const { apiKey, apiSecret: secret } = credentials;

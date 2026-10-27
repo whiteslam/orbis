@@ -27,7 +27,8 @@ type Credentials = { apiKey: string; apiSecret: string };
 async function verifyAndSave(broker: BrokerId, userId: string, credentials: Credentials) {
   switch (broker) {
     case 'groww':
-      await getAccessToken(credentials);
+      // Always a fresh exchange: a cached token proves nothing about this secret.
+      await getAccessToken(credentials, { fresh: true });
       await saveGrowwConnection(userId, credentials);
       return;
     case 'zerodha':
