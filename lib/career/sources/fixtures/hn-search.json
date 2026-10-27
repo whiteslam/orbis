@@ -1,0 +1,190 @@
+{
+ "exhaustive": {
+  "nbHits": true,
+  "typo": true
+ },
+ "exhaustiveNbHits": true,
+ "exhaustiveTypo": true,
+ "hits": [
+  {
+   "_highlightResult": {
+    "author": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "whoishiring"
+    },
+    "story_text": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Please state the location and include REMOTE for remote work, REMOTE (US)\nor similar if the country is restricted, and ONSITE when remote work is <i>not</i> an option.<p>Please only post if you personally are part of the hiring company—no\nrecruiting firms or job boards. One post per company. If it isn't a household name,\nexplain what your company does.<p>Please only post if you are actively filling a position and are committed\nto replying to applicants.<p>Commenters: please don't reply to job posts to complain about\nsomething. It's off topic here.<p>Readers: please only email if you are personally interested in the job.<p>Searchers: try <a href=\"https://hnwork.app\" rel=\"nofollow\">https://hnwork.app</a>, <a href=\"https://nthesis.ai/public/hn-who-is-hiring\" rel=\"nofollow\">https://nthesis.ai/public/hn-who-is-hiring</a>, <a href=\"https://dheerajck.github.io/hnwhoishiring/\" rel=\"nofollow\">https://dheerajck.github.io/hnwhoishiring/</a>,\n<a href=\"http://nchelluri.github.io/hnjobs/\" rel=\"nofollow\">http://nchelluri.github.io/hnjobs/</a>, <a href=\"https://hnjobs.emilburzo.com\" rel=\"nofollow\">https://hnjobs.emilburzo.com</a>.<p>Don't miss this other fine thread: <i>Who wants to be hired?</i> <a href=\"https://news.ycombinator.com/item?id=49922568\">https://news.ycombinator.com/item?id=49922568</a>"
+    },
+    "title": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Ask HN: Who is hiring? (October 2026)"
+    }
+   },
+   "_tags": [
+    "story",
+    "author_whoishiring",
+    "story_49922569",
+    "ask_hn"
+   ],
+   "author": "whoishiring",
+   "children": [
+    49926618,
+    49922584,
+    49925643
+   ],
+   "created_at": "2026-10-01T15:02:07Z",
+   "created_at_i": 1790866927,
+   "num_comments": 392,
+   "objectID": "49922569",
+   "points": 277,
+   "story_id": 49922569,
+   "story_text": "Please state the location and include REMOTE for remote work, REMOTE (US)\nor similar if the country is restricted, and ONSITE when remote work is <i>not</i> an option.<p>Please only post if you personally are part of the hiring company—no\nrecruiting firms or job boards. One post per company. If it isn&#x27;t a household name,\nexplain what your company does.<p>Please only post if you are actively filling a position and are committed\nto replying to applicants.<p>Commenters: please don&#x27;t reply to job posts to complain about\nsomething. It&#x27;s off topic here.<p>Readers: please only email if you are personally interested in the job.<p>Searchers: try <a href=\"https:&#x2F;&#x2F;hnwork.app\" rel=\"nofollow\">https:&#x2F;&#x2F;hnwork.app</a>, <a href=\"https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-who-is-hiring\" rel=\"nofollow\">https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-who-is-hiring</a>, <a href=\"https:&#x2F;&#x2F;dheerajck.github.io&#x2F;hnwhoishiring&#x2F;\" rel=\"nofollow\">https:&#x2F;&#x2F;dheerajck.github.io&#x2F;hnwhoishiring&#x2F;</a>,\n<a href=\"http:&#x2F;&#x2F;nchelluri.github.io&#x2F;hnjobs&#x2F;\" rel=\"nofollow\">http:&#x2F;&#x2F;nchelluri.github.io&#x2F;hnjobs&#x2F;</a>, <a href=\"https:&#x2F;&#x2F;hnjobs.emilburzo.com\" rel=\"nofollow\">https:&#x2F;&#x2F;hnjobs.emilburzo.com</a>.<p>Don&#x27;t miss this other fine thread: <i>Who wants to be hired?</i> <a href=\"https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=49922568\">https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=49922568</a>",
+   "title": "Ask HN: Who is hiring? (October 2026)",
+   "updated_at": "2026-10-26T19:45:07Z"
+  },
+  {
+   "_highlightResult": {
+    "author": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "whoishiring"
+    },
+    "story_text": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Share your information if you are looking for work. Please use this format:<p><pre><code>  Location:\n  Remote:\n  Willing to relocate:\n  Technologies:\n  Résumé/CV:\n  Email:\n</code></pre>\nPlease only post if you are personally looking for work. Agencies, recruiters, job boards,\nand so on, are off topic here.<p>Readers: please only email these addresses to discuss work opportunities.<p>Searchers: try <a href=\"https://nthesis.ai/public/hn-wants-to-be-hired\" rel=\"nofollow\">https://nthesis.ai/public/hn-wants-to-be-hired</a>, <a href=\"https://www.wantstobehired.com\" rel=\"nofollow\">https://www.wantstobehired.com</a>."
+    },
+    "title": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Ask HN: Who wants to be hired? (October 2026)"
+    }
+   },
+   "_tags": [
+    "story",
+    "author_whoishiring",
+    "story_49922568",
+    "ask_hn"
+   ],
+   "author": "whoishiring",
+   "children": [
+    49925150,
+    49926308,
+    49923956
+   ],
+   "created_at": "2026-10-01T15:02:07Z",
+   "created_at_i": 1790866927,
+   "num_comments": 702,
+   "objectID": "49922568",
+   "points": 136,
+   "story_id": 49922568,
+   "story_text": "Share your information if you are looking for work. Please use this format:<p><pre><code>  Location:\n  Remote:\n  Willing to relocate:\n  Technologies:\n  Résumé&#x2F;CV:\n  Email:\n</code></pre>\nPlease only post if you are personally looking for work. Agencies, recruiters, job boards,\nand so on, are off topic here.<p>Readers: please only email these addresses to discuss work opportunities.<p>Searchers: try <a href=\"https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-wants-to-be-hired\" rel=\"nofollow\">https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-wants-to-be-hired</a>, <a href=\"https:&#x2F;&#x2F;www.wantstobehired.com\" rel=\"nofollow\">https:&#x2F;&#x2F;www.wantstobehired.com</a>.",
+   "title": "Ask HN: Who wants to be hired? (October 2026)",
+   "updated_at": "2026-10-27T00:46:21Z"
+  },
+  {
+   "_highlightResult": {
+    "author": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "whoishiring"
+    },
+    "story_text": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Please state the location and include REMOTE for remote work, REMOTE (US)\nor similar if the country is restricted, and ONSITE when remote work is <i>not</i> an option.<p>Please only post if you personally are part of the hiring company—no\nrecruiting firms or job boards. One post per company. If it isn't a household name,\nexplain what your company does.<p>Please only post if you are actively filling a position and are committed\nto replying to applicants.<p>Commenters: please don't reply to job posts to complain about\nsomething. It's off topic here.<p>Readers: please only email if you are personally interested in the job.<p>Searchers: try <a href=\"https://hnwork.app\" rel=\"nofollow\">https://hnwork.app</a>, <a href=\"https://nthesis.ai/public/hn-who-is-hiring\" rel=\"nofollow\">https://nthesis.ai/public/hn-who-is-hiring</a>, <a href=\"https://dheerajck.github.io/hnwhoishiring/\" rel=\"nofollow\">https://dheerajck.github.io/hnwhoishiring/</a>,\n<a href=\"http://nchelluri.github.io/hnjobs/\" rel=\"nofollow\">http://nchelluri.github.io/hnjobs/</a>, <a href=\"https://hnjobs.emilburzo.com\" rel=\"nofollow\">https://hnjobs.emilburzo.com</a>.<p>Don't miss this other fine thread: <i>Who wants to be hired?</i> <a href=\"https://news.ycombinator.com/item?id=49522896\">https://news.ycombinator.com/item?id=49522896</a>"
+    },
+    "title": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Ask HN: Who is hiring? (September 2026)"
+    }
+   },
+   "_tags": [
+    "story",
+    "author_whoishiring",
+    "story_49522897",
+    "ask_hn"
+   ],
+   "author": "whoishiring",
+   "children": [
+    49523712,
+    49523950,
+    49524580
+   ],
+   "created_at": "2026-09-01T15:01:17Z",
+   "created_at_i": 1788274877,
+   "num_comments": 389,
+   "objectID": "49522897",
+   "points": 254,
+   "story_id": 49522897,
+   "story_text": "Please state the location and include REMOTE for remote work, REMOTE (US)\nor similar if the country is restricted, and ONSITE when remote work is <i>not</i> an option.<p>Please only post if you personally are part of the hiring company—no\nrecruiting firms or job boards. One post per company. If it isn&#x27;t a household name,\nexplain what your company does.<p>Please only post if you are actively filling a position and are committed\nto replying to applicants.<p>Commenters: please don&#x27;t reply to job posts to complain about\nsomething. It&#x27;s off topic here.<p>Readers: please only email if you are personally interested in the job.<p>Searchers: try <a href=\"https:&#x2F;&#x2F;hnwork.app\" rel=\"nofollow\">https:&#x2F;&#x2F;hnwork.app</a>, <a href=\"https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-who-is-hiring\" rel=\"nofollow\">https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-who-is-hiring</a>, <a href=\"https:&#x2F;&#x2F;dheerajck.github.io&#x2F;hnwhoishiring&#x2F;\" rel=\"nofollow\">https:&#x2F;&#x2F;dheerajck.github.io&#x2F;hnwhoishiring&#x2F;</a>,\n<a href=\"http:&#x2F;&#x2F;nchelluri.github.io&#x2F;hnjobs&#x2F;\" rel=\"nofollow\">http:&#x2F;&#x2F;nchelluri.github.io&#x2F;hnjobs&#x2F;</a>, <a href=\"https:&#x2F;&#x2F;hnjobs.emilburzo.com\" rel=\"nofollow\">https:&#x2F;&#x2F;hnjobs.emilburzo.com</a>.<p>Don&#x27;t miss this other fine thread: <i>Who wants to be hired?</i> <a href=\"https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=49522896\">https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=49522896</a>",
+   "title": "Ask HN: Who is hiring? (September 2026)",
+   "updated_at": "2026-10-24T18:19:00Z"
+  },
+  {
+   "_highlightResult": {
+    "author": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "whoishiring"
+    },
+    "story_text": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Share your information if you are looking for work. Please use this format:<p><pre><code>  Location:\n  Remote:\n  Willing to relocate:\n  Technologies:\n  Résumé/CV:\n  Email:\n</code></pre>\nPlease only post if you are personally looking for work. Agencies, recruiters, job boards,\nand so on, are off topic here.<p>Readers: please only email these addresses to discuss work opportunities.<p>Searchers: try <a href=\"https://nthesis.ai/public/hn-wants-to-be-hired\" rel=\"nofollow\">https://nthesis.ai/public/hn-wants-to-be-hired</a>, <a href=\"https://www.wantstobehired.com\" rel=\"nofollow\">https://www.wantstobehired.com</a>."
+    },
+    "title": {
+     "matchLevel": "none",
+     "matchedWords": [],
+     "value": "Ask HN: Who wants to be hired? (September 2026)"
+    }
+   },
+   "_tags": [
+    "story",
+    "author_whoishiring",
+    "story_49522896",
+    "ask_hn"
+   ],
+   "author": "whoishiring",
+   "children": [
+    49522899,
+    49522948,
+    49525586
+   ],
+   "created_at": "2026-09-01T15:01:17Z",
+   "created_at_i": 1788274877,
+   "num_comments": 551,
+   "objectID": "49522896",
+   "points": 114,
+   "story_id": 49522896,
+   "story_text": "Share your information if you are looking for work. Please use this format:<p><pre><code>  Location:\n  Remote:\n  Willing to relocate:\n  Technologies:\n  Résumé&#x2F;CV:\n  Email:\n</code></pre>\nPlease only post if you are personally looking for work. Agencies, recruiters, job boards,\nand so on, are off topic here.<p>Readers: please only email these addresses to discuss work opportunities.<p>Searchers: try <a href=\"https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-wants-to-be-hired\" rel=\"nofollow\">https:&#x2F;&#x2F;nthesis.ai&#x2F;public&#x2F;hn-wants-to-be-hired</a>, <a href=\"https:&#x2F;&#x2F;www.wantstobehired.com\" rel=\"nofollow\">https:&#x2F;&#x2F;www.wantstobehired.com</a>.",
+   "title": "Ask HN: Who wants to be hired? (September 2026)",
+   "updated_at": "2026-10-26T11:43:20Z"
+  }
+ ],
+ "hitsPerPage": 20,
+ "nbHits": 4,
+ "nbPages": 26,
+ "page": 0,
+ "params": "tags=story%2Cauthor_whoishiring&advancedSyntax=true&analyticsTags=backend",
+ "processingTimeMS": 1,
+ "processingTimingsMS": {
+  "_request": {
+   "roundTrip": 20
+  },
+  "afterFetch": {
+   "format": {
+    "highlighting": 1,
+    "total": 3
+   }
+  },
+  "total": 1
+ },
+ "query": "",
+ "serverTimeMS": 5
+}

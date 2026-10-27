@@ -1,0 +1,130 @@
+{
+ "comments": "Search results come 20 to a page. Pass ?page=2, ?page=3 and so on for more; there is no cursor on search. Cursor pagination (nextCursor) is only on /jobs/api, the browse feed. 13/03/2026: The API has been updated to include the companySlug field in the response.",
+ "updatedAt": 1793083023,
+ "offset": 0,
+ "limit": 3,
+ "totalCount": 3661,
+ "jobs": [
+  {
+   "title": "Head of Frontend Engineering",
+   "excerpt": "We are looking for a Head of Frontend Engineeringto lead a large engineering unit (~70+ engineers, including Team Leads) and drive the development of our frontend direction, engineering culture, and product quality.",
+   "companyName": "Made of Storm",
+   "companySlug": "made-of-storm",
+   "companyLogo": "https://cdn-images.himalayas.app/03h34q9whg2v40sfr4ufk7ctjdwl",
+   "employmentType": "Full Time",
+   "minSalary": null,
+   "maxSalary": null,
+   "salaryPeriod": "annual",
+   "seniority": [
+    "Director"
+   ],
+   "currency": null,
+   "locationRestrictions": [
+    "Malta"
+   ],
+   "timezoneRestrictions": [
+    1
+   ],
+   "categories": [
+    "Head-of-Frontend-Engineering",
+    "Frontend-Engineering-Director",
+    "Frontend-Engineering-Manager",
+    "VP-of-Frontend-Engineering"
+   ],
+   "parentCategories": [],
+   "description": "<p>We are looking for a <strong>Head of Frontend Engineering</strong>to lead a large engineering unit (~70+ engineers, including Team Leads) and drive the development of our frontend direction, engineering culture, and product quality.</p><p>This is a <strong>systems and leadership role</strong>, focused on scaling teams, improving engineering processes, and influencing architecture — not day-to-day hands-on development.</p><h3>Your Mission:</h3><ul>\n<li><p>Lead the frontend organization (engineering + UI/design teams), ~70+ engineers</p></li>\n<li><p>Scale teams through Team Leads and develop engineering leaders</p></li>\n<li><p>Build and evolve engineering culture, standards, and best practices</p></li>\n<li><p>Design and improve development and delivery processes</p></li>\n<li><p>Ensure quality, stability, and predictability of product delivery</p></li>\n<li><p>Participate in architectural decisions (including microfrontend approach)</p></li>\n<li><p>Manage technical debt and improve system sustainability</p></li>\n<li><p>Drive hiring and development of key engineering talent</p></li>\n<li><p>Collaborate closely with Product, Backend, and Design teams</p></li>\n</ul><h3>Your Unique Contribution:</h3><ul>\n<li><p>5+ years of engineering leadership experience, including managing 40+ people through Team Leads</p></li>\n<li><p>Proven experience scaling engineering organizations and delivery processes</p></li>\n<li><p>Strong background in frontend development</p></li>\n<li><p>Experience developing engineers and tech leads (mentoring, performance management, growth planning)</p></li>\n<li><p>Understanding of complex frontend architectures</p></li>\n<li><p>Experience with high-load web applications</p></li>\n<li><p>Strong communication skills and experience working in cross-functional teams</p></li>\n<li><p>Fluency in Russian is required for effective day-to-day collaboration within the engineering team</p></li>\n</ul><h3>Technology context:</h3><ul>\n<li><h3>Vue (2/3) / React</h3></li>\n<li><h3>TypeScript</h3></li>\n<li><p>State management: Pinia, Vuex and similar solutions</p></li>\n<li><p>Microfrontend architecture (Webpack Module Federation)</p></li>\n<li><h3>Webpack</h3></li>\n<li><h3>Jest and unit testing</h3></li>\n</ul><h3>What’s in It for You:</h3><ul>\n<li><p>Leadership of a large frontend engineering organization (~70+ engineers)</p></li>\n<li><p>Strong influence on architecture and core product direction</p></li>\n<li><p>Highly skilled engineering and leadership team</p></li>\n<li><p>Remote-first work format or office option</p></li>\n<li><p>Competitive compensation (discussed individually)</p></li>\n<li><p>Opportunity to shape engineering processes and strategy</p></li>\n<li><p>Learning &amp; development support (training, conferences, knowledge sharing)</p></li>\n<li><p>Open and collaborative environment where you can actively shape systems, not just maintain them</p></li>\n</ul><p><strong><em>Excited about the opportunity? If you're ready for a career that will challenge and energize you, let’s chat!</em></strong></p><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+   "pubDate": 1793014751,
+   "expiryDate": 1798198750,
+   "applicationLink": "https://himalayas.app/companies/made-of-storm/jobs/head-of-frontend-engineering?utm_source=api",
+   "guid": "https://himalayas.app/companies/made-of-storm/jobs/head-of-frontend-engineering"
+  },
+  {
+   "title": "SDE-III Frontend, Mobile",
+   "excerpt": "As a Software Engineer you have:• 4+ years of experience in the art of writing code and solving problems in complex frontend projects • Excellent command in Data Structures and Algorithms.",
+   "companyName": "Captain Fresh",
+   "companySlug": "captain-fresh",
+   "companyLogo": "https://cdn-images.himalayas.app/ru6d6rzh9dl8g3p1agtzihmandst",
+   "employmentType": "Full Time",
+   "minSalary": null,
+   "maxSalary": null,
+   "salaryPeriod": "annual",
+   "seniority": [
+    "Senior"
+   ],
+   "currency": null,
+   "locationRestrictions": [
+    "India"
+   ],
+   "timezoneRestrictions": [
+    5.5
+   ],
+   "categories": [
+    "Software-Engineer",
+    "Frontend-Engineer",
+    "Mobile-Engineer",
+    "Mobile-Application-Developer",
+    "Mobile-Frontend-Developer",
+    "Mobile-UI-Engineer",
+    "Frontend-Mobile-Development",
+    "Senior-Frontend-Engineering",
+    "Front-End-Software-Engineer"
+   ],
+   "parentCategories": [
+    "Developer"
+   ],
+   "description": "<h3>As a Software Engineer you have:</h3><ul>\n<li><p>4+ years of experience in the art of writing code and solving problems in complex frontend projects</p></li>\n<li><p>Excellent command in Data Structures and Algorithms.</p></li>\n<li><p>BTech, MTech in Computer Science or related technical discipline (or equivalent)</p></li>\n<li><p>Strong desire to solving complex and interesting real-world problems</p></li>\n<li><p>Go-getter attitude that reflects in energy and intent behind assigned tasks</p></li>\n</ul><p><strong>As a Software Engineer you know your things around:</strong></p><ul>\n<li><p>Extensive and expert programming experience in at least one general programming language &amp; ability to write maintainable, scalable, unit-tested code</p></li>\n<li><p>At least one of React Native or Flutter and related ecosystem</p></li>\n<li><p>At least one of native Android or iOS development</p></li>\n<li><h3>GraphQL and other modern JS ecosystems</h3></li>\n<li><p>Common design patterns and anti-patterns Javascript</p></li>\n<li><h3>Frontend performance issues</h3></li>\n<li><p>Excellent coding skills – should be able to convert the design into code</p></li>\n<li><p>Incremental changes to architecture: impact analysis of the same</p></li>\n<li><p>Performance tuning and improvements in large scale frontend codebases</p></li>\n<li><p>Mentoring young minds and foster team spirit, break down execution into phases</p></li>\n</ul><p>India has one of the largest consumer markets in the world for fish and seafood. Yet, the industry is extremely traditional, depriving businesses of consistent, reliable and trustworthy sources.  CaptainFresh is re-imagining the future of fresh fish and seafood using cutting edge technology solutions. Some of our key initiatives are</p><ul>\n<li><p>Full Service Stack for Retailers &amp; Suppliers</p></li>\n<li><h3>ML Driven Supply Demand Matching</h3></li>\n<li><h3>AI driven Standardizing Quality</h3></li>\n<li><h3>Optimal Material Flow </h3></li>\n<li><h3>Digital Footprint</h3></li>\n</ul><p><strong>You may read more about our Tech initiatives at </strong></p><h3>Culture</h3><p>At CaptainFresh, we go above and beyond to ensure that you give your best at work, every day! And one of the things we do is build the ideal environment for you. We empower people and trust them to do the right thing. Here, you own your work from start to finish, right from day one. Being enthusiastic about tech is a big part of being at CaptainFresh. If you enjoy developing technology that has an impact on millions, ideating with some of the best minds in the country and executing on your dreams with purpose and speed, join us!</p><h3>Challenges</h3><p>Building for Scale, Rapid Iterative Development, and Customer-centric Product Thinking at each step defines every day for a developer at CaptainFresh.  While we are quick to adopt the latest in Engineering, we care utmost for security, stability, and automation. Apply if you want to experience the best combination of passionate application development and product-driven thinking.</p><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+   "pubDate": 1792902407,
+   "expiryDate": 1798086406,
+   "applicationLink": "https://himalayas.app/companies/captain-fresh/jobs/sde-iii-frontend-mobile?utm_source=api",
+   "guid": "https://himalayas.app/companies/captain-fresh/jobs/sde-iii-frontend-mobile"
+  },
+  {
+   "title": "Frontend Developer [NovelAI]",
+   "excerpt": "Description Anlatan is a company working on cutting edge AI and making the best possible AI-fueled products.",
+   "companyName": "Anlatan",
+   "companySlug": "anlatan",
+   "companyLogo": "https://cdn-images.himalayas.app/nicci3nn1na6j8dw3tdz9jypcetu",
+   "employmentType": "Full Time",
+   "minSalary": 48000,
+   "maxSalary": 150000,
+   "salaryPeriod": "annual",
+   "seniority": [
+    "Mid-level"
+   ],
+   "currency": "USD",
+   "locationRestrictions": [
+    "United States"
+   ],
+   "timezoneRestrictions": [
+    -10,
+    -9,
+    -8,
+    -7,
+    -6,
+    -5,
+    14
+   ],
+   "categories": [
+    "Frontend-Development",
+    "Web-Development",
+    "React-Developer",
+    "UI-Engineering",
+    "Frontend-Engineer",
+    "AI-Front-End-Developer",
+    "Front-End-Developer",
+    "UI-Frontend-Developer",
+    "Frontend-React-Developer",
+    "React-Frontend-Developer",
+    "Developer"
+   ],
+   "parentCategories": [
+    "Developer"
+   ],
+   "description": "<div>Description</div><div>\n<a href=\"https://himalayas.app/companies/anlatan\">Anlatan</a> is a company working on cutting edge AI and making the best possible AI-fueled products. We pride ourselves on being user-friendly, privacy-safe, and censorship-free. We're a ragtag team of personalities, focused on crafting the best of the best in the AI world.</div><div>We're looking for a talented <b>Frontend Developer</b> to join our dynamic team at <a href=\"https://himalayas.app/companies/anlatan\">Anlatan</a>. You'll be working closely with the rest of our team to implement updates, fix bugs, and rapidly build up our products. You'll need to accurately implement mockups from our Designer, help test internal AI-related features, and assist in brainstorming new ideas with the rest of the team.</div><h3>Responsibilities</h3><ul>\n<li>Write clean and productive code across the entire frontend stack.</li>\n<li>Quickly find and squash bugs found both internally and by the users.</li>\n<li>Work and communicate with the rest of the <a href=\"https://himalayas.app/companies/anlatan\">Anlatan</a> team to efficiently build and ship updates.</li>\n<li>Implement finalized User Interface design mockups.</li>\n<li>Provide input into new and developing ideas with the rest of the <a href=\"https://himalayas.app/companies/anlatan\">Anlatan</a> team.</li>\n</ul><h3>Requirements</h3><ul>\n<li>Experience with Frontend frameworks such as React.</li>\n<li>Experience with HTML, CSS, and Typescript.</li>\n<li>Experience in managing large and ever-changing codebases.</li>\n<li>A strong background in computer science, with in-depth knowledge of algorithms, data structures, and software design principles.</li>\n<li>Being able to utilize Git for version control and collaboration.</li>\n</ul><div>Why work for us?</div><div>We're working fast to send ripples through the ever-moving field of AI, we offer a competitive salary package, and of course, we're all pretty fun to work with.</div><div>We offer a competitive salary and benefits, including:</div><div>- A casual and flexible work environment</div><div>- A culture focused on pushing the envelope and having fun while doing it</div><div>- Incredibly flexible PTO</div><div>For US Citizens</div><div>- Health Insurance</div><div>- Vision and Dental Insurance</div><div>- Life Insurance and Disability</div><div>- 401k (3% Match 100%, 2% Match 50%)</div><div>For non-US Citizens</div><div>- Health Insurance</div><div>- Vision and Dental Insurance</div><div>Beyond all else, our members are encouraged to:</div><div>1. Explore and Experiment</div><div>Unless we’re completely focused on getting a specific feature done, feel free to try something new out! Every idea brought to the table is appreciated and discussed.</div><div>2. Work Stress-free</div><div>We’re here to push boundaries in the AI consumer world, but that doesn’t mean you can’t have a little fun along the way. Our entire team emerged from the internet, so we’re a long ways from professional.</div><div>3. Ask For Help</div><div>No one is all-knowing. Sometimes all you need a little poke in the right direction to get something done. Never be afraid to reach out if it means getting your problem solved sooner rather than later.</div><div>4. Interact with the Community</div><div>Our community is what keeps us going, and we try to recognize that every single day. A primary goal of ours is to stay connected, and we pursue that by keeping in touch with our users through multiple different mediums.</div><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+   "pubDate": 1793083023,
+   "expiryDate": 1798267023,
+   "applicationLink": "https://himalayas.app/companies/anlatan/jobs/frontend-developer-novelai-1713326918?utm_source=api",
+   "guid": "https://himalayas.app/companies/anlatan/jobs/frontend-developer-novelai-1713326918"
+  }
+ ]
+}
