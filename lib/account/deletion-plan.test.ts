@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   DELETION_FRESH_AUTH_SEC,
   EXPORT_TABLES,
@@ -17,7 +18,7 @@ test('the auth user is deleted last, after connections and files', () => {
   assert.deepEqual(deletionSteps(), ['revoke-connections', 'remove-storage', 'delete-user']);
 });
 test('every private bucket is emptied', () => {
-  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
+  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
 });
 test('the export never includes stored credentials', () => {
   const tables = EXPORT_TABLES.map((entry) => entry.table);
@@ -95,4 +96,32 @@ test('the export includes heads-ups and their settings', () => {
   const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
   assert.equal(byTable.get('headsups')?.key, 'id');
   assert.equal(byTable.get('headsup_preferences')?.key, 'user_id');
+});
+
+const RESEARCH_TABLES = ['research_runs', 'research_events', 'research_settlements', 'research_settings'];
+
+test('the export includes the Research desk, its settings keyed by person', () => {
+  const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
+  for (const table of ['research_runs', 'research_events', 'research_settlements']) assert.equal(byTable.get(table)?.key, 'id', table);
+  assert.equal(byTable.get('research_settings')?.key, 'user_id');
+});
+
+test('deleting the account removes every Research desk row and its memory log', () => {
+  // Rows go when the auth user is deleted (the last step), by cascade; the
+  // memory log in research-memory is emptied with the other buckets before that.
+  const sql = readFileSync(new URL('../../supabase/migrations/202610270003_research_desk.sql', import.meta.url), 'utf8');
+  const tableSql = (table: string) => {
+    const match = new RegExp(`create table if not exists public\\.${table} \\(([\\s\\S]*?)\\n\\);`).exec(sql);
+    assert.ok(match, table);
+    return match[1];
+  };
+  for (const table of RESEARCH_TABLES) {
+    assert.match(tableSql(table), /user_id uuid (?:not null|primary key) references auth\.users \(id\) on delete cascade/, table);
+  }
+  // An event or a settlement can't outlive its run, so nothing blocks the run's own removal.
+  for (const table of ['research_events', 'research_settlements']) {
+    assert.match(tableSql(table), /foreign key \(user_id, run_id\) references public\.research_runs \(user_id, id\) on delete cascade/, table);
+  }
+  assert.deepEqual(deletionSteps().slice(-2), ['remove-storage', 'delete-user']);
+  assert.ok(STORAGE_BUCKETS.includes('research-memory'));
 });

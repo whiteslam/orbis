@@ -18,13 +18,13 @@ export function deletionSteps(): DeletionStep[] {
 }
 
 /** Every private bucket that holds files under `${userId}/`. */
-export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents'];
+export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory'];
 
 /** `key` is the column each table's rows are paged by: its primary key. */
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
 
 // One row per person, keyed by user_id; every other table has its own id.
-const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles']);
+const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings']);
 
 /**
  * The person's own content, read through their own session so row-level
@@ -37,7 +37,10 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * Gmail messages it has handled, which goes with the account by cascade).
  * Shared tables with no user_id (api_*, ai_providers, ai_models) hold nothing
  * personal. The career-documents bucket (the resume and tailored files) is
- * listed and emptied like the other buckets.
+ * listed and emptied like the other buckets, and so is research-memory (the
+ * Research desk's memory log, written only by its worker). The research tables
+ * go with the account by cascade: every one references auth.users, and
+ * research_events and research_settlements also cascade from their run.
  */
 export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_personal_profiles',
@@ -73,6 +76,10 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'career_applications',
   'career_events',
   'career_offers',
+  'research_runs',
+  'research_events',
+  'research_settlements',
+  'research_settings',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */

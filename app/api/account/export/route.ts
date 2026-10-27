@@ -17,6 +17,7 @@ const FILE_HELP: Record<string, string> = {
   'journal-voice': 'Voice notes attached to your journal. Play them from Journal to save them.',
   'workbook-uploads': 'Files uploaded for reading. These are temporary copies; the originals are on your device.',
   'career-documents': 'Your master resume and the tailored resumes made for each application. Open an application in Career to download its files; your resume is in Career → Setup.',
+  'research-memory': 'The Research desk’s memory log: its past calls and what it learned when each was scored. It isn’t opened in Orbis; the same calls and their scores are in this export’s research_runs and research_settlements tables.',
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
