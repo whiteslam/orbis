@@ -16,7 +16,9 @@
 
 **Done:** Tasks 1–4 (logic + tests, shared palette, frame/rail/header/palette/Ask docked, Settings dialog). Tasks 5–8 have a first pass (Today grid, Money/Health/Journal two balanced columns, Social full-width planner) that looks right in screenshots; they still need the polish listed below.
 
-**Next task:** Task 10 (the e2e fixture change, `desktop.spec.ts`, final screenshots). Task 9 is done.
+**Next task:** Task 10's final screenshots and a full e2e run against a production build. Task 9 is done; `desktop.spec.ts` and the `openTab` fixture change are committed and pass against a dev build with the switch on.
+
+**Changed after owner feedback (2026-10-27):** icon-only rails mixing navigation and Career's actions were confusing. Both rails (`.dk-rail` and the panel's `.cp-rail` with the switch on) are now navigation only, with a name under every icon (`.cp-rail-labelled`, `--cp-rail-w: 84px`). On the Career panel, the five actions moved onto the page as labelled buttons (`PanelActions`, `.cp-actions`) and light/dark moved beside the bell. Below 900px the panel's bottom bar is unchanged.
 
 **Known rough edges (switch on):**
 - Settings dialog: the "Settings" heading shows the browser's focus box when it opens (it is focused programmatically, as on the phone); give `.settings-head h1:focus` no outline on desktop. The chosen section's card sits in a wide right column; consider `justify-self: start` and a narrower first column.

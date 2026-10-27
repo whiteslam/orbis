@@ -1,12 +1,46 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ArrowLeft, ClipboardPaste, FileDown, ListChecks, Moon, Radar, Search, Sun } from 'lucide-react';
+import { ArrowLeft, ClipboardPaste, FileDown, ListChecks, Moon, Radar, Search, Sun, type LucideIcon } from 'lucide-react';
 import { BusyIcon } from '@/components/career/bits';
 import { useTheme } from '@/components/career/panel/panel-hooks';
 import { TAB_ICONS } from '@/components/shell/tab-icons';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import { TABS, appHref } from '@/lib/shell/tabs';
+
+type ActionProps = Readonly<{
+  onSearch: () => void;
+  onPaste: () => void;
+  onRunSearch: () => void;
+  onQueue: () => void;
+  onExport: () => void;
+  queueCount: number;
+  busy: string | null;
+}>;
+
+type Action = {
+  id: string;
+  /** The accessible name, and the rail's tooltip. */
+  label: string;
+  /** What the page's labelled button says. */
+  short: string;
+  Icon: LucideIcon;
+  onClick: () => void;
+  busy?: boolean;
+  badge?: number;
+  hint?: string;
+};
+
+/** Career's five actions, once, for the rail's icons and the page's labelled buttons. */
+function careerActions({ onSearch, onPaste, onRunSearch, onQueue, onExport, queueCount, busy }: ActionProps): Action[] {
+  return [
+    { id: 'search', label: 'Search', short: 'Search', Icon: Search, onClick: onSearch, hint: '/' },
+    { id: 'paste', label: 'Paste a job', short: 'Paste a job', Icon: ClipboardPaste, onClick: onPaste },
+    { id: 'run', label: busy === 'search' ? 'Searching your sources…' : 'Run a search now', short: busy === 'search' ? 'Searching…' : 'Run a search', Icon: Radar, onClick: onRunSearch, busy: busy === 'search' },
+    { id: 'queue', label: queueCount ? `Open the queue, ${queueCount} waiting` : 'Open the queue', short: 'Queue', Icon: ListChecks, onClick: onQueue, badge: queueCount },
+    { id: 'export', label: 'Export the tracker as CSV', short: 'Export CSV', Icon: FileDown, onClick: onExport, busy: busy === 'export' },
+  ];
+}
 
 function RailButton({ label, hint, onClick, children, badge, busy = false }: Readonly<{
   label: string;
@@ -28,65 +62,57 @@ function RailButton({ label, hint, onClick, children, badge, busy = false }: Rea
 }
 
 /**
- * The app's other tabs, so the panel's rail matches /active's on a laptop:
- * one rail, and a tab is a click away rather than "back" and then a click.
- * Only with the desktop layout on; career-panel.css hides it below 900px,
- * where "Back to the app" stays the way out.
+ * With the desktop layout on, the rail is the app's navigation, the same as
+ * /active's: every tab with its name under its icon, Career marked as here.
+ * Icons alone, mixed with Career's actions, were too hard to tell apart.
+ * career-panel.css hides it below 900px, where the bottom bar keeps the
+ * actions and "Back to the app".
  */
-function AppLinks() {
+function AppNav() {
   return (
-    <ul className="cp-rail-apps" aria-label="Orbis">
-      {TABS.filter(({ id }) => id !== 'career').map(({ id, label }) => {
-        const Icon = TAB_ICONS[id];
-        return (
-          <li key={id}>
-            <a className="cp-rail-btn" href={appHref(id)} aria-label={label}>
-              <Icon size={18} aria-hidden="true" />
-              <span className="cp-tip" aria-hidden="true">{label}</span>
-            </a>
-          </li>
-        );
-      })}
-    </ul>
+    <nav className="cp-rail-apps" aria-label="Orbis">
+      <ul>
+        {TABS.map(({ id, label }) => {
+          const Icon = TAB_ICONS[id];
+          const here = id === 'career';
+          return (
+            <li key={id}>
+              <a className="cp-rail-btn" href={here ? '/active/career' : appHref(id)} aria-current={here ? 'page' : undefined}>
+                <Icon size={19} aria-hidden="true" />
+                <span className="cp-rail-label">{label}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 
 /**
- * The floating quick-action rail on the left (a bar along the bottom on narrow
- * screens). Every button has its name as its accessible name and as a tooltip.
+ * The floating rail on the left (a bar along the bottom on narrow screens).
+ * Without the desktop layout it holds Career's actions as icons, each named by
+ * its accessible name and a tooltip. With it, it is the app's navigation from
+ * 900px up and the actions move onto the page as labelled buttons (PanelActions).
  */
-export function PanelRail({ onSearch, onPaste, onRunSearch, onQueue, onExport, queueCount, busy }: Readonly<{
-  onSearch: () => void;
-  onPaste: () => void;
-  onRunSearch: () => void;
-  onQueue: () => void;
-  onExport: () => void;
-  queueCount: number;
-  busy: string | null;
-}>) {
+export function PanelRail(props: ActionProps) {
   const { theme, toggle } = useTheme();
   const toLight = theme === 'dark';
   return (
-    <aside className="cp-rail" aria-label="Quick actions">
-      {DESKTOP_LAYOUT && <AppLinks />}
-      <ul>
-        <RailButton label="Search" hint="/" onClick={onSearch}><Search size={18} aria-hidden="true" /></RailButton>
-        <RailButton label="Paste a job" onClick={onPaste}><ClipboardPaste size={18} aria-hidden="true" /></RailButton>
-        <RailButton label={busy === 'search' ? 'Searching your sources…' : 'Run a search now'} onClick={onRunSearch} busy={busy === 'search'}>
-          <BusyIcon on={busy === 'search'} size={18}><Radar size={18} aria-hidden="true" /></BusyIcon>
-        </RailButton>
-        <RailButton label={queueCount ? `Open the queue, ${queueCount} waiting` : 'Open the queue'} onClick={onQueue} badge={queueCount}>
-          <ListChecks size={18} aria-hidden="true" />
-        </RailButton>
-        <RailButton label="Export the tracker as CSV" onClick={onExport} busy={busy === 'export'}>
-          <BusyIcon on={busy === 'export'} size={18}><FileDown size={18} aria-hidden="true" /></BusyIcon>
-        </RailButton>
+    <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-labelled' : 'cp-rail'} aria-label="Quick actions">
+      {DESKTOP_LAYOUT && <AppNav />}
+      <ul className="cp-rail-tools">
+        {careerActions(props).map(({ id, label, hint, Icon, onClick, busy, badge }) => (
+          <RailButton key={id} label={label} hint={hint} onClick={onClick} busy={busy} badge={badge}>
+            <BusyIcon on={Boolean(busy)} size={18}><Icon size={18} aria-hidden="true" /></BusyIcon>
+          </RailButton>
+        ))}
       </ul>
-      <ul>
+      <ul className="cp-rail-tools">
         <RailButton label={toLight ? 'Switch to light appearance' : 'Switch to dark appearance'} onClick={toggle}>
           {toLight ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
         </RailButton>
-        <li className="cp-rail-back">
+        <li>
           <a className="cp-rail-btn" href="/active#career" aria-label="Back to the app">
             <ArrowLeft size={18} aria-hidden="true" />
             <span className="cp-tip" aria-hidden="true">Back to the app</span>
@@ -94,5 +120,25 @@ export function PanelRail({ onSearch, onPaste, onRunSearch, onQueue, onExport, q
         </li>
       </ul>
     </aside>
+  );
+}
+
+/**
+ * Career's actions as labelled buttons above the page, for the desktop layout,
+ * where the rail is navigation instead. Hidden below 900px (career-panel.css),
+ * where the bottom bar has them.
+ */
+export function PanelActions(props: ActionProps) {
+  return (
+    <section className="cp-actions" aria-label="Career actions">
+      {careerActions(props).map(({ id, label, short, hint, Icon, onClick, busy, badge }) => (
+        <button key={id} type="button" className="cp-tool-btn" onClick={onClick} aria-label={label} aria-busy={busy || undefined} aria-keyshortcuts={hint === '/' ? '/ Control+K Meta+K' : undefined}>
+          <BusyIcon on={Boolean(busy)} size={16}><Icon size={16} aria-hidden="true" /></BusyIcon>
+          {short}
+          {badge ? <span className="cp-actions-count" aria-hidden="true">{badge}</span> : null}
+          {hint && <kbd aria-hidden="true">{hint}</kbd>}
+        </button>
+      ))}
+    </section>
   );
 }

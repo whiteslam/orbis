@@ -30,7 +30,7 @@
     --cp-card: var(--gl-fill);
     --cp-card-edge: var(--gl-edge);
     --cp-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 18px 40px -24px rgba(0, 0, 0, .7);
-    --cp-rail-w: 60px;
+    --cp-rail-w: 84px;
     --dk-gap: 20px;
     --dk-ask-w: 420px;
     display: block;
@@ -88,7 +88,6 @@
 
   /* ─── Rail ─── */
   .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 720px + 24px)); z-index: 30; }
-  .stage[data-desktop] .dk-rail .cp-rail-btn { width: 46px; height: 46px; }
   .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
   .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
   .stage[data-desktop] .dk-rail .dk-rail-ask { color: var(--fd-accent); }

@@ -19,11 +19,12 @@ import { allApplications, hrefFor, paletteIndex, type PaletteItem, type PanelPag
 import { PanelHeader } from '@/components/career/panel/panel-header';
 import { datedName, downloadText, goTo, useHashPage, useHashQuery, usePaletteShortcut } from '@/components/career/panel/panel-hooks';
 import { PasteDialog, QueueDrawer, StatusToast, type Toast } from '@/components/career/panel/panel-overlays';
-import { PanelRail } from '@/components/career/panel/panel-rail';
+import { PanelActions, PanelRail } from '@/components/career/panel/panel-rail';
 import { PipelinePage } from '@/components/career/panel/pipeline-page';
 import { TitleRow } from '@/components/career/panel/title-row';
 import { SERVER_MOVES, type MoveServices } from '@/components/career/panel/use-moves';
 import type { CareerJob } from '@/lib/career/types';
+import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from '@/lib/career/view';
 
 type Drawer = { jobId: string; fallback: ApplicationDetail | null };
@@ -204,6 +205,16 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
     opener.current = null;
   }, [covered]);
 
+  const actions = {
+    onSearch: openPalette,
+    onPaste: () => { remember(); setOverlay('paste'); },
+    onRunSearch: rail.runSearch,
+    onQueue: () => { remember(); setOverlay('queue'); },
+    onExport: rail.exportCsv,
+    queueCount: home?.counts.queue ?? 0,
+    busy: rail.busy,
+  };
+
   return (
     <PanelProvider value={api}>
       <div className="cp-panel">
@@ -211,15 +222,8 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
         <a className="cp-skip" href="#cp-main">Skip to content</a>
         <div className="cp-frame" inert={covered}>
           <PanelHeader page={page} who={who} />
-          <PanelRail
-            onSearch={openPalette}
-            onPaste={() => { remember(); setOverlay('paste'); }}
-            onRunSearch={rail.runSearch}
-            onQueue={() => { remember(); setOverlay('queue'); }}
-            onExport={rail.exportCsv}
-            queueCount={home?.counts.queue ?? 0}
-            busy={rail.busy}
-          />
+          <PanelRail {...actions} />
+          {DESKTOP_LAYOUT && <PanelActions {...actions} />}
           <main id="cp-main" className={`cp-main cp-page-${page}`} tabIndex={-1} aria-labelledby="cp-title">
             <TitleRow page={page} home={home} />
             <PageBody page={page} query={query} home={home} problem={problem} loading={loading} onRetry={onReload} onJobs={setKnownJobs} patchSetup={patchSetup} />

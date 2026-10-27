@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Bell, CalendarClock, HandCoins, Inbox, MessageCircleQuestion, Reply } from 'lucide-react';
+import { Bell, CalendarClock, HandCoins, Inbox, MessageCircleQuestion, Moon, Reply, Sun } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { UnmatchedReply } from '@/components/career/tracker-view';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { usePanel } from '@/components/career/panel/panel-context';
+import { useTheme } from '@/components/career/panel/panel-hooks';
 import { PAGE_META, PANEL_PAGES, allApplications, hrefFor, panelHeadsups, type PanelHeadsup, type PanelPage } from '@/components/career/panel/panel-data';
 import { isOpen } from '@/lib/career/status';
+import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 
 const HEADSUP_ICON: Record<PanelHeadsup['kind'], typeof Bell> = {
   interview: CalendarClock,
@@ -98,6 +100,19 @@ function NotifyButton() {
   );
 }
 
+/** Light or dark, beside the bell, for the desktop layout, whose rail is navigation only. Hidden below 900px, where the bottom bar has it. */
+function ThemeButton() {
+  const { theme, toggle } = useTheme();
+  const toLight = theme === 'dark';
+  const label = toLight ? 'Switch to light appearance' : 'Switch to dark appearance';
+  return (
+    <button type="button" className="cp-head-btn cp-head-theme" onClick={toggle} title={label}>
+      {toLight ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+}
+
 /** The top bar: the mark and "Career", the page pills, then the inbox, the heads-ups and who's signed in. */
 export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: string | null }>) {
   const initial = (who?.trim()[0] ?? 'O').toUpperCase();
@@ -117,6 +132,7 @@ export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: stri
         </ul>
       </nav>
       <div className="cp-head-tools">
+        {DESKTOP_LAYOUT && <ThemeButton />}
         <InboxButton />
         <NotifyButton />
         <span className="cp-avatar" role="img" aria-label={who ? `Signed in as ${who}` : 'Signed in'} title={who ?? undefined}>{initial}</span>
