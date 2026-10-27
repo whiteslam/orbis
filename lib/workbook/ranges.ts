@@ -2,7 +2,7 @@
 // <mergeCell ref> and every <dataValidation sqref>. That work grows with the range's area, not the file's size,
 // so a few hundred bytes can ask for billions of cells. These helpers measure those ranges from the raw XML
 // before ExcelJS sees it. (Conditional formatting sqref ranges are stored as text, not expanded, so they are
-// left alone.)
+// left alone.) Defined names in xl/workbook.xml and <col> spans in a worksheet are expanded the same way.
 
 const SHEET_ROWS = 1_048_576;
 const SHEET_COLUMNS = 16_384;
@@ -138,6 +138,130 @@ export function expandedRangeCells(xml: string): RangeCells {
     for (const [name, value] of tag.attributes) {
       if (name !== wanted) continue;
       for (const ref of value.split(/\s+/).filter(Boolean)) addArea(cells, rangeArea(ref));
+    }
+  }
+  return cells;
+}
+
+const COLUMN_TAG: ReadonlySet<string> = new Set(['col']);
+const COLUMN_INDEX = /^\d{1,5}$/;
+
+/**
+ * The highest column a sheet's `<col min max>` spans reach. ExcelJS makes one Column object for every index up to
+ * the largest max (filling any gap below a min too) with no bound of its own, so callers keep this within Excel's
+ * 16,384 columns. A span that is not two whole numbers with 1 <= min <= max counts as unbounded.
+ */
+export function declaredColumnExtent(xml: string): number {
+  let highest = 0;
+  for (const tag of startTags(xml, COLUMN_TAG)) {
+    const attributes = new Map(tag.attributes);
+    const min = attributes.get('min') ?? '';
+    const max = attributes.get('max') ?? '';
+    if (!COLUMN_INDEX.test(min) || !COLUMN_INDEX.test(max)) return Infinity;
+    const low = Number(min);
+    const high = Number(max);
+    if (low < 1 || low > high) return Infinity;
+    highest = Math.max(highest, high);
+  }
+  return highest;
+}
+
+const XML_ENTITIES: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
+
+function characterReference(entity: string): string | undefined {
+  const code = /^#\d{1,7}$/.test(entity) ? Number(entity.slice(1)) : /^#x[\da-fA-F]{1,6}$/.test(entity) ? Number.parseInt(entity.slice(2), 16) : NaN;
+  return Number.isInteger(code) && code <= 0x10ffff ? String.fromCodePoint(code) : undefined;
+}
+
+/** XML character data with its entities decoded, or null when it holds one this cannot read. */
+function decodeXmlText(text: string): string | null {
+  const parts: string[] = [];
+  let position = 0;
+  for (let amp = text.indexOf('&'); amp !== -1; amp = text.indexOf('&', position)) {
+    const semi = text.indexOf(';', amp);
+    if (semi === -1 || semi - amp > 10) return null;
+    const entity = text.slice(amp + 1, semi);
+    const char = XML_ENTITIES[entity] ?? characterReference(entity);
+    if (char === undefined) return null;
+    parts.push(text.slice(position, amp), char);
+    position = semi + 1;
+  }
+  parts.push(text.slice(position));
+  return parts.join('');
+}
+
+/** `text` split at characters matching `separator`, except inside single-quoted sheet names ('' is an escaped quote). */
+function splitOutsideQuotes(text: string, separator: RegExp): string[] {
+  const parts: string[] = [];
+  let quoted = false;
+  let start = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "'") quoted = !quoted;
+    else if (!quoted && separator.test(text[index])) {
+      parts.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts.filter(Boolean);
+}
+
+/** The reference after a defined-name token's plain or quoted sheet name, or null when the token is not that shape. */
+function definedNameReference(token: string): string | null {
+  if (!token.startsWith("'")) {
+    const bang = token.indexOf('!');
+    if (bang === -1) return token;
+    // ExcelJS reads an unquoted sheet name only up to its first `'`, `^`, space or `!`.
+    return /['^ ]/.test(token.slice(0, bang)) ? null : token.slice(bang + 1);
+  }
+  for (let index = 1; ; ) {
+    const quote = token.indexOf("'", index);
+    if (quote === -1) return null;
+    if (token[quote + 1] === "'") {
+      index = quote + 2;
+      continue;
+    }
+    return token[quote + 1] === '!' ? token.slice(quote + 2) : null;
+  }
+}
+
+/**
+ * The cells one defined-name token covers: an A1 range with an optional sheet name in front and any closing
+ * brackets of a surrounding formula after it (ExcelJS stops reading an address at them). Anything else, including
+ * a second `!`, counts as the whole sheet.
+ */
+function definedNameTokenArea(token: string): number {
+  const reference = definedNameReference(token);
+  if (reference === null || reference.includes('!')) return SHEET_ROWS * SHEET_COLUMNS;
+  let end = reference.length;
+  while (end > 0 && reference[end - 1] === ')') end -= 1;
+  return rangeArea(reference.slice(0, end));
+}
+
+const DEFINED_NAME_TAG: ReadonlySet<string> = new Set(['definedName']);
+const DEFINED_NAME_CLOSE = /^<\/(?:[\w.-]+:)?definedName[\s>]/;
+// ExcelJS expands a comma-separated part of a defined name into one object per cell when the text after the part's
+// last `!` contains this (unanchored) pattern: see the DefinedNames model setter in exceljs/lib/doc/defined-names.js.
+const EXPANDED_DEFINED_NAME = /\$\w+\$\d/;
+
+/**
+ * The largest single range and the total cells across the `<definedName>` values in xl/workbook.xml that ExcelJS
+ * would expand cell by cell. Every space-separated token of such a part must be a readable A1 reference (with an
+ * optional sheet name), and anything else counts as the whole sheet, as does a name whose text cannot be read.
+ */
+export function definedNameRangeCells(xml: string): RangeCells {
+  const cells: RangeCells = { largest: 0, total: 0 };
+  for (const tag of startTags(xml, DEFINED_NAME_TAG)) {
+    if (tag.selfClosing) continue;
+    const textEnd = xml.indexOf('<', tag.end);
+    const text = textEnd === -1 ? null : decodeXmlText(xml.slice(tag.end, textEnd));
+    if (text === null || !DEFINED_NAME_CLOSE.test(xml.slice(textEnd, textEnd + 64))) {
+      addArea(cells, SHEET_ROWS * SHEET_COLUMNS);
+      continue;
+    }
+    for (const part of splitOutsideQuotes(text, /,/)) {
+      if (!EXPANDED_DEFINED_NAME.test(part.slice(part.lastIndexOf('!') + 1))) continue;
+      for (const token of splitOutsideQuotes(part, /\s/)) addArea(cells, definedNameTokenArea(token));
     }
   }
   return cells;

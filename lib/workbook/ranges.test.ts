@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { expandedRangeCells, rangeArea } from './ranges';
+import { declaredColumnExtent, definedNameRangeCells, expandedRangeCells, rangeArea } from './ranges';
 
 const WHOLE_SHEET = 1_048_576 * 16_384;
 
@@ -68,4 +68,69 @@ test('a broken tag does not hide the well-formed tag after it', () => {
   assert.equal(expandedRangeCells('<mergeCell ref="A1:B2" <mergeCell ref="A1:XFD1048576"/>').largest, WHOLE_SHEET);
   assert.equal(expandedRangeCells('<mergeCells><mergeCell ref="C1:C3"/></mergeCells>').total, 3);
   assert.equal(expandedRangeCells('<mergeCellX ref="A:A"/><dataValidations sqref="A:A"/><a:b:mergeCell ref="A:A"/>').total, 0);
+});
+
+test('column spans report the highest column they reach', () => {
+  assert.equal(declaredColumnExtent('<sheetData/>'), 0);
+  assert.equal(declaredColumnExtent('<cols><col min="1" max="3" width="9"/><col min="5" max="5"/></cols>'), 5);
+  // A styled A:XFD span is common in real files and stays within Excel's own limit.
+  assert.equal(declaredColumnExtent('<x:cols><x:col min="1" max="16384" style="2"/></x:cols>'), 16_384);
+  assert.equal(declaredColumnExtent('<cols><col min="1" max="100000000" width="9"/></cols>'), Infinity);
+  assert.equal(declaredColumnExtent('<cols><col min="99999" max="99999"/></cols>'), 99_999);
+});
+
+test('column spans that are not whole numbers with 1 <= min <= max are unbounded', () => {
+  for (const col of ['<col min="0" max="3"/>', '<col min="4" max="3"/>', '<col min="1" max="2.5"/>', '<col min="1"/>', '<col min="-1" max="3"/>', '<col min="1" max="1e9"/>', '<col min="1" max="&#49;"/>']) {
+    assert.equal(declaredColumnExtent(`<cols>${col}</cols>`), Infinity, col);
+  }
+});
+
+test('defined names count the ranges ExcelJS would expand', () => {
+  const xml = `<workbook><definedNames>
+    <definedName name="Rates">Sheet1!$A$1:$B$10</definedName>
+    <definedName name="Two" localSheetId="0">'My &amp; Sheet'!$C$1:$C$5,Sheet1!$D$1</definedName>
+    <definedName name="_xlnm.Print_Titles" localSheetId="0">Sheet1!$1:$1,Sheet1!$A:$A</definedName>
+    <definedName name="Formula">OFFSET(Sheet1!$A$1,0,0,COUNTA(Sheet1!$A:$A),1)</definedName>
+    <definedName name="Sum">SUM(Sheet1!$A$1:$A$4)</definedName>
+    <definedName name="Constant">0.05</definedName>
+    <definedName name="Broken">#REF!</definedName>
+    <definedName name="Empty"/>
+  </definedNames></workbook>`;
+  assert.deepEqual(definedNameRangeCells(xml), { largest: 20, total: 20 + 5 + 1 + 1 + 4 });
+});
+
+test('a whole-sheet defined name is found however it is written', () => {
+  for (const value of [
+    'Sheet1!$A$1:$XFD$1048576',
+    "'Sheet, one'!$A$1:$XFD$1048576",
+    '&#83;heet1!&#36;A&#36;1:&#36;XFD&#36;1048576',
+    'Sheet1!$A$1 Sheet1!$A$1:$XFD$1048576',
+    'A1:XFD1048576 $B$2',
+    'S!$A$1:$Z$9999!$B$2',
+    'Sheet1!$A$1:$B$2:$XFD$1048576',
+    "'unterminated!$A$1",
+    'Sheet1!$A$1:$B$99999999',
+  ]) {
+    assert.ok(definedNameRangeCells(`<definedName name="n">${value}</definedName>`).largest >= 1_000_000, value);
+  }
+});
+
+test('a defined name whose text cannot be read counts as the whole sheet', () => {
+  for (const xml of [
+    '<definedName name="n"><![CDATA[Sheet1!$A$1:$XFD$1048576]]></definedName>',
+    '<definedName name="n">Sheet1!$A$1&bogus;</definedName>',
+    '<definedName name="n">Sheet1!$A$1',
+    '<definedName name="n">Sheet1!$A$1<!-- x --></definedName>',
+  ]) {
+    assert.equal(definedNameRangeCells(xml).largest, WHOLE_SHEET, xml);
+  }
+});
+
+test('defined names are scanned in linear time', () => {
+  for (const xml of ['<definedName '.repeat(200_000), `<definedName name="n">${"'".repeat(1_000_000)}</definedName>`, `<definedName>${'$a'.repeat(500_000)}</definedName>`]) {
+    const started = performance.now();
+    definedNameRangeCells(xml);
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 1_000, `took ${elapsed} ms`);
+  }
 });
