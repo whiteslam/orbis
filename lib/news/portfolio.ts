@@ -35,7 +35,7 @@ function byCodeUnit(left: string, right: string) {
  * recorded yourself. Personal, so only a model that will not train on it sees it.
  */
 export async function loadPortfolioNews(userId: string, email: string | null): Promise<PortfolioNewsResult> {
-  const blocked = await aiBlocked(userId, 'personal');
+  const blocked = await aiBlocked(userId);
   if (blocked === 'off') return { state: 'off', message: AI_OFF_MESSAGE };
   if (blocked) return { state: 'error', message: 'No AI provider that can hold your holdings is available right now.' };
 

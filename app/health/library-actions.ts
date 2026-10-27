@@ -32,7 +32,7 @@ const NO_PROVIDER_MESSAGE = 'No AI provider that can hold your documents is avai
  * charged. Returns the message to show, or null to go ahead.
  */
 async function consumeAiRequest(userId: string) {
-  const blocked = await aiBlocked(userId, 'personal');
+  const blocked = await aiBlocked(userId);
   if (blocked === 'off') return AI_OFF_MESSAGE;
   if (blocked) return NO_PROVIDER_MESSAGE;
   let admin: ReturnType<typeof createAdminClient>;

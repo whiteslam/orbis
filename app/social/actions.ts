@@ -361,7 +361,7 @@ export async function draftMonthWithAiAction(input: DraftMonthInput): Promise<Re
 
   // Before the daily draft credit is spent: nothing is charged for a request
   // that consent or the registry would stop anyway.
-  const blocked = await aiBlocked(userId, useProfile ? 'personal' : 'general');
+  const blocked = await aiBlocked(userId);
   if (blocked) return { success: false, message: blocked === 'off' ? AI_OFF_MESSAGE : NO_MODEL_MESSAGE };
 
   let profile: { preferredName: string; role: string; aboutMe: string } | null = null;

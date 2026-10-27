@@ -6,7 +6,7 @@ import { getAiConsent } from '@/lib/ai/consent-store';
 import { DEPTHS, questionDepthRequest, readDecision, type Decision } from '@/lib/ai/decide';
 import { later, recordAiEvent } from '@/lib/ai/events';
 import { failureFor } from '@/lib/ai/adapters/types';
-import { budgetState } from '@/lib/ai/policy';
+import { budgetCapped, budgetState } from '@/lib/ai/policy';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const SYSTEM_ONE_URL = 'https://openrouter.ai/api/v1/systemone';
@@ -63,8 +63,11 @@ export async function needsReasoning(userId: string, question: string, feature: 
   if (!aiAllowed(await getAiConsent(userId))) return undefined;
   // With the budget spent Claude cannot run anyway, so there is nothing to decide.
   const config = currentBudget();
-  const spent = await monthSpendUsd(admin);
-  if (config.monthlyInr === 0 || spent === null || budgetState(spent, config) === 'critical') return undefined;
+  if (config.monthlyInr === 0) return undefined;
+  if (budgetCapped(config)) {
+    const spent = await monthSpendUsd(admin);
+    if (spent === null || budgetState(spent, config) === 'critical') return undefined;
+  }
 
   const model = jevModel();
   const startedAt = Date.now();

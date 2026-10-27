@@ -7,7 +7,7 @@ const row = (overrides: Partial<UsageRow>): UsageRow => ({
   providerId: 'groq', modelId: 'gpt-oss', outcome: 'succeeded', attempt: 1, durationMs: 1_000, inputTokens: 1_000, outputTokens: 100, costUsd: 0, ...overrides,
 });
 
-const config = budgetConfig({});
+const config = budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '300' });
 // 15 Oct, about 46% of the way through October in India.
 const now = new Date('2026-10-15T06:30:00Z');
 
@@ -57,4 +57,10 @@ test('one provider can host free and paid models: each call is judged by its own
   ], ['openrouter/anthropic/claude-haiku-4.5'], config, now);
   assert.equal(summary.free.calls, 1);
   assert.equal(summary.paid.calls, 2);
+});
+
+test('with no cap the budget reads as null, never Infinity', () => {
+  const summary = summariseUsage([], [], budgetConfig({}), now);
+  assert.equal(summary.budgetInr, null);
+  assert.equal(summary.state, 'normal');
 });

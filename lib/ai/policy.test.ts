@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { attemptCostUsd, budgetConfig, budgetState, capAttempts, monthStartIso, orderCandidates, paidAffordable, personalDataGuarded, worstCaseCostUsd, type Priced } from './policy';
+import { attemptCostUsd, budgetCapped, budgetConfig, budgetState, capAttempts, monthStartIso, orderCandidates, paidAffordable, worstCaseCostUsd, type Priced } from './policy';
 
 const free = (id: string, order: number): Priced => ({ id, order, paid: false, inputUsdPerMTok: 0, outputUsdPerMTok: 0 });
 const haiku = (order = 5): Priced => ({ id: 'haiku', order, paid: true, inputUsdPerMTok: 1, outputUsdPerMTok: 5 });
@@ -15,16 +15,23 @@ test('the worst case assumes every allowed output token is used', () => {
   assert.equal(worstCaseCostUsd(4_000, 1_000, haiku()), 0.001 + 0.005);
 });
 
-test('budget comes from the environment, with ₹300 and fallback-only paid use by default', () => {
-  assert.deepEqual(budgetConfig({}), { monthlyInr: 300, usdInr: 88, paidRouting: 'fallback' });
+test('by default there is no cap, and paid models lead for quality features', () => {
+  assert.deepEqual(budgetConfig({}), { monthlyInr: Number.POSITIVE_INFINITY, usdInr: 88, paidRouting: 'quality' });
+  assert.equal(budgetCapped(budgetConfig({})), false);
+  assert.equal(budgetState(1_000, budgetConfig({})), 'normal');
+  assert.equal(paidAffordable({ promptChars: 4_000_000, maxTokens: 64_000 }, haiku(), 1_000, budgetConfig({})), true);
+});
+test('a budget set in the environment brings the cap back', () => {
+  assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '300' }).paidRouting, 'fallback');
+  assert.equal(budgetCapped(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '300' })), true);
   assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '500' }).paidRouting, 'quality');
   assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '500', ORBIS_AI_PAID_ROUTING: 'fallback' }).paidRouting, 'fallback');
   assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '0' }).monthlyInr, 0);
-  assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: 'lots', ORBIS_AI_USD_INR: '-1' }).monthlyInr, 300);
+  assert.equal(budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: 'lots', ORBIS_AI_USD_INR: '-1' }).monthlyInr, Number.POSITIVE_INFINITY);
   assert.equal(budgetConfig({ ORBIS_AI_USD_INR: '84.5' }).usdInr, 84.5);
 });
 test('the month is normal, then warning from 80%, then critical when the budget is spent', () => {
-  const config = budgetConfig({});
+  const config = budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '300' });
   assert.equal(budgetState(0, config), 'normal');
   assert.equal(budgetState((240 / 88) - 0.01, config), 'normal');
   assert.equal(budgetState(240 / 88, config), 'warning');
@@ -59,7 +66,7 @@ test('the attempt cap never squeezes out the paid fallback', () => {
   assert.deepEqual(ids(capAttempts([free('a', 1), free('b', 2)], 4)), ['a', 'b']);
 });
 test('a paid attempt is only made when its worst case fits what is left of the month', () => {
-  const config = budgetConfig({});
+  const config = budgetConfig({ ORBIS_AI_MONTHLY_BUDGET_INR: '300' });
   // ₹300 at 88 is about $3.41; this request could cost at most $0.006.
   assert.equal(paidAffordable({ promptChars: 4_000, maxTokens: 1_000 }, haiku(), 3, config), true);
   assert.equal(paidAffordable({ promptChars: 4_000, maxTokens: 1_000 }, haiku(), 3.405, config), false);
@@ -70,18 +77,6 @@ test('the budget month starts at midnight on the 1st in India', () => {
   // 1 Oct 02:00 in India is still 30 Sep in UTC, but already October's budget.
   assert.equal(monthStartIso(new Date('2026-09-30T20:30:00Z')), '2026-09-30T18:30:00.000Z');
   assert.equal(monthStartIso(new Date('2026-01-01T00:00:00Z')), '2025-12-31T18:30:00.000Z');
-});
-
-const DENY = { provider: { data_collection: 'deny', only: ['anthropic'], allow_fallbacks: false } };
-test('personal data reaches an OpenRouter model only when the request tells it to deny data collection', () => {
-  assert.equal(personalDataGuarded('https://openrouter.ai/api/v1', DENY), true);
-  assert.equal(personalDataGuarded('https://openrouter.ai/api/v1', {}), false);
-  assert.equal(personalDataGuarded('https://openrouter.ai/api/v1', { provider: { data_collection: 'allow' } }), false);
-  assert.equal(personalDataGuarded('https://openrouter.ai/api/v1', { reasoning: { effort: 'low' } }), false);
-});
-test('other providers keep their own registry stance', () => {
-  assert.equal(personalDataGuarded('https://api.groq.com/openai/v1', {}), true);
-  assert.equal(personalDataGuarded('https://api.anthropic.com', {}), true);
 });
 
 test('a Jev verdict overrides the mode for that one request', () => {

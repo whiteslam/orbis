@@ -5,11 +5,12 @@
  * (ai_models.input_usd_per_mtok / output_usd_per_mtok), the budget in the
  * environment; nothing about money is written into a feature.
  *
- * Free models cost nothing and are never limited by the budget. A paid model
- * (Claude Haiku) is the reliability layer: in the default ₹300 setup it is
- * only tried after every free model has failed, and in a ₹500 setup it goes
- * first for the features where quality matters most. Moving between the two
- * is a change to ORBIS_AI_MONTHLY_BUDGET_INR, not to code.
+ * Free models cost nothing and are never limited by the budget. By default
+ * there is no monthly cap: the owner chose capability over cost (2026-10-27),
+ * so paid models go first for the features where quality matters most. A
+ * positive ORBIS_AI_MONTHLY_BUDGET_INR brings a cap back (below ₹500 paid
+ * models are only a fallback; from ₹500 they lead for quality features), and
+ * 0 means paid models never run. That is a change to the environment, not to code.
  */
 import type { TokenUsage } from '@/lib/ai/attempt';
 
@@ -19,7 +20,8 @@ export type PaidRouting = 'fallback' | 'quality';
 export type BudgetState = 'normal' | 'warning' | 'critical';
 export type BudgetConfig = { monthlyInr: number; usdInr: number; paidRouting: PaidRouting };
 
-const DEFAULT_MONTHLY_INR = 300;
+/** No cap unless the environment sets one. */
+const DEFAULT_MONTHLY_INR = Number.POSITIVE_INFINITY;
 // Only used to compare a dollar-priced bill with a rupee budget. Set
 // ORBIS_AI_USD_INR to the rate on your card statement; this is a placeholder.
 const DEFAULT_USD_INR = 88;
@@ -29,7 +31,7 @@ const QUALITY_FROM_INR = 500;
 const WARNING_SHARE = 0.8;
 
 /** Where answer quality is worth paying for first, when the budget allows it. */
-const QUALITY_FEATURES = new Set(['ask_orbis', 'talk_orbis', 'health_plan', 'health_plan_questions', 'workbook_advice', 'portfolio_advice', 'news_digest', 'portfolio_news']);
+const QUALITY_FEATURES = new Set(['ask_orbis', 'talk_orbis', 'health_plan', 'health_plan_questions', 'workbook_advice', 'portfolio_advice', 'news_digest', 'portfolio_news', 'career_profile', 'career_tailor', 'career_offer', 'career_prep']);
 /** Where Orbis's own wording is already fine, so no request is ever paid for. */
 const FREE_ONLY_FEATURES = new Set(['headsups']);
 
@@ -67,7 +69,13 @@ export function budgetConfig(env: Record<string, string | undefined>): BudgetCon
   };
 }
 
+/** Whether the month's spend is capped at all. */
+export function budgetCapped(config: Pick<BudgetConfig, 'monthlyInr'>) {
+  return Number.isFinite(config.monthlyInr);
+}
+
 export function budgetState(spentUsd: number, config: BudgetConfig): BudgetState {
+  if (!budgetCapped(config)) return 'normal';
   // In whole paise, so a float like 239.99999999 does not decide the state.
   const spentInr = Math.round(spentUsd * config.usdInr * 100) / 100;
   if (spentInr >= config.monthlyInr) return 'critical';
@@ -106,6 +114,7 @@ export function capAttempts<T extends Pick<Priced, 'paid'>>(ordered: T[], max: n
 
 /** Whether a paid attempt's worst case still fits inside the month's budget. */
 export function paidAffordable(request: { promptChars: number; maxTokens: number }, model: Priced, spentUsd: number, config: BudgetConfig) {
+  if (!budgetCapped(config)) return true;
   const leftUsd = config.monthlyInr / config.usdInr - spentUsd;
   return worstCaseCostUsd(request.promptChars, request.maxTokens, model) <= leftUsd;
 }
@@ -116,25 +125,4 @@ const IST_OFFSET_MS = 330 * 60_000;
 export function monthStartIso(now: Date) {
   const india = new Date(now.getTime() + IST_OFFSET_MS);
   return new Date(Date.UTC(india.getUTCFullYear(), india.getUTCMonth(), 1) - IST_OFFSET_MS).toISOString();
-}
-
-/**
- * OpenRouter is a router, not a model host: who keeps the data depends on which
- * upstream provider it picks. A model there may only see personal data when the
- * request itself tells OpenRouter to use providers that do not collect it
- * (`provider.data_collection: "deny"`, from the model's request_extra). This is
- * checked in code so a registry row that says may_train = false without the
- * setting that makes it true is not enough. Other providers are the host
- * themselves, so their registry stance stands.
- */
-export function personalDataGuarded(baseUrl: string, extra: Record<string, unknown>) {
-  let host = '';
-  try {
-    host = new URL(baseUrl).host;
-  } catch {
-    return false;
-  }
-  if (host !== 'openrouter.ai') return true;
-  const provider = extra.provider as { data_collection?: unknown } | undefined;
-  return provider?.data_collection === 'deny';
 }

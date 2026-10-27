@@ -25,7 +25,8 @@ export type UsageSummary = {
   fallbacks: number;
   averageLatencyMs: number | null;
   spentInr: number;
-  budgetInr: number;
+  /** Null when there is no monthly cap. */
+  budgetInr: number | null;
   /** The month's spend if the pace so far continues. */
   projectedInr: number;
   state: BudgetState;
@@ -78,7 +79,8 @@ export function summariseUsage(rows: UsageRow[], paidModels: string[], config: B
     fallbacks,
     averageLatencyMs: answered ? Math.round(latency / answered) : null,
     spentInr,
-    budgetInr: config.monthlyInr,
+    // Null when there is no cap: Infinity doesn't survive JSON.
+    budgetInr: Number.isFinite(config.monthlyInr) ? config.monthlyInr : null,
     projectedInr: paise(spentInr / Math.min(elapsed, 1)),
     state: budgetState(billUsd, config),
   };

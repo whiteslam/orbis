@@ -57,7 +57,7 @@ export async function generatePortfolioAdviceAction(value: unknown): Promise<Adv
   }
 
   // Before any holdings are loaded or a daily credit is spent.
-  const blocked = await aiBlocked(userId, 'personal');
+  const blocked = await aiBlocked(userId);
   if (blocked === 'off') return { success: false, message: AI_OFF_MESSAGE };
   if (blocked) return { success: false, message: NO_PROVIDER_MESSAGE };
 

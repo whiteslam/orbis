@@ -345,7 +345,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
 
   // Before any personal context is read or the daily advice credit is spent:
   // a request that consent or the registry would stop must not cost a credit.
-  const blocked = await aiBlocked(userId, 'personal');
+  const blocked = await aiBlocked(userId);
   if (blocked) return { success: false, message: blocked === 'off' ? AI_OFF_MESSAGE : NO_PROVIDER_MESSAGE };
 
   const { verificationToken: _verificationToken, ...workbookData } = preview;

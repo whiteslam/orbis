@@ -8,7 +8,7 @@ import { aiAllowed } from '@/lib/ai/consent';
 import { later, MISSING_COLUMN, recordAiEvent } from '@/lib/ai/events';
 import { getAiConsent } from '@/lib/ai/consent-store';
 import {
-  attemptCostUsd, budgetState, capAttempts, orderCandidates, paidAffordable, personalDataGuarded, worstCaseCostUsd,
+  attemptCostUsd, budgetCapped, budgetState, capAttempts, orderCandidates, paidAffordable, worstCaseCostUsd,
   type BudgetConfig, type BudgetState, type Priced,
 } from '@/lib/ai/policy';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -16,21 +16,19 @@ import { createAdminClient } from '@/lib/supabase/admin';
 /**
  * The AI router the registry was designed for.
  *
- * `ai_providers` and `ai_models` were seeded with priorities, free-tier flags
- * and a `may_train` column, and then nothing read them: the notification writer
- * hard-coded two Groq models and the Home brief called OpenRouter directly.
- * That mattered, because the registry marks Groq as the only provider that will
- * not train on what it is sent, and the brief was sending spending totals and a
- * portfolio to one that will.
+ * `ai_providers` and `ai_models` hold priorities, free-tier flags and prices;
+ * this reads them so no feature hard-codes a model.
  *
- * So sensitivity is the first filter here, not a comment. A 'personal' request
- * can only ever reach a provider whose may_train is false; if none is
- * available, the caller gets null and falls back to wording Orbis wrote itself.
+ * Sensitivity is still carried on every request and logged, but it no longer
+ * narrows the providers: the owner lifted the rule that personal data may only
+ * reach providers that don't train on it (2026-10-27), choosing the most
+ * capable model over the most private one. Restoring it means filtering
+ * candidates() on may_train again.
  *
- * Money is the second. Free models are always allowed. A paid one (Claude
- * Haiku) runs only inside the month's budget, as lib/ai/policy.ts orders it:
- * after the free models by default, first for quality features from ₹500.
- * How each provider is actually called lives in lib/ai/adapters.
+ * Money decides the order. Free models are always allowed; paid ones run first
+ * for quality features, and only within a cap when the environment sets one
+ * (lib/ai/policy.ts). How each provider is actually called lives in
+ * lib/ai/adapters.
  */
 export type Sensitivity = 'personal' | 'general';
 
@@ -153,11 +151,11 @@ function pricing(model: Row): Pick<Candidate, 'paid' | 'inputUsdPerMTok' | 'outp
 }
 
 /**
- * Every model that could serve this sensitivity right now, free or paid, with
+ * Every model that could serve a request right now, free or paid, with
  * the registry's own order (provider priority, then model priority). Whether a
  * paid one may actually run is the budget's call, in plan().
  */
-async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candidate[]> {
+async function candidates(admin: Admin): Promise<Candidate[]> {
   const now = new Date().toISOString();
   const { providers, models } = await registry(admin);
   if (providers.error || models.error) return [];
@@ -169,14 +167,12 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
     if (!provider) return [];
     const apiStyle = typeof provider.api_style === 'string' ? provider.api_style : 'openai';
     if (!callable(provider, model, apiStyle, now)) return [];
-    // A model may override its provider's training stance; the stricter of the two wins.
+    // A model may override its provider's training stance; kept for the log.
     const mayTrain = model.may_train ?? provider.may_train;
-    if (sensitivity === 'personal' && mayTrain !== false) return [];
     // A model may override its provider's options entirely: null inherits,
     // {} deliberately sends none. Groq needs reasoning_effort for GPT-OSS
     // and must not send it to Qwen, which reasons harder when it sees it.
     const extra = (model.request_extra ?? provider.request_extra ?? {}) as Record<string, unknown>;
-    if (sensitivity === 'personal' && !personalDataGuarded(provider.base_url as string, extra)) return [];
     if (!process.env[provider.api_key_env as string]?.trim()) return [];
     const cost = pricing(model);
     if (!cost) return [];
@@ -199,10 +195,12 @@ async function candidates(admin: Admin, sensitivity: Sensitivity): Promise<Candi
  * Who to ask, in order, given this month's spend. The spend is only read when a
  * paid model is in play; when it cannot be read, paid models sit this one out.
  */
-async function plan(admin: Admin, sensitivity: Sensitivity, feature: string, escalate?: boolean) {
-  const all = await candidates(admin, sensitivity);
+async function plan(admin: Admin, feature: string, escalate?: boolean) {
+  const all = await candidates(admin);
   const config = currentBudget();
-  const spentUsd = all.some((candidate) => candidate.paid) ? await monthSpendUsd(admin) : 0;
+  // Without a cap the spend decides nothing, so it isn't read.
+  const capped = budgetCapped(config);
+  const spentUsd = capped && all.some((candidate) => candidate.paid) ? await monthSpendUsd(admin) : 0;
   const state: BudgetState = spentUsd === null ? 'critical' : budgetState(spentUsd, config);
   const ordered = capAttempts(orderCandidates(all, { feature, paidRouting: config.paidRouting, state, escalate }), MAX_ATTEMPTS);
   return { ordered, spentUsd: spentUsd ?? Number.POSITIVE_INFINITY, config };
@@ -301,7 +299,7 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const deadline = Date.now() + Math.min(timeoutMs * 1.5, MAX_TOTAL_MS);
   const promptChars = request.system.length + request.user.length;
-  const { ordered, spentUsd, config } = await plan(admin, request.sensitivity, request.feature, request.escalate);
+  const { ordered, spentUsd, config } = await plan(admin, request.feature, request.escalate);
   let attempt = 0;
   for (const candidate of ordered) {
     const remaining = deadline - Date.now();
@@ -327,10 +325,10 @@ export async function routeJson(request: RouterRequest): Promise<RouterResult> {
   return null;
 }
 
-/** Whether any model could serve this sensitivity right now, budget included, for settings copy. */
-export async function routerAvailable(sensitivity: Sensitivity) {
+/** Whether any model could serve a request right now, budget included, for settings copy. */
+export async function routerAvailable() {
   try {
-    return (await plan(createAdminClient(), sensitivity, 'availability')).ordered.length > 0;
+    return (await plan(createAdminClient(), 'availability')).ordered.length > 0;
   } catch {
     return false;
   }

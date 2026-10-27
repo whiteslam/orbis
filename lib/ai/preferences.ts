@@ -35,7 +35,7 @@ export function externalDocumentIndexing() {
 export async function getAiPreferences(userId: string): Promise<AiPreferences> {
   const base = { aiEnabled: false, aiConsentedAt: null, homeBriefEnabled: false, externalDocumentIndexing: externalDocumentIndexing() };
   const [configured, row] = await Promise.all([
-    routerAvailable('personal'),
+    routerAvailable(),
     (async () => {
       const supabase = await createClient();
       return supabase

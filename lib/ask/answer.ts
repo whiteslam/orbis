@@ -24,7 +24,7 @@ export type AskResult = { success: boolean; message: string; answer?: string; ci
  * path checks it before a recording leaves the server.
  */
 export async function askBlockedMessage(userId: string): Promise<string | null> {
-  const blocked = await aiBlocked(userId, 'personal');
+  const blocked = await aiBlocked(userId);
   if (blocked === 'off') return AI_OFF_MESSAGE;
   return blocked ? NO_MODEL_MESSAGE : null;
 }

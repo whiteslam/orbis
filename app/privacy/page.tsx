@@ -31,7 +31,8 @@ export default function PrivacyPage() {
         <p>Orbis only holds what you connect, upload or type in. Depending on what you use, that can include:</p>
         <ul>
           <li>Your account email address</li>
-          <li>The sender, subject, date and Gmail’s short preview of mail Gmail marks as important, read live from a connected Gmail account to show on Today and not stored (read-only — Orbis never sends, edits or deletes anything in Gmail)</li>
+          <li>The sender, subject, date and Gmail’s short preview of mail Gmail marks as important, read live from a connected Gmail account to show on Today and not stored</li>
+          <li>If you use Career: your resume, what you&apos;re looking for, the jobs Orbis finds, your applications and the files made for them, and the job-alert emails and employer replies it reads in your Gmail to track them. Orbis never edits or deletes anything in Gmail. It sends mail only if you turn sending on, and then only an application, follow-up or reply you approved by pressing Send.</li>
           <li>Holdings from a connected broker account (Zerodha or Groww), read-only</li>
           <li>Step counts synced from your device</li>
           <li>Health documents you upload for a preview and AI-grounded observations</li>
@@ -46,7 +47,8 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Supabase</strong> — hosts your account, your data and file storage</li>
           <li><strong>Vercel</strong> — hosts and runs the application</li>
-          <li><strong>Google</strong> — Gmail (read-only, important mail on Today) and Calendar, only if you connect them</li>
+          <li><strong>Google</strong>: Gmail (important mail on Today, plus job alerts and employer replies for Career, and sending only what you approve if you allow it) and Calendar, only if you connect them</li>
+          <li><strong>Job boards</strong>: Himalayas, Remotive, Remote OK, We Work Remotely, Jobspresso, Hacker News, Adzuna, and the hiring pages of companies you add (Greenhouse, Lever, Ashby, Recruitee). Orbis only reads their public listings, except that sending an application through Recruitee shares that application with the company</li>
           <li><strong>Zerodha</strong> and <strong>Groww</strong> — read-only broker holdings, only if you connect them</li>
           <li><strong>Groq, Google Gemini, Mistral, OpenRouter, Anthropic and TypeSafe</strong> — the AI providers behind Orbis&apos;s AI features, chosen automatically by a router (see below)</li>
           <li><strong>Open-Meteo</strong> — weather for your approximate location</li>
@@ -54,12 +56,12 @@ export default function PrivacyPage() {
         </ul>
         <p>We do not sell your data, and we do not run ads or tracking pixels on Orbis.</p>
 
-        <h2>The AI no-training rule</h2>
+        <h2>How AI requests are routed</h2>
         <p>
-          When a request involves anything personal — your finances, health documents, notes or journal — Orbis&apos;s
-          AI router only calls providers whose models are flagged as not training on submitted data. General,
-          non-personal requests may use a broader set of providers. This rule is enforced in code, not just policy: a
-          personal request that only fits a training-capable provider is refused rather than sent.
+          Orbis&apos;s AI router picks the most capable available provider for each request. Requests built from
+          personal data, such as your finances, health documents, notes, journal, resume or job applications, can go to
+          any of the providers listed above, and some of them may keep or train on what they receive. Every request is
+          logged with the provider and model that answered it.
         </p>
 
         <h2>Why we keep it, and for how long</h2>

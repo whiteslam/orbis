@@ -66,9 +66,10 @@ export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiP
         <li>Health plans: passages from your health documents, your profile, fitness persona, step averages and your answers.</li>
         <li>Ask Orbis: your question, plus the last six months of only the sources you tick for it: journal entries (moods, tags and the entries that match your question), saved notes, weekly spending totals and top places, weekly routine answers, and weekly step averages.</li>
         <li>Social drafts: your brief for the month and the platforms you chose, plus your profile if you tick “Use my profile”.</li>
+        <li>Career: your resume and career profile, what you’re looking for, the job descriptions it reads, and replies from employers in your Gmail, to score jobs, tailor applications, classify replies and advise on offers.</li>
       </ul>
       <p className="fd-note">
-        Requests go to Groq, Google Gemini, Mistral, OpenRouter or Anthropic (Claude). Anything built from your personal data only goes to a provider that does not train on what it receives: Groq, or Claude, either directly or through OpenRouter set to use only Anthropic and never a provider that keeps data; if none is available, the feature stays off rather than send it elsewhere. Social drafts that don’t use your profile may go to any of them.
+        Requests go to Groq, Google Gemini, Mistral, OpenRouter or Anthropic (Claude), whichever is most capable for the job and available. Requests built from your personal data are no longer limited to providers that don’t train on what they receive, so some of these providers may keep or learn from what they’re sent.
       </p>
       <p className="fd-note">
         Before Ask Orbis or Talk to Orbis answers, Jev (a decision model by TypeSafe, through OpenRouter with zero data retention) reads your question, and only your question, to decide whether it needs Claude or a free model can answer it.
@@ -84,6 +85,7 @@ export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiP
 }
 
 const rupees = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: amount < 100 ? 2 : 0 }).format(amount);
+const spendLine = (spent: number, budget: number | null) => budget === null ? `${rupees(spent)} spent, no monthly cap` : `${rupees(spent)} of your ${rupees(budget)} budget`;
 const plural = (count: number, word: string) => `${count.toLocaleString('en-IN')} ${word}${count === 1 ? '' : 's'}`;
 
 /**
@@ -104,7 +106,7 @@ function AiUsageLine() {
   if (!usage) return null;
 
   const parts = [`This month: ${plural(usage.free.calls, 'free model call')}`];
-  if (usage.paid.calls || usage.spentInr > 0) parts.push(`${plural(usage.paid.calls, 'paid call')} (Claude and Jev), ${rupees(usage.spentInr)} of your ${rupees(usage.budgetInr)} budget`);
+  if (usage.paid.calls || usage.spentInr > 0) parts.push(`${plural(usage.paid.calls, 'paid call')} (Claude and Jev), ${spendLine(usage.spentInr, usage.budgetInr)}`);
   const notes = [
     usage.fallbacks ? `${plural(usage.fallbacks, 'answer')} came from a backup model.` : '',
     usage.state === 'warning' ? 'The budget is nearly used, so Claude is only a last resort for the rest of the month.' : '',
