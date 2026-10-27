@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { jobDetailAction } from '@/app/career/actions';
-import { NoticeLine } from '@/components/career/bits';
+import { NoticeLine, SafeLink } from '@/components/career/bits';
 import { creditFor } from '@/components/career/format';
 import { StatusChip } from '@/components/career/status-chip';
 import { AtsCard, FilesRow, RemovedList } from '@/components/career/sheet/checks';
@@ -50,7 +50,7 @@ function ApplicationSections({ detail, application, context, original, handOff, 
   return (
     <>
       {showKit && application.status !== 'sent' && <ApplyKit application={application} detail={detail} handOff={handOff} onDetail={onDetail} />}
-      {showOffer && <OfferSection applicationId={application.id} offer={detail.offer} onDetail={onDetail} />}
+      {showOffer && <OfferSection applicationId={application.id} offer={detail.offer} replyTo={detail.offerReplyTo ?? null} onDetail={onDetail} />}
       {application.prep && <PrepPack prep={application.prep} profile={context.profile} />}
       <FollowUp application={application} job={detail.job} events={detail.events} name={context.profile?.contact.name ?? ''} onDetail={onDetail} />
       {application.draft && <ResumePreview draft={application.draft} profile={context.profile} />}
@@ -60,7 +60,12 @@ function ApplicationSections({ detail, application, context, original, handOff, 
       <FilesRow files={detail.files} />
       <Timeline events={detail.events} />
       <OwnerMoves applicationId={application.id} onDetail={onDetail} />
-      {SEND_STATES.has(application.status) && <SendBar application={application} canSend={context.canSend} onDetail={onDetail} onHandOff={setHandOff} onSent={onSent} />}
+      {SEND_STATES.has(application.status) && (
+        <SendBar
+          application={application} recipient={detail.recipient ?? null} company={detail.job.company} canSend={context.canSend}
+          onDetail={onDetail} onHandOff={setHandOff} onSent={onSent}
+        />
+      )}
     </>
   );
 }
@@ -161,9 +166,9 @@ export function ApplicationSheet({ jobId, initial = null, fallback = null, conte
         {job && (
           <div className="cr-sheet-meta">
             {detail?.application && <StatusChip status={detail.application.status} />}
-            <a className="cr-credit" href={job.url} target="_blank" rel="noopener noreferrer">
-              {creditFor(job)}<ExternalLink size={10} aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
-            </a>
+            <SafeLink className="cr-credit" url={job.url}>
+              {creditFor(job)}<ExternalLink size={10} aria-hidden="true" />
+            </SafeLink>
           </div>
         )}
       </header>

@@ -149,6 +149,8 @@
 .cr-unmatched-item p { display: flex; justify-content: space-between; gap: 10px; margin: 0; color: var(--fd-ink); font-size: 13px; line-height: 1.45; }
 .cr-unmatched-item b { font-weight: 600; }
 .cr-unmatched-item time { flex: none; color: var(--fd-faint); font-size: 11px; }
+.cr-unmatched-item small { display: block; margin-top: 2px; color: var(--fd-soft); font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.cr-unmatched-item .cr-unmatched-snippet { color: var(--fd-faint); }
 .cr-attach { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .cr-attach select { flex: 1; min-width: 0; min-height: 34px; padding: 0 8px; border: 1px solid var(--fd-rule); border-radius: 10px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 12.5px; }
 .cr-stage { margin-top: 18px; }
@@ -452,6 +454,13 @@
 .cr-send:disabled { background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-faint); cursor: default; }
 .cr-send:focus-visible { outline: 2px solid var(--fd-ink); outline-offset: 3px; }
 .cr-sendbar .fd-hint { display: block; margin-top: 6px; text-align: center; }
+.cr-recipient { margin: 8px 0 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.45; }
+.cr-recipient b { color: var(--fd-ink); font-weight: 650; }
+.cr-recipient-text { overflow-wrap: anywhere; }
+.fd-msg.cr-recipient-warn { margin: 8px 0 0; }
+.cr-confirm { margin-top: 10px; }
+.cr-confirm p { margin: 0; color: var(--fd-ink); font-size: 13px; line-height: 1.5; }
+.cr-confirm-cancel { display: block; margin: 8px auto 0; }
 
 .cr-timeline { margin: 10px 0 0; padding: 0; list-style: none; }
 .cr-timeline li { position: relative; display: flex; gap: 12px; padding-bottom: 14px; }

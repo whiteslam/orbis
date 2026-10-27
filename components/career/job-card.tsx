@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Check, Circle, CircleDot, ExternalLink, MapPin } from 'lucide-react';
+import { SafeLink } from '@/components/career/bits';
 import { ScoreRing } from '@/components/career/score-ring';
 import { creditFor, freshness, salaryText } from '@/components/career/format';
 import type { CareerJob, MatchLine } from '@/lib/career/types';
@@ -80,9 +81,9 @@ export function JobCard({ job, threshold = null, onOpen, actions, now }: Readonl
 
       <div className="cr-job-foot">
         {salary ? <span className="cr-salary">{salary}</span> : <span className="cr-salary none">Salary not stated</span>}
-        <a className="cr-credit" href={job.url} target="_blank" rel="noopener noreferrer">
-          {creditFor(job)}<ExternalLink size={10} aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
-        </a>
+        <SafeLink className="cr-credit" url={job.url}>
+          {creditFor(job)}<ExternalLink size={10} aria-hidden="true" />
+        </SafeLink>
       </div>
 
       {actions && <div className="cr-job-actions">{actions}</div>}

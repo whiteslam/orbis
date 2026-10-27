@@ -38,15 +38,18 @@ type JobConfig = {
  * Per-feature settings. Extraction and classification run cold (0.1) so the
  * output sticks to what the text says; writing for a person runs warmer.
  * Requirements, alerts and mail are read by the crons in bulk, hence hundreds
- * a day; the rest follow an owner's press or a rare event.
+ * a day; the rest follow an owner's press or a rare event. Mail and alerts are
+ * written by strangers, so their allowance is kept lower: a flood of mail can
+ * spend it, and the watcher only classifies mail it can already tie to an
+ * application (lib/career/watch.ts).
  */
 export const CAREER_AI: Readonly<Record<CareerFeature, JobConfig>> = {
   career_profile: { daily: 30, sensitivity: 'personal', maxTokens: 8000, temperature: 0.1, timeoutMs: 45_000 },
   career_spec: { daily: 40, sensitivity: 'personal', maxTokens: 1500, temperature: 0.2, timeoutMs: 20_000 },
   career_requirements: { daily: 800, sensitivity: 'general', maxTokens: 1800, temperature: 0.1, timeoutMs: 20_000 },
   career_tailor: { daily: 80, sensitivity: 'personal', maxTokens: 6000, temperature: 0.3, timeoutMs: 40_000 },
-  career_alerts: { daily: 400, sensitivity: 'personal', maxTokens: 3000, temperature: 0.1, timeoutMs: 25_000 },
-  career_mail: { daily: 600, sensitivity: 'personal', maxTokens: 700, temperature: 0.1, timeoutMs: 15_000 },
+  career_alerts: { daily: 300, sensitivity: 'personal', maxTokens: 3000, temperature: 0.1, timeoutMs: 25_000 },
+  career_mail: { daily: 300, sensitivity: 'personal', maxTokens: 700, temperature: 0.1, timeoutMs: 15_000 },
   career_offer: { daily: 30, sensitivity: 'personal', maxTokens: 2500, temperature: 0.4, timeoutMs: 35_000 },
   career_prep: { daily: 40, sensitivity: 'personal', maxTokens: 3500, temperature: 0.4, timeoutMs: 35_000 },
   career_followup: { daily: 100, sensitivity: 'personal', maxTokens: 500, temperature: 0.5, timeoutMs: 15_000 },
@@ -119,7 +122,8 @@ export function specFromText(userId: string, sentence: string, profile: CareerPr
 
 /** What a job asks for. Only for a job with a description; a thin one has nothing to read. */
 export function extractRequirements(userId: string, job: NormalizedJob, options?: AiOptions): Promise<Requirements | null> {
-  return run(userId, 'career_requirements', buildRequirementsPrompt(job), parseRequirementsReply, options);
+  // An apply address the model reads must be written in the description itself.
+  return run(userId, 'career_requirements', buildRequirementsPrompt(job), (text) => parseRequirementsReply(text, job.description), options);
 }
 
 /** The tailored draft, cover note, answers and outreach, before the truth check. */

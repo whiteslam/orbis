@@ -105,7 +105,7 @@ function OfferCard({ card, salary }: Readonly<{ card: ApplicationCard; salary: S
           <MarketCompare terms={offer?.terms ?? null} salary={salary} />
         </div>
         <div className="cp-offer-advice">
-          {busy !== 'load' && <OfferSection key={offer?.id ?? 'none'} applicationId={card.application.id} offer={offer} onDetail={update} />}
+          {busy !== 'load' && <OfferSection key={offer?.id ?? 'none'} applicationId={card.application.id} offer={offer} replyTo={detail?.offerReplyTo ?? null} onDetail={update} />}
         </div>
       </div>
     </article>

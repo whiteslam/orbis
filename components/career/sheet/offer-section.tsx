@@ -3,11 +3,13 @@
 import { useId, useState } from 'react';
 import { Lightbulb, Save, Send } from 'lucide-react';
 import { adviseOfferAction, saveOfferTermsAction, sendOfferReplyAction } from '@/app/career/actions';
-import { BusyIcon, NoticeLine } from '@/components/career/bits';
+import { BusyIcon, CopyButton, NoticeLine } from '@/components/career/bits';
 import { moneyShort } from '@/components/career/format';
 import { useRun } from '@/components/career/use-run';
 import type { CareerOffer, OfferAdvice, OfferAsk, OfferTerms, SalaryPeriod } from '@/lib/career/types';
 import type { ApplicationDetail } from '@/lib/career/view';
+
+type ReplyTo = NonNullable<ApplicationDetail['offerReplyTo']>;
 
 const EMPTY: OfferTerms = { fixed: null, variable: null, joiningBonus: null, equity: null, currency: 'INR', period: 'year', startDate: null, deadline: null };
 
@@ -87,16 +89,34 @@ function TermsForm({ applicationId, offer, onDetail }: Readonly<{ applicationId:
   );
 }
 
-/** The advisor's verdict, asks, risks and reply draft; the reply goes only on its Send. */
-function AdviceView({ offerId, advice, onDetail }: Readonly<{ offerId: string; advice: OfferAdvice; onDetail: (detail: ApplicationDetail) => void }>) {
+/** Who the reply goes to, before its Send; a warning when the offer email couldn't be tied to the company. */
+function ReplyRecipient({ replyTo }: Readonly<{ replyTo: ReplyTo | null }>) {
+  if (!replyTo) return <p className="cr-block-note">There’s no email thread for this offer in Orbis, so copy the reply and send it from your own mail.</p>;
+  return (
+    <>
+      <p className="cr-recipient">Goes to <b className="cr-recipient-text">{replyTo.to}</b></p>
+      {!replyTo.verified && (
+        <p className="fd-msg bad cr-recipient-warn">
+          Orbis couldn’t tie this offer email to the company: it isn’t in the thread Orbis sent, nor from the company’s own domain. Make sure {replyTo.to} is really them before you send.
+        </p>
+      )}
+    </>
+  );
+}
+
+/** The advisor's verdict, asks, risks and reply draft; the reply goes only on its Send, to the address shown. */
+function AdviceView({ offerId, advice, replyTo, onDetail }: Readonly<{ offerId: string; advice: OfferAdvice; replyTo: ReplyTo | null; onDetail: (detail: ApplicationDetail) => void }>) {
   const replyId = useId();
   const [reply, setReply] = useState(advice.replyDraft);
   const { busy, notice, run } = useRun();
   const verdict = VERDICT[advice.verdict];
-  const send = () => run('reply', () => sendOfferReplyAction(offerId, reply.trim()), (detail) => {
-    onDetail(detail);
-    return 'Reply sent from your Gmail.';
-  });
+  const send = () => {
+    if (!replyTo) return;
+    void run('reply', () => sendOfferReplyAction(offerId, reply.trim(), replyTo.to), (detail) => {
+      onDetail(detail);
+      return `Reply sent from your Gmail to ${replyTo.to}.`;
+    });
+  };
   return (
     <div className="cr-advice">
       <p className={`cr-advice-verdict v-${advice.verdict}`}><b>{verdict.word}</b><span>{verdict.line}</span></p>
@@ -126,11 +146,14 @@ function AdviceView({ offerId, advice, onDetail }: Readonly<{ offerId: string; a
         Reply to the recruiter
         <textarea id={replyId} rows={8} value={reply} onChange={(event) => setReply(event.currentTarget.value)} />
       </label>
+      <ReplyRecipient replyTo={replyTo} />
       <div className="fd-act pf-act">
-        <button type="button" onClick={send} disabled={busy !== null || reply.trim().length < 20}>
-          <BusyIcon on={busy === 'reply'}><Send size={14} aria-hidden="true" /></BusyIcon>
-          Send reply
-        </button>
+        {replyTo ? (
+          <button type="button" onClick={send} disabled={busy !== null || reply.trim().length < 20}>
+            <BusyIcon on={busy === 'reply'}><Send size={14} aria-hidden="true" /></BusyIcon>
+            Send reply
+          </button>
+        ) : <CopyButton value={reply.trim()} label="the reply" />}
       </div>
       <NoticeLine notice={notice} />
     </div>
@@ -138,7 +161,13 @@ function AdviceView({ offerId, advice, onDetail }: Readonly<{ offerId: string; a
 }
 
 /** An offer: confirm its terms, then ask for advice and send the reply. */
-export function OfferSection({ applicationId, offer, onDetail }: Readonly<{ applicationId: string; offer: CareerOffer | null; onDetail: (detail: ApplicationDetail) => void }>) {
+export function OfferSection({ applicationId, offer, replyTo, onDetail }: Readonly<{
+  applicationId: string;
+  offer: CareerOffer | null;
+  /** Who the reply goes to (ApplicationDetail.offerReplyTo); null when there's no thread to reply in. */
+  replyTo: ReplyTo | null;
+  onDetail: (detail: ApplicationDetail) => void;
+}>) {
   const [advice, setAdvice] = useState<OfferAdvice | null>(offer?.advice ?? null);
   const { busy, notice, run } = useRun();
   const advise = () => {
@@ -171,7 +200,7 @@ export function OfferSection({ applicationId, offer, onDetail }: Readonly<{ appl
         </div>
       )}
       <NoticeLine notice={notice} />
-      {offer && advice && <AdviceView key={advice.replyDraft} offerId={offer.id} advice={advice} onDetail={onDetail} />}
+      {offer && advice && <AdviceView key={advice.replyDraft} offerId={offer.id} advice={advice} replyTo={replyTo} onDetail={onDetail} />}
     </section>
   );
 }

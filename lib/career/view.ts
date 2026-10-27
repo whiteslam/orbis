@@ -5,6 +5,7 @@
  * and the web panel both read these shapes and nothing else, so either side
  * can change without the other guessing.
  */
+import type { SendRecipient } from '@/lib/career/recipient';
 import type {
   ApplicationStatus, CareerApplication, CareerEvent, CareerInsights, CareerJob, CareerOffer, CareerProfile,
   CareerSettings, CareerSpec, CareerState, CitedText, OfferTerms, ScreeningAnswer, SourceId, TailoredDraft, TruthRemoval,
@@ -52,6 +53,13 @@ export type ApplicationDetail = {
   files: { pdf: string | null; docx: string | null };
   /** What a link apply needs to paste, field by field. */
   pasteKit: Array<{ label: string; value: string }>;
+  /** Exactly where Send delivers the application, shown before the press. Absent until loaded. */
+  recipient?: SendRecipient | null;
+  /**
+   * Who the offer reply goes to, shown before its Send. `verified` is false
+   * when the offer email couldn't be tied to the company (one attached by hand).
+   */
+  offerReplyTo?: { to: string; verified: boolean } | null;
   /**
    * Only from updateDraftAction: text the owner typed that the profile can't
    * back up (a new number, a skill not on file). It is kept, never removed;
@@ -80,6 +88,11 @@ export type SendOutcome =
   | { kind: 'compose'; url: string; detail: ApplicationDetail };
 
 export type ResumeUpload = { path: string; signedUrl: string; token: string };
+
+/** What the Send bar showed: the address, and whether the owner confirmed a first-time one. */
+export type SendConfirmation = { to: string | null; confirmed: boolean };
+
+export type { SendRecipient };
 
 export type CareerSetup = { profile: CareerProfile | null; spec: CareerSpec | null; settings: CareerSettings; resumeFileName: string | null };
 

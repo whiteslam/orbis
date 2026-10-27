@@ -19,8 +19,17 @@ export type RawMessageInput = {
   /** The Message-ID being answered, `<…>`, to stay in the thread. */
   inReplyTo?: string;
   references?: string;
+  /**
+   * Orbis's own reference for this message (X-Orbis-Ref), so a send whose
+   * answer never came back can be found in the Sent folder before deciding
+   * whether it went. Letters, digits and dashes only.
+   */
+  orbisRef?: string;
   attachments?: MimeAttachment[];
 };
+
+export const ORBIS_REF_HEADER = 'X-Orbis-Ref';
+const ORBIS_REF = /^[A-Za-z0-9-]{8,80}$/;
 
 const CRLF = '\r\n';
 const LINE = 76;
@@ -183,6 +192,10 @@ export function buildMessage(input: RawMessageInput): string {
   ];
   if (input.inReplyTo) headers.push(`In-Reply-To: ${foldIds('In-Reply-To', input.inReplyTo)}`);
   if (input.references) headers.push(`References: ${foldIds('References', input.references)}`);
+  if (input.orbisRef !== undefined) {
+    if (!ORBIS_REF.test(input.orbisRef)) throw new Error('That message reference is not valid.');
+    headers.push(`${ORBIS_REF_HEADER}: ${input.orbisRef}`);
+  }
   headers.push('MIME-Version: 1.0');
   const body = bodyOf(input);
   return `${[...headers, ...body.headers].join(CRLF)}${CRLF}${CRLF}${body.body}${CRLF}`;

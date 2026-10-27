@@ -60,6 +60,21 @@ export function hadReply(status: ApplicationStatus): boolean {
   return stageRank(status) >= stageRank('replied') || status === 'accepted' || status === 'declined' || status === 'rejected';
 }
 
+/** How long a rejected application is still matched against mail. */
+export const REJECTED_WATCH_DAYS = 30;
+
+/**
+ * Watched now: open or ghosted always, and rejected for 30 days after its
+ * last news. A rejection may be wrong (or fake), and a later reply from the
+ * company must still land on its timeline rather than be skipped unread.
+ */
+export function isWatchedNow(app: { status: ApplicationStatus; lastEventAt: string | null; updatedAt: string }, now: Date): boolean {
+  if (isWatched(app.status)) return true;
+  if (app.status !== 'rejected') return false;
+  const since = Date.parse(app.lastEventAt ?? app.updatedAt);
+  return Number.isFinite(since) && now.getTime() - since <= REJECTED_WATCH_DAYS * 86_400_000;
+}
+
 const TERMINAL: readonly ApplicationStatus[] =['accepted', 'declined', 'withdrawn'];
 
 function mailMay(from: ApplicationStatus, to: ApplicationStatus): boolean {

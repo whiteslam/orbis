@@ -1,25 +1,34 @@
 /**
  * The small decisions drafting makes that don't need a database. Pure.
  */
+import { emailInText } from './requirements.ts';
 import type { ApplicationStatus, ApplyRoute, CareerJob, Requirements } from './types.ts';
 
 /** More than a third of the bullets failing the truth check means the draft is rewritten once. */
 export const REGENERATE_ABOVE = 1 / 3;
 
 /**
+ * The address to apply to: the listing's own, or one the description gives.
+ * An address the requirements model read counts only if it is written in the
+ * description, so an injected or imagined one never becomes a recipient
+ * (lib/career/requirements.ts checks this at parse time too; this covers
+ * requirements stored before that check).
+ */
+export function applyEmailFor(job: Pick<CareerJob, 'applyEmail' | 'description'>, requirements: Pick<Requirements, 'applyEmail'> | null): string | null {
+  if (job.applyEmail) return job.applyEmail;
+  const read = requirements?.applyEmail ?? null;
+  return read && emailInText(read, job.description) ? read : null;
+}
+
+/**
  * How the application leaves Orbis: by email when there is an address to apply
  * to, through Recruitee's API for a Recruitee listing, otherwise the owner
  * applies on the site with everything ready to paste.
  */
-export function applyRouteFor(job: Pick<CareerJob, 'applyEmail' | 'recruitee'>, requirements: Pick<Requirements, 'applyEmail'> | null): ApplyRoute {
-  if (job.applyEmail ?? requirements?.applyEmail) return 'email';
+export function applyRouteFor(job: Pick<CareerJob, 'applyEmail' | 'description' | 'recruitee'>, requirements: Pick<Requirements, 'applyEmail'> | null): ApplyRoute {
+  if (applyEmailFor(job, requirements)) return 'email';
   if (job.recruitee) return 'recruitee';
   return 'link';
-}
-
-/** The address to apply to, from the listing or, failing that, from what the description says. */
-export function applyEmailFor(job: Pick<CareerJob, 'applyEmail'>, requirements: Pick<Requirements, 'applyEmail'> | null): string | null {
-  return job.applyEmail ?? requirements?.applyEmail ?? null;
 }
 
 const VERSION = /resume-(\d+)\.(?:pdf|docx)$/;

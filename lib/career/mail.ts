@@ -348,16 +348,27 @@ function bestByName(name: string, apps: OpenApp[]) {
 }
 
 /**
+ * Whether a candidate is tied to an application by something a stranger
+ * can't fake cheaply: the thread Orbis sent, or a sender at the company's own
+ * domain. Only these are classified (each costs a model credit) and only these
+ * may move an application; a company name in the subject proves nothing, as
+ * anyone can write "Acme: your offer" from a free-mail address.
+ */
+export function isStrongCandidate(candidate: Pick<Candidate, 'reason'>): boolean {
+  return candidate.reason !== 'words';
+}
+
+/**
  * Which open application a classified reply belongs to: the thread wins, then
- * the sender's company domain, then the company name. Null lands it in
- * "Unmatched replies".
+ * the sender's company domain. The company name the model read only chooses
+ * among several applications at that same domain; on its own it links
+ * nothing. Null lands it in "Unmatched replies" for the owner to attach.
  */
 export function linkReply(classification: Pick<ReplyClassification, 'company'>, summary: Pick<MailSummary, 'threadId' | 'from'>, openApps: OpenApp[]): string | null {
   const byThread = openApps.filter((app) => app.threadId !== null && app.threadId === summary.threadId);
   if (byThread.length === 1) return byThread[0].id;
   const byDomain = appsFromDomain(summary.from, openApps);
   if (byDomain.length === 1) return byDomain[0].id;
-  if (!classification.company) return null;
-  // Several applications at one company: the name can only choose among them.
-  return bestByName(classification.company, byDomain.length ? byDomain : openApps);
+  if (!classification.company || byDomain.length === 0) return null;
+  return bestByName(classification.company, byDomain);
 }

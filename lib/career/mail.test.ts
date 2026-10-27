@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
-  MAIL_BODY_CAP, baseDomain, buildReplyPrompt, companyDomains, domainOf, linkReply, nameSimilarity, parseReplyReply,
+  MAIL_BODY_CAP, baseDomain, buildReplyPrompt, companyDomains, domainOf, isStrongCandidate, linkReply, nameSimilarity, parseReplyReply,
   replyCandidate, validateTerms, type OpenApp,
 } from './mail.ts';
 
@@ -127,18 +127,28 @@ test('nameSimilarity ignores legal suffixes', () => {
   assert.ok(nameSimilarity('Acme Labs', 'Acme Bank') < 0.6);
 });
 
-test('linkReply: thread, then domain, then name', () => {
+test('linkReply: thread, then domain; a name alone links nothing', () => {
   assert.equal(linkReply({ company: 'Bolt' }, { threadId: 't-acme', from: 'x@bolt.eu' }, apps), 'a1');
   assert.equal(linkReply({ company: null }, { threadId: 'zz', from: 'x@bolt.eu' }, apps), 'a2');
-  assert.equal(linkReply({ company: 'Northwind Labs India' }, { threadId: 'zz', from: 'x@lever.co' }, apps), 'a3');
+  // The model read "Northwind Labs" from an ATS sender: not proof, so unmatched.
+  assert.equal(linkReply({ company: 'Northwind Labs India' }, { threadId: 'zz', from: 'x@lever.co' }, apps), null);
+  // A spoofed offer from free mail naming the company stays unmatched.
+  assert.equal(linkReply({ company: 'Acme Technologies' }, { threadId: 'zz', from: 'acme.hr@gmail.com' }, apps), null);
   assert.equal(linkReply({ company: 'Initech' }, { threadId: 'zz', from: 'x@lever.co' }, apps), null);
 });
 
-test('linkReply leaves a tie unlinked', () => {
+test('linkReply: the name only chooses among applications at the sender’s domain', () => {
   const twins: OpenApp[] = [
-    { id: 'x', company: 'Acme Labs', domains: [], threadId: null },
-    { id: 'y', company: 'Acme Cloud', domains: [], threadId: null },
+    { id: 'x', company: 'Acme Labs', domains: ['acme.io'], threadId: null },
+    { id: 'y', company: 'Acme Cloud', domains: ['acme.io'], threadId: null },
   ];
-  assert.equal(linkReply({ company: 'Acme' }, { threadId: 'z', from: 'a@b.com' }, twins), null);
-  assert.equal(linkReply({ company: 'Acme Cloud' }, { threadId: 'z', from: 'a@b.com' }, twins), 'y');
+  assert.equal(linkReply({ company: 'Acme' }, { threadId: 'z', from: 'a@acme.io' }, twins), null);
+  assert.equal(linkReply({ company: 'Acme Cloud' }, { threadId: 'z', from: 'a@acme.io' }, twins), 'y');
+  assert.equal(linkReply({ company: 'Acme Cloud' }, { threadId: 'z', from: 'a@b.com' }, twins), null);
+});
+
+test('only thread and domain candidates are strong', () => {
+  assert.equal(isStrongCandidate({ reason: 'thread' }), true);
+  assert.equal(isStrongCandidate({ reason: 'domain' }), true);
+  assert.equal(isStrongCandidate({ reason: 'words' }), false);
 });

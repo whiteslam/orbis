@@ -3,11 +3,21 @@ import assert from 'node:assert/strict';
 import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion } from './draft-plan.ts';
 
 test('email wins when there is an address, then Recruitee, then the link', () => {
-  assert.equal(applyRouteFor({ applyEmail: 'jobs@acme.io', recruitee: { company: 'acme', offer: 'fe' } }, null), 'email');
-  assert.equal(applyRouteFor({ applyEmail: null, recruitee: undefined }, { applyEmail: 'hr@acme.io' }), 'email');
-  assert.equal(applyRouteFor({ applyEmail: null, recruitee: { company: 'acme', offer: 'fe' } }, null), 'recruitee');
-  assert.equal(applyRouteFor({ applyEmail: null, recruitee: undefined }, { applyEmail: null }), 'link');
-  assert.equal(applyEmailFor({ applyEmail: null }, { applyEmail: 'hr@acme.io' }), 'hr@acme.io');
+  const said = 'Apply: hr@acme.io';
+  assert.equal(applyRouteFor({ applyEmail: 'jobs@acme.io', description: null, recruitee: { company: 'acme', offer: 'fe' } }, null), 'email');
+  assert.equal(applyRouteFor({ applyEmail: null, description: said, recruitee: undefined }, { applyEmail: 'hr@acme.io' }), 'email');
+  assert.equal(applyRouteFor({ applyEmail: null, description: null, recruitee: { company: 'acme', offer: 'fe' } }, null), 'recruitee');
+  assert.equal(applyRouteFor({ applyEmail: null, description: null, recruitee: undefined }, { applyEmail: null }), 'link');
+  assert.equal(applyEmailFor({ applyEmail: null, description: said }, { applyEmail: 'hr@acme.io' }), 'hr@acme.io');
+});
+
+test('an address the model read counts only if the description says it', () => {
+  const read = { applyEmail: 'jobs@acme-hiring.io' };
+  assert.equal(applyEmailFor({ applyEmail: null, description: 'Apply on our careers page.' }, read), null);
+  assert.equal(applyRouteFor({ applyEmail: null, description: 'Apply on our careers page.', recruitee: undefined }, read), 'link');
+  assert.equal(applyEmailFor({ applyEmail: null, description: null }, read), null);
+  // The listing's own address needs no such check.
+  assert.equal(applyEmailFor({ applyEmail: 'jobs@acme.io', description: null }, read), 'jobs@acme.io');
 });
 
 test('file versions count up from the stored path', () => {

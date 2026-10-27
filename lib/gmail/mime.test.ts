@@ -101,3 +101,10 @@ test('html alone is multipart/alternative; boundaries differ per part', () => {
   assert.equal(boundaries.length, 2);
   assert.notEqual(boundaries[0], boundaries[1]);
 });
+
+test('an Orbis reference rides in its own header, and only a safe one', () => {
+  const message = buildMessage({ from: 'a@b.com', to: 'c@d.com', subject: 'Hi', text: 'x', orbisRef: 'app-1234abcd' });
+  assert.match(message, /\r\nX-Orbis-Ref: app-1234abcd\r\n/);
+  assert.throws(() => buildMessage({ from: 'a@b.com', to: 'c@d.com', subject: 'Hi', text: 'x', orbisRef: 'bad\r\nBcc: e@f.com' }));
+  assert.doesNotMatch(buildMessage({ from: 'a@b.com', to: 'c@d.com', subject: 'Hi', text: 'x' }), /X-Orbis-Ref/);
+});

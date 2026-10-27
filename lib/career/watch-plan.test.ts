@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery } from './watch-plan.ts';
+import { eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery, retryClassification } from './watch-plan.ts';
 import type { ReplyClassification } from './types.ts';
 
 test('the reply search skips the owner’s own mail, promotions and the alert senders', () => {
@@ -19,12 +19,32 @@ test('every reply kind has an event; "other" is a plain reply', () => {
   assert.equal(eventKindFor('other'), 'reply');
 });
 
-test('open apps carry the job’s company, their domains and thread', () => {
+const job = (over: Record<string, unknown> = {}) => ({
+  company: 'Acme', source: 'greenhouse' as const, url: 'https://boards.greenhouse.io/acme/jobs/1', applyUrl: 'https://acme.io/careers/1',
+  applyEmail: null, description: null, seenOn: [], requirements: null, ...over,
+});
+
+test('open apps carry the job’s company, its trusted domains and the thread', () => {
   const apps = [
-    { id: 'a1', jobId: 'j1', companyDomains: ['acme.io'], gmailThreadId: 't1' },
-    { id: 'a2', jobId: 'missing', companyDomains: [], gmailThreadId: null },
+    { id: 'a1', jobId: 'j1', gmailThreadId: 't1' },
+    { id: 'a2', jobId: 'missing', gmailThreadId: null },
   ];
-  assert.deepEqual(openAppsFrom(apps, new Map([['j1', { company: 'Acme' }]])), [{ id: 'a1', company: 'Acme', domains: ['acme.io'], threadId: 't1' }]);
+  assert.deepEqual(openAppsFrom(apps, new Map([['j1', job()]])), [{ id: 'a1', company: 'Acme', domains: ['acme.io'], threadId: 't1' }]);
+});
+
+test('an apply address from Hacker News doesn’t make its domain the company’s', () => {
+  const hn = job({ source: 'hn', url: 'https://news.ycombinator.com/item?id=1', applyUrl: null, applyEmail: 'jobs@acme-hiring.io' });
+  assert.deepEqual(openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', hn]]))[0].domains, []);
+  // From the company's own board it does.
+  const own = job({ applyEmail: 'jobs@acme-careers.com' });
+  assert.deepEqual(openAppsFrom([{ id: 'a', jobId: 'j', gmailThreadId: null }], new Map([['j', own]]))[0].domains, ['acme-careers.com', 'acme.io']);
+});
+
+test('an unclassified reply waits for another try until it is 60 hours old', () => {
+  const now = new Date('2026-10-27T12:00:00Z');
+  assert.equal(retryClassification('2026-10-27T10:00:00Z', now), true);
+  assert.equal(retryClassification('2026-10-24T23:00:00Z', now), false);
+  assert.equal(retryClassification('not a date', now), false);
 });
 
 test('event details keep the headers and the classification, never a body', () => {
@@ -35,6 +55,8 @@ test('event details keep the headers and the classification, never a body', () =
   assert.equal(details.interviewFormat, 'video');
   assert.equal(details.matchedBy, 'domain');
   assert.equal(replyDetails({ from: 'a', subject: 'b', classification: null, reason: 'thread' }).classified, false);
+  const unread = replyDetails({ from: 'a', subject: 'b', classification: null, reason: 'words', threadId: 't9', snippet: 'Hi', suggestedApplicationId: 'a1' });
+  assert.deepEqual([unread.threadId, unread.snippet, unread.suggestedApplicationId], ['t9', 'Hi', 'a1']);
 });
 
 test('fallbacks read plainly', () => {

@@ -2,9 +2,10 @@ import 'server-only';
 
 import { applyEmailFor } from '@/lib/career/draft-plan';
 import { predictionFor } from '@/lib/career/drafting';
+import { applyRecipient, lastSentMessage, offerReplyTarget, trustedCompanyDomains, type ReplyTarget } from '@/lib/career/recipient';
 import {
-  addEvent, CareerError, countSentSince, downloadCareerFile, getApplication, getApplicationFiles, getCareerRow, getJob, getOffer,
-  listEvents, setJobState, transitionApplication, updateApplication, type CareerDb, type CareerRow,
+  addEvent, CareerError, claimSendLock, countSentSince, downloadCareerFile, getApplication, getApplicationFiles, getCareerRow, getJob, getOffer,
+  listEvents, releaseSendLock, sentAddresses, setJobState, transitionApplication, updateApplication, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
 import { careerToday } from '@/lib/career/scoring';
 import {
@@ -12,7 +13,7 @@ import {
 } from '@/lib/career/send-plan';
 import { USER_AGENT } from '@/lib/career/sources/http';
 import type { ApplicationStatus, ApplyRoute, CareerApplication, CareerEvent, CareerJob, CareerProfile } from '@/lib/career/types';
-import { getMessageFull, GmailSendScopeError, sendMessage, type GmailMessageFull } from '@/lib/gmail/api';
+import { findSentByRef, getMessageFull, GmailSendScopeError, GmailSendUncertainError, sendMessage, type GmailMessageFull } from '@/lib/gmail/api';
 import { gmailAccessToken, type GmailConnection } from '@/lib/gmail/connection';
 import { senderAddress } from '@/lib/gmail/important-filter';
 import { buildRawMessage, formatAddress } from '@/lib/gmail/mime';
@@ -27,7 +28,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // - nothing is left in `sending`: any failure puts it back to ready with a
 //   note, and a `sending` older than five minutes counts as ready again;
 // - once Gmail or Recruitee has accepted it, nothing afterwards can undo that,
-//   so a later bookkeeping failure is logged, never turned back into "ready".
+//   so a later bookkeeping failure is logged, never turned back into "ready";
+// - when Gmail's answer is lost, the Sent folder decides whether it went
+//   (each message carries an X-Orbis-Ref to find it by), and when Recruitee's
+//   is lost, the owner is told it may have gone rather than offered a resend;
+// - a follow-up or offer reply holds a send lock (claimSendLock) while it goes,
+//   so a second press can't send it twice;
+// - the email route sends only to the address the Send bar showed, and asks
+//   for a confirmation the first time an address (or company domain) is used.
 
 export type SendResult =
   | { kind: 'sent' }
@@ -36,6 +44,9 @@ export type SendResult =
   | { kind: 'refused'; message: string };
 
 export type ReplyResult = { ok: true } | { ok: false; message: string };
+
+/** What the owner saw and agreed to on the Send bar. */
+export type SendConfirmation = { to?: string | null; confirmed?: boolean };
 
 /** A reason not to send, written for the owner. */
 class SendRefusal extends Error {}
@@ -47,6 +58,10 @@ export const STALE_SENDING_MS = 5 * 60_000;
 /** A second press within this long of a reply that went is a double press, not a second reply. */
 const REPEAT_WINDOW_MS = 2 * 60_000;
 const RECRUITEE_TIMEOUT_MS = 20_000;
+/** A send lock this old was left by a request that died. Gmail's own timeout is 30 s. */
+const LOCK_STALE_MS = 2 * 60_000;
+const NOT_IN_SENT = 'Gmail didn’t answer in time, and the email isn’t in your Sent folder, so it looks like nothing went out. Check Sent in Gmail before you send again.';
+const UNSURE_SENT = 'Gmail didn’t answer in time and Orbis couldn’t check your Sent folder. Check Sent in Gmail before you send again.';
 const PDF_TYPE = 'application/pdf';
 const IST_OFFSET = '+05:30';
 
@@ -108,6 +123,33 @@ async function sendingToken(userId: string): Promise<{ token: string; email: str
   const connection = await gmailConnection(userId);
   if (!connection?.canSend) throw new SendRefusal(SEND_PERMISSION_MESSAGE);
   return { token: await gmailAccessToken(userId, connection), email: connection.google_email };
+}
+
+/** A reference for one message, carried as X-Orbis-Ref so it can be found in Sent. */
+function messageRef(kind: string, id: string, now: Date) {
+  return `${kind}-${id}-${now.getTime().toString(36)}`;
+}
+
+/**
+ * Sends; when Gmail's answer is lost, looks for the message in Sent before
+ * deciding. Found means it went. Not found throws NOT_IN_SENT, and a failed
+ * look throws UNSURE_SENT; both reach the owner as the reason it stopped.
+ */
+async function sendOrFind(token: string, raw: string, threadId: string | null, lookup: { to: string; subject: string; ref: string }) {
+  try {
+    return await sendMessage(token, raw, threadId);
+  } catch (error) {
+    if (!(error instanceof GmailSendUncertainError)) throw error;
+  }
+  let found: { id: string; threadId: string } | null;
+  try {
+    found = await findSentByRef(token, lookup);
+  } catch (error) {
+    console.error('Checking Sent after a lost Gmail answer failed', error);
+    throw new SendRefusal(UNSURE_SENT);
+  }
+  if (!found) throw new SendRefusal(NOT_IN_SENT);
+  return found;
 }
 
 // ─── Applications ─────────────────────────────────────────────────────────
@@ -215,14 +257,16 @@ async function sendEmail(ctx: Context): Promise<SendResult> {
   }
   const pdf = await tailoredPdf(ctx);
   const token = await gmailAccessToken(ctx.userId, connection);
+  const ref = messageRef('app', app.id, ctx.now);
   const raw = buildRawMessage({
     from: fromHeader(contact.name, connection.google_email),
     to,
     subject,
     text: body,
+    orbisRef: ref,
     attachments: [{ filename: resumeFileName(contact.name), contentType: PDF_TYPE, data: pdf }],
   });
-  const sent = await sendMessage(token, raw);
+  const sent = await sendOrFind(token, raw, null, { to, subject, ref });
   await recordSent(ctx, {
     route: 'email',
     threadId: sent.threadId || null,
@@ -234,6 +278,9 @@ async function sendEmail(ctx: Context): Promise<SendResult> {
 }
 
 const RECRUITEE_FALLBACK = 'Sending straight to their Recruitee page didn’t work, so apply on their page instead. Everything is ready to paste.';
+const RECRUITEE_UNSURE = 'Recruitee didn’t answer in time, so your application may have gone through. Check your email for their confirmation before applying on their page, then press “I applied”.';
+
+const isTimeout = (error: unknown) => error instanceof Error && error.name === 'TimeoutError';
 
 /**
  * Recruitee's public candidates endpoint. Its exact payload isn't verified, so
@@ -264,6 +311,8 @@ async function sendRecruitee(ctx: Context): Promise<SendResult> {
     if (!accepted) console.error('Recruitee refused an application', response.status);
   } catch (error) {
     console.error('Recruitee could not be reached', error);
+    // The post may have landed before the answer was lost: say so, never invite a blind second try.
+    if (isTimeout(error)) return openLink(ctx, RECRUITEE_UNSURE);
   }
   if (!accepted) return openLink(ctx, RECRUITEE_FALLBACK);
   await recordSent(ctx, {
@@ -294,14 +343,28 @@ function notSendable(app: CareerApplication, now: Date): string | null {
 }
 
 /**
+ * For the email route: why it mustn't go yet, or null. It goes only to the
+ * address the Send bar showed (`confirm.to`), and an address Orbis hasn't sent
+ * to before needs the owner's explicit confirmation. No address at all is
+ * fine here: the route falls back to the apply page.
+ */
+async function recipientRefusal(client: CareerDb, userId: string, job: CareerJob, confirm: SendConfirmation): Promise<string | null> {
+  const recipient = applyRecipient(job, 'email', await sentAddresses(userId, client));
+  if (recipient.kind !== 'email') return null;
+  if (senderAddress(confirm.to ?? '') !== recipient.address) return 'Where this goes has changed since the page loaded. Check the address and send again.';
+  if (recipient.firstTime && confirm.confirmed !== true) return `Confirm that this should go to ${recipient.address} first.`;
+  return null;
+}
+
+/**
  * The owner's Send on one application. Checks it is theirs and ready, the
- * daily cap, claims it once, then takes its route:
+ * daily cap, the recipient, claims it once, then takes its route:
  * - email: from their Gmail with the tailored PDF, or a prefilled compose
  *   window when sending isn't allowed;
  * - recruitee: Recruitee's candidates endpoint, falling back to the link;
  * - link: the apply page opens, and it waits for "I applied".
  */
-export async function sendApplication(client: CareerDb, userId: string, applicationId: string, now = new Date()): Promise<SendResult> {
+export async function sendApplication(client: CareerDb, userId: string, applicationId: string, confirm: SendConfirmation = {}, now = new Date()): Promise<SendResult> {
   const app = await getApplication(userId, applicationId, client);
   if (!app) return { kind: 'refused', message: 'That application couldn’t be found.' };
   const [job, row] = await Promise.all([getJob(userId, app.jobId, client), getCareerRow(userId, client)]);
@@ -314,6 +377,10 @@ export async function sendApplication(client: CareerDb, userId: string, applicat
   const sentToday = await countSentSince(userId, dayStartIso(careerToday(now)), client);
   if (sentToday >= row.settings.dailySendCap) {
     return { kind: 'refused', message: `That’s ${sentToday} sent today, your daily limit. Raise it in Career → Setup, or send tomorrow.` };
+  }
+  if (app.route === 'email') {
+    const refusal = await recipientRefusal(client, userId, job, confirm);
+    if (refusal) return { kind: 'refused', message: refusal };
   }
   if (!(await claimSend(client, userId, app.id, now))) return { kind: 'refused', message: 'This was sent or is being sent already.' };
   const ctx: Context = { client, userId, app, job, row: { ...row, profile: row.profile }, now };
@@ -353,18 +420,6 @@ export async function markApplied(client: CareerDb, userId: string, applicationI
 
 // ─── Replies in the thread ────────────────────────────────────────────────
 
-const str = (value: unknown) => (typeof value === 'string' && value ? value : null);
-
-/** The newest message Orbis sent for this application (its Gmail id and the address it went to). */
-function lastSent(events: readonly CareerEvent[]) {
-  for (const event of events) {
-    if (event.kind !== 'sent' && event.kind !== 'follow_up_sent' && !(event.kind === 'note' && event.details.kind === 'offer_reply')) continue;
-    const gmailId = str(event.details.gmailId);
-    if (gmailId) return { gmailId, to: str(event.details.to), subject: str(event.details.subject) };
-  }
-  return null;
-}
-
 /** True when the same kind of reply went out moments ago: the second press of a double press. */
 function justSent(events: readonly CareerEvent[], test: (event: CareerEvent) => boolean, now: Date) {
   return events.some((event) => test(event) && now.getTime() - Date.parse(event.at) < REPEAT_WINDOW_MS);
@@ -390,6 +445,20 @@ async function readMessage(token: string, gmailId: string | null): Promise<Gmail
 }
 
 /**
+ * Runs `work` holding the send lock for `key`; `busy` when another press
+ * holds it. The lock is let go however `work` ends.
+ */
+async function withSendLock<T>(userId: string, key: string, applicationId: string, now: Date, work: () => Promise<T>): Promise<T | 'busy'> {
+  const staleBefore = new Date(now.getTime() - LOCK_STALE_MS).toISOString();
+  if (!(await claimSendLock(userId, key, applicationId, now, staleBefore))) return 'busy';
+  try {
+    return await work();
+  } finally {
+    await releaseSendLock(userId, key);
+  }
+}
+
+/**
  * The follow-up the owner approved, as a reply in the same Gmail thread to
  * the last message Orbis sent there. Clears the drafted follow-up.
  */
@@ -398,78 +467,107 @@ export async function sendFollowUp(client: CareerDb, userId: string, application
     const app = await getApplication(userId, applicationId, client);
     if (!app) return { ok: false, message: 'That application couldn’t be found.' };
     if (!FOLLOW_UP_FROM.includes(app.status)) return { ok: false, message: 'This application isn’t waiting on a reply any more.' };
-    if (!app.gmailThreadId) return { ok: false, message: 'This application wasn’t sent from Gmail, so there’s no thread to follow up in. Send it from your own mail.' };
-    const [events, row, job] = await Promise.all([
-      listEvents(userId, { applicationId: app.id, limit: 200 }, client),
-      getCareerRow(userId, client),
-      getJob(userId, app.jobId, client),
-    ]);
-    if (justSent(events, (event) => event.kind === 'follow_up_sent', now)) return { ok: false, message: 'That follow-up was just sent.' };
-    const { token, email } = await sendingToken(userId);
-    const previous = lastSent(events);
-    const original = await readMessage(token, previous?.gmailId ?? null);
-    const to = (original?.to || previous?.to) ?? null;
-    if (!to || !validAddress(to)) return { ok: false, message: 'Orbis can’t tell who the application went to. Follow up from Gmail instead.' };
-    const name = row?.profile?.contact.name ?? '';
-    const subject = replySubject(original?.subject || previous?.subject || applicationSubject(job?.title ?? 'your role', name));
-    const raw = buildRawMessage({ from: fromHeader(name, email), to, subject, text, ...threading(original) });
-    const sent = await sendMessage(token, raw, app.gmailThreadId);
-    try {
-      await updateApplication(userId, app.id, { followUpDraft: null, followUpDue: null }, client);
-      await addEvent(userId, {
-        applicationId: app.id, kind: 'follow_up_sent', summary: 'Follow-up sent in the same thread', at: now.toISOString(),
-        details: { to, subject, gmailId: sent.id || null, threadId: sent.threadId || app.gmailThreadId },
-      }, client);
-    } catch (error) {
-      console.error('Recording a follow-up failed; it did go out', error);
-    }
-    return { ok: true };
+    const threadId = app.gmailThreadId;
+    if (!threadId) return { ok: false, message: 'This application wasn’t sent from Gmail, so there’s no thread to follow up in. Send it from your own mail.' };
+    const result = await withSendLock(userId, `follow_up:${app.id}`, app.id, now, () => followUpLocked(client, userId, app, threadId, text, now));
+    return result === 'busy' ? { ok: false, message: 'That follow-up is being sent already.' } : result;
   } catch (error) {
     return { ok: false, message: messageOf(error) };
   }
 }
 
+async function followUpLocked(client: CareerDb, userId: string, app: CareerApplication, threadId: string, text: string, now: Date): Promise<ReplyResult> {
+  // Read under the lock, so a press that waited sees the follow-up the first one sent.
+  const [events, row, job] = await Promise.all([
+    listEvents(userId, { applicationId: app.id, limit: 200 }, client),
+    getCareerRow(userId, client),
+    getJob(userId, app.jobId, client),
+  ]);
+  if (justSent(events, (event) => event.kind === 'follow_up_sent', now)) return { ok: false, message: 'That follow-up was just sent.' };
+  const { token, email } = await sendingToken(userId);
+  const previous = lastSentMessage(events);
+  const original = await readMessage(token, previous?.gmailId ?? null);
+  const to = (original?.to || previous?.to) ?? null;
+  if (!to || !validAddress(to)) return { ok: false, message: 'Orbis can’t tell who the application went to. Follow up from Gmail instead.' };
+  const name = row?.profile?.contact.name ?? '';
+  const subject = replySubject(original?.subject || previous?.subject || applicationSubject(job?.title ?? 'your role', name));
+  const ref = messageRef('fu', app.id, now);
+  const raw = buildRawMessage({ from: fromHeader(name, email), to, subject, text, orbisRef: ref, ...threading(original) });
+  const sent = await sendOrFind(token, raw, threadId, { to, subject, ref });
+  try {
+    await updateApplication(userId, app.id, { followUpDraft: null, followUpDue: null }, client);
+    await addEvent(userId, {
+      applicationId: app.id, kind: 'follow_up_sent', summary: 'Follow-up sent in the same thread', at: now.toISOString(),
+      details: { to, subject, gmailId: sent.id || null, threadId: sent.threadId || threadId },
+    }, client);
+  } catch (error) {
+    console.error('Recording a follow-up failed; it did go out', error);
+  }
+  return { ok: true };
+}
+
+/** Where the offer reply for this application goes (lib/career/recipient.ts offerReplyTarget). */
+export function offerTargetFor(app: CareerApplication, job: CareerJob | null, events: readonly CareerEvent[]): ReplyTarget | null {
+  const trustedDomains = job ? trustedCompanyDomains(job, applyEmailFor(job, job.requirements)) : [];
+  return offerReplyTarget({ events, appThreadId: app.gmailThreadId, trustedDomains });
+}
+
 /**
- * The owner's reply to an offer, in the thread the offer came in: to whoever
- * sent the offer, or, without that message, after the last one Orbis sent.
+ * The owner's reply to an offer: in the thread Orbis sent or the offer's own
+ * thread, to the recipient offerTargetFor picks, which the screen showed
+ * (`expectedTo`); if that has changed since, nothing goes.
  */
-export async function sendOfferReply(client: CareerDb, userId: string, offerId: string, text: string, now = new Date()): Promise<ReplyResult & { applicationId?: string }> {
+export async function sendOfferReply(
+  client: CareerDb, userId: string, offerId: string, text: string, expectedTo: string | null, now = new Date(),
+): Promise<ReplyResult & { applicationId?: string }> {
   try {
     const offer = await getOffer(userId, offerId, client);
     if (!offer) return { ok: false, message: 'That offer couldn’t be found.' };
     const app = await getApplication(userId, offer.applicationId, client);
     if (!app) return { ok: false, message: 'That application couldn’t be found.' };
-    const [events, row, job] = await Promise.all([
-      listEvents(userId, { applicationId: app.id, limit: 200 }, client),
-      getCareerRow(userId, client),
-      getJob(userId, app.jobId, client),
-    ]);
-    const isOfferReply = (event: CareerEvent) => event.kind === 'note' && event.details.kind === 'offer_reply';
-    if (justSent(events, isOfferReply, now)) return { ok: false, message: 'That reply was just sent.' };
-    const { token, email } = await sendingToken(userId);
-    const offerMail = await readMessage(token, events.find((event) => event.kind === 'offer' && event.gmailMessageId)?.gmailMessageId ?? null);
-    const previous = offerMail ? null : lastSent(events);
-    const ours = offerMail ? null : await readMessage(token, previous?.gmailId ?? null);
-    const target = offerMail ?? ours;
-    const to = offerMail ? senderAddress(offerMail.from) : (ours?.to || previous?.to) ?? null;
-    const threadId = target?.threadId ?? app.gmailThreadId;
-    if (!to || !threadId || !validAddress(to)) {
-      return { ok: false, message: 'There’s no email thread for this offer in Orbis. Copy the reply and send it from your own mail.' };
-    }
-    const name = row?.profile?.contact.name ?? '';
-    const subject = replySubject(target?.subject || `Offer for ${job?.title ?? 'the role'}`);
-    const raw = buildRawMessage({ from: fromHeader(name, email), to, subject, text, ...threading(target) });
-    const sent = await sendMessage(token, raw, threadId);
-    try {
-      await addEvent(userId, {
-        applicationId: app.id, kind: 'note', summary: 'Your reply to the offer was sent', at: now.toISOString(),
-        details: { kind: 'offer_reply', offerId, to, subject, gmailId: sent.id || null, threadId: sent.threadId || threadId },
-      }, client);
-    } catch (error) {
-      console.error('Recording an offer reply failed; it did go out', error);
-    }
-    return { ok: true, applicationId: app.id };
+    const result = await withSendLock(userId, `offer_reply:${offerId}`, app.id, now, () => offerReplyLocked(client, userId, { app, offerId, text, expectedTo }, now));
+    if (result === 'busy') return { ok: false, message: 'That reply is being sent already.' };
+    return result.ok ? { ok: true, applicationId: app.id } : result;
   } catch (error) {
     return { ok: false, message: messageOf(error) };
   }
+}
+
+const NO_OFFER_THREAD = 'There’s no email thread for this offer in Orbis. Copy the reply and send it from your own mail.';
+
+async function offerReplyLocked(
+  client: CareerDb, userId: string, input: { app: CareerApplication; offerId: string; text: string; expectedTo: string | null }, now: Date,
+): Promise<ReplyResult> {
+  const { app, offerId, text } = input;
+  const [events, row, job] = await Promise.all([
+    listEvents(userId, { applicationId: app.id, limit: 200 }, client),
+    getCareerRow(userId, client),
+    getJob(userId, app.jobId, client),
+  ]);
+  const isOfferReply = (event: CareerEvent) => event.kind === 'note' && event.details.kind === 'offer_reply';
+  if (justSent(events, isOfferReply, now)) return { ok: false, message: 'That reply was just sent.' };
+  const target = offerTargetFor(app, job, events);
+  if (!target || !validAddress(target.to)) return { ok: false, message: NO_OFFER_THREAD };
+  if (senderAddress(input.expectedTo ?? '') !== target.to) {
+    return { ok: false, message: `This reply would now go to ${target.to}. Check that’s right, then send again.` };
+  }
+  const { token, email } = await sendingToken(userId);
+  const original = await readMessage(token, target.gmailId);
+  const threadId = original?.threadId ?? target.threadId;
+  if (!threadId) return { ok: false, message: NO_OFFER_THREAD };
+  const to = target.to;
+  const name = row?.profile?.contact.name ?? '';
+  const subject = replySubject(original?.subject || `Offer for ${job?.title ?? 'the role'}`);
+  const ref = messageRef('offer', offerId, now);
+  const raw = buildRawMessage({ from: fromHeader(name, email), to, subject, text, orbisRef: ref, ...threading(original) });
+  const sent = await sendOrFind(token, raw, threadId, { to, subject, ref });
+  try {
+    await addEvent(userId, {
+      applicationId: app.id, kind: 'note', summary: 'Your reply to the offer was sent', at: now.toISOString(),
+      details: { kind: 'offer_reply', offerId, to, subject, gmailId: sent.id || null, threadId: sent.threadId || threadId },
+    }, client);
+  } catch (error) {
+    console.error('Recording an offer reply failed; it did go out', error);
+  }
+  return { ok: true };
 }

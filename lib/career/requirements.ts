@@ -108,12 +108,39 @@ function salaryOf(value: unknown): Requirements['salary'] {
 }
 
 /**
+ * Whether `email` appears, as written, in `text` (case aside). An address the
+ * model read must be one the listing really gives: a model can be talked into
+ * "finding" one, and Send would mail the owner's resume to it.
+ */
+export function emailInText(email: string, text: string | null | undefined): boolean {
+  const needle = email.trim().toLowerCase();
+  const haystack = text?.toLowerCase() ?? '';
+  if (!needle) return false;
+  for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, at + 1)) {
+    if (standsAlone(haystack, at, at + needle.length)) return true;
+  }
+  return false;
+}
+
+const ADDRESS_CHAR = /[a-z0-9._%+-]/;
+
+/** Not part of a longer address: "jobs@acme.io" isn't in "jobs@acme.io.evil.com" or "xjobs@acme.io". */
+function standsAlone(text: string, start: number, end: number) {
+  if (start > 0 && ADDRESS_CHAR.test(text[start - 1])) return false;
+  const next = text[end] ?? '';
+  // A full stop that ends the sentence is fine; one that carries on the domain isn't.
+  if (next === '.') return !/[a-z0-9-]/.test(text[end + 1] ?? '');
+  return !ADDRESS_CHAR.test(next);
+}
+
+/**
  * The model's reply as Requirements, or null when it isn't the right shape
  * (not an object, or the skill lists missing). Within it, unreadable entries
  * are dropped and unknown enum values become null; skills come back canonical,
- * and one named in both lists counts as a must-have.
+ * and one named in both lists counts as a must-have. `sourceText` is the
+ * listing the model read: an apply address is kept only if it appears there.
  */
-export function parseRequirementsReply(reply: string): Requirements | null {
+export function parseRequirementsReply(reply: string, sourceText: string | null = null): Requirements | null {
   const raw = readJsonObject(reply);
   if (!raw || !Array.isArray(raw.mustHave) || !Array.isArray(raw.niceToHave)) return null;
   const mustHave = requirementList(raw.mustHave);
@@ -132,7 +159,7 @@ export function parseRequirementsReply(reply: string): Requirements | null {
     salary: salaryOf(raw.salary),
     employmentType: employmentOf(raw.employmentType),
     visa: cleanNullable(raw.visa, CAPS.visa),
-    applyEmail: email && isEmailLike(email) ? email : null,
+    applyEmail: email && isEmailLike(email) && emailInText(email, sourceText) ? email : null,
     screeningQuestions: cleanList(raw.screeningQuestions, CAPS.questions, CAPS.question),
   };
 }

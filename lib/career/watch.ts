@@ -6,21 +6,24 @@ import { careerAiGate, classifyReply, draftFollowUp, prepPack, readAlertEmail } 
 import { alertAllowedUrls, alertGmailQuery, alertSenderFor, extractLinks, isAlertSender, spotJobLinks } from '@/lib/career/alerts';
 import { dedupeKey } from '@/lib/career/dedupe';
 import { fallbackFollowUp, isFollowUpDue, isGhosted } from '@/lib/career/followup';
-import { linkReply, replyCandidate, type Candidate, type OpenApp } from '@/lib/career/mail';
+import { isStrongCandidate, linkReply, replyCandidate, type Candidate, type OpenApp } from '@/lib/career/mail';
 import { followUpHeadsup, headsupKindFor, replyHeadsup, type CareerHeadsup } from '@/lib/career/notify';
 import { runPool } from '@/lib/career/pool';
 import { prepLogistics } from '@/lib/career/prep';
 import {
   addEvent, claimCareerRun, createOffer, getCareerRow, listApplications, listCareerUsers, listJobsByIds, markMailSeen,
-  pruneCareerMail, releaseCareerRun, seenMessageIds, setLastMailScan, transitionApplication, updateApplication,
+  pruneCareerMail, reclassifyEvent, releaseCareerRun, seenMessageIds, setLastMailScan, transitionApplication, updateApplication,
   upsertJobs, type CareerDb, type CareerRow, type MailOutcome,
 } from '@/lib/career/repository';
 import { careerToday, scoreJob } from '@/lib/career/scoring';
-import { isWatched, statusFromReply } from '@/lib/career/status';
+import { isWatched, isWatchedNow, statusFromReply } from '@/lib/career/status';
 import { htmlToText } from '@/lib/career/text';
 import { APPLICATION_STATUSES } from '@/lib/career/types';
-import type { CareerApplication, CareerJob, CareerProfile, CareerSpec, NormalizedJob, OfferTerms, ReplyClassification } from '@/lib/career/types';
-import { eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery } from '@/lib/career/watch-plan';
+import type { CareerApplication, CareerEvent, CareerJob, CareerProfile, CareerSpec, NormalizedJob, OfferTerms, ReplyClassification } from '@/lib/career/types';
+import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery, retryClassification,
+} from '@/lib/career/watch-plan';
 
 // The Gmail watcher, every 15 minutes: job-alert emails become thin jobs,
 // replies move applications along and raise heads-ups, and the clock drafts
@@ -132,8 +135,11 @@ async function readAlerts(admin: CareerDb, person: Person, token: string, deadli
 
 type Watched = { apps: Map<string, CareerApplication>; jobs: Map<string, CareerJob>; open: OpenApp[]; sentThreads: Set<string> };
 
-async function watchedApplications(admin: CareerDb, userId: string): Promise<Watched> {
-  const apps = await listApplications(userId, { statuses: APPLICATION_STATUSES.filter(isWatched) }, admin);
+// Rejected ones are read too, and kept for 30 days (isWatchedNow).
+const WATCH_STATUSES = APPLICATION_STATUSES.filter((status) => isWatched(status) || status === 'rejected');
+
+async function watchedApplications(admin: CareerDb, userId: string, now: Date): Promise<Watched> {
+  const apps = (await listApplications(userId, { statuses: WATCH_STATUSES }, admin)).filter((app) => isWatchedNow(app, now));
   const jobs = new Map((await listJobsByIds(userId, apps.map((app) => app.jobId), admin)).map((job) => [job.id, job]));
   return {
     apps: new Map(apps.map((app) => [app.id, app])),
@@ -173,7 +179,12 @@ async function storePrep(admin: CareerDb, person: Person, app: CareerApplication
   return prep;
 }
 
-/** What a linked, classified reply sets off: status, offer row, prep pack, heads-up. */
+/**
+ * What a reply tied to an application by its thread or company domain sets
+ * off: status, offer row, prep pack, heads-up. The offer row and prep pack
+ * follow the status, so mail that can't move the card (a reply to a rejected
+ * application) only lands on the timeline and raises its heads-up.
+ */
 async function actOnReply(admin: CareerDb, person: Person, watched: Watched, item: Classified & { applicationId: string; classification: ReplyClassification }, deadline: number) {
   const app = watched.apps.get(item.applicationId);
   const job = app ? watched.jobs.get(app.jobId) : undefined;
@@ -181,8 +192,11 @@ async function actOnReply(admin: CareerDb, person: Person, watched: Watched, ite
   const { classification } = item;
   await moveStatus(admin, person, app, classification);
   // Unconfirmed until the owner checks the terms; advice waits for that.
-  if (classification.kind === 'offer') await createOffer(person.userId, { applicationId: app.id, terms: classification.offer ?? EMPTY_TERMS }, admin);
-  const prep = classification.kind === 'interview_invite' ? await storePrep(admin, person, app, job, classification, deadline) : null;
+  if (classification.kind === 'offer' && app.status === 'offer') {
+    await createOffer(person.userId, { applicationId: app.id, terms: classification.offer ?? EMPTY_TERMS }, admin);
+  }
+  const invited = classification.kind === 'interview_invite' && app.status === 'interview';
+  const prep = invited ? await storePrep(admin, person, app, job, classification, deadline) : null;
   const kind = headsupKindFor(classification.kind);
   if (!kind) return;
   await raiseHeadsup(admin, person, replyHeadsup({
@@ -190,7 +204,10 @@ async function actOnReply(admin: CareerDb, person: Person, watched: Watched, ite
   }));
 }
 
-/** Records one reply on the timeline (unmatched when no application fits) and acts on it. */
+/**
+ * Records one reply tied by thread or domain on the timeline (unmatched when
+ * no single application fits) and acts on it.
+ */
 async function recordReply(admin: CareerDb, person: Person, watched: Watched, item: Classified, deadline: number) {
   const { summary, candidate, classification } = item;
   const applicationId = (classification ? linkReply(classification, summary, watched.open) : null) ?? candidate.applicationId;
@@ -199,7 +216,10 @@ async function recordReply(admin: CareerDb, person: Person, watched: Watched, it
     kind: eventKindFor(classification?.kind ?? 'other'),
     summary: classification?.summary ?? (summary.subject || 'A reply about an application'),
     at: summary.receivedAt,
-    details: replyDetails({ from: summary.from, subject: summary.subject, classification, reason: candidate.reason }),
+    details: replyDetails({
+      from: summary.from, subject: summary.subject, classification, reason: candidate.reason, threadId: summary.threadId,
+      snippet: classification ? undefined : summary.snippet,
+    }),
     gmailMessageId: summary.id,
   }, admin);
   person.marks.push({ id: summary.id, outcome: 'reply' });
@@ -208,6 +228,29 @@ async function recordReply(admin: CareerDb, person: Person, watched: Watched, it
   if (applicationId) person.counts.replies += 1;
   else person.counts.unmatched += 1;
   if (applicationId && classification) await actOnReply(admin, person, watched, { ...item, applicationId, classification }, deadline);
+}
+
+/**
+ * A message tied to an application only by a company name in its subject or
+ * preview: recorded unmatched, unread and unclassified (no model credit, no
+ * effects), with Gmail's preview and the application the name suggests. The
+ * owner attaches it, and it is classified then (attachReplyAction).
+ */
+async function recordUnmatched(admin: CareerDb, person: Person, item: { summary: GmailMessageSummary; candidate: Candidate }) {
+  const { summary, candidate } = item;
+  const event = await addEvent(person.userId, {
+    applicationId: null,
+    kind: 'reply',
+    summary: summary.subject || 'A reply about an application',
+    at: summary.receivedAt,
+    details: replyDetails({
+      from: summary.from, subject: summary.subject, classification: null, reason: candidate.reason,
+      threadId: summary.threadId, snippet: summary.snippet, suggestedApplicationId: candidate.applicationId,
+    }),
+    gmailMessageId: summary.id,
+  }, admin);
+  person.marks.push({ id: summary.id, outcome: 'reply' });
+  if (event) person.counts.unmatched += 1;
 }
 
 /** Which unseen messages are worth reading: everything else is marked skipped from its headers alone. */
@@ -232,16 +275,47 @@ async function replyCandidates(admin: CareerDb, person: Person, token: string, w
 }
 
 async function readReplies(admin: CareerDb, person: Person, token: string, deadline: number) {
-  const watched = await watchedApplications(admin, person.userId);
+  const now = new Date();
+  const watched = await watchedApplications(admin, person.userId, now);
   const candidates = await replyCandidates(admin, person, token, watched, deadline);
-  // With AI off, candidates stay unread and unmarked until it's back (within the 3-day window).
-  if (!candidates.length || (await careerAiGate(person.userId))) return;
-  const { results } = await runPool(candidates, (item) => classifyOne(person, token, item, deadline), { limit: LANES, deadline, taskMs: MAIL_AI_MS + 5_000 });
+  const strong = candidates.filter((item) => isStrongCandidate(item.candidate));
+  for (const item of candidates) {
+    if (!isStrongCandidate(item.candidate)) await recordUnmatched(admin, person, item); // NOSONAR: a handful a run, one insert each
+  }
+  // With AI off, the strong ones stay unread and unmarked until it is back (within the 3-day window).
+  if (!strong.length || (await careerAiGate(person.userId))) return;
+  const { results } = await runPool(strong, (item) => classifyOne(person, token, item, deadline), { limit: LANES, deadline, taskMs: MAIL_AI_MS + 5_000 });
   const inOrder = results.toSorted((a, b) => a.summary.receivedAt.localeCompare(b.summary.receivedAt));
   for (const item of inOrder) {
+    // No model answered (credits spent, none available): left unmarked for a later run, until it nears the end of the search window.
+    if (!item.classification && retryClassification(item.summary.receivedAt, now)) continue;
     // Oldest first, one at a time: an acknowledgement then an invite must move the card in that order.
     await recordReply(admin, person, watched, item, deadline); // NOSONAR: replies to one application must apply in the order they arrived
   }
+}
+
+/**
+ * A reply recorded unread (tied to an application only by a company name) is
+ * read and classified when the owner attaches it, so its effects can follow.
+ * Null when it can't be read now (no Gmail, AI off, no answer): it stays a
+ * plain reply on the timeline.
+ */
+export async function classifyAttached(userId: string, event: CareerEvent): Promise<ReplyClassification | null> {
+  if (event.details.classified !== false || !event.gmailMessageId) return null;
+  if (await careerAiGate(userId)) return null;
+  const token = await mailToken(userId);
+  if (!token) return null;
+  const full = await getMessageFull(token, event.gmailMessageId).catch((error: unknown) => {
+    console.error('Reading an attached reply failed', error);
+    return null;
+  });
+  if (!full) return null;
+  const classification = await classifyReply(userId, { from: full.from, subject: full.subject, body: full.text || htmlToText(full.html) }, { timeoutMs: MAIL_AI_MS });
+  if (!classification) return null;
+  const reason = typeof event.details.matchedBy === 'string' ? event.details.matchedBy : 'words';
+  const details = replyDetails({ from: full.from, subject: full.subject, classification, reason, threadId: full.threadId });
+  await reclassifyEvent(createAdminClient(), userId, event.id, { kind: eventKindFor(classification.kind), summary: classification.summary, details: { ...details, attachedBy: 'owner' } });
+  return classification;
 }
 
 // ─── Follow-ups and ghosting ───────────────────────────────────────────────

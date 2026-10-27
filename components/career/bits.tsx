@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Copy, LoaderCircle } from 'lucide-react';
 import type { Notice } from '@/components/career/use-run';
+import { httpsHref, linkHost } from '@/lib/career/links';
 
 /** A result line under the control that caused it. `<output>`, so it is announced. */
 export function NoticeLine({ notice, onDismiss }: Readonly<{ notice: Notice | null; onDismiss?: () => void }>) {
@@ -50,5 +51,36 @@ export function CopyButton({ value, label }: Readonly<{ value: string; label: st
       {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
       <span aria-hidden="true">{copied ? 'Copied' : 'Copy'}</span>
     </button>
+  );
+}
+
+/**
+ * A link built from stored data (a listing, an apply page): clickable only
+ * when it is https, checked here as it is drawn; otherwise the same content
+ * as plain text.
+ */
+export function SafeLink({ url, className, children }: Readonly<{ url: string | null | undefined; className?: string; children: ReactNode }>) {
+  const href = httpsHref(url);
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <a className={className} href={href} target="_blank" rel="noopener noreferrer">
+      {children}<span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
+/**
+ * A meeting link from an invite email: always shows the host it goes to, and
+ * is a link only when https. The invite was read from mail, so the host is
+ * the owner's check that it really is Meet, Zoom or Teams.
+ */
+export function MeetingLink({ url }: Readonly<{ url: string }>) {
+  const href = httpsHref(url);
+  const host = linkHost(url);
+  if (!href || !host) return <span>Meeting link{host ? ` on ${host}` : ''} not shown: it isn’t a secure (https) address. Check the invite email.</span>;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      Meeting link on {host}<span className="sr-only"> (opens in a new tab)</span>
+    </a>
   );
 }

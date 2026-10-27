@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { APPLICATION_STATUSES } from './types.ts';
-import { STAGE_GROUPS, canTransition, groupOf, isOpen, isWatched, ownerMoves, stageRank, statusFromReply } from './status.ts';
+import { STAGE_GROUPS, canTransition, groupOf, isOpen, isWatched, isWatchedNow, ownerMoves, stageRank, statusFromReply } from './status.ts';
 
 test('every status sits in exactly one column', () => {
   for (const status of APPLICATION_STATUSES) {
@@ -88,4 +88,14 @@ test('the owner\'s menu', () => {
   assert.deepEqual(ownerMoves('sending'), []);
   // Correcting a misread rejection.
   assert.ok(ownerMoves('rejected').includes('interview'));
+});
+
+test('a rejected application stays watched for 30 days after its last news', () => {
+  const now = new Date('2026-10-27T00:00:00Z');
+  const rejected = (lastEventAt: string | null) => ({ status: 'rejected' as const, lastEventAt, updatedAt: '2026-01-01T00:00:00Z' });
+  assert.ok(isWatchedNow(rejected('2026-10-10T00:00:00Z'), now));
+  assert.ok(!isWatchedNow(rejected('2026-09-20T00:00:00Z'), now));
+  assert.ok(!isWatchedNow(rejected(null), now));
+  assert.ok(isWatchedNow({ status: 'ghosted', lastEventAt: null, updatedAt: '2025-01-01T00:00:00Z' }, now));
+  assert.ok(!isWatchedNow({ status: 'withdrawn', lastEventAt: '2026-10-26T00:00:00Z', updatedAt: '2026-10-26T00:00:00Z' }, now));
 });

@@ -4,9 +4,9 @@ import { careerAiGate, tailorApplication } from '@/lib/career/ai';
 import { atsCheck } from '@/lib/career/ats';
 import { applyEmailFor, applyRouteFor, betterAttempt, draftBlocker, nextFileVersion, REGENERATE_ABOVE } from '@/lib/career/draft-plan';
 import { outcomesOf } from '@/lib/career/history';
-import { companyDomains } from '@/lib/career/mail';
 import { scoreMatch } from '@/lib/career/match';
 import { predictApplication, train } from '@/lib/career/predict';
+import { trustedCompanyDomains } from '@/lib/career/recipient';
 import { renderResumeDocx } from '@/lib/career/render/docx';
 import { resumeSections } from '@/lib/career/render/layout';
 import { renderResumePdf } from '@/lib/career/render/pdf';
@@ -161,7 +161,8 @@ async function draftInto(client: CareerDb, userId: string, application: CareerAp
   }
   const route = applyRouteFor(job, requirements);
   const prediction = await predictionFor(client, userId, { job, route, score: job.score ?? match.score, spec, today });
-  const domains = companyDomains({ applyEmail: applyEmailFor(job, requirements), urls: [job.url, job.applyUrl, ...job.seenOn.map((seen) => seen.url)] });
+  // The domains replies may come from; an address from a low-trust listing isn't one on its own say-so.
+  const domains = trustedCompanyDomains(job, applyEmailFor(job, requirements));
   await updateApplication(userId, application.id, {
     status: 'ready', route, draft: checked.draft, coverNote: checked.coverNote, answers, outreach: checked.outreach || null,
     removed: checked.removed, ats: files.ats, pdfPath: files.pdfPath, docxPath: files.docxPath, companyDomains: domains.slice(0, 20), prediction,

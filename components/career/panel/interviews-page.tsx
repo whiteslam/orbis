@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowUpRight, CalendarClock, Link2, Video } from 'lucide-react';
+import { MeetingLink } from '@/components/career/bits';
 import { dayTime } from '@/components/career/format';
 import { PrepPack } from '@/components/career/sheet/prep-pack';
 import { StatusChip } from '@/components/career/status-chip';
@@ -65,7 +66,7 @@ function PrepColumn({ item }: Readonly<{ item: UpcomingInterview }>) {
           <ul className="cr-logistics">
             <li><CalendarClock size={14} aria-hidden="true" /><span>{item.at ? dayTime(item.at) : 'Time not given yet'}</span></li>
             {item.format && <li><Video size={14} aria-hidden="true" /><span>{item.format}</span></li>}
-            {item.link && <li><Link2 size={14} aria-hidden="true" /><a href={item.link} target="_blank" rel="noopener noreferrer">Meeting link<span className="sr-only"> (opens in a new tab)</span></a></li>}
+            {item.link && <li><Link2 size={14} aria-hidden="true" /><MeetingLink url={item.link} /></li>}
           </ul>
           <p className="cp-quiet">The prep pack is written when the invite is read. If it’s missing, open the application and check its timeline.</p>
         </>

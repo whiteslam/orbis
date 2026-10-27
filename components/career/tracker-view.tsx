@@ -55,7 +55,11 @@ function TrackerRow({ card, latest, interviewAt, onOpen }: Readonly<{ card: Appl
 /** A reply Orbis couldn't link: attach it to the application it belongs to. The web panel's inbox uses it too. */
 export function UnmatchedReply({ event, options, onAttached }: Readonly<{ event: CareerEvent; options: ApplicationCard[]; onAttached: () => void }>) {
   const id = useId();
-  const [target, setTarget] = useState(options[0]?.application.id ?? '');
+  // The application its company name suggests comes first; the owner decides.
+  const suggested = options.find((card) => card.application.id === event.details.suggestedApplicationId);
+  const [target, setTarget] = useState(suggested?.application.id ?? options[0]?.application.id ?? '');
+  const from = typeof event.details.from === 'string' ? event.details.from : null;
+  const snippet = typeof event.details.snippet === 'string' ? event.details.snippet : null;
   const { busy, notice, run } = useRun();
   const attach = () => run('attach', () => attachReplyAction(event.id, target), () => {
     onAttached();
@@ -63,6 +67,8 @@ export function UnmatchedReply({ event, options, onAttached }: Readonly<{ event:
   return (
     <li className="cr-unmatched-item">
       <p><b>{event.summary || 'A reply'}</b><time dateTime={event.at}>{dayMonth(event.at)}</time></p>
+      {from && <small className="cr-unmatched-from">From {from}</small>}
+      {snippet && <small className="cr-unmatched-snippet">{snippet}</small>}
       <div className="cr-attach">
         <label htmlFor={id} className="sr-only">Which application this reply is for</label>
         <select id={id} value={target} onChange={(change) => setTarget(change.currentTarget.value)}>
@@ -100,7 +106,7 @@ export function TrackerView({ home, onOpen, onReload }: Readonly<{ home: CareerH
       {unmatched.length > 0 && (
         <section className="mn-card cr-unmatched" aria-labelledby="cr-unmatched-title">
           <h2 className="fd-label" id="cr-unmatched-title"><Inbox size={12} aria-hidden="true" /> Unmatched replies</h2>
-          <p className="cr-block-note">Orbis found these in your Gmail but couldn’t tell which application they answer.</p>
+          <p className="cr-block-note">Orbis found these in your Gmail but couldn’t prove which application they answer: they aren’t in a thread Orbis sent or from the company’s own domain. Check the sender before you attach one.</p>
           <ul>
             {unmatched.map((event) => (
               <UnmatchedReply key={event.id} event={event} options={attachable} onAttached={() => { setAttached((ids) => [...ids, event.id]); onReload(); }} />

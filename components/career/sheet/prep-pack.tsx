@@ -1,4 +1,5 @@
 import { CalendarClock, Link2, Video } from 'lucide-react';
+import { MeetingLink } from '@/components/career/bits';
 import { dayTime } from '@/components/career/format';
 import type { CareerProfile, InterviewPrep } from '@/lib/career/types';
 
@@ -12,7 +13,7 @@ export function PrepPack({ prep, profile }: Readonly<{ prep: InterviewPrep; prof
       <ul className="cr-logistics">
         <li><CalendarClock size={14} aria-hidden="true" /><span>{logistics.at ? dayTime(logistics.at) : 'Time not given yet'}</span></li>
         {logistics.format && <li><Video size={14} aria-hidden="true" /><span>{logistics.format}</span></li>}
-        {logistics.link && <li><Link2 size={14} aria-hidden="true" /><a href={logistics.link} target="_blank" rel="noopener noreferrer">Meeting link</a></li>}
+        {logistics.link && <li><Link2 size={14} aria-hidden="true" /><MeetingLink url={logistics.link} /></li>}
       </ul>
 
       {prep.likelyTopics.length > 0 && <h3 className="cr-sub">What they’ll likely test</h3>}

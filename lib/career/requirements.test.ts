@@ -36,7 +36,7 @@ const reply = {
 };
 
 test('a realistic reply parses with canonical skills and tidy enums', () => {
-  const parsed = parseRequirementsReply(JSON.stringify(reply));
+  const parsed = parseRequirementsReply(JSON.stringify(reply), 'Apply at careers@plane.so with your resume.');
   assert.deepEqual(parsed, {
     version: REQUIREMENTS_VERSION,
     mustHave: [{ skill: 'react', years: 5 }, { skill: 'typescript', years: null }, { skill: 'jest', years: null }],
@@ -80,6 +80,18 @@ test('the wrong shape is rejected', () => {
   assert.equal(parseRequirementsReply('{"mustHave":"React","niceToHave":[]}'), null);
   assert.equal(parseRequirementsReply('I could not read it'), null);
   assert.ok(parseRequirementsReply('```json\n{"mustHave":[],"niceToHave":[]}\n```'));
+});
+
+test('an apply address is kept only when the listing itself says it', () => {
+  const text = JSON.stringify(reply);
+  assert.equal(parseRequirementsReply(text, 'Send your CV to CAREERS@plane.so')?.applyEmail, 'careers@plane.so');
+  // The model "found" an address the listing never gives (an injected instruction, say).
+  assert.equal(parseRequirementsReply(text, 'Apply on our site.')?.applyEmail, null);
+  assert.equal(parseRequirementsReply(text)?.applyEmail, null);
+  // Part of a longer address isn't the same address.
+  assert.equal(parseRequirementsReply(text, 'Write to careers@plane.solutions.example')?.applyEmail, null);
+  assert.equal(parseRequirementsReply(text, 'Write to xcareers@plane.so')?.applyEmail, null);
+  assert.equal(parseRequirementsReply(text, 'Write to careers@plane.so.')?.applyEmail, 'careers@plane.so');
 });
 
 test('lists are capped', () => {

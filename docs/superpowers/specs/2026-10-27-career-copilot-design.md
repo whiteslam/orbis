@@ -97,7 +97,8 @@ pasted ──┘                                                                
 
 ### Dedupe
 - Each job gets `dedupe_key = normalise(company) + '|' + normalise(title) + '|' + normalise(location bucket)`. Normalising lowercases, strips punctuation and drops company suffixes (`inc`, `ltd`, `pvt`, `technologies`…). The key is unique per user.
-- A second sighting from another source adds its URL to `sources` and keeps the richer description.
+- A second sighting from another listing adds its URL to `sources` and nothing else: the apply address and apply page come only from the listing stored first (seen again, it may fill what it lacked). A richer description is taken from that listing, or from a more trusted source. Trust, highest first: the company's ATS board and pasted jobs; remote boards (Himalayas, Remotive, Remote OK, WWR, Jobspresso, Adzuna); Hacker News comments and alert emails (anyone can post a comment). See `lib/career/recipient.ts`.
+- An apply address the requirements model reads is kept only if it is written, as a whole address, in the description.
 - Jobs older than 45 days, or from listings that have closed, are hidden. They are never deleted while an application points at them.
 
 ### Prefilter (before any AI)
@@ -157,6 +158,8 @@ Most feed items are irrelevant (RemoteOK alone returns hundreds). A job goes on 
   - `email`: a MIME message from the owner's Gmail to the job's apply address, with the tailored PDF attached and the cover note as the body. This needs the `gmail.send` scope; see "Gmail send". The returned thread id is stored.
   - `recruitee`: a multipart POST of the candidate's name, email, phone, cover letter and the PDF to `https://<co>.recruitee.com/api/offers/<slug>/candidates`. The exact payload isn't verified. Any non-2xx reply falls back to `link`, and the owner is told.
   - `link`: the apply page opens in a new tab. A side panel has copy buttons for every field, the downloads and the screening answers. The application waits in `opened` until the owner presses "I applied". Only then does it count as sent.
+- Before sending: the Send bar shows exactly where it goes (the address, Recruitee's careers page of the company, or the apply page's host), warns when an address isn't at a domain the company's own pages use, and the first time an address (or company domain) is used asks "Send to …? This address came from …". The server sends only to the address shown.
+- A Gmail send whose answer is lost is looked up in Sent (by an `X-Orbis-Ref` header) before deciding whether it went; a Recruitee post whose answer is lost is reported as "may have gone through", never retried blind. A follow-up or offer reply holds a send lock while it goes. The offer reply goes to the offer's sender only when that email is in Orbis's thread or from the company's domain, otherwise to whoever Orbis applied to; the recipient is shown before Send.
 - After sending: the status is `sent`, a `sent` event is recorded, the prediction is snapshotted, and `follow_up_due` is set to 7 days later for the `email` and `recruitee` routes.
 
 ### Gmail watcher (cron, every 15 minutes)
@@ -167,7 +170,8 @@ Most feed items are irrelevant (RemoteOK alone returns hundreds). A job goes on 
   - from the domain of a company with an open application; or
   - whose subject or snippet matches a hiring vocabulary (interview, application, assessment, shortlisted, offer, unfortunately, next steps, recruiter…) **and** names a company with an open application.
   
-  Everything else is skipped without reading the body.
+  Everything else is skipped without reading the body. Applications are watched while open, while ghosted, and for 30 days after a rejection.
+- **Only strong candidates are read.** A message in a thread Orbis sent, or from the company's own domain, is classified. One tied only by a company name (anyone can write "Acme: your offer" from free mail) is recorded unread in "Unmatched replies" with Gmail's preview, spends no AI credit and changes nothing; it is read and acted on when the owner attaches it.
 - **Classifying.** For a candidate, the plain-text body (capped at 8k characters) is classified by AI as JSON:
   - `kind`: one of `acknowledgement`, `rejection`, `interview_invite`, `assessment`, `recruiter_question`, `offer`, `other`;
   - `company`, `role`;
@@ -178,7 +182,8 @@ Most feed items are irrelevant (RemoteOK alone returns hundreds). A job goes on 
   Rules check it afterwards:
   - an offer must contain an amount or the word offer;
   - a rejection may not also be an offer.
-- **Linking.** A thread id match wins. Otherwise the sender domain is matched against the company's domains (from its apply email and URLs). Otherwise the company name is fuzzy-matched against open applications. A reply that can't be linked lands in an "Unmatched replies" list the owner can attach.
+- **Linking.** A thread id match wins. Otherwise the sender domain is matched against the company's domains (from its listing URLs, plus its apply address unless that came from Hacker News or an alert and matches none of them). The company name only chooses among several applications at that same domain. A reply that can't be linked lands in an "Unmatched replies" list the owner can attach. Only a linked reply moves the status, creates an offer row or prep pack, or raises a heads-up.
+- **No answer from the model** (AI off, credits spent): the message is left unmarked and retried on later runs until it is 60 hours old, then recorded unclassified.
 - **Status only moves forward:** `sent < acknowledged < replied < assessment < interview < offer`. `rejected` is allowed from any stage before `offer`. `withdrawn`, `accepted` and `declined` are set only by the owner.
 - **Notifications.** Interview invites, offers and recruiter questions create heads-ups (kinds below, `urgent`), which reach the owner through the existing push path and its caps.
 

@@ -33,24 +33,26 @@ import { totalYears, validateProfile } from '@/lib/career/profile';
 import {
   addEvent, CareerError, countForYou, createOffer, findJobIdByKey, getApplication, getApplicationFiles, getApplicationForJob,
   getCareerRow, getCareerState, getJob, getOffer, linkEvent, listApplications, listEvents, listJobs, listJobsByIds, listJobsPage,
-  listOffers, readSettings, saveProfile, saveSettings, saveSpec, setJobDescription, setJobState, signedCareerUrl, transitionApplication,
+  listOffers, readSettings, saveProfile, saveSettings, saveSpec, sentAddresses, setJobDescription, setJobState, signedCareerUrl, transitionApplication,
   updateApplication, updateOffer, upsertJobs, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
 import { careerToday, scoreJob } from '@/lib/career/scoring';
 import { buildPasteKit, resumeFileName } from '@/lib/career/send-plan';
-import { markApplied, sendApplication, sendFollowUp, sendOfferReply } from '@/lib/career/send';
+import { applyRecipient } from '@/lib/career/recipient';
+import { markApplied, offerTargetFor, sendApplication, sendFollowUp, sendOfferReply } from '@/lib/career/send';
 import { fetchPastedJob, pastedUrlKind } from '@/lib/career/sources';
 import { looksRemote } from '@/lib/career/sources/common';
 import { validateSpec } from '@/lib/career/spec';
+import { classifyAttached } from '@/lib/career/watch';
 import { canTransition, ownerMoves, statusFromReply } from '@/lib/career/status';
 import {
   APPLICATION_STATUSES, SOURCE_IDS,
   type ApplicationStatus, type CareerApplication, type CareerEvent, type CareerInsights, type CareerJob, type CareerProfile,
   type CareerSettings, type CareerSpec, type EventKind, type JobState, type NormalizedJob, type OfferAdvice, type OfferTerms,
-  type ReplyKind, type SourceId, type WatchedCompany,
+  type ReplyClassification, type ReplyKind, type SourceId, type WatchedCompany,
 } from '@/lib/career/types';
 import type {
-  ApplicationDetail, CareerHome, CareerSetup, DraftPatch, JobFilters, JobsPage, OwnerMove, ResumeUpload, Result, SendOutcome,
+  ApplicationDetail, CareerHome, CareerSetup, DraftPatch, JobFilters, JobsPage, OwnerMove, ResumeUpload, Result, SendConfirmation, SendOutcome,
 } from '@/lib/career/view';
 
 // ─── Shared ───────────────────────────────────────────────────────────────
@@ -144,14 +146,17 @@ async function signedFile(me: Session, path: string | null, name: string, format
   return signedCareerUrl(me.userId, path, { download: resumeFileName(name, format), seconds: FILE_URL_SECONDS }, me.client);
 }
 
-/** The job, its application, timeline, offer, signed file links and paste kit. */
+/** The job, its application, timeline, offer, signed file links, paste kit and where Send and the offer reply go. */
 async function detailFor(me: Session, job: CareerJob, application: CareerApplication | null, row?: CareerRow | null): Promise<ApplicationDetail> {
-  const [events, offers, files, careerRow] = await Promise.all([
+  const emailRoute = application?.route === 'email';
+  const [events, offers, files, careerRow, used] = await Promise.all([
     application ? listEvents(me.userId, { applicationId: application.id, limit: 200 }, me.client) : Promise.resolve([]),
     application ? listOffers(me.userId, { applicationId: application.id }, me.client) : Promise.resolve([]),
     application ? getApplicationFiles(me.userId, application.id, me.client) : Promise.resolve(null),
     row === undefined ? getCareerRow(me.userId, me.client) : Promise.resolve(row),
+    emailRoute ? sentAddresses(me.userId, me.client) : Promise.resolve([]),
   ]);
+  const offerTarget = application && offers.length ? offerTargetFor(application, job, events) : null;
   const name = careerRow?.profile?.contact.name ?? '';
   const [pdf, docx] = await Promise.all([
     signedFile(me, files?.pdfPath ?? null, name, 'pdf'),
@@ -164,6 +169,8 @@ async function detailFor(me: Session, job: CareerJob, application: CareerApplica
     offer: offers[0] ?? null,
     files: { pdf, docx },
     pasteKit: buildPasteKit({ profile: careerRow?.profile ?? null, application, spec: careerRow?.spec ?? null }),
+    recipient: application ? applyRecipient(job, application.route, used) : null,
+    offerReplyTo: offerTarget ? { to: offerTarget.to, verified: offerTarget.verified } : null,
   };
 }
 
@@ -592,13 +599,29 @@ function toOutcome(result: Awaited<ReturnType<typeof sendApplication>>, detail: 
   return { kind: 'sent', detail };
 }
 
-/** The owner's Send. Never called by anything but a press of Send. */
-export async function sendApplicationAction(applicationId: string): Promise<Result<SendOutcome>> {
-  if (!isUuid(applicationId)) return INVALID;
+/** A confirmation from the browser, checked: an address within limits and a real boolean. */
+function cleanConfirmation(value: unknown): SendConfirmation | null {
+  if (value === undefined) return { to: null, confirmed: false };
+  if (!value || typeof value !== 'object') return null;
+  const { to, confirmed } = value as Record<string, unknown>;
+  const address = to === null || to === undefined ? null : cleanText(to, 320, 3);
+  if (to !== null && to !== undefined && address === null) return null;
+  if (confirmed !== undefined && typeof confirmed !== 'boolean') return null;
+  return { to: address, confirmed: confirmed === true };
+}
+
+/**
+ * The owner's Send. Never called by anything but a press of Send. `confirm`
+ * is what the Send bar showed: the email route sends only to that address,
+ * and only once the owner confirmed an address Orbis hasn't used before.
+ */
+export async function sendApplicationAction(applicationId: string, confirm?: SendConfirmation): Promise<Result<SendOutcome>> {
+  const confirmation = cleanConfirmation(confirm);
+  if (!isUuid(applicationId) || !confirmation) return INVALID;
   return signedIn('That couldn’t be sent, and nothing went out. Try again in a little while.', async (me) => {
     const refused = await rateLimitRefusal(me.userId, 'career_send');
     if (refused) return fail(refused);
-    const result = await sendApplication(me.client, me.userId, applicationId);
+    const result = await sendApplication(me.client, me.userId, applicationId, confirmation);
     refresh();
     if (result.kind === 'refused') return fail(result.message);
     return ok(toOutcome(result, await detailForApplication(me, applicationId)));
@@ -686,13 +709,35 @@ const REPLY_KIND_OF: Partial<Record<EventKind, ReplyKind>> = {
 };
 const EMPTY_TERMS: OfferTerms = { fixed: null, variable: null, joiningBonus: null, equity: null, currency: null, period: null, startDate: null, deadline: null };
 
-/** What an attached reply sets off, as if the watcher had linked it: the status, and an offer to confirm. */
-async function actOnAttached(me: Session, application: CareerApplication, event: CareerEvent) {
-  const kind = REPLY_KIND_OF[event.kind];
+/**
+ * What an attached reply sets off, as if the watcher had linked it: the status
+ * (only where mail may move it, canTransition), and an offer to confirm. The
+ * owner's attach is the evidence the watcher lacked. `read` is the reply's
+ * classification when it was only read now (it was recorded unread).
+ */
+async function actOnAttached(me: Session, application: CareerApplication, event: CareerEvent, read: ReplyClassification | null) {
+  const kind = read?.kind ?? REPLY_KIND_OF[event.kind];
   const target = kind ? statusFromReply(application.status, kind) : null;
-  if (target) await transitionApplication(me.client, me.userId, application.id, [application.status], target);
+  if (target && (await transitionApplication(me.client, me.userId, application.id, [application.status], target))) {
+    await addEvent(me.userId, {
+      applicationId: application.id, kind: 'status_change', summary: `A reply you attached moved it to ${MOVE_LABELS[target].toLowerCase()}`,
+      details: { from: application.status, to: target, by: 'owner' },
+    }, me.client);
+  }
   if (kind === 'offer' && !(await listOffers(me.userId, { applicationId: application.id }, me.client)).length) {
-    await createOffer(me.userId, { applicationId: application.id, terms: EMPTY_TERMS }, me.client);
+    await createOffer(me.userId, { applicationId: application.id, terms: read?.offer ?? EMPTY_TERMS }, me.client);
+  }
+}
+
+/** Reads an attached reply that was recorded unread, within the owner's AI allowance; null when it can't be now. */
+async function readAttached(me: Session, event: CareerEvent): Promise<ReplyClassification | null> {
+  if (event.details.classified !== false || !event.gmailMessageId) return null;
+  if (await gateAndLimit(me.userId, 'career_ai', true)) return null;
+  try {
+    return await classifyAttached(me.userId, event);
+  } catch (error) {
+    console.error('Classifying an attached reply failed', error);
+    return null;
   }
 }
 
@@ -706,7 +751,7 @@ export async function attachReplyAction(eventId: string, applicationId: string):
     if (!application) return fail('That application couldn’t be found.');
     const event = unmatched.find((item) => item.id === eventId);
     if (!event || !(await linkEvent(me.userId, eventId, applicationId, me.client))) return fail('That reply is already attached.');
-    await actOnAttached(me, application, event);
+    await actOnAttached(me, application, event, await readAttached(me, event));
     refresh();
     return ok(await detailForApplication(me, applicationId));
   });
@@ -812,14 +857,17 @@ export async function adviseOfferAction(offerId: string): Promise<Result<OfferAd
   });
 }
 
-export async function sendOfferReplyAction(offerId: string, text: string): Promise<Result<ApplicationDetail>> {
+/** The offer reply's Send; `to` is the recipient the screen showed, and nothing goes if that has changed. */
+export async function sendOfferReplyAction(offerId: string, text: string, to: string): Promise<Result<ApplicationDetail>> {
   if (!isUuid(offerId)) return INVALID;
   const body = cleanText(text, 5000, 1);
   if (!body) return fail('Write the reply first (up to 5,000 characters).');
+  const expectedTo = cleanText(to, 320, 3);
+  if (!expectedTo) return INVALID;
   return signedIn('The reply couldn’t be sent, and nothing went out. Try again in a little while.', async (me) => {
     const refused = await rateLimitRefusal(me.userId, 'career_send');
     if (refused) return fail(refused);
-    const result = await sendOfferReply(me.client, me.userId, offerId, body);
+    const result = await sendOfferReply(me.client, me.userId, offerId, body, expectedTo);
     if (!result.ok) return fail(result.message);
     refresh();
     const offer = await getOffer(me.userId, offerId, me.client);

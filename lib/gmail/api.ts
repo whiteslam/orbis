@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { ORBIS_REF_HEADER } from '@/lib/gmail/mime';
 import { GoogleOAuthError } from '@/lib/gmail/oauth';
 import { headerValue, messageBodies, type GmailPart } from '@/lib/gmail/parts';
 
@@ -168,6 +169,18 @@ export class GmailSendScopeError extends Error {
   }
 }
 
+/**
+ * The request went to Gmail but no answer came back (a timeout, a dropped
+ * connection). Gmail may well have sent it: the caller must look in the Sent
+ * folder (findSentByRef) before offering Send again.
+ */
+export class GmailSendUncertainError extends Error {
+  constructor() {
+    super('Gmail didn’t answer in time.');
+    this.name = 'GmailSendUncertainError';
+  }
+}
+
 /** True when a 403's body says the token lacks a scope, rather than some other refusal. */
 function isScopeRefusal(body: string) {
   return /insufficient|ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficientPermissions/i.test(body);
@@ -180,13 +193,19 @@ function isScopeRefusal(body: string) {
  * an owner's press of Send.
  */
 export async function sendMessage(accessToken: string, raw: string, threadId?: string | null): Promise<{ id: string; threadId: string }> {
-  const response = await fetch(`${GMAIL_API}/messages/send`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
-    body: JSON.stringify(threadId ? { raw, threadId } : { raw }),
-    cache: 'no-store',
-    signal: AbortSignal.timeout(30_000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${GMAIL_API}/messages/send`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify(threadId ? { raw, threadId } : { raw }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (error) {
+    console.error('Gmail send got no answer', error);
+    throw new GmailSendUncertainError();
+  }
   if (response.status === 401) throw new GoogleOAuthError('Gmail access needs to be reconnected.', true);
   if (response.status === 403 && isScopeRefusal(await response.text().catch(() => ''))) throw new GmailSendScopeError();
   if (!response.ok) {
@@ -197,4 +216,32 @@ export async function sendMessage(accessToken: string, raw: string, threadId?: s
   // caller would offer Send again; empty ids say "sent, ids unknown".
   const data = (await response.json().catch(() => ({}))) as { id?: unknown; threadId?: unknown };
   return { id: typeof data.id === 'string' ? data.id : '', threadId: typeof data.threadId === 'string' ? data.threadId : '' };
+}
+
+/** Gmail search quoting: a phrase in double quotes, with any quote inside dropped. */
+const quoted = (text: string) => `"${text.replaceAll('"', ' ').trim()}"`;
+
+/**
+ * The message in the Sent folder from the last day that carries this
+ * X-Orbis-Ref, or null. Narrowed by recipient and subject, then each match's
+ * header is checked, so another email with the same subject never counts.
+ */
+export async function findSentByRef(accessToken: string, input: { to: string; subject: string; ref: string }): Promise<{ id: string; threadId: string } | null> {
+  const query = ['in:sent', 'newer_than:1d', `to:${quoted(input.to)}`, `subject:${quoted(input.subject.slice(0, 120))}`].join(' ');
+  const url = new URL(`${GMAIL_API}/messages`);
+  url.searchParams.set('q', query);
+  url.searchParams.set('maxResults', '10');
+  url.searchParams.set('fields', 'messages(id,threadId)');
+  const list = await gmailJson<GmailListResponse>(accessToken, url);
+  for (const message of list?.messages ?? []) {
+    if (!message.id) continue;
+    const one = new URL(`${GMAIL_API}/messages/${encodeURIComponent(message.id)}`);
+    one.searchParams.set('format', 'metadata');
+    one.searchParams.append('metadataHeaders', ORBIS_REF_HEADER);
+    one.searchParams.set('fields', 'id,threadId,payload(headers(name,value))');
+    const data = await gmailJson<{ id?: string; threadId?: string; payload?: { headers?: Array<{ name?: string; value?: string }> } }>(accessToken, one); // NOSONAR: at most ten, usually one
+    const ref = data?.payload?.headers?.find((header) => header.name?.toLowerCase() === ORBIS_REF_HEADER.toLowerCase())?.value?.trim();
+    if (data?.id && ref === input.ref) return { id: data.id, threadId: data.threadId ?? message.threadId ?? '' };
+  }
+  return null;
 }

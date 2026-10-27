@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { isRecord } from '@/lib/ai/json';
 import { CAREER_BUCKET } from '@/lib/storage/upload-rules';
+import { listingPatch, type StoredListing } from '@/lib/career/recipient';
 import {
   APPLICATION_STATUSES,
   DEFAULT_SETTINGS,
@@ -461,27 +462,31 @@ function newJobRow(userId: string, job: NormalizedJob & { dedupeKey: string }): 
   };
 }
 
-/** True when `incoming` says more about the job than what is stored. */
-function isRicher(incoming: NormalizedJob, stored: Row) {
-  if (incoming.thin && stored.thin !== true) return false;
-  if (!incoming.thin && stored.thin === true) return Boolean(incoming.description);
-  return (incoming.description?.length ?? 0) > (str(stored.description)?.length ?? 0);
+function storedListing(stored: Row): StoredListing {
+  return {
+    source: oneOf(stored.source, SOURCE_IDS), url: str(stored.url), thin: stored.thin === true,
+    description: str(stored.description), applyEmail: str(stored.apply_email), applyUrl: str(stored.apply_url),
+  };
 }
 
-/** What a new sighting of a stored job changes: its sources, and the richer listing's details. */
+/**
+ * What a new sighting of a stored job changes: its sources, and what
+ * listingPatch (lib/career/recipient.ts) allows. Another listing with the same
+ * dedupe key is only recorded as a sighting: its apply address and apply page
+ * are never taken, so a stranger's post can't redirect Send.
+ */
 function mergedJobValues(incoming: NormalizedJob, stored: Row): Row | null {
   const seenOn = readSightings(stored.sources);
   const values: Row = {};
   if (!seenOn.some((item) => item.source === incoming.source && item.url === incoming.url)) {
     values.sources = [sightingOf(incoming), ...seenOn].slice(0, MAX_SIGHTINGS);
   }
-  if (isRicher(incoming, stored)) {
-    values.description = incoming.description?.slice(0, 20_000) ?? null;
-    values.thin = incoming.thin;
-  }
+  const patch = listingPatch(incoming, storedListing(stored));
+  if (patch.description !== undefined) values.description = patch.description;
+  if (patch.thin !== undefined) values.thin = patch.thin;
+  if (patch.applyEmail) values.apply_email = patch.applyEmail;
+  if (patch.applyUrl && isHttp(patch.applyUrl)) values.apply_url = patch.applyUrl;
   if (!stored.salary && incoming.salary) values.salary = incoming.salary;
-  if (!stored.apply_email && incoming.applyEmail) values.apply_email = incoming.applyEmail;
-  if (!stored.apply_url && isHttp(incoming.applyUrl)) values.apply_url = incoming.applyUrl;
   if (!stored.posted_at && incoming.postedAt) values.posted_at = incoming.postedAt;
   return Object.keys(values).length ? values : null;
 }
@@ -514,7 +519,7 @@ function planUpserts(userId: string, jobs: Array<NormalizedJob & { dedupeKey: st
 async function storedByKey(client: CareerDb, userId: string, keys: string[]) {
   const stored = new Map<string, Row>();
   for (const part of chunks(keys)) {
-    const { data, error } = await client.from('career_jobs').select('id,dedupe_key,sources,description,thin,salary,apply_email,apply_url,posted_at')
+    const { data, error } = await client.from('career_jobs').select('id,dedupe_key,source,url,sources,description,thin,salary,apply_email,apply_url,posted_at')
       .eq('user_id', userId).in('dedupe_key', part);
     if (error) throw failed(error, 'Jobs could not be saved.');
     for (const row of (data ?? []) as Row[]) stored.set(String(row.dedupe_key), row);
@@ -524,7 +529,7 @@ async function storedByKey(client: CareerDb, userId: string, keys: string[]) {
 
 /**
  * Saves a batch of found jobs. A job already stored (same dedupe key) gains the
- * sighting and keeps whichever description is richer; the rest are inserted.
+ * sighting (and only what mergedJobValues allows); the rest are inserted.
  * Returns the ids of the rows that are new.
  */
 export async function upsertJobs(client: CareerDb, userId: string, jobs: Array<NormalizedJob & { dedupeKey: string }>): Promise<string[]> {
@@ -893,6 +898,8 @@ export async function countSentSince(userId: string, since: string, db?: CareerD
 // ─── Events ───────────────────────────────────────────────────────────────
 
 const EVENT_COLUMNS = 'id,application_id,kind,at,summary,details,gmail_message_id';
+/** details.kind of the events claimSendLock writes. */
+const SEND_LOCK = 'send_lock';
 
 function toEvent(row: Row): CareerEvent {
   return {
@@ -946,7 +953,70 @@ export async function listEvents(userId: string, options: { applicationId?: stri
     if (isMissingTable(error)) return [];
     throw failed(error, 'The timeline couldn’t be loaded.');
   }
-  return ((data ?? []) as Row[]).map(toEvent);
+  // A send lock (claimSendLock) is bookkeeping, not something that happened.
+  return ((data ?? []) as Row[]).map(toEvent).filter((event) => event.details.kind !== SEND_LOCK);
+}
+
+/** The addresses earlier applications were emailed to, for "Orbis hasn't sent here before". */
+export async function sentAddresses(userId: string, db?: CareerDb): Promise<string[]> {
+  const client = await dbOr(db);
+  const { data, error } = await client.from('career_events').select('details').eq('user_id', userId).eq('kind', 'sent')
+    .order('at', { ascending: false }).limit(1000);
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw failed(error, LOAD_MESSAGE);
+  }
+  return ((data ?? []) as Row[]).flatMap((row) => {
+    const to = isRecord(row.details) ? str(row.details.to) : null;
+    return to ? [to] : [];
+  });
+}
+
+/**
+ * Sets what an attached reply turned out to be once it was read (it was
+ * recorded unread). Service role: the owner may only move an event's link.
+ */
+export async function reclassifyEvent(admin: CareerDb, userId: string, eventId: string, value: { kind: EventKind; summary: string; details: Record<string, unknown> }) {
+  const { error } = await admin.from('career_events').update({ kind: value.kind, summary: value.summary.trim().slice(0, 300) || value.kind, details: value.details })
+    .eq('user_id', userId).eq('id', eventId);
+  if (error) throw failed(error, SAVE_MESSAGE);
+}
+
+// ─── Send locks ───────────────────────────────────────────────────────────
+
+const lockId = (key: string) => `orbis-lock:${key}`.slice(0, 100);
+
+async function insertLock(admin: CareerDb, userId: string, key: string, applicationId: string, at: string) {
+  const { error } = await admin.from('career_events').insert({
+    user_id: userId, application_id: applicationId, kind: 'note', at, summary: 'Sending', details: { kind: SEND_LOCK }, gmail_message_id: lockId(key),
+  });
+  if (error && error.code !== '23505') throw failed(error, SAVE_MESSAGE);
+  return !error;
+}
+
+/**
+ * One send at a time for `key` (a follow-up, an offer reply): an insert on
+ * the events table's unique Gmail-message key, so two presses can't both get
+ * past it. A lock older than `staleBefore` was left by a request that died and
+ * is taken over. Service role, as only it writes that key.
+ */
+export async function claimSendLock(userId: string, key: string, applicationId: string, now: Date, staleBefore: string): Promise<boolean> {
+  const admin = createAdminClient();
+  if (await insertLock(admin, userId, key, applicationId, now.toISOString())) return true;
+  const { data, error } = await admin.from('career_events').delete().eq('user_id', userId).eq('gmail_message_id', lockId(key)).lt('at', staleBefore).select('id');
+  if (error) throw failed(error, SAVE_MESSAGE);
+  if (!data?.length) return false;
+  return insertLock(admin, userId, key, applicationId, now.toISOString());
+}
+
+/** Lets the next send for `key` through. Never throws: a stuck lock goes stale on its own. */
+export async function releaseSendLock(userId: string, key: string) {
+  try {
+    const { error } = await createAdminClient().from('career_events').delete().eq('user_id', userId).eq('gmail_message_id', lockId(key));
+    if (error) console.error('Releasing a send lock failed', error);
+  } catch (error) {
+    console.error('Releasing a send lock failed', error);
+  }
 }
 
 /** Attaches an unmatched reply to an application. */
