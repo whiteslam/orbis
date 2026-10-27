@@ -5,7 +5,8 @@ import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import { UserFacingError } from '@/lib/errors';
-import { expandedRangeCells } from '@/lib/workbook/ranges';
+import { ambiguousEntryName, entryNameKey } from '@/lib/workbook/entries';
+import { declaredColumnExtent, definedNameRangeCells, expandedRangeCells, type RangeCells } from '@/lib/workbook/ranges';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -16,20 +17,31 @@ const MAX_CELLS = 20_000;
 const MAX_PREVIEW_BYTES = 24 * 1024;
 const MAX_ARCHIVE_EXPANDED_BYTES = 12_000_000;
 const MAX_ARCHIVE_ENTRIES = 1_024;
-// ExcelJS builds one object per cell of every merge and data validation range while loading, before the row and
-// cell limits above can run. No range needs to be bigger than the largest sheet Orbis reads.
+// ExcelJS builds one object per cell of every merge, data validation and defined-name range while loading, before
+// the row and cell limits above can run. No range needs to be bigger than the largest sheet Orbis reads.
 const MAX_RANGE_CELLS = MAX_ROWS * MAX_COLUMNS;
 const MAX_TOTAL_RANGE_CELLS = 250_000;
+// ExcelJS makes one Column object per index up to a sheet's widest <col> span. Excel itself stops at XFD.
+const MAX_DECLARED_COLUMNS = 16_384;
 // The same (unanchored) pattern ExcelJS uses to decide which entries are worksheets.
 const WORKSHEET_ENTRY = /xl\/worksheets\/sheet(\d+)[.]xml/;
+const WORKBOOK_ENTRY = 'xl/workbook.xml';
+
+function checkRangeCells(cells: RangeCells, totalRangeCells: number, message: string) {
+  const total = totalRangeCells + cells.total;
+  if (cells.largest > MAX_RANGE_CELLS || total > MAX_TOTAL_RANGE_CELLS) throw new UserFacingError(message);
+  return total;
+}
 
 function checkWorksheetRanges(xml: string, totalRangeCells: number) {
-  const cells = expandedRangeCells(xml);
-  const total = totalRangeCells + cells.total;
-  if (cells.largest > MAX_RANGE_CELLS || total > MAX_TOTAL_RANGE_CELLS) {
-    throw new UserFacingError('This workbook has merged or validated ranges too large to process safely. Remove whole-column merges or data validation and try again.');
+  if (declaredColumnExtent(xml) > MAX_DECLARED_COLUMNS) {
+    throw new UserFacingError('This workbook has column settings beyond the last Excel column. Save it again from Excel and try again.');
   }
-  return total;
+  return checkRangeCells(expandedRangeCells(xml), totalRangeCells, 'This workbook has merged or validated ranges too large to process safely. Remove whole-column merges or data validation and try again.');
+}
+
+function checkDefinedNames(xml: string, totalRangeCells: number) {
+  return checkRangeCells(definedNameRangeCells(xml), totalRangeCells, 'This workbook has named ranges or print areas too large to process safely. Remove large named ranges and try again.');
 }
 const MAX_PDF_PAGES = 50;
 const MAX_PDF_TEXT_ITEMS = 20_000;
@@ -41,9 +53,17 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
   let streamedExpandedBytes = 0;
   let entryCount = 0;
   let totalRangeCells = 0;
+  const entryNames = new Set<string>();
 
   try {
     for await (const entry of archive.eachEntry()) {
+      // Measured entries must be the ones ExcelJS loads under the same names; see lib/workbook/entries.ts.
+      const nameKey = entryNameKey(entry.fileName);
+      if (ambiguousEntryName(entry.fileNameRaw, entry.extraFields.map((field) => field.id)) || entryNames.has(nameKey)) {
+        archive.close();
+        throw new UserFacingError('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
+      }
+      entryNames.add(nameKey);
       if (entry.fileName.endsWith('/')) continue;
       entryCount += 1;
       declaredExpandedBytes += entry.uncompressedSize;
@@ -53,7 +73,9 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
       }
 
       const isWorksheet = WORKSHEET_ENTRY.test(entry.fileName);
-      const worksheetChunks: Buffer[] = [];
+      const isWorkbook = entry.fileName === WORKBOOK_ENTRY;
+      const measured = isWorksheet || isWorkbook;
+      const chunks: Buffer[] = [];
       const stream = await archive.openReadStreamPromise(entry);
       for await (const chunk of stream) {
         streamedExpandedBytes += Buffer.byteLength(chunk);
@@ -62,10 +84,12 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
           archive.close();
           throw new UserFacingError('This workbook expands beyond the safe processing limit. Save a simpler workbook and try again.');
         }
-        if (isWorksheet) worksheetChunks.push(chunk);
+        if (measured) chunks.push(chunk);
       }
-      // Worksheets are held whole only within the expanded-bytes budget above, then measured before ExcelJS loads them.
-      if (isWorksheet) totalRangeCells = checkWorksheetRanges(Buffer.concat(worksheetChunks).toString('utf8'), totalRangeCells);
+      // Worksheets and the workbook part are held whole only within the expanded-bytes budget above, then measured
+      // before ExcelJS loads them.
+      if (isWorksheet) totalRangeCells = checkWorksheetRanges(Buffer.concat(chunks).toString('utf8'), totalRangeCells);
+      if (isWorkbook) totalRangeCells = checkDefinedNames(Buffer.concat(chunks).toString('utf8'), totalRangeCells);
     }
   } catch (error) {
     archive.close();
