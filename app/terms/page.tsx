@@ -28,10 +28,15 @@ export default function TermsPage() {
           treated as a substitute for a qualified professional.
         </p>
 
-        <h2>Read-only connections</h2>
+        <h2>Connections</h2>
         <p>
-          Every third-party connection Orbis offers (Gmail, brokers, health devices) is read-only. Orbis never sends,
-          edits or deletes anything in an account you connect; it only reads what it needs to show you a summary.
+          Third-party connections (Gmail, brokers, health devices) are read-only by default. Orbis never edits or
+          deletes anything in an account you connect; it reads what it needs to show you a summary.
+        </p>
+        <p>
+          The one exception is sending from Gmail for Career, and only if you turn it on with &ldquo;Allow sending
+          applications&rdquo;. Then Orbis sends, from your own account, only a job application, follow-up or reply you
+          approved by pressing Send on it. It never sends anything on its own.
         </p>
 
         <h2>Your account and credentials</h2>

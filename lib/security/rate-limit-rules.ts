@@ -1,7 +1,7 @@
 // How often each costly action may run per person, and what they are told when
 // they reach the limit. Pure so it can be tested without the server.
 
-export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights';
+export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights' | 'career_ai' | 'career_send' | 'career_search';
 
 export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: number }> = {
   uploads: { limit: 20, windowSeconds: 86_400 },
@@ -12,6 +12,15 @@ export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: num
   password: { limit: 5, windowSeconds: 900 },
   // Each look at Social insights is a couple of dozen Meta calls, all on the user's token.
   insights: { limit: 30, windowSeconds: 3_600 },
+  // Career presses that run a model (draft, rescore, read a resume, advise on
+  // an offer). The AI's own daily credits are the real budget; this stops a
+  // stuck button or a script from burning through them in minutes.
+  career_ai: { limit: 60, windowSeconds: 3_600 },
+  // Sends from Career: applications, follow-ups, offer replies. The daily send
+  // cap in Career's settings is the owner's own limit; this is the backstop.
+  career_send: { limit: 60, windowSeconds: 3_600 },
+  // "Run a search now": a full fetch of every source plus scoring.
+  career_search: { limit: 6, windowSeconds: 3_600 },
 };
 
 export function limitFor(bucket: RateBucket) {
@@ -24,6 +33,9 @@ const MESSAGES: Record<RateBucket, string> = {
   sync: 'Gmail has been synced many times in the last hour. Try again in an hour.',
   password: 'Too many password attempts. Try again in 15 minutes.',
   insights: 'Insights have been refreshed many times in the last hour. Try again later.',
+  career_ai: 'Career has asked AI for a lot in the last hour. Try again in a little while.',
+  career_send: 'Career has sent a lot in the last hour. Try again in a little while.',
+  career_search: 'A search has run several times in the last hour. Try again in an hour.',
 };
 
 export function rateLimitMessage(bucket: RateBucket) {

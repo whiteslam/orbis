@@ -153,3 +153,48 @@ export async function getMessageFull(accessToken: string, messageId: string): Pr
     html,
   };
 }
+
+// ─── Sending ───────────────────────────────────────────────────────────────
+
+/**
+ * Gmail refused because the connection was never allowed to send (or the
+ * owner took that back). The caller says "allow sending first"; it is not a
+ * reason to reconnect.
+ */
+export class GmailSendScopeError extends Error {
+  constructor() {
+    super('Allow sending in Career → Setup first.');
+    this.name = 'GmailSendScopeError';
+  }
+}
+
+/** True when a 403's body says the token lacks a scope, rather than some other refusal. */
+function isScopeRefusal(body: string) {
+  return /insufficient|ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficientPermissions/i.test(body);
+}
+
+/**
+ * Sends one message (users.messages.send). `raw` is the base64url message from
+ * lib/gmail/mime.ts; `threadId` keeps a reply in its thread, and the message
+ * must also carry In-Reply-To and References for that. Only ever called from
+ * an owner's press of Send.
+ */
+export async function sendMessage(accessToken: string, raw: string, threadId?: string | null): Promise<{ id: string; threadId: string }> {
+  const response = await fetch(`${GMAIL_API}/messages/send`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify(threadId ? { raw, threadId } : { raw }),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (response.status === 401) throw new GoogleOAuthError('Gmail access needs to be reconnected.', true);
+  if (response.status === 403 && isScopeRefusal(await response.text().catch(() => ''))) throw new GmailSendScopeError();
+  if (!response.ok) {
+    console.error('Gmail send failed', response.status);
+    throw new GoogleOAuthError('Gmail could not send the message. Try again in a little while.');
+  }
+  // A 2xx means it went. An unreadable body must not look like a failure, or the
+  // caller would offer Send again; empty ids say "sent, ids unknown".
+  const data = (await response.json().catch(() => ({}))) as { id?: unknown; threadId?: unknown };
+  return { id: typeof data.id === 'string' ? data.id : '', threadId: typeof data.threadId === 'string' ? data.threadId : '' };
+}

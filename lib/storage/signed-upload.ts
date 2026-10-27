@@ -3,7 +3,10 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { UserFacingError } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { contentTypeFor, isStagedPath, MAX_UPLOAD_BYTES, UPLOAD_BUCKET, uploadExtension, uploadProblem, type UploadKind } from '@/lib/storage/upload-rules';
+import {
+  CAREER_BUCKET, careerContentTypeFor, careerResumePath, careerUploadExtension, careerUploadProblem, contentTypeFor, isStagedPath,
+  MAX_UPLOAD_BYTES, UPLOAD_BUCKET, uploadExtension, uploadProblem, type UploadKind,
+} from '@/lib/storage/upload-rules';
 
 // Large files go from the browser straight to Storage, because a request body
 // over ~4.5 MB never reaches a Vercel function. The server picks the path, signs
@@ -11,19 +14,35 @@ import { contentTypeFor, isStagedPath, MAX_UPLOAD_BYTES, UPLOAD_BUCKET, uploadEx
 // and later reads the bytes back itself: it never trusts file content sent with
 // an action.
 
-const BUCKETS: Record<UploadKind, string> = { 'health-document': UPLOAD_BUCKET, workbook: UPLOAD_BUCKET };
+const BUCKETS: Record<UploadKind, string> = { 'health-document': UPLOAD_BUCKET, workbook: UPLOAD_BUCKET, 'career-resume': CAREER_BUCKET };
 const bucketFor = (kind: UploadKind) => BUCKETS[kind];
 
-export async function createUploadTarget(userId: string, kind: UploadKind, file: { name: unknown; type: unknown; size: unknown }) {
+/**
+ * Where this upload goes and what it is stored as. A resume is a PDF or DOCX up
+ * to 10 MB, kept under the person's resume folder in the career bucket (where
+ * it stays as the master resume); the rest stage as before.
+ */
+function uploadPlan(userId: string, kind: UploadKind, file: { name: unknown; type: unknown; size: unknown }) {
+  if (kind === 'career-resume') {
+    const problem = careerUploadProblem(file);
+    if (problem) throw new UserFacingError(problem);
+    const extension = careerUploadExtension(file.name)!;
+    return { path: careerResumePath(userId, randomUUID(), extension), contentType: careerContentTypeFor(extension) };
+  }
   const problem = uploadProblem(file);
   if (problem) throw new UserFacingError(problem);
   const extension = uploadExtension(file.name)!;
-  const { data, error } = await createAdminClient().storage.from(bucketFor(kind)).createSignedUploadUrl(`${userId}/${randomUUID()}.${extension}`);
+  return { path: `${userId}/${randomUUID()}.${extension}`, contentType: contentTypeFor(extension) };
+}
+
+export async function createUploadTarget(userId: string, kind: UploadKind, file: { name: unknown; type: unknown; size: unknown }) {
+  const plan = uploadPlan(userId, kind, file);
+  const { data, error } = await createAdminClient().storage.from(bucketFor(kind)).createSignedUploadUrl(plan.path);
   if (error || !data) {
     console.error('createSignedUploadUrl failed', error);
     throw new UserFacingError('The upload could not be started. Try again in a little while.');
   }
-  return { path: data.path, token: data.token, contentType: contentTypeFor(extension) };
+  return { path: data.path, token: data.token, signedUrl: data.signedUrl, contentType: plan.contentType };
 }
 
 /**
@@ -44,7 +63,9 @@ export async function downloadOwned(userId: string, kind: UploadKind, path: unkn
 const CLAIM_RETENTION_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Claims a staged path for processing, once ever. The table's primary key makes
+ * Claims a staged path for processing, once ever. Any kind's path works (a
+ * career resume's `${userId}/resume/…` included): the caller has already
+ * checked the path's shape for its kind, and uuids keep paths unique across buckets. The table's primary key makes
  * this atomic, so concurrent calls on one path process it once, and a signed token
  * reused to re-upload to the same path finds it already claimed. Throws (fails
  * closed) when the claim can't be recorded.

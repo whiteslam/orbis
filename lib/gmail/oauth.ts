@@ -38,16 +38,33 @@ export function verifySignedGmailState(cookieValue: string | undefined, returned
 export const googleReturnCookieName = 'orbis_google_return';
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+/**
+ * Sending, asked for only when the owner presses "Allow sending applications"
+ * in Career (`/auth/gmail/start?send=1`). Orbis sends with it only what the
+ * owner approved by pressing Send; without it the connection stays read-only.
+ */
+export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 
-export function buildGoogleAuthorizationUrl(state: string) {
+/** Where the callback sends the person back to, carried in the return cookie. */
+export type GoogleReturn = 'settings' | 'career';
+
+/** The scopes to ask for: the read scopes always, plus sending when asked. */
+export function googleScopes(options: { send?: boolean } = {}) {
+  const scopes = ['openid', 'email', GMAIL_SCOPE, CALENDAR_SCOPE];
+  if (options.send) scopes.push(GMAIL_SEND_SCOPE);
+  return scopes.join(' ');
+}
+
+export function buildGoogleAuthorizationUrl(state: string, options: { send?: boolean } = {}) {
   const { clientId, redirectUri } = getGmailConfig();
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', `openid email ${GMAIL_SCOPE} ${CALENDAR_SCOPE}`);
+  url.searchParams.set('scope', googleScopes(options));
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
+  // Keeps whatever was granted before, so asking for sending never drops reading.
   url.searchParams.set('include_granted_scopes', 'true');
   url.searchParams.set('state', state);
   return url.toString();

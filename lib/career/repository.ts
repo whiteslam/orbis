@@ -578,6 +578,57 @@ export async function listJobs(userId: string, query: JobQuery, db?: CareerDb): 
   return ((data ?? []) as Row[]).map(toJob);
 }
 
+export type JobPageQuery = JobQuery & { source?: SourceId; remoteOnly?: boolean; minScore?: number };
+
+/**
+ * One page of a job list with the total that matches, for the Jobs views'
+ * filters (source, remote only, a minimum score). For you keeps its own bar:
+ * the threshold, or `minScore` when that is higher.
+ */
+export async function listJobsPage(userId: string, query: JobPageQuery, db?: CareerDb): Promise<{ jobs: CareerJob[]; total: number }> {
+  const client = await dbOr(db);
+  const limit = Math.min(Math.max(query.limit ?? 30, 1), 100);
+  const offset = Math.max(query.offset ?? 0, 0);
+  let request = client.from('career_jobs').select(JOB_COLUMNS, { count: 'exact' }).eq('user_id', userId);
+  if (query.view === 'for_you') {
+    request = request.eq('state', 'new').is('excluded_reason', null).gte('score', Math.max(query.threshold, query.minScore ?? 0));
+  } else if (query.view === 'shortlisted') {
+    request = request.eq('state', 'shortlisted');
+  } else {
+    request = request.neq('state', 'dismissed');
+  }
+  if (query.view !== 'for_you' && query.minScore) request = request.gte('score', query.minScore);
+  if (query.source) request = request.eq('source', query.source);
+  if (query.remoteOnly) request = request.eq('remote', true);
+  const term = searchTerm(query.search);
+  if (term) request = request.or(`title.ilike.*${term}*,company.ilike.*${term}*`);
+  request = query.view === 'for_you'
+    ? request.order('score', { ascending: false }).order('found_at', { ascending: false })
+    : request.order('found_at', { ascending: false });
+  const { data, error, count } = await request.range(offset, offset + limit - 1);
+  if (error) {
+    if (isMissingTable(error)) return { jobs: [], total: 0 };
+    throw failed(error, 'Jobs couldn’t be loaded. Try again in a little while.');
+  }
+  return { jobs: ((data ?? []) as Row[]).map(toJob), total: count ?? 0 };
+}
+
+/** The stored job with this dedupe key, for a pasted job that turned out to be one already found. */
+export async function findJobIdByKey(userId: string, dedupeKey: string, db?: CareerDb): Promise<string | null> {
+  const client = await dbOr(db);
+  const { data, error } = await client.from('career_jobs').select('id').eq('user_id', userId).eq('dedupe_key', dedupeKey).maybeSingle();
+  if (error) throw failed(error, 'That job couldn’t be loaded.');
+  return data ? String(data.id) : null;
+}
+
+/**
+ * The full description the owner pasted for a thin job. It is no longer thin,
+ * and its requirements are cleared so the next score reads them from the text.
+ */
+export async function setJobDescription(userId: string, jobId: string, description: string, db?: CareerDb) {
+  return updateJob(userId, jobId, { description: description.slice(0, 20_000), thin: false, requirements: null, requirements_version: null }, db);
+}
+
 export async function getJob(userId: string, jobId: string, db?: CareerDb): Promise<CareerJob | null> {
   const client = await dbOr(db);
   const { data, error } = await client.from('career_jobs').select(JOB_COLUMNS).eq('user_id', userId).eq('id', jobId).maybeSingle();

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   exchangeGoogleCode,
   getGoogleAccount,
+  GMAIL_SEND_SCOPE,
   GoogleOAuthError,
   gmailStateCookieName,
   googleReturnCookieName,
@@ -23,8 +24,11 @@ function clearCookies(response: NextResponse) {
 }
 
 export async function GET(request: NextRequest) {
-  // Connections started from Settings return there; others go to Today, where the mail is.
-  const returnTab = request.cookies.get(googleReturnCookieName)?.value === 'settings' ? 'settings' : 'today';
+  // Connections started from Settings return there, Career's "Allow sending" to
+  // the Career tab; others go to Today, where the mail is.
+  const returnCookie = request.cookies.get(googleReturnCookieName)?.value;
+  let returnTab = 'today';
+  if (returnCookie === 'settings' || returnCookie === 'career') returnTab = returnCookie;
   const redirect = (status: string) => clearCookies(resultRedirect(returnTab, status));
 
   const stateCookie = request.cookies.get(gmailStateCookieName)?.value;
@@ -53,7 +57,11 @@ export async function GET(request: NextRequest) {
   try {
     const token = await exchangeGoogleCode(code);
     const account = await getGoogleAccount(token.access_token);
-    await saveGmailConnection(currentUserId, account, token.refresh_token, (token.scope ?? '').split(/\s+/).filter(Boolean));
+    const scopes = (token.scope ?? '').split(/\s+/).filter(Boolean);
+    await saveGmailConnection(currentUserId, account, token.refresh_token, scopes);
+    // Google's consent screen lets each scope be unticked: a send request that
+    // came back without gmail.send connected, but sending is still off.
+    if (returnTab === 'career' && !scopes.includes(GMAIL_SEND_SCOPE)) return redirect('send-declined');
     return redirect('connected');
   } catch (error) {
     console.error('Finishing the Gmail connection failed', error);

@@ -15,3 +15,9 @@ test('password checks allow five tries in fifteen minutes', () => {
   assert.deepEqual(limitFor('password'), { limit: 5, windowSeconds: 900 });
   assert.equal(rateLimitMessage('password'), 'Too many password attempts. Try again in 15 minutes.');
 });
+test('career buckets: AI and sends hourly, the manual search a few times an hour', () => {
+  assert.deepEqual(limitFor('career_ai'), { limit: 60, windowSeconds: 3_600 });
+  assert.deepEqual(limitFor('career_send'), { limit: 60, windowSeconds: 3_600 });
+  assert.deepEqual(limitFor('career_search'), { limit: 6, windowSeconds: 3_600 });
+  assert.match(rateLimitMessage('career_search'), /try again in an hour/i);
+});

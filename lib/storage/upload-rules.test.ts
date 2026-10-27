@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { MAX_CAREER_UPLOAD_BYTES, MAX_UPLOAD_BYTES, careerUploadExtension, careerUploadProblem, contentTypeFor, isStagedPath, stagedInput, uploadExtension, uploadProblem } from './upload-rules';
+import { MAX_CAREER_UPLOAD_BYTES, MAX_UPLOAD_BYTES, careerResumePath, careerUploadExtension, isCareerResumePath, careerUploadProblem, contentTypeFor, isStagedPath, stagedInput, uploadExtension, uploadProblem } from './upload-rules';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const user = '11111111-2222-3333-4444-555555555555';
@@ -56,4 +56,16 @@ test('a staged upload still refuses docx: only the career bucket takes it', () =
   assert.equal(uploadExtension('cv.docx'), null);
   assert.match(uploadProblem({ name: 'cv.docx', type: '', size: 10 }) ?? '', /xlsx/);
   assert.equal(isStagedPath(user, `${user}/${object}.docx`), false);
+});
+
+test('a career resume path is the server-picked one in the user resume folder', () => {
+  const path = careerResumePath(user, object, 'docx');
+  assert.equal(path, `${user}/resume/${object}.docx`);
+  assert.equal(isCareerResumePath(user, path), true);
+  assert.equal(isCareerResumePath(user, `${user}/resume/${object}.pdf`), true);
+  assert.equal(isCareerResumePath(user, `${user}/${object}.pdf`), false);
+  assert.equal(isCareerResumePath(user, `${user}/resume/../${object}.pdf`), false);
+  assert.equal(isCareerResumePath(user, `${user}/resume/${object}.xlsx`), false);
+  assert.equal(isCareerResumePath(user, `99999999-2222-3333-4444-555555555555/resume/${object}.pdf`), false);
+  assert.equal(isCareerResumePath(user, null), false);
 });

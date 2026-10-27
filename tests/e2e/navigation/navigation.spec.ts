@@ -5,6 +5,7 @@ const TABS: Array<[Tab, RegExp]> = [
   ['Health', /#health$/],
   ['Journal', /#journal$/],
   ['Social', /#social$/],
+  ['Career', /#career$/],
 ];
 
 test('every tab opens, is reflected in the URL, and survives a reload', async ({ page, consoleErrors }) => {

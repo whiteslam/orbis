@@ -7,7 +7,7 @@
  */
 import type {
   ApplicationStatus, CareerApplication, CareerEvent, CareerInsights, CareerJob, CareerOffer, CareerProfile,
-  CareerSettings, CareerSpec, CareerState, CitedText, OfferTerms, ScreeningAnswer, SourceId, TailoredDraft,
+  CareerSettings, CareerSpec, CareerState, CitedText, OfferTerms, ScreeningAnswer, SourceId, TailoredDraft, TruthRemoval,
 } from '@/lib/career/types';
 
 export type Result<T> = { success: true; data: T } | { success: false; message: string };
@@ -52,6 +52,12 @@ export type ApplicationDetail = {
   files: { pdf: string | null; docx: string | null };
   /** What a link apply needs to paste, field by field. */
   pasteKit: Array<{ label: string; value: string }>;
+  /**
+   * Only from updateDraftAction: text the owner typed that the profile can't
+   * back up (a new number, a skill not on file). It is kept, never removed;
+   * show it highlighted so they know a recruiter may ask about it.
+   */
+  highlights?: TruthRemoval[];
 };
 
 export type DraftPatch = {
@@ -65,8 +71,11 @@ export type DraftPatch = {
 export type SendOutcome =
   /** Sent from Gmail or posted to Recruitee. */
   | { kind: 'sent'; detail: ApplicationDetail }
-  /** A link apply: open this page; the owner then presses "I applied". */
-  | { kind: 'opened'; url: string; detail: ApplicationDetail }
+  /**
+   * A link apply: open this page; the owner then presses "I applied". `message`
+   * is set when a direct send (Recruitee) didn't work and this is the fallback.
+   */
+  | { kind: 'opened'; url: string; detail: ApplicationDetail; message?: string }
   /** Email route without the send permission: a prefilled Gmail compose window. */
   | { kind: 'compose'; url: string; detail: ApplicationDetail };
 

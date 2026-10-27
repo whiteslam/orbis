@@ -1,7 +1,11 @@
 // What the browser may upload straight to Storage, shared by the browser (to
 // check before asking) and the server (to check before signing). No server code.
 
-export type UploadKind = 'health-document' | 'workbook';
+/**
+ * health-document and workbook stage in UPLOAD_BUCKET; career-resume goes to
+ * CAREER_BUCKET, where the master resume is kept (see below).
+ */
+export type UploadKind = 'health-document' | 'workbook' | 'career-resume';
 
 /**
  * Both kinds stage in one private bucket. health-documents keeps a 50 MB limit
@@ -94,4 +98,21 @@ export function careerUploadProblem(file: { name?: unknown; type?: unknown; size
   if (typeof file.size !== 'number' || !Number.isFinite(file.size) || file.size <= 0) return 'This file is empty. Choose your resume and try again.';
   if (file.size > MAX_CAREER_UPLOAD_BYTES) return 'This file is larger than 10 MB. Choose a smaller file and try again.';
   return null;
+}
+
+const UUID_FILE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|docx)$/;
+
+/** Where an uploaded resume goes: `${userId}/resume/${uuid}.${ext}`, picked by the server. */
+export function careerResumePath(userId: string, uuid: string, extension: CareerUploadExtension) {
+  return `${userId}/resume/${uuid}.${extension}`;
+}
+
+/** True only for a resume path the server could have picked for this user. */
+export function isCareerResumePath(userId: string, path: unknown): path is string {
+  const prefix = `${userId}/resume/`;
+  return typeof path === 'string' && path.startsWith(prefix) && UUID_FILE.test(path.slice(prefix.length));
+}
+
+export function careerContentTypeFor(extension: CareerUploadExtension) {
+  return CONTENT_TYPES[extension];
 }

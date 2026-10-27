@@ -16,6 +16,7 @@ const FILE_HELP: Record<string, string> = {
   'social-media': 'Photos and videos attached to your social posts. Open a post in Social to save its media.',
   'journal-voice': 'Voice notes attached to your journal. Play them from Journal to save them.',
   'workbook-uploads': 'Files uploaded for reading. These are temporary copies; the originals are on your device.',
+  'career-documents': 'Your master resume and the tailored resumes made for each application. Open an application in Career to download its files; your resume is in Career → Setup.',
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
