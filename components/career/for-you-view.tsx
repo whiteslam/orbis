@@ -38,7 +38,8 @@ function DismissForm({ job, onDone, onCancel }: Readonly<{ job: CareerJob; onDon
   );
 }
 
-function JobActions({ job, onOpen, onChanged }: Readonly<{ job: CareerJob; onOpen: (job: CareerJob) => void; onChanged: (job: CareerJob) => void }>) {
+/** Open, Shortlist and Not for me under a job card; the web panel's Jobs page uses it too. */
+export function JobActions({ job, onOpen, onChanged }: Readonly<{ job: CareerJob; onOpen: (job: CareerJob) => void; onChanged: (job: CareerJob) => void }>) {
   const [dismissing, setDismissing] = useState(false);
   const { busy, notice, run } = useRun();
   const shortlisted = job.state === 'shortlisted';
@@ -64,7 +65,7 @@ function JobActions({ job, onOpen, onChanged }: Readonly<{ job: CareerJob; onOpe
 }
 
 /** A job from anywhere: a link (Greenhouse, Lever, Ashby and Recruitee are read directly) or the pasted text. */
-function PasteJob({ onPasted, onClose }: Readonly<{ onPasted: (jobId: string) => void; onClose: () => void }>) {
+export function PasteJob({ onPasted, onClose }: Readonly<{ onPasted: (jobId: string) => void; onClose: () => void }>) {
   const urlId = useId();
   const textId = useId();
   const [url, setUrl] = useState('');

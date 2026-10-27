@@ -1,0 +1,126 @@
+'use client';
+
+import { useCallback, useRef, useState } from 'react';
+import { Bell, CalendarClock, HandCoins, Inbox, MessageCircleQuestion, Reply } from 'lucide-react';
+import { OrbisMark } from '@/components/brand/orbis-mark';
+import { UnmatchedReply } from '@/components/career/tracker-view';
+import { useDismiss } from '@/components/career/panel/panel-bits';
+import { usePanel } from '@/components/career/panel/panel-context';
+import { PAGE_META, PANEL_PAGES, allApplications, hrefFor, panelHeadsups, type PanelHeadsup, type PanelPage } from '@/components/career/panel/panel-data';
+import { isOpen } from '@/lib/career/status';
+
+const HEADSUP_ICON: Record<PanelHeadsup['kind'], typeof Bell> = {
+  interview: CalendarClock,
+  offer: HandCoins,
+  question: MessageCircleQuestion,
+  follow_up: Reply,
+};
+
+function CountBadge({ count, what }: Readonly<{ count: number; what: string }>) {
+  if (count <= 0) return null;
+  return <span className="cp-count"><span className="sr-only">, </span>{count > 99 ? '99+' : count}<span className="sr-only"> {what}</span></span>;
+}
+
+/** Replies Orbis found but couldn't link, each with the house's attach control. */
+function InboxButton() {
+  const { home, reload } = usePanel();
+  const [open, setOpen] = useState(false);
+  const [attached, setAttached] = useState<string[]>([]);
+  const box = useRef<HTMLDivElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, box, close);
+  const unmatched = (home?.unmatched ?? []).filter((event) => !attached.includes(event.id));
+  const options = home ? allApplications(home).filter((card) => isOpen(card.application.status) || card.application.status === 'ghosted') : [];
+  return (
+    <div className="cp-pop-wrap" ref={box}>
+      <button type="button" className="cp-head-btn" aria-expanded={open} aria-controls="cp-inbox" onClick={() => setOpen((value) => !value)} title="Unmatched replies">
+        <Inbox size={18} aria-hidden="true" />
+        <span className="sr-only">Unmatched replies</span>
+        <CountBadge count={unmatched.length} what="to attach" />
+      </button>
+      {open && (
+        <div className="cp-pop" id="cp-inbox" role="dialog" aria-labelledby="cp-inbox-title">
+          <h2 id="cp-inbox-title">Unmatched replies</h2>
+          {unmatched.length === 0 ? <p className="cp-pop-empty">Every reply Orbis found is linked to its application.</p> : (
+            <>
+              <p className="cp-pop-note">Orbis found these in your Gmail but couldn’t tell which application they answer. Attach each one.</p>
+              <ul className="cp-pop-list">
+                {unmatched.map((event) => (
+                  <UnmatchedReply key={event.id} event={event} options={options} onAttached={() => { setAttached((ids) => [...ids, event.id]); reload(); }} />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** What would raise a Career heads-up now: interviews soon, offers, questions and follow-ups. */
+function NotifyButton() {
+  const { home, openJobId } = usePanel();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, box, close);
+  const items = home ? panelHeadsups(home) : [];
+  const urgent = items.some((item) => item.urgent);
+  return (
+    <div className="cp-pop-wrap" ref={box}>
+      <button type="button" className={`cp-head-btn${urgent ? ' urgent' : ''}`} aria-expanded={open} aria-controls="cp-notify" onClick={() => setOpen((value) => !value)} title="Needs you">
+        <Bell size={18} aria-hidden="true" />
+        <span className="sr-only">Needs you</span>
+        <CountBadge count={items.length} what={items.length === 1 ? 'item' : 'items'} />
+      </button>
+      {open && (
+        <div className="cp-pop" id="cp-notify" role="dialog" aria-labelledby="cp-notify-title">
+          <h2 id="cp-notify-title">Needs you</h2>
+          {items.length === 0 ? <p className="cp-pop-empty">Nothing is waiting on you. Orbis tells you when a reply needs an answer.</p> : (
+            <ul className="cp-notes">
+              {items.map((item) => {
+                const Icon = HEADSUP_ICON[item.kind];
+                return (
+                  <li key={item.id}>
+                    <button type="button" onClick={() => { setOpen(false); openJobId(item.jobId); }}>
+                      <span className={`cp-note-icon k-${item.kind}`} aria-hidden="true"><Icon size={15} /></span>
+                      <span className="cp-note-text"><b>{item.title}</b><small>{item.detail}</small></span>
+                      {item.urgent && <span className="cp-note-flag">Soon</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The top bar: the mark and "Career", the page pills, then the inbox, the heads-ups and who's signed in. */
+export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: string | null }>) {
+  const initial = (who?.trim()[0] ?? 'O').toUpperCase();
+  return (
+    <header className="cp-header">
+      <a className="cp-brand" href={hrefFor('overview')}>
+        <OrbisMark size={30} />
+        <span>Career</span>
+      </a>
+      <nav className="cp-nav" aria-label="Career pages">
+        <ul>
+          {PANEL_PAGES.map((id) => (
+            <li key={id}>
+              <a href={hrefFor(id)} aria-current={page === id ? 'page' : undefined}>{PAGE_META[id].label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="cp-head-tools">
+        <InboxButton />
+        <NotifyButton />
+        <span className="cp-avatar" role="img" aria-label={who ? `Signed in as ${who}` : 'Signed in'} title={who ?? undefined}>{initial}</span>
+      </div>
+    </header>
+  );
+}

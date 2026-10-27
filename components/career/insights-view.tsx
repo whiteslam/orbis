@@ -164,12 +164,22 @@ function Timing({ freshness, bestDay }: Readonly<{ freshness: CareerInsights['fr
 }
 
 /** Insights: forecast, skill gaps, salary and market pulse, sources and timing. Every figure says how sure it is. */
-export function InsightsView({ initial, spec }: Readonly<{ initial: CareerInsights | null; spec: CareerSpec | null }>) {
+export function InsightsView({ initial, spec, showSources = true, onInsights }: Readonly<{
+  initial: CareerInsights | null;
+  spec: CareerSpec | null;
+  /** The web panel draws its own, wider source table. */
+  showSources?: boolean;
+  /** Told when fresh numbers land, so a page around this view can use them too. */
+  onInsights?: (insights: CareerInsights) => void;
+}>) {
   const [insights, setInsights] = useState<CareerInsights | null>(initial);
   const { busy, notice, run } = useRun();
   useEffect(() => {
-    void run('load', () => insightsAction(), setInsights);
-  }, [run]);
+    void run('load', () => insightsAction(), (next) => {
+      setInsights(next);
+      onInsights?.(next);
+    });
+  }, [run, onInsights]);
 
   if (!insights) {
     return (
@@ -187,7 +197,7 @@ export function InsightsView({ initial, spec }: Readonly<{ initial: CareerInsigh
       <SkillGaps gaps={insights.skillGaps} />
       <SalaryPulseCard salary={insights.salary} spec={spec} />
       <MarketPulse market={insights.market} />
-      <Sources sources={insights.sources} />
+      {showSources && <Sources sources={insights.sources} />}
       <Timing freshness={insights.freshness} bestDay={insights.bestDay} />
     </div>
   );

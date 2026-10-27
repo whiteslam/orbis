@@ -115,16 +115,22 @@ function useSheetFocus(onClose: () => void) {
  * unless `initial` is given, and reports every change through `onChanged` so
  * the lists behind it stay true.
  */
-export function ApplicationSheet({ jobId, initial = null, context, onClose, onChanged, className }: Readonly<{
+export function ApplicationSheet({ jobId, initial = null, fallback = null, context, onClose, onChanged, className }: Readonly<{
   jobId: string;
   initial?: ApplicationDetail | null;
+  /**
+   * What the opener already knows (the job, its application): shown at once
+   * while the detail loads, and kept if the load fails. Unlike `initial`, the
+   * detail is still loaded and replaces it.
+   */
+  fallback?: ApplicationDetail | null;
   context: SheetContext;
   onClose: () => void;
   onChanged?: (detail: ApplicationDetail) => void;
   /** Extra classes, e.g. the panel's drawer variant. */
   className?: string;
 }>) {
-  const [detail, setDetail] = useState<ApplicationDetail | null>(initial);
+  const [detail, setDetail] = useState<ApplicationDetail | null>(initial ?? fallback);
   const { busy, notice, run } = useRun();
   const headingRef = useSheetFocus(onClose);
 
@@ -158,7 +164,7 @@ export function ApplicationSheet({ jobId, initial = null, context, onClose, onCh
           </div>
         )}
       </header>
-      {busy === 'load' && <output className="fd-empty">Loading the job…</output>}
+      {busy === 'load' && <output className="fd-empty">{detail ? 'Refreshing…' : 'Loading the job…'}</output>}
       <NoticeLine notice={notice} />
       {detail && <ApplicationDetailView key={detail.application?.id ?? 'none'} detail={detail} context={context} onDetail={update} />}
     </dialog>

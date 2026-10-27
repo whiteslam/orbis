@@ -51,8 +51,8 @@ function TrackerRow({ card, latest, interviewAt, onOpen }: Readonly<{ card: Appl
   );
 }
 
-/** A reply Orbis couldn't link: attach it to the application it belongs to. */
-function UnmatchedReply({ event, options, onAttached }: Readonly<{ event: CareerEvent; options: ApplicationCard[]; onAttached: () => void }>) {
+/** A reply Orbis couldn't link: attach it to the application it belongs to. The web panel's inbox uses it too. */
+export function UnmatchedReply({ event, options, onAttached }: Readonly<{ event: CareerEvent; options: ApplicationCard[]; onAttached: () => void }>) {
   const id = useId();
   const [target, setTarget] = useState(options[0]?.application.id ?? '');
   const { busy, notice, run } = useRun();
