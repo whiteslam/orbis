@@ -16,7 +16,7 @@
 
 **Done:** Tasks 1–4 (logic + tests, shared palette, frame/rail/header/palette/Ask docked, Settings dialog). Tasks 5–8 have a first pass (Today grid, Money/Health/Journal two balanced columns, Social full-width planner) that looks right in screenshots; they still need the polish listed below.
 
-**Next task:** Task 9 (Career link-up: `.cp-rail-apps` in `components/career/panel/panel-rail.tsx` using `appHref`, and the "Back to the app" swap), then Task 10.
+**Next task:** Task 10 (the e2e fixture change, `desktop.spec.ts`, final screenshots). Task 9 is done.
 
 **Known rough edges (switch on):**
 - Settings dialog: the "Settings" heading shows the browser's focus box when it opens (it is focused programmatically, as on the phone); give `.settings-head h1:focus` no outline on desktop. The chosen section's card sits in a wide right column; consider `justify-self: start` and a narrower first column.
@@ -24,7 +24,7 @@
 - Social's subtitle row is kept on desktop (others drop their date row); the empty state's insights span the full width.
 - The 1440 shots are full-page; the fixed wallpaper only paints the first viewport in a full-page capture (a screenshot artefact, not a layout bug).
 - `tests/e2e` still assumes the bottom nav at 1440 in some specs (`responsive/*`, `openTab('Career')`); with the switch on they need Task 10's fixture change. With it off nothing changes.
-- Not done: the e2e `desktop.spec.ts`, a keyboard pass on the palette/rail/heads-up popover in a real browser, and the Career panel rail.
+- Not done: the e2e `desktop.spec.ts` and a keyboard pass on the palette/rail/heads-up popover in a real browser.
 
 **Screenshot harness (not committed, it lived in the ignored `.superpowers/shots/`):** a Playwright config with `globalSetup`/`globalTeardown` pointing at `tests/e2e/support/global-setup.ts`/`global-teardown.ts` (needs `.env.local`), `use.baseURL` = the server (`pnpm start -p 3101` with `ORBIS_ALLOWED_EMAILS=''`; port 3000 is taken on the owner's machine), a seed test (three expenses, one journal entry, three social posts through the UI), then each of `/active`, `#money`, `#money/investments`, `#health`, `#journal`, `#social`, `#career`, `#profile` and Ask opened, at 390×844 (isMobile) and 1440×900, dark and light.
 
@@ -136,11 +136,11 @@
 
 - [ ] Title, notices and the two add actions across; the month planner (`.so-cal*` card) across the full width so the month view has its room; posts and insights side by side below. Screenshot week and month views. Commit.
 
-### Task 9: Career link-up (not started)
+### Task 9: Career link-up (done)
 
 **Files:** Modify `components/career/panel/panel-rail.tsx`, `app/styles/career-panel.css`, `app/styles/desktop.css`.
 
-- [ ] Panel rail gains a third list, `.cp-rail-apps`, of the app's other tabs as `<a href={appHref(tab)}>` with icons and tooltips (Today, Money, Health, Journal, Social); `display: none` below 900px, where the existing "Back to the app" link stays the way back (and is hidden at 900px+ where the tabs replace it). The `/active` rail's Career link is marked current when the Career tab is open (it was reached by URL). The Career tab, when shown on desktop, sits in the centred column. Commit.
+- [x] Panel rail gains a third list, `.cp-rail-apps`, of the app's other tabs as `<a href={appHref(tab)}>` with icons and tooltips (Today, Money, Health, Journal, Social); `display: none` below 900px, where the existing "Back to the app" link stays the way back (and is hidden at 900px+ where the tabs replace it). The `/active` rail's Career link is marked current when the Career tab is open (it was reached by URL). The Career tab, when shown on desktop, sits in the centred column. Commit. (The app links render only with `DESKTOP_LAYOUT` on, so the panel on `main` is unchanged while the switch is off. Checked at 1440, 1000 and 390: links shown and Back hidden at 900px+, the bottom bar unchanged below; a rail click lands on `#money`; the `/active` rail marks Career current on `#career`.)
 
 ### Task 10: Verification (harness and phone comparison done; e2e changes and final shots open)
 
