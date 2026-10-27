@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
-// Signed OAuth state, shared by the Gmail and Zerodha connect flows.
+// Signed OAuth state, shared by the Gmail, Zerodha and Meta (social) connect flows.
 //
 // The start route puts a random state in the provider's URL and a signed copy,
 // bound to the signed-in user, in an httpOnly cookie. The callback accepts the
@@ -14,7 +14,8 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 const VERSION = 'v1';
 export const OAUTH_STATE_MAX_AGE_SEC = 10 * 60;
 const USER_ID = /^[A-Za-z0-9-]{1,80}$/;
-const PURPOSE = /^[a-z]{1,20}$/;
+// A flow name, optionally scoped (social:instagram), so one flow's state can't finish another.
+const PURPOSE = /^[a-z]{1,20}(:[a-z]{1,20})?$/;
 
 /** The HMAC key, derived so it never equals a key used for anything else. */
 function stateSecret() {
@@ -33,7 +34,7 @@ function sign(payload: string, secret: string) {
 /**
  * A fresh state for `userId`. `state` goes in the provider URL; `cookieValue`
  * goes in an httpOnly cookie. Cookie layout: v1.<state>.<userId>.<expiresAt>.<hmac>,
- * with the purpose (gmail, zerodha) signed in but not stored.
+ * with the purpose (gmail, zerodha, social:<platform>) signed in but not stored.
  */
 export function signState(userId: string, purpose = 'oauth', secret = stateSecret(), nowSec = nowSeconds()) {
   if (!USER_ID.test(userId) || !PURPOSE.test(purpose)) throw new Error('Invalid OAuth state input.');

@@ -44,6 +44,9 @@ function credentials(platform: SocialPlatformId) {
   return { id, secret };
 }
 
+/** The httpOnly cookie holding the signed OAuth state between /auth/social/<platform>/start and its callback. */
+export const socialStateCookieName = 'orbis-social-oauth-state';
+
 export const socialRedirectUri = (platform: SocialPlatformId, siteUrl: string) =>
   `${withoutTrailingSlashes(siteUrl)}/auth/social/${platform}/callback`;
 

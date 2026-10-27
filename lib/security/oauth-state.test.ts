@@ -28,3 +28,12 @@ test('a missing, malformed or expired state is refused', () => {
   assert.equal(verifyState('v1.a.b', state, user, 'zerodha', secret, now), false);
   assert.equal(verifyState(cookieValue, state, user, 'zerodha', secret, now + OAUTH_STATE_MAX_AGE_SEC), false);
 });
+
+test('a scoped purpose binds the state to one social platform', () => {
+  const { state, cookieValue } = signState(user, 'social:instagram', secret, now);
+  assert.equal(verifyState(cookieValue, state, user, 'social:instagram', secret, now), true);
+  assert.equal(verifyState(cookieValue, state, user, 'social:threads', secret, now), false);
+  assert.equal(verifyState(cookieValue, state, other, 'social:instagram', secret, now), false);
+  assert.throws(() => signState(user, 'social:', secret, now));
+  assert.throws(() => signState(user, 'social.instagram', secret, now));
+});
