@@ -42,7 +42,11 @@ export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app' }: { nonce: 
   const realtime = supabase.replace(/^https:/, 'wss:');
   return [
     ...shared,
-    `img-src 'self' blob: data: ${supabase}`,
+    // https: is for the news photos on Today (lib/news, NewsData's image_url):
+    // they come from whatever site ran the story, so no fixed list can name
+    // them. Images cannot run code; the cost is that the site sees the
+    // viewer's IP when the picture loads. Scripts, frames and fetches stay pinned.
+    `img-src 'self' blob: data: ${supabase} https:`,
     `media-src 'self' blob: ${supabase}`,
     `connect-src 'self' ${supabase} ${realtime}`,
     "worker-src 'self' blob:",

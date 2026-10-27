@@ -59,6 +59,8 @@ export function parseNewsData(raw: unknown, desk: NewsArticle['desk']): NewsArti
     const title = clean(record.title, 200);
     const url = httpsUrl(record.link);
     if (!id || !title || !url) return [];
+    // Shown as a picture on the desktop's news grid; only https, so a page never asks for mixed content.
+    const image = httpsUrl(record.image_url);
     const published = typeof record.pubDate === 'string' ? new Date(`${record.pubDate.replace(' ', 'T')}Z`) : null;
     return [{
       id,
@@ -68,6 +70,7 @@ export function parseNewsData(raw: unknown, desk: NewsArticle['desk']): NewsArti
       source: clean(record.source_name, 60) || clean(record.source_id, 60) || 'News',
       publishedAt: published && !Number.isNaN(published.getTime()) ? published.toISOString() : new Date(0).toISOString(),
       desk,
+      ...(image?.startsWith('https:') ? { imageUrl: image } : {}),
     }];
   });
 }
