@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { BookOpen, Briefcase, HeartPulse, Home, Megaphone, WalletCards, type LucideIcon } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
+import { DesktopHeader } from '@/components/shell/desktop-header';
+import { DesktopRail } from '@/components/shell/desktop-rail';
 import { TabLoading } from '@/components/shell/loading';
+import { TAB_ICONS } from '@/components/shell/tab-icons';
 import { SettingsProvider } from '@/components/shell/settings-context';
 import { Wallpaper } from '@/components/shell/wallpaper';
 import { TodayScreen } from '@/components/today/today-screen';
@@ -30,6 +32,9 @@ import type { HeadsupAction } from '@/lib/headsups/types';
 import { hashFor, openingFromUrl, TABS, type MoneyView, type SettingsSection, type TabId } from '@/lib/shell/tabs';
 import type { FocusTarget } from '@/lib/focus/types';
 import { socialConnectNotice, type SocialConnectNotice } from '@/lib/social/connect-notice';
+import { openAskPanel } from '@/lib/ask/about';
+import { DESKTOP_LAYOUT, isDesktop } from '@/lib/shell/desktop';
+import type { PaletteGo } from '@/lib/shell/palette';
 
 // Today is what opens, so it is the only screen in the first download. Every
 // other tab loads the first time it is opened.
@@ -41,11 +46,11 @@ const CareerScreen = dynamic(() => import('@/components/career/career-screen').t
 // The mic shows on every screen but is not needed to draw Today, so it follows it.
 const TalkToOrbis = dynamic(() => import('@/components/assistant/talk-to-orbis').then((m) => m.TalkToOrbis));
 const SettingsSheet = dynamic(() => import('@/components/settings/settings-sheet').then((m) => m.SettingsSheet));
+// The desktop's Ctrl/⌘+K palette knows the Career panel's pages, so it loads on first use.
+const AppPalette = dynamic(() => import('@/components/shell/app-palette').then((m) => m.AppPalette));
 
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;
-
-const ICONS: Record<TabId, LucideIcon> = { today: Home, money: WalletCards, health: HeartPulse, journal: BookOpen, social: Megaphone, career: Briefcase };
 
 export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
   const router = useRouter();
@@ -60,6 +65,9 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   // The step a heads-up prepared. Screens read it once, as they mount from that tap.
   const [intent, setIntent] = useState<HeadsupAction | null>(null);
+  // The desktop's command palette (Ctrl/⌘+K), open or not.
+  const [palette, setPalette] = useState(false);
+  const closePalette = useCallback(() => setPalette(false), []);
   const settingsAccess = useMemo(() => ({
     open: (section: SettingsSection = 'you') => setSettings(section),
     initial: personalProfile.profile?.preferredName?.trim().charAt(0).toLocaleUpperCase() || null,
@@ -89,6 +97,45 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (action.type === 'open_career_application') return setTab('career');
     setTab('health');
   };
+
+  // A tab chosen from the bottom nav or the desktop rail: the tab, nothing else open.
+  const goTab = (id: TabId) => {
+    setTab(id);
+    setSettings(null);
+    setIntent(null);
+  };
+
+  // A place picked in the desktop palette.
+  const goPalette = (go: PaletteGo) => {
+    setPalette(false);
+    if (go.to === 'ask') return openAskPanel();
+    if (go.to === 'href') return window.location.assign(go.href);
+    if (go.to === 'settings') return setSettings(go.section);
+    if (go.money) setMoney(go.money);
+    goTab(go.tab);
+  };
+
+  // Ctrl/⌘+K, and "/" outside a text field, open the palette, on desktop only:
+  // the phone layout keeps every key doing what it did before.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const typing = target !== null && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      const combo = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+      const slash = event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !typing;
+      if ((!combo && !slash) || !isDesktop()) return;
+      event.preventDefault();
+      setPalette(true);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // On the phone each screen scrolls inside itself and starts at the top; on
+  // desktop the window scrolls, so a new tab or Money view starts there too.
+  useEffect(() => {
+    if (isDesktop()) window.scrollTo({ top: 0 });
+  }, [tab, money]);
 
   // The brief is only true for as long as its data is. Opening the app already
   // rendered it fresh, and every save revalidates the page, so Home re-reads
@@ -206,7 +253,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, careerGmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
 
   return (
-    <main className="stage">
+    <main className="stage" data-tab={tab} data-money={money} data-desktop={DESKTOP_LAYOUT || undefined}>
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <section className="intro">
@@ -218,6 +265,9 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
         <div className="phone-screen">
           <Wallpaper />
           <SettingsProvider value={settingsAccess}>
+            {/* Desktop only: hidden by app/styles/desktop.css below the breakpoint, and everywhere unless data-desktop is set. */}
+            <DesktopRail tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />
+            <DesktopHeader name={personalProfile.profile?.preferredName ?? null} onSearch={() => setPalette(true)} onHeadsup={openHeadsup} />
             {screen}
             {settings && (
               <SettingsSheet
@@ -233,14 +283,15 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
             <TalkToOrbis />
             <nav className="bottom-nav">
               {TABS.map(({ id, label }) => {
-                const Icon = ICONS[id];
+                const Icon = TAB_ICONS[id];
                 return (
-                  <button key={id} onClick={() => { setTab(id); setSettings(null); setIntent(null); }} className={tab === id ? 'active' : ''} aria-label={label}>
+                  <button key={id} onClick={() => goTab(id)} className={tab === id ? 'active' : ''} aria-label={label}>
                     <Icon size={20} /><span>{label}</span>
                   </button>
                 );
               })}
             </nav>
+            {palette && <AppPalette onGo={goPalette} onClose={closePalette} />}
           </SettingsProvider>
         </div>
       </div>

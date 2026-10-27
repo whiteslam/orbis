@@ -45,3 +45,10 @@ export function readAbout(value: unknown): AskAbout | null {
 export function openAsk(about: AskAbout, question: string) {
   window.dispatchEvent(new CustomEvent<AskRequest>(ASK_EVENT, { detail: { about, question } }));
 }
+
+/** Opens Ask Orbis empty, from a control outside it (the desktop rail and palette). */
+export const ASK_OPEN_EVENT = 'orbis:ask-open';
+
+export function openAskPanel() {
+  window.dispatchEvent(new Event(ASK_OPEN_EVENT));
+}

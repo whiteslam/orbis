@@ -23,6 +23,8 @@ import '../styles/career.css';
 import '../styles/career-panel.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
+// The desktop web layout: last, and only inside its own media query.
+import '../styles/desktop.css';
 
 export default function OrbisLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

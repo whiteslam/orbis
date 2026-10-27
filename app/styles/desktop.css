@@ -1,0 +1,232 @@
+/* ─── Orbis on a laptop: the desktop web layout ───────────────────────
+   docs/superpowers/specs/2026-10-27-web-desktop-design.md. Loaded last in
+   app/(orbis)/layout.tsx. Every rule that changes the app sits inside the
+   desktop query below, so the phone layout (and the phone mock-up a window
+   between 721px and 1099px wide still gets) is exactly what it was.
+
+   The query is DESKTOP_QUERY in lib/shell/desktop.ts, word for word; change
+   both together. The second clause keeps a short touch screen out of it.
+
+   Switched off until the layout is finished: every rule is scoped under
+   .stage[data-desktop], which the shell sets only when the build has
+   NEXT_PUBLIC_DESKTOP_LAYOUT=1 (lib/shell/desktop.ts, .env.example). Off,
+   a wide window gets the phone mock-up exactly as before.
+
+   The look is the Career panel's (career-panel.css): a floating pill rail on
+   the left, a header across the top, glass cards on the house wallpaper. The
+   panel's .cp-rail, .cp-tip, .cp-head-btn, .cp-pop and .cp-palette classes are
+   reused as they are; the --cp-* tokens they read are set on .stage here. Each
+   tab keeps its own markup: columns come from grid placement by class
+   (Today, Social) or from two balanced columns (Money, Health, Journal), never
+   from wrappers, so the phone's rise-in order (motion.css) is untouched.
+   Prefix: .dk- */
+
+/* The rail and the header are always in the page; only the desktop shows them. */
+.dk-rail, .dk-header, .settings-veil { display: none; }
+
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop] {
+    --cp-surface: var(--brand-s1);
+    --cp-card: var(--gl-fill);
+    --cp-card-edge: var(--gl-edge);
+    --cp-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 18px 40px -24px rgba(0, 0, 0, .7);
+    --cp-rail-w: 60px;
+    --dk-gap: 20px;
+    --dk-ask-w: 420px;
+    display: block;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 0;
+    overflow: visible;
+    background: var(--sys-bg);
+  }
+  :root[data-theme="light"] .stage[data-desktop] {
+    --cp-surface: #ffffff;
+    --cp-card: rgba(255, 255, 255, .72);
+    --cp-card-edge: 1px solid rgba(255, 255, 255, .9);
+    --cp-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 14px 34px -20px rgba(30, 40, 50, .22);
+  }
+
+  /* ─── The frame: no phone, no intro, the window is the screen ─── */
+  .stage[data-desktop] > .ambient, .stage[data-desktop] > .intro, .stage[data-desktop] .phone-speaker, .stage[data-desktop] .phone::after, .stage[data-desktop] .bottom-nav, .stage[data-desktop] .talk-fab { display: none; }
+  .stage[data-desktop] .phone { position: static; width: auto; height: auto; min-height: 0; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .stage[data-desktop] .phone-screen {
+    position: relative;
+    max-width: 1440px;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: 0 32px 72px calc(var(--cp-rail-w) + 64px);
+    border-radius: 0;
+    overflow: visible;
+    background: none;
+  }
+  /* The wallpaper stays put while the window scrolls. */
+  .stage[data-desktop] .glass-wall { position: fixed; }
+  .stage[data-desktop] .glass-blob.one { width: 620px; height: 620px; left: -160px; top: -200px; }
+  .stage[data-desktop] .glass-blob.two { width: 560px; height: 560px; right: -160px; top: 120px; }
+  .stage[data-desktop] .glass-blob.three { width: 640px; height: 640px; left: 30%; bottom: -320px; }
+
+  /* Each screen flows in the window, which scrolls; the frame sets the edges. */
+  .stage[data-desktop] .screen-body, .stage[data-desktop] .screen-body.field {
+    --screen-pad-top: 4px;
+    --screen-pad-bottom: 0px;
+    height: auto;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--screen-pad-top) 0 0;
+    overflow: visible;
+    background: transparent;
+  }
+
+  /* The header carries the brand, the date and the avatar, so screens drop theirs. */
+  .stage[data-desktop] .fd-top, .stage[data-desktop]:not([data-tab="social"]) .fd-head-row, .stage[data-desktop] .fd-head-row > .avatar { display: none; }
+  .stage[data-desktop] .fd-head-row .orbis-mark { display: none; }
+  .stage[data-desktop] .fd-head { margin-bottom: 20px; }
+  .stage[data-desktop] .fd-head h1 { margin-top: 4px; font-size: clamp(34px, 3vw, 44px); font-weight: 600; letter-spacing: -.04em; line-height: 1.02; }
+
+  /* ─── Rail ─── */
+  .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 720px + 24px)); z-index: 30; }
+  .stage[data-desktop] .dk-rail .cp-rail-btn { width: 46px; height: 46px; }
+  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
+  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
+  .stage[data-desktop] .dk-rail .dk-rail-ask { color: var(--fd-accent); }
+
+  /* ─── Header ─── */
+  .stage[data-desktop] .dk-header { position: relative; z-index: 25; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 420px) minmax(0, 1fr); align-items: center; gap: 16px; min-height: 88px; }
+  .stage[data-desktop] .dk-hello { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .stage[data-desktop] .dk-hello p { display: grid; min-width: 0; margin: 0; }
+  .stage[data-desktop] .dk-hello b { overflow: hidden; color: var(--fd-ink); font-size: 18px; font-weight: 600; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+  .stage[data-desktop] .dk-hello small { color: var(--fd-soft); font-size: 12.5px; }
+  .stage[data-desktop] .dk-search { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 8px 0 18px; border: var(--cp-card-edge); border-radius: 999px; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--cp-shadow); color: var(--fd-soft); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+  .stage[data-desktop] .dk-search:hover { color: var(--fd-ink); background: var(--gl-fill-strong); }
+  .stage[data-desktop] .dk-search span { flex: 1; }
+  .stage[data-desktop] .dk-search kbd { padding: 4px 9px; border-radius: 999px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; }
+  .stage[data-desktop] .dk-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .stage[data-desktop] .dk-tools .icon-btn, .stage[data-desktop] .dk-tools .avatar { width: 42px; height: 42px; border: var(--cp-card-edge); border-radius: 50%; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: none; color: var(--fd-ink); cursor: pointer; }
+  .stage[data-desktop] .dk-tools .avatar { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); font-size: 15px; font-weight: 600; }
+  .stage[data-desktop] .dk-pop { width: min(420px, calc(100vw - 32px)); }
+  .stage[data-desktop] .dk-pop .hu-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .stage[data-desktop] :is(.dk-search, .dk-tools .icon-btn, .dk-tools .avatar):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+
+  /* ─── Ask Orbis: docked on the right; the page moves over to stay in view ─── */
+  .stage[data-desktop] .talk-sheet {
+    position: fixed;
+    inset: 16px 16px 16px auto;
+    z-index: 40;
+    width: var(--dk-ask-w);
+    max-height: none;
+    padding-top: 8px;
+    border: var(--cp-card-edge);
+    border-radius: 24px;
+    box-shadow: var(--e3);
+  }
+  .stage[data-desktop]:has(.talk-sheet) .phone-screen { padding-right: calc(var(--dk-ask-w) + 48px); }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail { left: 24px; }
+
+  /* ─── Settings: a large dialog, the sections down the left, the chosen one on the right ─── */
+  .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(6, 6, 8, .55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  :root[data-theme="light"] .stage[data-desktop] .settings-veil { background: rgba(30, 36, 44, .26); }
+  .stage[data-desktop] .settings-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 51;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    column-gap: 36px;
+    width: min(1080px, calc(100vw - 80px));
+    height: min(860px, calc(100dvh - 64px));
+    margin: auto;
+    padding: 28px 36px 40px;
+    border: var(--cp-card-edge);
+    border-radius: 24px;
+    background: var(--cp-surface);
+    box-shadow: var(--e3);
+  }
+  .stage[data-desktop] .settings-head { grid-column: 1 / -1; margin-bottom: 18px; }
+  .stage[data-desktop] .settings-head h1 { font-size: 34px; font-weight: 600; letter-spacing: -.035em; }
+  .stage[data-desktop] .settings-head button { margin-right: -8px; border-radius: 50%; cursor: pointer; }
+  .stage[data-desktop] .settings-head button:hover { background: var(--fd-chip); color: var(--fd-ink); }
+  .stage[data-desktop] .settings-jump { position: sticky; top: 0; grid-column: 1; grid-row: 2; display: grid; gap: 2px; margin: 0; }
+  .stage[data-desktop] .settings-jump button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: none; color: var(--fd-soft); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
+  .stage[data-desktop] .settings-jump button:hover { background: var(--fd-chip); color: var(--fd-ink); }
+  .stage[data-desktop] .settings-jump button[aria-current="true"] { background: var(--fd-chip); color: var(--fd-ink); font-weight: 600; box-shadow: inset 3px 0 0 var(--fd-accent); }
+  .stage[data-desktop] .settings-jump button:focus-visible, .stage[data-desktop] .settings-head button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+  .stage[data-desktop] .settings-sheet .pf-group { grid-column: 2; grid-row: 2; min-width: 0; max-width: 720px; margin: 0; }
+  .stage[data-desktop] .settings-sheet .pf-group:not([data-shown]) { display: none; }
+  /* Ask Orbis can still open over Settings, as on the phone. */
+  .stage[data-desktop]:has(.settings-sheet) .talk-sheet { z-index: 60; }
+
+  /* ─── Today: the brief on top, cards in two columns, heads-ups down the side ─── */
+  .stage[data-desktop][data-tab="today"] .screen-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--dk-gap);
+    align-items: start;
+    align-content: start;
+    max-width: none;
+  }
+  /* With heads-ups, a third column holds them. The trailing 1fr row takes
+     their height, so the two main columns never open gaps to match it. */
+  .stage[data-desktop][data-tab="today"] .screen-body:has(> .hu-card) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(300px, 380px);
+    grid-template-rows: repeat(12, auto) 1fr;
+  }
+  .stage[data-desktop][data-tab="today"] .screen-body > * { min-width: 0; }
+  .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-note-brief, .passkey-prompt, .rt-check, .today-widgets, .finance-notice, .setup-list:not(.fd-mail-connect), .fd-note) { grid-column: 1 / 3; }
+  .stage[data-desktop][data-tab="today"] .screen-body > .hu-card { grid-column: 3; grid-row: 1 / -1; margin-top: 4px; }
+  .stage[data-desktop][data-tab="today"] .fd-note-brief { margin: 4px 0 8px; }
+  .stage[data-desktop][data-tab="today"] .fd-note-brief .fd-note-line { font-size: 19px; line-height: 1.55; max-width: 62ch; }
+  .stage[data-desktop][data-tab="today"] .today-widgets { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--dk-gap); }
+  /* Square on a phone; at this width a square would be a wall. */
+  .stage[data-desktop][data-tab="today"] .today-widget { aspect-ratio: auto; min-height: 196px; padding: 18px 20px; }
+
+  /* ─── Two balanced columns: Money, Health, Journal ───
+     The title and anything that leads the page span both; the cards then flow
+     down the left and on down the right, each kept whole. */
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body:not(:has(> .fd-sub-head)) {
+    max-width: none;
+    columns: 2;
+    column-gap: calc(var(--dk-gap) + 8px);
+  }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > * { break-inside: avoid; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-head, .fd-tabs, .mn-top, .fd-hero, .finance-notice, .fd-focus, .fd-option) { column-span: all; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-label, .fd-label-row) { break-after: avoid; }
+  /* A card that starts a column sits level with its neighbour's top. */
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-quiet, .mn-card, .pf-group, .apple-card, .fd-rates) { margin-top: 0; margin-bottom: var(--dk-gap); }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > .fd-tabs { max-width: 420px; }
+
+  /* Money · Spending: the month on the left, the transactions on the right. */
+  .stage[data-desktop][data-money="spending"] .screen-body > .fd-label-row { break-before: column; }
+  .stage[data-desktop][data-money="spending"] .screen-body > .mn-top { margin-bottom: var(--dk-gap); }
+  /* Money · Investments: the holdings and the news on the left; the mix, the accounts and advice on the right. */
+  .stage[data-desktop][data-money="investments"] .screen-body > .fd-label:not(.fd-label ~ .fd-label) { break-before: column; }
+  .stage[data-desktop][data-money="investments"] .screen-body > .fd-focus { margin-bottom: var(--dk-gap); }
+
+  /* Journal: today's entry on the left; past entries and saved notes on the right. */
+  .stage[data-desktop][data-tab="journal"] .screen-body > .fd-label { break-before: column; }
+
+  /* ─── Social: the month planner gets the full width; posts and insights share the row below ─── */
+  .stage[data-desktop][data-tab="social"] .screen-body:not(:has(> .fd-sub-head)) {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    column-gap: var(--dk-gap);
+    align-items: start;
+    max-width: none;
+  }
+  .stage[data-desktop][data-tab="social"] .screen-body > * { grid-column: 1 / -1; min-width: 0; }
+  .stage[data-desktop][data-tab="social"] .screen-body > .mn-card:not(.so-calcard) { grid-column: 1; }
+  .stage[data-desktop][data-tab="social"] .screen-body:has(> .mn-card:not(.so-calcard)) > .so-insights { grid-column: 2; }
+  .stage[data-desktop][data-tab="social"] .so-actions { max-width: 560px; }
+
+  /* ─── Career: the tab still opens by URL (?tab=career, #career); it reads in one centred column ─── */
+  .stage[data-desktop][data-tab="career"] .screen-body { max-width: 880px; }
+}
+
+/* While the Settings dialog is up, the page behind it holds still. */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  html:has(.stage[data-desktop] .settings-sheet) { overflow: hidden; }
+}

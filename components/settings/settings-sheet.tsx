@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
@@ -12,6 +12,8 @@ import { NotificationSettings } from '@/components/settings/notification-setting
 import { ProfileEditor } from '@/components/settings/profile-editor';
 import { RoutineSettings } from '@/components/settings/routine-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
+import { keepTabInside } from '@/components/shell/dialog-focus';
+import { isDesktop } from '@/lib/shell/desktop';
 import { SETTINGS_SECTIONS, type SettingsSection } from '@/lib/shell/tabs';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import type { StepsSummary } from '@/lib/health/types';
@@ -48,9 +50,10 @@ function jumpTo(section: SettingsSection) {
   document.getElementById(`settings-${section}`)?.scrollIntoView({ block: 'start' });
 }
 
-function Group({ id, note, children }: Readonly<{ id: SettingsSection; note?: string; children: ReactNode }>) {
+// `shown` marks the section picked in the list; only the desktop layout hides the rest (app/styles/desktop.css).
+function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; shown: SettingsSection; note?: string; children: ReactNode }>) {
   return (
-    <section className="pf-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`}>
+    <section className="pf-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} data-shown={shown === id || undefined}>
       <h2 className="fd-label" id={`settings-${id}-title`}>{LABEL[id]}</h2>
       {note && <p className="fd-note tight">{note}</p>}
       {children}
@@ -60,7 +63,9 @@ function Group({ id, note, children }: Readonly<{ id: SettingsSection; note?: st
 
 /**
  * Everything you configure, in one place, opened from the avatar on any tab.
- * It sits above the bottom nav, so tapping a tab is always a way out.
+ * It sits above the bottom nav, so tapping a tab is always a way out. On a
+ * desktop it is a large dialog over a veil instead: the sections listed down
+ * the left, the chosen one on the right, and Tab kept inside it.
  */
 export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: Readonly<{
   /** A routine to open for editing, when a heads-up asked to adjust it. */
@@ -73,6 +78,14 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   data: SettingsData;
 }>) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  // The section on show in the desktop list: where Settings was opened, then whatever is picked.
+  const [shown, setShown] = useState(section);
+  const [openedAt, setOpenedAt] = useState(section);
+  if (openedAt !== section) {
+    setOpenedAt(section);
+    setShown(section);
+  }
 
   useEffect(() => jumpTo(section), [section]);
 
@@ -91,6 +104,21 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // On a desktop the sheet is a modal dialog over the page, so Tab stays in
+      // it (Ask Orbis, docked beside it, keeps its own). The phone's sheet
+      // leaves the tab bar reachable, as it always has.
+      const dialog = dialogRef.current;
+      if (event.key === 'Tab' && dialog && isDesktop()) {
+        const at = document.activeElement;
+        if (at instanceof Node && document.querySelector('.talk-sheet')?.contains(at)) return;
+        if (!(at instanceof Node) || !dialog.contains(at)) {
+          event.preventDefault();
+          headingRef.current?.focus({ preventScroll: true });
+          return;
+        }
+        keepTabInside(dialog, event);
+        return;
+      }
       if (event.key !== 'Escape') return;
       // Ask Orbis can be open over Settings; it owns Escape while it is, so a
       // question in progress there isn't lost to Settings closing underneath it.
@@ -107,59 +135,65 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
 
   return (
-    <dialog open className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
-      <header className="settings-head">
-        <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
-        <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
-      </header>
-      {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
-      <fieldset className="settings-jump" aria-label="Settings sections">
-        {SETTINGS_SECTIONS.map((item) => <button key={item.id} type="button" onClick={() => jumpTo(item.id)}>{item.label}</button>)}
-      </fieldset>
+    <>
+      {/* The desktop's veil behind the dialog; a press on it closes Settings. Hidden on the phone. */}
+      <div className="settings-veil" aria-hidden="true" onClick={onClose} />
+      <dialog open ref={dialogRef} className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
+        <header className="settings-head">
+          <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
+          <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
+        </header>
+        {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
+        <fieldset className="settings-jump" aria-label="Settings sections">
+          {SETTINGS_SECTIONS.map((item) => (
+            <button key={item.id} type="button" aria-current={shown === item.id || undefined} onClick={() => { setShown(item.id); jumpTo(item.id); }}>{item.label}</button>
+          ))}
+        </fieldset>
 
-      <Group id="you" note="The name Orbis calls you, what you do, and where you are.">
-        <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
-        {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
-      </Group>
+        <Group id="you" shown={shown} note="The name Orbis calls you, what you do, and where you are.">
+          <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
+          {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
+        </Group>
 
-      <Group id="connections" note="Everything Orbis reads from. Every connection is read-only, and you can disconnect at any time.">
-        {notice && (
-          <output className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`}>
-            <span>{notice.text}</span>
-            <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
-          </output>
-        )}
-        <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
-        <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
-        <p className="fd-note tight">Services Orbis uses for weather, rates, prices and AI.</p>
-        <Integrations items={dataServices} heading={false} />
-      </Group>
+        <Group id="connections" shown={shown} note="Everything Orbis reads from. Every connection is read-only, and you can disconnect at any time.">
+          {notice && (
+            <output className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`}>
+              <span>{notice.text}</span>
+              <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
+            </output>
+          )}
+          <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
+          <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
+          <p className="fd-note tight">Services Orbis uses for weather, rates, prices and AI.</p>
+          <Integrations items={dataServices} heading={false} />
+        </Group>
 
-      <Group id="ai" note="One switch for every AI feature. Nothing is sent to an AI provider until it is on.">
-        <HomeBriefSetting preferences={data.aiPreferences} />
-        <h3 className="fd-label">Heads-ups</h3>
-        <HeadsupSettings />
-      </Group>
+        <Group id="ai" shown={shown} note="One switch for every AI feature. Nothing is sent to an AI provider until it is on.">
+          <HomeBriefSetting preferences={data.aiPreferences} />
+          <h3 className="fd-label">Heads-ups</h3>
+          <HeadsupSettings />
+        </Group>
 
-      <Group id="notifications">
-        <NotificationSettings settings={data.notificationSettings} />
-      </Group>
+        <Group id="notifications" shown={shown}>
+          <NotificationSettings settings={data.notificationSettings} />
+        </Group>
 
-      <Group id="day" note="The times your day already has. Today leads with whatever is due, and records what you say happened to it.">
-        <RoutineSettings summary={data.routines} editId={editRoutineId} />
-      </Group>
+        <Group id="day" shown={shown} note="The times your day already has. Today leads with whatever is due, and records what you say happened to it.">
+          <RoutineSettings summary={data.routines} editId={editRoutineId} />
+        </Group>
 
-      <Group id="security">
-        <SecuritySettings />
-      </Group>
+        <Group id="security" shown={shown}>
+          <SecuritySettings />
+        </Group>
 
-      <Group id="data">
-        <div className="fd-source pf-account">
-          <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
-          <SignOutButton variant="text" />
-        </div>
-        <AccountData />
-      </Group>
-    </dialog>
+        <Group id="data" shown={shown}>
+          <div className="fd-source pf-account">
+            <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
+            <SignOutButton variant="text" />
+          </div>
+          <AccountData />
+        </Group>
+      </dialog>
+    </>
   );
 }

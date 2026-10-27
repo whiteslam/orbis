@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useId, useState, useTransition, type ReactNode } from 'react';
 import { completeHeadsupAction, dismissHeadsupAction, setHeadsupKindAction, snoozeHeadsupAction } from '@/app/headsups/actions';
 import { safeAction } from '@/lib/client/safe-action';
 import type { Headsup, HeadsupAction, HeadsupKind, HeadsupsResponse } from '@/lib/headsups/types';
@@ -16,8 +16,15 @@ function source(headsup: Headsup) {
   return `From ${from} · worded by ${headsup.wordedBy === 'ai' ? 'AI' : 'Orbis'}`;
 }
 
-/** What Orbis noticed without being asked. Renders nothing when there is nothing. */
-export function Headsups({ onAction }: Readonly<{ onAction: (action: HeadsupAction) => void }>) {
+/**
+ * What Orbis noticed without being asked. Renders nothing when there is nothing,
+ * unless `empty` is given: the desktop header's popover passes it, and then
+ * this says it is looking, or `empty` when there is nothing.
+ */
+export function Headsups({ onAction, empty }: Readonly<{ onAction: (action: HeadsupAction) => void; empty?: ReactNode }>) {
+  const titleId = useId();
+  // Only Today's list carries the ids a push scrolls to; the popover's copy would repeat them.
+  const page = empty === undefined;
   const [data, setData] = useState<HeadsupsResponse | null>(null);
   const [all, setAll] = useState(false);
   const [offer, setOffer] = useState<HeadsupKind | null>(null);
@@ -35,13 +42,16 @@ export function Headsups({ onAction }: Readonly<{ onAction: (action: HeadsupActi
   // A push opens /?headsup=<id>; bring that one into view once it has loaded.
   useEffect(() => {
     const id = new URL(window.location.href).searchParams.get('headsup');
-    if (!id || !data) return;
+    if (!page || !id || !data) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAll(true);
     requestAnimationFrame(() => document.getElementById(`headsup-${id}`)?.scrollIntoView({ block: 'center' }));
-  }, [data]);
+  }, [data, page]);
 
-  if (!data?.headsups.length) return null;
+  if (!data?.headsups.length) {
+    if (page) return null;
+    return <p className="fd-note tight">{data ? empty : 'Looking…'}</p>;
+  }
   const shown = all ? data.headsups : data.headsups.slice(0, SHOWN);
 
   function remove(id: string) {
@@ -57,10 +67,10 @@ export function Headsups({ onAction }: Readonly<{ onAction: (action: HeadsupActi
   }
 
   return (
-    <section className="hu-card" aria-labelledby="headsups-title">
-      <h2 id="headsups-title" className="fd-label">Heads-ups</h2>
+    <section className="hu-card" aria-labelledby={titleId}>
+      <h2 id={titleId} className="fd-label">Heads-ups</h2>
       {shown.map((headsup) => (
-        <article className={`hu-item${headsup.urgency === 'urgent' ? ' urgent' : ''}`} id={`headsup-${headsup.id}`} key={headsup.id}>
+        <article className={`hu-item${headsup.urgency === 'urgent' ? ' urgent' : ''}`} id={page ? `headsup-${headsup.id}` : undefined} key={headsup.id}>
           <strong>{headsup.title}</strong>
           <p>{headsup.body}</p>
           <small>{source(headsup)}</small>

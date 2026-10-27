@@ -6,7 +6,7 @@ import { askOrbisAction } from '@/app/ask/actions';
 import { talkAvailableAction, talkToOrbisAction, type TalkResult } from '@/app/ask/talk-actions';
 import { safeAction } from '@/lib/client/safe-action';
 import { ASK_SOURCES, type AskSource } from '@/lib/ask/select';
-import { ASK_EVENT, type AskAbout, type AskRequest } from '@/lib/ask/about';
+import { ASK_EVENT, ASK_OPEN_EVENT, type AskAbout, type AskRequest } from '@/lib/ask/about';
 import { RECORDER_PREFERENCES } from '@/lib/voice/types';
 import { TALK_MAX_SECONDS, type TalkTurn } from '@/lib/voice/talk';
 
@@ -98,6 +98,25 @@ export function TalkToOrbis() {
     window.addEventListener(ASK_EVENT, onAsk);
     return () => window.removeEventListener(ASK_EVENT, onAsk);
   }, []);
+
+  // The desktop rail and palette open the panel as it is, with nothing attached,
+  // and put the cursor in the question so a keyboard user can start typing.
+  const typing = useRef<HTMLInputElement | null>(null);
+  const [focusTyping, setFocusTyping] = useState(false);
+  useEffect(() => {
+    const onOpen = () => {
+      setOpen(true);
+      setFocusTyping(true);
+    };
+    window.addEventListener(ASK_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(ASK_OPEN_EVENT, onOpen);
+  }, []);
+  useEffect(() => {
+    if (!open || !focusTyping) return;
+    typing.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFocusTyping(false);
+  }, [open, focusTyping]);
 
   function silence() {
     player.current?.pause();
@@ -331,7 +350,7 @@ export function TalkToOrbis() {
               </button>
             )}
             <form className="talk-type" onSubmit={ask}>
-              <input aria-label="Type a question" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={300} placeholder={phase === 'listening' ? 'Listening…' : 'Type a question'} disabled={phase === 'thinking' || phase === 'listening'} />
+              <input ref={typing} aria-label="Type a question" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={300} placeholder={phase === 'listening' ? 'Listening…' : 'Type a question'} disabled={phase === 'thinking' || phase === 'listening'} />
               <button type="submit" aria-label="Ask" disabled={draft.trim().length < 5 || (!sources.length && !about) || phase === 'thinking'}><Send size={16} /></button>
             </form>
           </footer>
