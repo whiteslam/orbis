@@ -15,9 +15,15 @@ the `research-memory` bucket are in the data export and account deletion (`lib/a
 are set (`researchDeskAvailable` in `lib/research/access.ts`, used by every action and by the panel page, which
 404s otherwise). The Investments section renders nothing while loading, when not available, or when loading fails.
 
-**Next task: Task 11 (weekly run and Monday heads-up)**, the only one left. Nothing is half-done or known broken;
-`pnpm typecheck`, `pnpm lint` (4 pre-existing warnings, none in research code), `pnpm test` (837 passed), `pnpm build`
-and the worker's pytest (51 passed) pass. (Those counts are without Task 11.)
+**Task 11 done:** `lib/research/weekly.ts` (`weeklyPicks`, `weeklyHeadsup`), `POST /api/research/weekly?step=queue|summary`
+(cron-secret auth like the other pg_cron routes; answers `skipped: not_configured` and reads no research table until
+the worker env vars and the desk allowlist are set; each account found is checked against the allowlist and
+`enabled`), `supabase/cron/research_schedule.sql` (optional, re-runnable), the `money.research_week` heads-up kind
+with the `open_research` action (opens `/active/research`; hidden from Settings' list since it is owner-only).
+
+**All tasks (1-13) are done.** What is left is the owner's go-live below and the unverified items that need a real
+run. Nothing is half-done or known broken; `pnpm typecheck`, `pnpm lint` (4 pre-existing warnings, none in research
+code), `pnpm test`, `pnpm build` and the worker's pytest (51 passed) pass.
 
 **Not yet verified (needs a real run):** OpenRouter accepting `anthropic/claude-sonnet-5.5` and
 `anthropic/claude-haiku-5.5`; `UpstreamGraph` against TradingAgents v0.7.1 (`create_run_state`, `stream_run`,
@@ -207,13 +213,18 @@ Tables: `research_runs` (id, user_id, ticker, symbol, exchange, trade_date, sour
 - `saveResearchSettingsAction(patch)` validates every field.
 - [x] typecheck, lint. Commit.
 
-### Task 11: Weekly run and Monday heads-up (OPEN, next)
+### Task 11: Weekly run and Monday heads-up (done)
 
 **Files:** `lib/research/weekly.ts` (+test), `app/api/research/weekly/route.ts`, `supabase/cron/research_schedule.sql`, modify `lib/headsups/types.ts`, `components/app-shell.tsx`.
 - `weeklyPicks(holdings, n)` – supported stock/ETF holdings by value, top n.
 - `weeklyHeadsup(runs, weekOf)` → `{ kind: 'money.research_week', dedupeKey: 'research-week:<weekOf>', title, body, action: { type: 'open_research' } }` or null when no weekly runs finished.
 - Route `POST /api/research/weekly?step=queue` (Saturday 09:00 IST): for each enabled, allowlisted person: dispatch `settle` when unsettled done runs are older than 8 days; when `weekly_enabled`, queue `weeklyPicks` within the cap and dispatch them in one workflow run. `?step=summary` (Monday 08:00 IST) raises the heads-up.
-- [ ] Tests for picks and heads-up wording; typecheck. Commit.
+- Decisions made while building: picks are `Stocks` and `ETFs` only (gold/silver ETFs and SGBs are left to manual
+  runs), one pick per ticker across brokers at combined value; settling looks at done runs with a trade date more
+  than 8 days and at most 90 days back; a second Saturday call queues nothing once that day's weekly runs exist; the
+  heads-up covers weekly runs with a trade date in the week before `weekOf` (the IST Monday), counts calls by rating
+  (no tickers), carries `RESEARCH_DISCLAIMER`, and respects the owner's disabled heads-up kinds.
+- [x] Tests for picks and heads-up wording; typecheck. Commit.
 
 ## Phase 5: Hardening
 

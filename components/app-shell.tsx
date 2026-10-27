@@ -65,6 +65,10 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   // The step a heads-up prepared. Screens read it once, as they mount from that tap.
   const [intent, setIntent] = useState<HeadsupAction | null>(null);
+  // A heads-up that leads to a page of its own (the Research desk). A client
+  // push, so the heads-up's "done" request isn't cut off by a page load.
+  const [leaveFor, setLeaveFor] = useState<string | null>(null);
+  useEffect(() => { if (leaveFor) router.push(leaveFor); }, [leaveFor, router]);
   // The desktop's command palette (Ctrl/⌘+K), open or not.
   const [palette, setPalette] = useState(false);
   const closePalette = useCallback(() => setPalette(false), []);
@@ -87,6 +91,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
 
   // A heads-up's prepared step: open the screen it belongs to, ready to go.
   const openHeadsup = (action: HeadsupAction) => {
+    if (action.type === 'open_research') return setLeaveFor('/active/research');
     setIntent(action);
     if (action.type === 'adjust_routine') return setSettings('day');
     setSettings(null);

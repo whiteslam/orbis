@@ -16,8 +16,18 @@ export const SCAN_KINDS = [
  */
 export const CAREER_KINDS = ['career.interview', 'career.offer', 'career.question', 'career.follow_up'] as const;
 
-export const HEADSUP_KINDS = [...SCAN_KINDS, ...CAREER_KINDS] as const;
+/**
+ * Raised by the Research desk's Monday cron (app/api/research/weekly), and only
+ * for the desk's owner, so the scan never withdraws them and Settings doesn't
+ * list them for everyone: the owner turns the weekly run off in the desk.
+ */
+export const RESEARCH_KINDS = ['money.research_week'] as const;
+
+export const HEADSUP_KINDS = [...SCAN_KINDS, ...CAREER_KINDS, ...RESEARCH_KINDS] as const;
 export type HeadsupKind = (typeof HEADSUP_KINDS)[number];
+
+/** The checks Settings offers to turn off: everything but the owner-only desk's. */
+export const SETTINGS_KINDS: readonly HeadsupKind[] = HEADSUP_KINDS.filter((kind) => !(RESEARCH_KINDS as readonly string[]).includes(kind));
 
 /** How Settings names each check. */
 export const KIND_LABELS: Record<HeadsupKind, string> = {
@@ -31,6 +41,7 @@ export const KIND_LABELS: Record<HeadsupKind, string> = {
   'career.offer': 'A job offer',
   'career.question': 'A recruiter asking you something',
   'career.follow_up': 'A follow-up ready for an application with no reply',
+  'money.research_week': 'The weekend’s Research desk calls',
 };
 
 /** Fixed in code: the model words a heads-up, it never decides how loud it is. */
@@ -45,6 +56,7 @@ export const URGENCY: Record<HeadsupKind, 'normal' | 'urgent'> = {
   'career.offer': 'urgent',
   'career.question': 'urgent',
   'career.follow_up': 'normal',
+  'money.research_week': 'normal',
 };
 
 export type HeadsupAction =
@@ -53,7 +65,8 @@ export type HeadsupAction =
   | { type: 'adjust_routine'; routineId: string }
   | { type: 'open_health_plan'; planId: string }
   | { type: 'open_steps' }
-  | { type: 'open_career_application'; applicationId: string };
+  | { type: 'open_career_application'; applicationId: string }
+  | { type: 'open_research' };
 
 export type Evidence = Record<string, string | number>;
 
@@ -105,6 +118,8 @@ export function parseAction(value: unknown): HeadsupAction | null {
       return { type: 'open_steps' };
     case 'open_career_application':
       return text(action.applicationId, 64) ? { type: 'open_career_application', applicationId: action.applicationId as string } : null;
+    case 'open_research':
+      return { type: 'open_research' };
     default:
       return null;
   }

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { clearHeadsupsAction, setHeadsupKindAction } from '@/app/headsups/actions';
 import { safeAction } from '@/lib/client/safe-action';
-import { HEADSUP_KINDS, KIND_LABELS, type HeadsupKind, type HeadsupsResponse } from '@/lib/headsups/types';
+import { KIND_LABELS, SETTINGS_KINDS, type HeadsupKind, type HeadsupsResponse } from '@/lib/headsups/types';
 
 /** Which checks run, and a way to clear what they found. */
 export function HeadsupSettings() {
@@ -31,7 +31,7 @@ export function HeadsupSettings() {
   return (
     <div className="pf-headsups">
       <p className="fd-note tight">Orbis checks these once a day and puts anything worth knowing on Today. The checks run inside Orbis; with AI on, only the numbers behind a heads-up are sent to be worded.</p>
-      {HEADSUP_KINDS.map((kind) => (
+      {SETTINGS_KINDS.map((kind) => (
         <label className="fd-line" key={kind}>
           <span>{KIND_LABELS[kind]}</span>
           <input type="checkbox" role="switch" aria-label={KIND_LABELS[kind]} checked={!(disabled ?? []).includes(kind)} disabled={disabled === null || isPending} onChange={(event) => toggle(kind, event.target.checked)} />
