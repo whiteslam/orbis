@@ -303,6 +303,8 @@ export type CareerApplication = {
   gmailThreadId: string | null;
   companyDomains: string[];
   followUpDue: string | null;
+  /** A follow-up Orbis drafted when followUpDue arrived with no reply; sent only on the owner's Send. */
+  followUpDraft?: string | null;
   prediction: Prediction | null;
   prep: InterviewPrep | null;
   lastEventAt: string | null;

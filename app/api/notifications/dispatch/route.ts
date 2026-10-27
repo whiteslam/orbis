@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { cronAuthorized } from '@/lib/cron/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
 import { dueSlots, SLOT_IDS, type SlotPreferences } from '@/lib/notifications/schedule';
@@ -7,17 +7,9 @@ export const maxDuration = 60;
 
 const TIME_BUDGET_MS = 50_000;
 
-function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret || secret.length < 32) return false;
-  const provided = Buffer.from(request.headers.get('authorization') ?? '');
-  const expected = Buffer.from(`Bearer ${secret}`);
-  return provided.length === expected.length && timingSafeEqual(provided, expected);
-}
-
 // Called every 15 minutes by the Supabase scheduler (pg_cron + pg_net). Sends each user's due slots once.
 export async function POST(request: Request) {
-  if (!authorized(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!cronAuthorized(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   const startedAt = Date.now();
   const now = new Date();

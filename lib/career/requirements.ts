@@ -6,7 +6,7 @@
  */
 import type { NormalizedJob, Requirement, Requirements, SalaryPeriod, Seniority, WorkMode } from './types.ts';
 import { normaliseSkill } from './skills.ts';
-import { cleanList, cleanNullable, cleanNumber, cleanText, isRecord, readJsonObject } from './normalise.ts';
+import { cleanList, cleanNullable, cleanNumber, cleanText, isRecord, readJsonObject } from '../ai/json.ts';
 import { isEmailLike } from './profile.ts';
 import { SENIORITIES, WORK_MODES } from './spec.ts';
 

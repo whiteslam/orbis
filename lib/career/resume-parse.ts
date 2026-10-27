@@ -8,7 +8,7 @@
  */
 import type { CareerContact, CareerEducation, CareerFact, CareerProfile, CareerProject, CareerRole, CareerSkill } from './types.ts';
 import { normaliseSkill } from './skills.ts';
-import { cleanList, cleanNullable, cleanNumber, cleanText, isRecord, readJsonObject } from './normalise.ts';
+import { cleanList, cleanNullable, cleanNumber, cleanText, isRecord, readJsonObject } from '../ai/json.ts';
 import { PROFILE_CAPS, emptyProfile, isEmailLike, isYearMonth, newId, validateProfile } from './profile.ts';
 
 /** Enough for a long resume; beyond it is usually an appendix of publications. */

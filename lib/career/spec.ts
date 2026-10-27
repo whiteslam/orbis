@@ -5,7 +5,7 @@
  */
 import type { CareerProfile, CareerSpec, Money, SalaryPeriod, Seniority, WorkMode } from './types.ts';
 import { normaliseSkill } from './skills.ts';
-import { cleanList, cleanNullable, cleanNumber, isRecord, readJsonObject } from './normalise.ts';
+import { cleanList, cleanNullable, cleanNumber, isRecord, readJsonObject } from '../ai/json.ts';
 
 export const SENIORITIES: readonly Seniority[] = ['intern', 'junior', 'mid', 'senior', 'lead', 'principal', 'manager', 'director', 'executive'];
 export const WORK_MODES: readonly WorkMode[] = ['remote', 'hybrid', 'onsite'];

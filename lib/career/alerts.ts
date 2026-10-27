@@ -12,6 +12,7 @@
 import type { NormalizedJob } from './types.ts';
 import { clipText, collapseWhitespace, decodeEntities, htmlToText } from './text.ts';
 import { parseSalaryText } from './sources/salary.ts';
+import { cleanText, isRecord, readJson } from '../ai/json.ts';
 
 // ─── Senders ─────────────────────────────────────────────────────────────
 
@@ -357,41 +358,21 @@ export function buildAlertPrompt(input: AlertPromptInput) {
   return { system, user: lines.join('\n\n') };
 }
 
-const text = (value: unknown, cap: number) => (typeof value === 'string' ? collapseWhitespace(value).slice(0, cap) : '');
-
-/** The reply without a Markdown code fence around it, if the model added one. */
-function unfence(reply: string) {
-  let body = reply.trim();
-  if (body.startsWith('```')) {
-    body = body.slice(3);
-    if (body.slice(0, 4).toLowerCase() === 'json') body = body.slice(4);
-    body = body.trimStart();
-  }
-  if (body.endsWith('```')) body = body.slice(0, -3).trimEnd();
-  return body;
-}
-
 function replyEntries(reply: string): unknown[] {
-  try {
-    const data = JSON.parse(unfence(reply)) as unknown;
-    if (Array.isArray(data)) return data;
-    const jobs = (data as { jobs?: unknown } | null)?.jobs;
-    return Array.isArray(jobs) ? jobs : [];
-  } catch {
-    return [];
-  }
+  const data = readJson(reply);
+  if (Array.isArray(data)) return data;
+  return isRecord(data) && Array.isArray(data.jobs) ? data.jobs : [];
 }
 
-function toThinJob(entry: unknown, allowed: Set<string>, senderLabel: string, attribution: string): NormalizedJob | null {
-  if (!entry || typeof entry !== 'object') return null;
-  const raw = entry as Record<string, unknown>;
+function toThinJob(raw: unknown, allowed: Set<string>, senderLabel: string, attribution: string): NormalizedJob | null {
+  if (!isRecord(raw)) return null;
   const url = typeof raw.url === 'string' ? raw.url.trim() : '';
-  const title = text(raw.title, 200);
-  const company = text(raw.company, 120);
+  const title = cleanText(raw.title, 200);
+  const company = cleanText(raw.company, 120);
   if (!allowed.has(url) || !title || !company) return null;
-  const location = text(raw.location, 160) || null;
-  const salaryText = text(raw.salary, 120);
-  const line = text(raw.line, 400);
+  const location = cleanText(raw.location, 160) || null;
+  const salaryText = cleanText(raw.salary, 120);
+  const line = cleanText(raw.line, 400);
   return {
     source: 'gmail_alerts',
     sourceRef: jobRef(senderLabel, url)?.ref ?? url,

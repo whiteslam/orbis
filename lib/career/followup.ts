@@ -6,7 +6,7 @@
  * no reply `ghostDays` after sending, the application is ghosted.
  */
 import type { ApplicationStatus, CareerApplication } from './types.ts';
-import { cleanText, replyObject } from './mail.ts';
+import { cleanBlock, readJsonObject } from '../ai/json.ts';
 
 const DAY_MS = 86_400_000;
 
@@ -80,7 +80,7 @@ function wordCount(text: string) {
 
 /** The follow-up body, or null when it is missing, too long, or still has a [placeholder]. */
 export function parseFollowUpReply(reply: string): string | null {
-  const body = cleanText(replyObject(reply)?.body, 2000);
+  const body = cleanBlock(readJsonObject(reply)?.body, 2000);
   if (!body) return null;
   if (wordCount(body) > FOLLOW_UP_WORD_CAP) return null;
   if (body.includes('[') && body.includes(']')) return null;

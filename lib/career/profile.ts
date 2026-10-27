@@ -4,7 +4,8 @@
  */
 import type { CareerContact, CareerEducation, CareerFact, CareerProfile, CareerProject, CareerRole, CareerSkill } from './types.ts';
 import { normaliseSkill, skillsMentioned } from './skills.ts';
-import { isRecord, normaliseCompany, normaliseTitle } from './normalise.ts';
+import { isRecord } from '../ai/json.ts';
+import { normaliseCompany, normaliseTitle } from './normalise.ts';
 
 export type IdPrefix = 'f' | 'r' | 'e' | 'p' | 'c';
 

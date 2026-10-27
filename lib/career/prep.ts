@@ -4,7 +4,8 @@
  * id that isn't in the profile is dropped, never shown.
  */
 import type { CareerProfile, InterviewPrep, Match, ReplyClassification, Requirements } from './types.ts';
-import { cleanList, cleanText, httpsLink, isoWithOffset, replyObject } from './mail.ts';
+import { cleanList, cleanNullable, cleanText, readJsonObject } from '../ai/json.ts';
+import { httpsLink, isoWithOffset } from './mail.ts';
 
 const MAX_FACTS = 120;
 const MAX_TOPICS = 8;
@@ -68,25 +69,25 @@ type Topic = InterviewPrep['likelyTopics'][number];
 function toTopic(value: unknown, factIds: ReadonlySet<string>): Topic | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
-  const topic = cleanText(raw.topic, 120);
+  const topic = cleanNullable(raw.topic, 120);
   if (!topic) return null;
   const stories: Topic['stories'] = [];
   for (const entry of Array.isArray(raw.stories) ? raw.stories : []) {
     const story = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
     const factId = typeof story.factId === 'string' ? story.factId.trim() : '';
-    const prompt = cleanText(story.prompt, 400);
+    const prompt = cleanNullable(story.prompt, 400);
     // A story must rest on a real fact.
     if (prompt && factIds.has(factId)) stories.push({ factId, prompt });
     if (stories.length >= MAX_STORIES) break;
   }
-  return { topic, why: cleanText(raw.why, 240) ?? '', stories };
+  return { topic, why: cleanText(raw.why, 240), stories };
 }
 
 function toGap(value: unknown): InterviewPrep['gaps'][number] | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
-  const skill = cleanText(raw.skill, 80);
-  const framing = cleanText(raw.framing, 400);
+  const skill = cleanNullable(raw.skill, 80);
+  const framing = cleanNullable(raw.framing, 400);
   return skill && framing ? { skill, framing } : null;
 }
 
@@ -97,7 +98,7 @@ const NO_LOGISTICS: InterviewPrep['logistics'] = { at: null, format: null, link:
  * invite (see prepLogistics), never from the model. Null when it holds nothing usable.
  */
 export function parsePrepReply(reply: string, profile: Pick<CareerProfile, 'facts'>, logistics: InterviewPrep['logistics'] = NO_LOGISTICS): InterviewPrep | null {
-  const raw = replyObject(reply);
+  const raw = readJsonObject(reply);
   if (!raw) return null;
   const factIds = new Set(profile.facts.map((fact) => fact.id));
   const likelyTopics: Topic[] = [];
@@ -107,7 +108,7 @@ export function parsePrepReply(reply: string, profile: Pick<CareerProfile, 'fact
     if (likelyTopics.length >= MAX_TOPICS) break;
   }
   const gaps = (Array.isArray(raw.gaps) ? raw.gaps : []).map(toGap).filter((gap) => gap !== null).slice(0, MAX_TOPICS);
-  const questionsToAsk = cleanList(raw.questionsToAsk, 240, 8);
+  const questionsToAsk = cleanList(raw.questionsToAsk, 8, 240);
   if (!likelyTopics.length && !questionsToAsk.length) return null;
   return { logistics, likelyTopics, questionsToAsk, gaps };
 }
@@ -136,7 +137,7 @@ export function prepLogistics(classification: Pick<ReplyClassification, 'intervi
   const at = isoWithOffset(classification.interviewAt);
   return {
     at: at ? (inZone(at, timeZone) ?? at) : null,
-    format: cleanText(classification.interviewFormat, 60),
+    format: cleanNullable(classification.interviewFormat, 60),
     link: httpsLink(classification.meetingLink),
   };
 }

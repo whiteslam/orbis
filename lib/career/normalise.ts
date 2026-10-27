@@ -1,6 +1,6 @@
 /**
- * Career: the normal forms dedupe and matching compare on, plus the small
- * readers every AI-reply parser in lib/career shares. Client-safe and pure.
+ * Career: the normal forms dedupe and matching compare on. Client-safe and
+ * pure. The readers for AI replies live in lib/ai/json.ts.
  */
 import { titleWords } from './skills.ts';
 
@@ -93,57 +93,4 @@ export function locationBucket(location: string | null, remote: boolean): string
     return CITY_ALIASES.get(place) ?? place;
   }
   return 'unknown';
-}
-
-// ─── Reading AI replies ─────────────────────────────────────────────────
-
-/**
- * The JSON object in a model's reply, or null. Tolerates a Markdown fence and
- * a sentence around the object; the router already unfences, but a reply
- * re-parsed later may not have gone through it.
- */
-export function readJsonObject(reply: string): Record<string, unknown> | null {
-  const start = reply.indexOf('{');
-  const end = reply.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try {
-    const parsed: unknown = JSON.parse(reply.slice(start, end + 1));
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** A trimmed, single-spaced string capped at `max`, or '' for anything else. */
-export function cleanText(value: unknown, max: number): string {
-  if (typeof value !== 'string') return '';
-  return value.split(/\s+/).filter(Boolean).join(' ').slice(0, max).trim();
-}
-
-/** cleanText, but null instead of ''. */
-export function cleanNullable(value: unknown, max: number): string | null {
-  return cleanText(value, max) || null;
-}
-
-/** Unique non-empty cleaned strings, at most `maxItems`. */
-export function cleanList(value: unknown, maxItems: number, maxLength: number): string[] {
-  if (!Array.isArray(value)) return [];
-  const out: string[] = [];
-  for (const item of value) {
-    const text = cleanText(item, maxLength);
-    if (text && !out.includes(text)) out.push(text);
-    if (out.length >= maxItems) break;
-  }
-  return out;
-}
-
-/** A finite number within [min, max] (rounded when `integer`), else null. */
-export function cleanNumber(value: unknown, min: number, max: number, integer = false): number | null {
-  const number = typeof value === 'string' ? Number.parseFloat(value) : value;
-  if (typeof number !== 'number' || !Number.isFinite(number) || number < min || number > max) return null;
-  return integer ? Math.round(number) : number;
 }

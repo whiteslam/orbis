@@ -10,6 +10,7 @@
 import type {
   CareerProfile, CareerSpec, CitedText, Match, Money, NormalizedJob, Requirements, ScreeningAnswer, TailoredDraft,
 } from './types.ts';
+import { cleanText, isRecord, readJsonObject } from '../ai/json.ts';
 import { normaliseSkill } from './skills.ts';
 
 export const MAX_BULLETS_PER_ROLE = 6;
@@ -126,21 +127,6 @@ export function buildTailorPrompt(input: TailorInput): { system: string; user: s
 
 // ─── Reply ───────────────────────────────────────────────────────────────
 
-/** The reply without a Markdown code fence around it, if the model added one. */
-function unfence(reply: string): string {
-  let body = reply.trim();
-  if (body.startsWith('```')) {
-    body = body.slice(3);
-    if (body.slice(0, 4).toLowerCase() === 'json') body = body.slice(4);
-    body = body.trimStart();
-  }
-  if (body.endsWith('```')) body = body.slice(0, -3).trimEnd();
-  return body;
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-const text = (value: unknown, cap: number) => (typeof value === 'string' ? value.replaceAll(/\s+/g, ' ').trim().slice(0, cap) : '');
-
 function ids(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && id.trim() !== '').map((id) => id.trim()))];
@@ -148,7 +134,7 @@ function ids(value: unknown): string[] {
 
 function cited(value: unknown, cap: number): CitedText | null {
   if (!isRecord(value)) return null;
-  const body = text(value.text, cap);
+  const body = cleanText(value.text, cap);
   return body ? { text: body, factIds: ids(value.factIds) } : null;
 }
 
@@ -171,7 +157,7 @@ function grouped(value: unknown, key: 'roleId' | 'projectId', known: Set<string>
   const out: Array<{ id: string; bullets: CitedText[] }> = [];
   for (const entry of value) {
     if (!isRecord(entry)) continue;
-    const id = text(entry[key], 40);
+    const id = cleanText(entry[key], 40);
     if (!known.has(id) || seen.has(id)) continue;
     seen.add(id);
     out.push({ id, bullets: bullets(entry.bullets, limit) });
@@ -193,8 +179,8 @@ function answers(value: unknown): ScreeningAnswer[] {
   const out: ScreeningAnswer[] = [];
   for (const entry of value) {
     if (!isRecord(entry)) continue;
-    const question = text(entry.question, 300);
-    const answer = text(entry.answer, 1500);
+    const question = cleanText(entry.question, 300);
+    const answer = cleanText(entry.answer, 1500);
     if (question && answer) out.push({ question, answer });
     if (out.length >= MAX_ANSWERS) break;
   }
@@ -203,7 +189,7 @@ function answers(value: unknown): ScreeningAnswer[] {
 
 function skillList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  const names = value.map((skill) => text(skill, 60)).filter(Boolean);
+  const names = value.map((skill) => cleanText(skill, 60)).filter(Boolean);
   return [...new Set(names)].slice(0, MAX_SKILLS);
 }
 
@@ -213,13 +199,8 @@ function skillList(value: unknown): string[] {
  * lists and lengths are capped; the claims themselves are left to the truth check.
  */
 export function parseTailorReply(reply: string, profile: CareerProfile): TailorReply | null {
-  let data: unknown;
-  try {
-    data = JSON.parse(unfence(reply));
-  } catch {
-    return null;
-  }
-  if (!isRecord(data) || !Array.isArray(data.roles)) return null;
+  const data = readJsonObject(reply);
+  if (!data || !Array.isArray(data.roles)) return null;
   const summary = cited(data.summary, 1200);
   const coverNote = cited(data.coverNote, 2000);
   if (!summary || !coverNote) return null;
@@ -228,7 +209,7 @@ export function parseTailorReply(reply: string, profile: CareerProfile): TailorR
   const projects = grouped(data.projects, 'projectId', new Set(profile.projects.map((project) => project.id)), MAX_PROJECT_BULLETS);
   return {
     draft: {
-      headline: text(data.headline, 160),
+      headline: cleanText(data.headline, 160),
       summary,
       skills: skillList(data.skills),
       roles: roles.map((role) => ({ roleId: role.id, bullets: role.bullets })),
@@ -236,7 +217,7 @@ export function parseTailorReply(reply: string, profile: CareerProfile): TailorR
     },
     coverNote: { text: capWords(coverNote.text, MAX_COVER_WORDS), factIds: coverNote.factIds },
     answers: answers(data.answers),
-    outreach: text(data.outreach, 800),
+    outreach: cleanText(data.outreach, 800),
   };
 }
 

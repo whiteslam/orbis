@@ -8,50 +8,7 @@
  */
 import { REPLY_KINDS } from './types.ts';
 import type { OfferTerms, ReplyClassification, ReplyKind, SalaryPeriod } from './types.ts';
-
-// ─── Shared reading of model replies ─────────────────────────────────────
-
-/** The reply without a Markdown code fence around it, if the model added one. */
-function unfence(reply: string) {
-  let body = reply.trim();
-  if (body.startsWith('```')) {
-    body = body.slice(3);
-    if (body.slice(0, 4).toLowerCase() === 'json') body = body.slice(4);
-    body = body.trimStart();
-  }
-  if (body.endsWith('```')) body = body.slice(0, -3).trimEnd();
-  return body;
-}
-
-/** A model's JSON reply as a plain object, or null. Never throws. */
-export function replyObject(reply: string): Record<string, unknown> | null {
-  let data: unknown;
-  try {
-    data = JSON.parse(unfence(reply));
-  } catch {
-    return null;
-  }
-  return data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : null;
-}
-
-/** A trimmed string capped at `cap`, or null when empty or not a string. */
-export function cleanText(value: unknown, cap: number): string | null {
-  if (typeof value !== 'string') return null;
-  const text = value.trim().slice(0, cap).trim();
-  return text || null;
-}
-
-/** Strings from an array, cleaned and capped in count. */
-export function cleanList(value: unknown, cap: number, max: number): string[] {
-  if (!Array.isArray(value)) return [];
-  const out: string[] = [];
-  for (const item of value) {
-    const text = cleanText(item, cap);
-    if (text) out.push(text);
-    if (out.length >= max) break;
-  }
-  return out;
-}
+import { cleanNullable, readJsonObject } from '../ai/json.ts';
 
 // ─── Text normalising ────────────────────────────────────────────────────
 
@@ -277,7 +234,7 @@ export function validateTerms(value: unknown): OfferTerms | null {
     fixed: amount(raw.fixed),
     variable: amount(raw.variable),
     joiningBonus: amount(raw.joiningBonus),
-    equity: cleanText(raw.equity, 200),
+    equity: cleanNullable(raw.equity, 200),
     currency: currency(raw.currency),
     period: PERIODS.find((period) => period === raw.period) ?? null,
     startDate: isoDay(raw.startDate),
@@ -297,7 +254,7 @@ export function isoWithOffset(value: unknown): string | null {
 
 /** An https link, or null. */
 export function httpsLink(value: unknown): string | null {
-  const text = cleanText(value, 500);
+  const text = cleanNullable(value, 500);
   if (!text) return null;
   try {
     return new URL(text).protocol === 'https:' ? text : null;
@@ -324,13 +281,13 @@ const NEEDS_REPLY_BY_DEFAULT: readonly ReplyKind[] = ['interview_invite', 'recru
 
 /** The model's classification, checked against the rules. Null when unusable. */
 export function parseReplyReply(reply: string): ReplyClassification | null {
-  const raw = replyObject(reply);
+  const raw = readJsonObject(reply);
   if (!raw) return null;
   let kind = REPLY_KINDS.find((candidate) => candidate === raw.kind);
-  const rawSummary = cleanText(raw.summary, 2000);
+  const rawSummary = cleanNullable(raw.summary, 2000);
   if (!kind || !rawSummary) return null;
   const summary = capSummary(rawSummary);
-  const role = cleanText(raw.role, 160);
+  const role = cleanNullable(raw.role, 160);
   // Only an offer carries terms: a rejection (or an invite quoting a range) never does.
   let offer = kind === 'offer' ? validateTerms(raw.offer) : null;
   if (kind === 'offer' && !offerHolds(offer, summary, role)) {
@@ -339,10 +296,10 @@ export function parseReplyReply(reply: string): ReplyClassification | null {
   }
   return {
     kind,
-    company: cleanText(raw.company, 160),
+    company: cleanNullable(raw.company, 160),
     role,
     interviewAt: isoWithOffset(raw.interviewAt),
-    interviewFormat: cleanText(raw.interviewFormat, 60),
+    interviewFormat: cleanNullable(raw.interviewFormat, 60),
     meetingLink: httpsLink(raw.meetingLink),
     offer,
     needsReply: typeof raw.needsReply === 'boolean' ? raw.needsReply : NEEDS_REPLY_BY_DEFAULT.includes(kind),

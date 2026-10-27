@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isMissingTable } from '@/lib/supabase/errors';
+import { isRecord } from '@/lib/ai/json';
 import { CAREER_BUCKET } from '@/lib/storage/upload-rules';
 import {
   APPLICATION_STATUSES,
@@ -80,7 +81,6 @@ function chunks<T>(items: T[], size = IN_CHUNK): T[][] {
 
 // ─── Shape checks ─────────────────────────────────────────────────────────
 
-const isRecord = (value: unknown): value is Row => typeof value === 'object' && value !== null && !Array.isArray(value);
 const str = (value: unknown) => (typeof value === 'string' ? value : null);
 const num = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
@@ -358,6 +358,35 @@ export async function setSourceCursor(admin: CareerDb, userId: string, source: S
   await writeBookkeeping(admin, userId, { source_cursors: { ...cursors, [source]: at } });
 }
 
+/** Several sources fetched in one run: one read and one write, so parallel fetches can't lose each other's cursor. */
+export async function setSourceCursors(admin: CareerDb, userId: string, sources: SourceId[], at = new Date().toISOString()) {
+  if (!sources.length) return;
+  const cursors = await getSourceCursors(admin, userId);
+  for (const source of sources) cursors[source] = at;
+  await writeBookkeeping(admin, userId, { source_cursors: cursors });
+}
+
+export type CronKind = 'ingest' | 'mail';
+const CRON_COLUMN: Record<CronKind, string> = { ingest: 'last_ingest_at', mail: 'last_mail_scan_at' };
+
+/**
+ * Claims this person's run: stamps `at` only if the last run is older than
+ * `staleBefore` (or never happened), in one conditional update. False means an
+ * overlapping run got there first, or it is too soon.
+ */
+export async function claimCareerRun(admin: CareerDb, userId: string, kind: CronKind, at: string, staleBefore: string): Promise<boolean> {
+  const column = CRON_COLUMN[kind];
+  const { data, error } = await admin.from('career_profiles').update({ [column]: at }).eq('user_id', userId)
+    .or(`${column}.is.null,${column}.lt."${staleBefore}"`).select('user_id');
+  if (error) throw failed(error, 'Career bookkeeping could not be saved.');
+  return Boolean(data?.length);
+}
+
+/** Gives a failed run's claim back, so the next cron tries again instead of waiting a whole interval. */
+export async function releaseCareerRun(admin: CareerDb, userId: string, kind: CronKind, previous: string | null) {
+  await writeBookkeeping(admin, userId, { [CRON_COLUMN[kind]]: previous });
+}
+
 export type CareerUser = { userId: string; lastIngestAt: string | null; lastMailScanAt: string | null };
 
 /** Everyone with a career profile, the longest-waiting first for the given cron. */
@@ -570,6 +599,62 @@ export async function listJobsNeedingRequirements(client: CareerDb, userId: stri
   return ((data ?? []) as Row[]).map(toJob);
 }
 
+/** The given jobs, in no particular order; ids that aren't this person's are simply absent. */
+export async function listJobsByIds(userId: string, ids: string[], db?: CareerDb): Promise<CareerJob[]> {
+  const client = await dbOr(db);
+  const jobs: CareerJob[] = [];
+  for (const part of chunks([...new Set(ids)])) {
+    const { data, error } = await client.from('career_jobs').select(JOB_COLUMNS).eq('user_id', userId).in('id', part); // NOSONAR: chunks keep each URL short; there are rarely more than one or two
+    if (error) {
+      if (isMissingTable(error)) return [];
+      throw failed(error, 'Jobs couldn’t be loaded.');
+    }
+    jobs.push(...((data ?? []) as Row[]).map(toJob));
+  }
+  return jobs;
+}
+
+/** Jobs never scored, newest first: the freshest listings matter most when a run can't do them all. */
+export async function listUnscoredJobs(client: CareerDb, userId: string, limit: number): Promise<CareerJob[]> {
+  const { data, error } = await client.from('career_jobs').select(JOB_COLUMNS).eq('user_id', userId).is('score', null)
+    .neq('state', 'dismissed').order('found_at', { ascending: false }).limit(Math.max(limit, 1));
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw failed(error, 'Jobs couldn’t be loaded.');
+  }
+  return ((data ?? []) as Row[]).map(toJob);
+}
+
+// Everything but the description, which is up to 20 kB a job and not needed to count or chart.
+const SUMMARY_JOB_COLUMNS = 'id,source,source_ref,dedupe_key,title,company,location,remote,url,apply_url,apply_email,recruitee,thin,salary,posted_at,sources,attribution,requirements,match,score,state,dismiss_reason,found_at';
+
+/**
+ * Jobs found since `since` (ISO), newest first, WITHOUT their descriptions
+ * (`description` is null on every one), for Insights and the auto-draft pick.
+ */
+export async function listJobsSince(userId: string, since: string, limit: number, db?: CareerDb): Promise<CareerJob[]> {
+  const client = await dbOr(db);
+  const { data, error } = await client.from('career_jobs').select(SUMMARY_JOB_COLUMNS).eq('user_id', userId).gte('found_at', since)
+    .order('found_at', { ascending: false }).limit(Math.min(Math.max(limit, 1), 5000));
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw failed(error, 'Jobs couldn’t be loaded.');
+  }
+  return ((data ?? []) as Row[]).map(toJob);
+}
+
+/** How many new, unexcluded jobs are at or above the bar: the "For you" count. */
+export async function countForYou(userId: string, threshold: number, db?: CareerDb): Promise<number> {
+  const client = await dbOr(db);
+  const { count, error } = await client.from('career_jobs').select('id', { count: 'exact', head: true }).eq('user_id', userId)
+    .eq('state', 'new').is('excluded_reason', null).gte('score', threshold);
+  if (error) {
+    if (isMissingTable(error)) return 0;
+    throw failed(error, LOAD_MESSAGE);
+  }
+  return count ?? 0;
+}
+
 async function updateJob(userId: string, jobId: string, values: Row, db?: CareerDb) {
   const client = await dbOr(db);
   const { data, error } = await client.from('career_jobs').update(values).eq('user_id', userId).eq('id', jobId).select('id');
@@ -594,7 +679,7 @@ export async function setJobState(userId: string, jobId: string, state: JobState
 
 // ─── Applications ─────────────────────────────────────────────────────────
 
-const APPLICATION_COLUMNS = 'id,job_id,status,route,draft,cover_note,answers,outreach,removed,ats,resume_pdf_path,resume_docx_path,sent_at,gmail_thread_id,company_domains,follow_up_due,prediction,prep,last_event_at,notes,updated_at';
+const APPLICATION_COLUMNS = 'id,job_id,status,route,draft,cover_note,answers,outreach,removed,ats,resume_pdf_path,resume_docx_path,sent_at,gmail_thread_id,company_domains,follow_up_due,follow_up_draft,prediction,prep,last_event_at,notes,updated_at';
 
 const readDraft = (value: unknown) =>
   shaped<TailoredDraft>(value, (row) => typeof row.headline === 'string' && isRecord(row.summary) && hasArrays(row, ['skills', 'roles', 'projects']));
@@ -622,6 +707,7 @@ function toApplication(row: Row): CareerApplication {
     gmailThreadId: str(row.gmail_thread_id),
     companyDomains: strings(row.company_domains),
     followUpDue: str(row.follow_up_due),
+    followUpDraft: str(row.follow_up_draft),
     prediction: readPrediction(row.prediction),
     prep: readPrep(row.prep),
     lastEventAt: str(row.last_event_at),
@@ -646,6 +732,8 @@ export type ApplicationPatch = Partial<{
   gmailThreadId: string | null;
   companyDomains: string[];
   followUpDue: string | null;
+  /** The follow-up the watcher drafted, waiting for the owner's Send. */
+  followUpDraft: string | null;
   prediction: Prediction | null;
   prep: InterviewPrep | null;
   lastEventAt: string | null;
@@ -655,7 +743,7 @@ export type ApplicationPatch = Partial<{
 const PATCH_COLUMNS: Record<keyof ApplicationPatch, string> = {
   status: 'status', route: 'route', draft: 'draft', coverNote: 'cover_note', answers: 'answers', outreach: 'outreach',
   removed: 'removed', ats: 'ats', pdfPath: 'resume_pdf_path', docxPath: 'resume_docx_path', sentAt: 'sent_at',
-  gmailThreadId: 'gmail_thread_id', companyDomains: 'company_domains', followUpDue: 'follow_up_due', prediction: 'prediction',
+  gmailThreadId: 'gmail_thread_id', companyDomains: 'company_domains', followUpDue: 'follow_up_due', followUpDraft: 'follow_up_draft', prediction: 'prediction',
   prep: 'prep', lastEventAt: 'last_event_at', notes: 'notes',
 };
 

@@ -7,6 +7,8 @@
  * properly. Callers now say what "usable" means, and anything else is
  * 'invalid', which the router treats like any other failure: try the next one.
  */
+import { unfence } from './json.ts';
+
 export type TokenUsage = { inputTokens: number; outputTokens: number };
 
 export type Completion =
@@ -21,13 +23,6 @@ function usageFrom(input: unknown, output: unknown): TokenUsage | null {
   return inputTokens === null || outputTokens === null ? null : { inputTokens, outputTokens };
 }
 
-/** JSON a model wrapped in a Markdown code fence, unwrapped. */
-function unfence(text: string) {
-  const trimmed = text.trim();
-  if (trimmed.length < 6 || !trimmed.startsWith('```') || !trimmed.endsWith('```')) return text;
-  const body = trimmed.slice(3, -3);
-  return (body.slice(0, 4).toLowerCase() === 'json' ? body.slice(4) : body).trim();
-}
 
 /** The shared verdict: empty or unusable text is invalid, whichever provider sent it. */
 function judge(content: unknown, usage: TokenUsage | null, accept?: (text: string) => boolean): Completion {

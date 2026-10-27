@@ -5,7 +5,8 @@
  * backs it, and the cap is said aloud.
  */
 import type { CareerSpec, Money, OfferAdvice, OfferAsk, OfferTerms, SalaryPeriod, SalaryPulse } from './types.ts';
-import { cleanList, cleanText, replyObject, validateTerms } from './mail.ts';
+import { cleanBlock, cleanList, cleanNullable, cleanText, readJsonObject } from '../ai/json.ts';
+import { validateTerms } from './mail.ts';
 
 // The watcher reads terms out of mail with the same rules, so one definition serves both.
 export { validateTerms };
@@ -77,18 +78,18 @@ const ASK_ITEMS: ReadonlyArray<OfferAsk['item']> = ['base', 'joining_bonus', 'no
 function toAsk(value: unknown): OfferAsk | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
-  const ask = cleanText(raw.ask, 200);
+  const ask = cleanNullable(raw.ask, 200);
   if (!ask) return null;
-  return { item: ASK_ITEMS.find((item) => item === raw.item) ?? 'other', ask, why: cleanText(raw.why, 240) ?? '' };
+  return { item: ASK_ITEMS.find((item) => item === raw.item) ?? 'other', ask, why: cleanText(raw.why, 240) };
 }
 
 /** The model's advice, checked. Null when it has no verdict, reasons or reply draft. */
 export function parseOfferReply(reply: string): OfferAdvice | null {
-  const raw = replyObject(reply);
+  const raw = readJsonObject(reply);
   const verdict = VERDICTS.find((candidate) => candidate === raw?.verdict);
   if (!raw || !verdict) return null;
-  const reasons = cleanList(raw.reasons, 240, 5);
-  const replyDraft = cleanText(raw.replyDraft, 3000);
+  const reasons = cleanList(raw.reasons, 5, 240);
+  const replyDraft = cleanBlock(raw.replyDraft, 3000);
   if (!reasons.length || !replyDraft) return null;
   const asks: OfferAsk[] = [];
   for (const entry of Array.isArray(raw.asks) ? raw.asks : []) {
@@ -96,7 +97,7 @@ export function parseOfferReply(reply: string): OfferAdvice | null {
     if (ask) asks.push(ask);
     if (asks.length >= 5) break;
   }
-  return { verdict, reasons, asks, risks: cleanList(raw.risks, 240, 4), replyDraft, capNote: null };
+  return { verdict, reasons, asks, risks: cleanList(raw.risks, 4, 240), replyDraft, capNote: null };
 }
 
 // ─── Amounts in asks ─────────────────────────────────────────────────────

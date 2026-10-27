@@ -299,7 +299,7 @@ Today gets a row from `lib/focus/career.ts`. It reads the most important of: an 
 
 ## AI policy change (the owner's decision)
 
-- **Budget.** The ₹300/₹500 monthly cap stops limiting by default. With `ORBIS_AI_MONTHLY_BUDGET_INR` unset or `0`, there is no cap and paid models go first for quality features. A positive value restores the cap. Spend is still logged per attempt.
+- **Budget.** The ₹300/₹500 monthly cap stops limiting by default. With `ORBIS_AI_MONTHLY_BUDGET_INR` unset, there is no cap and paid models go first for quality features. A positive value restores the cap, and `0` still turns paid models off, as before. Spend is still logged per attempt.
 - **Personal data.** It is no longer limited to `may_train = false` providers. `sensitivity` stays on requests for logging, and the router no longer filters on it.
 - The privacy page says this plainly.
 - This is a separate commit so it can be reverted on its own.

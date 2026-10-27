@@ -13,6 +13,7 @@ import { WeatherCard } from '@/components/today/weather-card';
 import { ImportantMail } from '@/components/today/important-mail';
 import { NewsCard } from '@/components/today/news-card';
 import { Headsups } from '@/components/today/headsups';
+import { CareerRow } from '@/components/today/career-row';
 import type { HealthPlanRecord } from '@/lib/health-docs/types';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { StepsSummary } from '@/lib/health/types';
@@ -162,6 +163,9 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       <Headsups onAction={openHeadsup} />
 
       <TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />
+
+      {/* The job hunt's most pressing fact, once Career is set up. */}
+      <CareerRow openTab={openTab} />
 
       <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
 
