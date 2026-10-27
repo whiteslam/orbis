@@ -31,12 +31,15 @@ function parseUrl(text: string) {
   }
 }
 
+// A board token goes into the Greenhouse API path, so it must look like one: never '.', '..' or a slash.
+const GREENHOUSE_TOKEN = /^[A-Za-z0-9_-]+$/;
+
 function greenhouseRef(url: URL, parts: string[]): PastedRef | null {
   // The embedded form: /embed/job_app?for=<token>&token=<id>.
   if (parts[0] === 'embed') {
     const token = url.searchParams.get('for');
     const id = url.searchParams.get('token');
-    return token && id && /^\d+$/.test(id) ? { kind: 'greenhouse', token, id } : null;
+    return token && GREENHOUSE_TOKEN.test(token) && id && /^\d+$/.test(id) ? { kind: 'greenhouse', token, id } : null;
   }
   const [token, jobs, id] = parts;
   return token && jobs === 'jobs' && id && /^\d+$/.test(id) ? { kind: 'greenhouse', token, id } : null;
