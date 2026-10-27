@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, type ReactNode, type RefObject } from 'react';
+
+// The dialog focus hook moved to the shell, which shares it; Career imports it from here as before.
+export { useDialogFocus } from '@/components/shell/dialog-focus';
 
 /** A bento card: a real heading, an optional aside on the right (a toggle, a link), and its body. */
 export function PanelCard({ title, aside, children, className, as = 'section' }: Readonly<{
@@ -37,48 +40,6 @@ export function MiniSwitch<T extends string>({ label, value, options, onChange }
       ))}
     </div>
   );
-}
-
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/**
- * A dialog's focus: in on open (the element marked data-autofocus, else the
- * first control), Tab kept inside, Escape closes, and back to the opener on close.
- */
-export function useDialogFocus(ref: RefObject<HTMLElement | null>, onClose: () => void) {
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const root = ref.current;
-    const first = root?.querySelector<HTMLElement>('[data-autofocus]') ?? root?.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus({ preventScroll: true });
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        close.current();
-        return;
-      }
-      if (event.key !== 'Tab' || !root) return;
-      const items = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((item) => item.offsetParent !== null);
-      if (!items.length) return;
-      const [head, tail] = [items[0], items.at(-1)];
-      if (event.shiftKey && document.activeElement === head) {
-        event.preventDefault();
-        tail?.focus();
-      } else if (!event.shiftKey && document.activeElement === tail) {
-        event.preventDefault();
-        head.focus();
-      }
-    };
-    root?.addEventListener('keydown', onKey);
-    return () => {
-      root?.removeEventListener('keydown', onKey);
-      opener?.focus({ preventScroll: true });
-    };
-  }, [ref]);
 }
 
 /**
