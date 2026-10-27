@@ -29,8 +29,9 @@ def queued_run(**extra):
 class FakeGraph:
     """Stands in for TradingAgentsGraph: replays a scripted run, never calls a model."""
 
-    def __init__(self, analysts, config, callbacks, *, states, on_state=None, entries=None, fail_with=None):
+    def __init__(self, analysts, config, callbacks, *, states, on_state=None, entries=None, fail_with=None, on_settle=None):
         self.analysts, self.config, self.callbacks = analysts, config, callbacks
+        self.on_settle = on_settle
         self.states, self.on_state, self._entries, self.fail_with = states, on_state, entries or [], fail_with
         self.recorded = None
         self.portfolio = None
@@ -61,6 +62,8 @@ class FakeGraph:
         return self._entries
 
     def settle_all(self):
+        if self.on_settle:
+            self.on_settle()
         return None
 
 
@@ -191,6 +194,53 @@ def test_settle_mode_settles_and_syncs_without_a_run(tmp_path):
     db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = b"[2026-10-01 | RELIANCE.NS | Buy | pending]\n"
     assert settle_user(USER_ID, deps) == 1
     assert db.settlements[0]["benchmark_pct"] == 0.5
+
+
+def delete_account(db):
+    """What deleteAccount leaves behind: the memory log removed, then the runs cascaded away with the user."""
+    db.storage.clear()
+    db.runs.clear()
+
+
+def test_a_run_whose_account_is_deleted_midway_stops_and_never_saves_the_log(tmp_path):
+    db = FakeDb([queued_run()])
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = f"[2026-10-01 | TCS.NS | Buy | pending]\n\nDECISION:\ny{ENTRY_END}".encode()
+
+    def delete_at(index):
+        if index == 2:
+            delete_account(db)
+
+    deps, built = make_deps(db, tmp_path, on_state=delete_at)
+    # A missing row counts as cancelled, so the run stops instead of carrying on.
+    assert run_one(RUN_ID, deps) == "cancelled"
+    assert built["graph"].recorded is None
+    assert db.storage == {}
+    assert db.settlements == []
+
+
+def test_a_run_that_fails_after_its_account_is_deleted_never_saves_the_log(tmp_path):
+    db = FakeDb([queued_run()])
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = f"[2026-10-01 | TCS.NS | Buy | pending]\n\nDECISION:\ny{ENTRY_END}".encode()
+
+    def delete_at(index):
+        if index == 1:
+            delete_account(db)
+
+    deps, _ = make_deps(db, tmp_path, on_state=delete_at, fail_with=RuntimeError("insert violates foreign key"))
+    assert run_one(RUN_ID, deps) == "failed"
+    assert db.storage == {}
+
+
+def test_settle_mode_never_saves_the_log_of_an_account_deleted_meanwhile(tmp_path):
+    earlier = {**queued_run(), "status": "done", "trade_date": "2026-10-01"}
+    db = FakeDb([earlier])
+    db.storage[(MEMORY_BUCKET, memory_path(USER_ID))] = b"[2026-10-01 | RELIANCE.NS | Buy | pending]\n"
+    entries = [{"date": "2026-10-01", "ticker": "RELIANCE.NS", "rating": "Buy", "pending": False, "raw": "-1.0%", "alpha": "-1.5%",
+                "holding": "5d", "resolved": "2026-10-09", "decision": "", "reflection": ""}]
+    deps, _ = make_deps(db, tmp_path, entries=entries, on_settle=lambda: delete_account(db))
+    assert settle_user(USER_ID, deps) == 0
+    assert db.storage == {}
+    assert db.settlements == []
 
 
 def test_the_command_line_refuses_bad_ids_before_touching_anything(monkeypatch):

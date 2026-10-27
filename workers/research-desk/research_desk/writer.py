@@ -49,8 +49,13 @@ class RunWriter:
         }])
 
     def cancelled(self) -> bool:
+        """True when the owner cancelled the run, or its row is gone (the run or the whole account was deleted)."""
         rows = self.db.select("research_runs", self._filters(select="status"))
-        return bool(rows) and rows[0].get("status") == "cancelled"
+        return not rows or rows[0].get("status") == "cancelled"
+
+    def exists(self) -> bool:
+        """False once the run's row is gone: deleting an account deletes its runs."""
+        return bool(self.db.select("research_runs", self._filters(select="id")))
 
     def finish(self, decision: dict, usage: dict) -> bool:
         """running → done with the call and its spend. False when the run was cancelled meanwhile."""

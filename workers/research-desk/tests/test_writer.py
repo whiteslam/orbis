@@ -56,6 +56,15 @@ def test_finish_never_overwrites_a_cancelled_run():
     assert db.runs[RUN_ID]["status"] == "cancelled"
 
 
+def test_a_run_whose_row_is_gone_counts_as_cancelled():
+    db = FakeDb([queued_run()])
+    writer = RunWriter(db, RUN_ID, USER_ID)
+    writer.claim()
+    assert writer.cancelled() is False and writer.exists() is True
+    del db.runs[RUN_ID]
+    assert writer.cancelled() is True and writer.exists() is False
+
+
 def test_finish_records_the_decision_and_the_spend():
     db = FakeDb([queued_run()])
     writer = RunWriter(db, RUN_ID, USER_ID)

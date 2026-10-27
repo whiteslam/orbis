@@ -95,6 +95,13 @@ def sync_settlements(db, graph: Graph, user_id: str) -> int:
     return len(rows)
 
 
+def _owner_present(db, user_id: str) -> bool:
+    """Whether the owner still has Research desk rows; deleting an account deletes them all."""
+    owner = {"user_id": f"eq.{user_id}", "limit": "1"}
+    return bool(db.select("research_settings", {"select": "user_id", **owner})
+                or db.select("research_runs", {"select": "id", **owner}))
+
+
 def run_one(run_id: str, deps: Deps) -> str:
     """Runs one queued run. Returns its final status: done, cancelled, failed, skipped or missing."""
     db = deps.db
@@ -172,8 +179,13 @@ def run_one(run_id: str, deps: Deps) -> str:
         status = "failed"
 
     # Settlements made during the run (upstream settles due calls beside its
-    # analysts) are real whatever became of this run, so the log goes back up.
+    # analysts) are real whatever became of this run, so the log goes back up,
+    # unless the row is gone: the owner deleted their account mid-run, and the
+    # log was deleted with it.
     try:
+        if not writer.exists():
+            safe_log.stage(run_id, "owner gone")
+            return status
         if upload_memory(db, user_id, config["memory_log_path"]):
             safe_log.stage(run_id, "memory saved")
         if graph is not None:
@@ -198,6 +210,10 @@ def settle_user(user_id: str, deps: Deps, token_cap: int = 200_000) -> int:
     # Reflections use the quick tier; building the graph calls no model.
     graph = deps.make_graph(["market"], config, [usage])
     graph.settle_all()
+    if not _owner_present(db, user_id):
+        # The account was deleted while this settled; its log was deleted with it and must stay gone.
+        safe_log.stage(user_id, "owner gone")
+        return 0
     upload_memory(db, user_id, config["memory_log_path"])
     count = sync_settlements(db, graph, user_id)
     safe_log.stage(user_id, "settle done", count)

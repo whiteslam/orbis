@@ -19,7 +19,7 @@ UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 STAGES = frozenset({
     "start", "claimed", "skipped", "memory loaded", "memory saved", "graph built", "analysts",
     "debate", "plan", "trader", "risk", "decision", "recorded", "settled", "finished",
-    "cancelled", "token cap", "failed", "settle start", "settle done", "no runs",
+    "cancelled", "token cap", "failed", "settle start", "settle done", "no runs", "owner gone",
 })
 
 
