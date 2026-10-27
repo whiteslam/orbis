@@ -5,7 +5,12 @@
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
-select vault.create_secret('PASTE_CRON_SECRET_HERE', 'orbis_cron_secret', 'Bearer secret for /api/notifications/dispatch');
+-- Safe to run again: the secret is only created when it doesn't exist yet (to
+-- change it, use vault.update_secret below), and the job is replaced, not doubled.
+select vault.create_secret('PASTE_CRON_SECRET_HERE', 'orbis_cron_secret', 'Bearer secret for /api/notifications/dispatch')
+where not exists (select 1 from vault.secrets where name = 'orbis_cron_secret');
+
+select cron.unschedule('orbis-notifications') where exists (select 1 from cron.job where jobname = 'orbis-notifications');
 
 -- Every 5 minutes: the route sends each slot once, from its time until 45 minutes later.
 select cron.schedule(
