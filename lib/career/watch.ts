@@ -11,7 +11,7 @@ import { followUpHeadsup, headsupKindFor, replyHeadsup, type CareerHeadsup } fro
 import { runPool } from '@/lib/career/pool';
 import { prepLogistics } from '@/lib/career/prep';
 import {
-  addEvent, claimCareerRun, createOffer, getCareerRow, listApplications, listCareerUsers, listJobsByIds, markMailSeen,
+  addEvent, claimCareerRun, createOffer, deferCareerUsers, getCareerRow, listApplications, listCareerUsers, listJobsByIds, markMailSeen,
   pruneCareerMail, reclassifyEvent, releaseCareerRun, seenMessageIds, setLastMailScan, transitionApplication, updateApplication,
   upsertJobs, type CareerDb, type CareerRow, type MailOutcome,
 } from '@/lib/career/repository';
@@ -416,6 +416,8 @@ export async function watchDue(admin: CareerDb, now: Date, deadline: number): Pr
   // Anyone signed in can write a career profile; only admitted accounts are watched.
   const people = await listCareerUsers(admin, 'mail');
   const admitted = await admittedUserIds(admin, people.map((person) => person.userId));
+  // The refused go to the back of the list, so they can't crowd out admitted people.
+  await deferCareerUsers(admin, 'mail', people.filter((item) => !admitted.has(item.userId)).map((item) => item.userId), now.toISOString());
   for (const person of people.filter((item) => admitted.has(item.userId))) {
     if (timeLeft(deadline) < 10_000) break;
     if (!(await claimCareerRun(admin, person.userId, 'mail', now.toISOString(), staleBefore))) continue; // NOSONAR: one person at a time, so the run stops cleanly at the deadline

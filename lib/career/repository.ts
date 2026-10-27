@@ -397,6 +397,21 @@ export async function releaseCareerRun(admin: CareerDb, userId: string, kind: Cr
   await writeBookkeeping(admin, userId, { [CRON_COLUMN[kind]]: previous });
 }
 
+/**
+ * Stamps people a cron listed but refused (not admitted) as if their run
+ * happened at `at`, so they rotate behind everyone else instead of holding the
+ * head of the list, and the LIMIT, on every run. One update; best effort.
+ */
+export async function deferCareerUsers(admin: CareerDb, kind: CronKind, userIds: readonly string[], at: string) {
+  if (!userIds.length) return;
+  try {
+    const { error } = await admin.from('career_profiles').update({ [CRON_COLUMN[kind]]: at }).in('user_id', [...userIds]);
+    if (error) console.error('Deferring refused career profiles failed', error);
+  } catch (error) {
+    console.error('Deferring refused career profiles failed', error);
+  }
+}
+
 export type CareerUser = { userId: string; lastIngestAt: string | null; lastMailScanAt: string | null };
 
 /** Everyone with a career profile, the longest-waiting first for the given cron. */

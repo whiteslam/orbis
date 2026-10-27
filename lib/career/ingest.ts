@@ -9,7 +9,7 @@ import { mergeProfiles } from '@/lib/career/profile';
 import { runPool, withTimeout } from '@/lib/career/pool';
 import { extractPdfText } from '@/lib/career/render/pdf-text';
 import {
-  CareerError, claimCareerRun, downloadCareerFile, getCareerRow, listApplications, listCareerUsers, listJobs,
+  CareerError, claimCareerRun, deferCareerUsers, downloadCareerFile, getCareerRow, listApplications, listCareerUsers, listJobs,
   listJobsNeedingRequirements, listUnscoredJobs, releaseCareerRun, saveProfile, setLastIngest, setResumeFile, setSourceCursors,
   upsertJobs, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
@@ -146,6 +146,8 @@ export async function ingestDue(admin: CareerDb, now: Date, deadline: number): P
   // Anyone signed in can write a career profile and AI consent; only admitted accounts are searched for.
   const people = await listCareerUsers(admin, 'ingest');
   const admitted = await admittedUserIds(admin, people.map((person) => person.userId));
+  // The refused go to the back of the list, so they can't crowd out admitted people.
+  await deferCareerUsers(admin, 'ingest', people.filter((item) => !admitted.has(item.userId)).map((item) => item.userId), now.toISOString());
   for (const person of people.filter((item) => admitted.has(item.userId))) {
     if (deadline - Date.now() < SOURCE_TIMEOUT_MS) break;
     // Claim first, so an overlapping run skips this person.
