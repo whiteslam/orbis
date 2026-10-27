@@ -23,7 +23,7 @@
 
 **Next task:** Task 10's final screenshots and a full e2e run against a production build. Task 9 is done; `desktop.spec.ts` and the `openTab` fixture change are committed and pass against a dev build with the switch on.
 
-**Changed after owner feedback (2026-10-27):** icon-only rails mixing navigation and Career's actions were confusing. Both rails (`.dk-rail` and the panel's `.cp-rail` with the switch on) are now navigation only, with a name under every icon (`.cp-rail-labelled`, `--cp-rail-w: 84px`). On the Career panel, the five actions moved onto the page as labelled buttons (`PanelActions`, `.cp-actions`) and light/dark moved beside the bell. Below 900px the panel's bottom bar is unchanged.
+**Changed after owner feedback (2026-10-27/28):** both rails (`.dk-rail` and the panel's `.cp-rail` with the switch on, `.cp-rail-nav`) are navigation only, icons with tooltips. Names under the icons were tried and the owner preferred icons alone. On the Career panel, the five actions moved onto the page as labelled buttons (`PanelActions`, `.cp-actions`) and light/dark moved beside the bell. Below 900px the panel's bottom bar is unchanged.
 
 **Known rough edges (switch on):**
 - Investments with real holdings has not been seen (the test users have no broker); only its first-run view (two cards side by side) is checked.

@@ -63,8 +63,8 @@ function RailButton({ label, hint, onClick, children, badge, busy = false }: Rea
 
 /**
  * With the desktop layout on, the rail is the app's navigation, the same as
- * /active's: every tab with its name under its icon, Career marked as here.
- * Icons alone, mixed with Career's actions, were too hard to tell apart.
+ * /active's: every tab, Career marked as here, named by its tooltip. Career's
+ * actions are on the page instead, so the rail is never a mix of the two.
  * career-panel.css hides it below 900px, where the bottom bar keeps the
  * actions and "Back to the app".
  */
@@ -77,9 +77,9 @@ function AppNav() {
           const here = id === 'career';
           return (
             <li key={id}>
-              <a className="cp-rail-btn" href={here ? '/active/career' : appHref(id)} aria-current={here ? 'page' : undefined}>
+              <a className="cp-rail-btn" href={here ? '/active/career' : appHref(id)} aria-label={label} aria-current={here ? 'page' : undefined}>
                 <Icon size={19} aria-hidden="true" />
-                <span className="cp-rail-label">{label}</span>
+                <span className="cp-tip" aria-hidden="true">{label}</span>
               </a>
             </li>
           );
@@ -99,7 +99,7 @@ export function PanelRail(props: ActionProps) {
   const { theme, toggle } = useTheme();
   const toLight = theme === 'dark';
   return (
-    <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-labelled' : 'cp-rail'} aria-label="Quick actions">
+    <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-nav' : 'cp-rail'} aria-label="Quick actions">
       {DESKTOP_LAYOUT && <AppNav />}
       <ul className="cp-rail-tools">
         {careerActions(props).map(({ id, label, hint, Icon, onClick, busy, badge }) => (

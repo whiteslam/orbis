@@ -105,20 +105,17 @@
 .cp-tip { position: absolute; top: 50%; left: calc(100% + 14px); z-index: 2; display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 10px; background: var(--fd-ink); color: var(--sys-bg); font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; pointer-events: none; transform: translate(-4px, -50%); transition: opacity .12s ease, transform .12s ease; }
 .cp-tip kbd { padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--sys-bg) 18%, transparent); font: inherit; font-size: 11px; }
 .cp-rail-btn:hover .cp-tip, .cp-rail-btn:focus-visible .cp-tip { opacity: 1; transform: translate(0, -50%); }
-/* ─── Desktop layout on: the rail is navigation with a name under every
-   icon (shared with /active's .dk-rail), and Career's actions sit on the page
-   as labelled buttons (.cp-actions). Below 900px the bottom bar is unchanged. ─── */
+/* ─── Desktop layout on: the rail is navigation only (the same as /active's
+   .dk-rail), and Career's actions sit on the page as labelled buttons
+   (.cp-actions). Below 900px the bottom bar is unchanged. ─── */
 .cp-actions, .cp-head-theme { display: none; }
 @media (min-width: 900px) {
-  .cp-panel:has(.cp-rail-labelled) { --cp-rail-w: 84px; }
   /* The same frame as /active's desktop layout: the window, up to 1920px. */
-  .cp-panel:has(.cp-rail-labelled) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); padding-left: calc(var(--cp-rail-w) + 56px); }
-  .cp-rail.cp-rail-labelled { left: max(24px, calc(50vw - 960px + 24px)); width: var(--cp-rail-w, 84px); padding: 10px 0; border-radius: 30px; }
-  .cp-rail-labelled ul { gap: 2px; }
-  .cp-rail-labelled .cp-rail-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 70px; height: auto; min-height: 56px; padding: 8px 2px 7px; box-sizing: border-box; border-radius: 18px; }
-  .cp-rail-label { font-size: 10.5px; font-weight: 600; line-height: 1.15; letter-spacing: .01em; text-align: center; }
-  .cp-rail-labelled .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
-  .cp-rail-labelled .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
+  .cp-panel:has(.cp-rail-nav) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); padding-left: calc(var(--cp-rail-w) + 56px); }
+  .cp-rail.cp-rail-nav { left: max(24px, calc(50vw - 960px + 24px)); }
+  .cp-rail-nav .cp-rail-btn { width: 46px; height: 46px; }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
   .cp-rail:has(.cp-rail-apps) .cp-rail-tools { display: none; }
   .cp-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
   .cp-actions .cp-tool-btn { min-height: 38px; padding: 0 14px; }
