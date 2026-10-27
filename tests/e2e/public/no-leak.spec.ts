@@ -66,14 +66,14 @@ test('nothing the waitlist downloads names a service Orbis connects to', async (
   expect(bytes).toBeLessThan(900_000);
 });
 
-test('joining the waitlist stores the address and answers with a place in the queue', async ({ page }) => {
+test('joining the waitlist confirms without a place in the queue', async ({ page }) => {
   await page.goto('/');
   const email = `orbis-qa-waitlist-${Date.now()}@example.com`;
   await page.getByLabel('Email').fill(email);
   await page.getByRole('button', { name: /join the waitlist/i }).click();
   await expect(page.getByRole('heading', { name: /on the list/i })).toBeVisible({ timeout: 15_000 });
-  // The number is read back out of the table after the insert, so seeing one is
-  // proof the address was stored and not merely accepted. Teardown removes it.
-  await expect(page.getByText(/You’re number \d+/)).toBeVisible();
+  // No number: a listed address used to get an older one than a new address,
+  // which said who was on the list. Teardown removes the row.
+  await expect(page.getByText(/You’re number/)).toHaveCount(0);
   await expect(page.getByText(email)).toBeVisible();
 });

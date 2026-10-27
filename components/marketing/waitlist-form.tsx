@@ -5,8 +5,9 @@ import { ArrowRight, Check } from 'lucide-react';
 import { joinWaitlistAction } from '@/app/waitlist/actions';
 
 /**
- * The only thing a stranger can do here. One field, one button, and a place in
- * the queue once it goes through.
+ * The only thing a stranger can do here. One field, one button, and a
+ * confirmation once it goes through. No place in the queue: a listed address
+ * would get an older, lower number than a new one, giving away who signed up.
  *
  * `joined` holds the address rather than a boolean so the confirmation can
  * repeat it back — the one place an email appears on a public page, and it is
@@ -16,7 +17,7 @@ export function WaitlistForm() {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [joined, setJoined] = useState<{ email: string; position: number | null } | null>(null);
+  const [joined, setJoined] = useState<{ email: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -24,7 +25,7 @@ export function WaitlistForm() {
     setError(null);
     startTransition(async () => {
       const result = await joinWaitlistAction({ email, website });
-      if (result.ok) setJoined({ email: email.trim(), position: result.position });
+      if (result.ok) setJoined({ email: email.trim() });
       else setError(result.message);
     });
   }
@@ -34,11 +35,7 @@ export function WaitlistForm() {
       <div className="wl-done" aria-live="polite">
         <span className="wl-done-mark" aria-hidden="true"><Check size={18} strokeWidth={2.4} /></span>
         <h2>You’re on the list.</h2>
-        <p>
-          {joined.position
-            ? <>You’re number <strong>{joined.position}</strong>. We’ll email <strong>{joined.email}</strong> when your invite is ready.</>
-            : <>We’ll email <strong>{joined.email}</strong> when your invite is ready.</>}
-        </p>
+        <p>We’ll email <strong>{joined.email}</strong> when your invite is ready.</p>
         <button type="button" className="wl-text-button" onClick={() => { setJoined(null); setEmail(''); }}>
           Use a different email
         </button>
