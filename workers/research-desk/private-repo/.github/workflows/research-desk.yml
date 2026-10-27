@@ -1,0 +1,100 @@
+# Orbis Research desk worker.
+#
+# This file belongs in the PRIVATE repo `orbis-research-worker`, at
+# .github/workflows/research-desk.yml. It must never run in the public app repo:
+# Actions logs in a public repo are public. It holds no code of its own; it
+# checks out the worker from the app repo at a pinned commit and runs it.
+#
+# Set up once, in the private repo's Settings:
+#   Secrets (Actions):  OPENROUTER_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+#                       NEWSDATA_API_KEY (optional: Indian headlines from NewsData.io)
+#   Variables (Actions): ORBIS_WORKER_REF = the full 40-character commit SHA of
+#                       whiteslam/orbis to run the worker from. Change it on purpose
+#                       to upgrade, never to a branch name.
+#
+# Orbis starts it with workflow_dispatch, using a fine-grained token that has
+# Actions: write on this repo only (ORBIS_RESEARCH_GITHUB_TOKEN in Vercel).
+# The worker prints only run ids, stage names and exception types; it never
+# prints portfolio values, positions, prices or decisions.
+
+name: Research desk
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: run analyses, or only settle past calls
+        type: choice
+        options: [run, settle]
+        default: run
+      run_ids:
+        description: Comma-separated research_runs ids (mode run)
+        required: false
+        default: ''
+      user_id:
+        description: Owner's user id (mode settle)
+        required: false
+        default: ''
+
+# No concurrency group on purpose: GitHub cancels a pending run when a newer
+# one joins the same group, which would strand a queued analysis. Jobs may run
+# side by side; the worker merges the memory log on upload so none is lost.
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    # A run takes 3-10 minutes; a weekly batch of up to 15 runs fits well inside.
+    # Orbis treats a run still "running" after 120 minutes as failed.
+    timeout-minutes: 180
+    steps:
+      - name: Check the pinned ref
+        env:
+          REF: ${{ vars.ORBIS_WORKER_REF }}
+        run: |
+          if ! printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Set the ORBIS_WORKER_REF variable to a full commit SHA of whiteslam/orbis." >&2
+            exit 1
+          fi
+
+      - name: Check out the worker
+        uses: actions/checkout@v4
+        with:
+          repository: whiteslam/orbis
+          ref: ${{ vars.ORBIS_WORKER_REF }}
+          sparse-checkout: workers/research-desk
+          sparse-checkout-cone-mode: true
+          persist-credentials: false
+          path: orbis
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: orbis/workers/research-desk/requirements.txt
+
+      - name: Install TradingAgents (pinned) and the worker's needs
+        working-directory: orbis/workers/research-desk
+        run: python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+
+      - name: Run
+        working-directory: orbis/workers/research-desk
+        env:
+          # Inputs pass through the environment, never into the script itself.
+          MODE: ${{ inputs.mode }}
+          RUN_IDS: ${{ inputs.run_ids }}
+          USER_ID: ${{ inputs.user_id }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ "$MODE" = "settle" ]; then
+            python -m research_desk settle --user-id "$USER_ID"
+          else
+            python -m research_desk run --run-ids "$RUN_IDS"
+          fi

@@ -21,6 +21,7 @@ import '../styles/glass-dark.css';
 import '../styles/headsups.css';
 import '../styles/career.css';
 import '../styles/career-panel.css';
+import '../styles/research.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
 // The desktop web layout: last, and only inside its own media query.
