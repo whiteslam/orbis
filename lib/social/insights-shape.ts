@@ -137,5 +137,16 @@ export function isMetaCdnUrl(value: string | null | undefined) {
   }
 }
 
+const RASTER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+
+/**
+ * The media type the thumbnail route may hand on, or null. Raster images only: an SVG (or any other image/*
+ * that can carry script or markup) served from Orbis's own origin would lean on the CSP alone.
+ */
+export function thumbnailType(contentType: string | null | undefined) {
+  const type = (contentType ?? '').split(';')[0].trim().toLowerCase();
+  return RASTER_IMAGE_TYPES.has(type) ? type : null;
+}
+
 /** Thumbnails go through Orbis: Meta's CDN refuses to be shown on other sites (Cross-Origin-Resource-Policy). */
 export const thumbnailSrc = (url: string) => `/api/social/thumb?u=${encodeURIComponent(url)}`;

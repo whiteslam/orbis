@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { compactCount, isMetaCdnUrl, labelled, metaErrorKind, metricValue, shortText, INSTAGRAM_METRICS } from './insights-shape.ts';
+import { compactCount, isMetaCdnUrl, labelled, metaErrorKind, metricValue, shortText, thumbnailType, INSTAGRAM_METRICS } from './insights-shape.ts';
 
 test('an account total is read from total_value', () => {
   const body = { data: [{ name: 'reach', period: 'day', total_value: { value: 1234 } }] };
@@ -67,4 +67,13 @@ test('only https images on Meta CDNs may be fetched through the thumbnail route'
   assert.equal(isMetaCdnUrl('https://169.254.169.254/latest'), false);
   assert.equal(isMetaCdnUrl('not a url'), false);
   assert.equal(isMetaCdnUrl(null), false);
+});
+
+test('the thumbnail route hands on raster images only', () => {
+  assert.equal(thumbnailType('image/jpeg'), 'image/jpeg');
+  assert.equal(thumbnailType('IMAGE/WEBP; charset=binary'), 'image/webp');
+  for (const type of ['image/png', 'image/gif', 'image/avif']) assert.equal(thumbnailType(type), type);
+  for (const type of ['image/svg+xml', 'image/svg+xml; charset=utf-8', 'text/html', 'image/', 'image/x-icon', '', null, undefined]) {
+    assert.equal(thumbnailType(type), null, String(type));
+  }
 });

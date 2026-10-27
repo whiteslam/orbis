@@ -1,6 +1,6 @@
 import { type NextRequest } from 'next/server';
 import { getAuthenticatedUserId } from '@/lib/auth/session';
-import { isMetaCdnUrl } from '@/lib/social/insights-shape';
+import { isMetaCdnUrl, thumbnailType } from '@/lib/social/insights-shape';
 
 /**
  * A post thumbnail from Instagram or Threads, served from Orbis's own origin.
@@ -11,7 +11,7 @@ import { isMetaCdnUrl } from '@/lib/social/insights-shape';
  * own response is the only way to show it.
  *
  * It is not an open proxy: signed-in users only, https on Meta's CDN hosts only,
- * every redirect hop checked again, images only, and a size cap.
+ * every redirect hop checked again, raster images only, and a size cap.
  */
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_HOPS = 3;
@@ -31,8 +31,8 @@ async function fetchOnce(url: string): Promise<Response | null> {
 async function passOnImage(response: Response): Promise<Response> {
   // Signed CDN links expire; the Refresh button fetches fresh ones.
   if (!response.ok) return refuse(response.status === 403 || response.status === 404 ? 410 : 502);
-  const type = response.headers.get('content-type') ?? '';
-  if (!type.startsWith('image/')) return refuse(415);
+  const type = thumbnailType(response.headers.get('content-type'));
+  if (!type) return refuse(415);
   if (Number(response.headers.get('content-length') ?? 0) > MAX_BYTES) return refuse(413);
   const body = await response.arrayBuffer();
   if (body.byteLength > MAX_BYTES) return refuse(413);
