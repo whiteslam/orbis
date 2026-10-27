@@ -54,7 +54,9 @@ test('a passkey unlock does not count a freshly verified MFA factor', () => {
   }
   assert.equal(hasFreshAuth([{ method: 'passkey', timestamp: now - 5 }], now, 60, passkey), true);
   assert.equal(hasFreshAuth([{ method: 'webauthn', timestamp: now - 5 }], now, 60, passkey), true);
-  assert.equal(hasFreshAuth([{ method: 'password', timestamp: now - 5 }], now, 60, passkey), false);
+  // Any first factor counts for the passkey path; only second factors are refused.
+  assert.equal(hasFreshAuth([{ method: 'password', timestamp: now - 5 }], now, 60, passkey), true);
+  assert.equal(hasFreshAuth([{ method: 'mfa/anything-new', timestamp: now - 5 }], now, 60, passkey), false);
   assert.equal(hasFreshAuth([{ timestamp: now - 5 }], now, 60, passkey), false);
   // Each path keeps its own method.
   assert.equal(hasFreshAuth([{ method: 'password', timestamp: now - 5 }], now, 60, password), true);

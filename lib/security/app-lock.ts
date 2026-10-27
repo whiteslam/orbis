@@ -2,7 +2,7 @@ import 'server-only';
 
 import { createHmac } from 'node:crypto';
 import { cookies } from 'next/headers';
-import { hasFreshAuth, signUnlockToken, verifyUnlockToken } from '@/lib/security/unlock-token';
+import { hasFreshAuth, signUnlockToken, verifyUnlockToken, type MethodRule } from '@/lib/security/unlock-token';
 
 export const APP_LOCK_IDLE_MS = 5 * 60_000;
 export const APP_LOCK_MESSAGE = 'Orbis is locked. Unlock to continue.';
@@ -50,7 +50,7 @@ export async function isAppUnlocked(claims: LockClaims | null | undefined) {
 
 // Unlocks only when the session's JWT shows the user authenticated within the last minute,
 // by one of the methods this caller's screen produces (UNLOCK_METHODS).
-export async function unlockWithFreshAuth(claims: LockClaims | null | undefined, methods: readonly string[]) {
+export async function unlockWithFreshAuth(claims: LockClaims | null | undefined, methods: MethodRule) {
   const who = identity(claims);
   if (!who || !hasFreshAuth(claims?.amr, nowSec(), FRESH_AUTH_SECONDS, methods)) return false;
   await writeCookie(who.userId, who.sessionId);
