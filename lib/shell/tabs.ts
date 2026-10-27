@@ -78,3 +78,12 @@ export function hashFor(tab: TabId, money: MoneyView = 'spending'): string {
   if (tab === 'money' && money === 'investments') return '#money/investments';
   return `#${tab}`;
 }
+
+/**
+ * A link into the app that opens `tab`, for pages outside it (the Career
+ * panel's rail). Today is named rather than left bare, so the hash is never
+ * empty and a same-page click still fires hashchange.
+ */
+export function appHref(tab: TabId, money: MoneyView = 'spending'): string {
+  return `/active${hashFor(tab, money) || '#today'}`;
+}

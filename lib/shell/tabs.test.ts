@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hashFor, openingFromUrl, SETTINGS_SECTIONS, TABS } from '@/lib/shell/tabs';
+import { appHref, hashFor, openingFromUrl, SETTINGS_SECTIONS, TABS } from '@/lib/shell/tabs';
 
 describe('TABS', () => {
   it('lists the six tabs in order, one name each', () => {
@@ -63,5 +63,19 @@ describe('hashFor', () => {
     expect(hashFor('journal')).toBe('#journal');
     expect(hashFor('social')).toBe('#social');
     expect(hashFor('career')).toBe('#career');
+  });
+});
+
+describe('appHref', () => {
+  it('links into the app at a tab, with Today named so the hash is never empty', () => {
+    expect(appHref('today')).toBe('/active#today');
+    expect(appHref('money')).toBe('/active#money');
+    expect(appHref('money', 'investments')).toBe('/active#money/investments');
+    expect(appHref('social')).toBe('/active#social');
+  });
+
+  it('opens the tab it names', () => {
+    for (const { id } of TABS) expect(openingFromUrl(new URL(appHref(id), 'https://orbis.test').hash, null)?.tab).toBe(id);
+    expect(openingFromUrl(new URL(appHref('money', 'investments'), 'https://orbis.test').hash, null)).toEqual({ tab: 'money', money: 'investments' });
   });
 });
