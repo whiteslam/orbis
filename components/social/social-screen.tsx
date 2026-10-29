@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus, RefreshCw, TrendingUp, TrendingDown, Users, Eye } from 'lucide-react';
 import { FieldHead, FieldLabel, useScrollTop } from '@/components/field/field';
 import { SocialCalendar } from '@/components/social/social-calendar';
 import { SocialGrid, SocialList, type SocialSort } from '@/components/social/social-list';
 import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
+import { AiSocialChat } from '@/components/social/ai-social-chat';
 import { loadSocialMonthAction } from '@/app/social/actions';
 import { PERIOD_PATTERN, indiaToday, monthName, periodOfDate } from '@/lib/social/month';
 import { SOCIAL_FORMATS, type SocialFormat, type SocialPost } from '@/lib/social/types';
@@ -20,8 +21,49 @@ type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: 
 
 const VIEWS: Array<[View, string]> = [['list', 'List'], ['grid', 'Grid']];
 const HASH_PREFIX = '#social/';
-/** The banner class for each connect result; 'info' takes the plain banner. */
 const NOTICE_TONE_CLASS: Record<SocialConnectNotice['tone'], string> = { success: 'success', error: 'error', info: '' };
+
+const PLATFORM_TABS = ['Instagram', 'YouTube', 'X', 'TikTok'] as const;
+type PlatformTab = typeof PLATFORM_TABS[number];
+
+interface StatTile {
+  label: string;
+  value: string;
+  change: string;
+  up: boolean;
+}
+
+const MOCK_STATS: Record<PlatformTab, StatTile[]> = {
+  Instagram: [
+    { label: 'Reach', value: '18.2K', change: '+12%', up: true },
+    { label: 'Engagement', value: '3.1%', change: '-0.4%', up: false },
+    { label: 'Views', value: '41.6K', change: '+8%', up: true },
+    { label: 'New followers', value: '+148', change: '+18%', up: true },
+  ],
+  YouTube: [
+    { label: 'Views', value: '9.4K', change: '+22%', up: true },
+    { label: 'Watch time', value: '3.2h', change: '+5%', up: true },
+    { label: 'Subscribers', value: '+64', change: '+11%', up: true },
+    { label: 'Avg. duration', value: '1:48', change: '-0.2%', up: false },
+  ],
+  X: [
+    { label: 'Impressions', value: '24.1K', change: '+6%', up: true },
+    { label: 'Engagements', value: '1.8%', change: '+0.3%', up: true },
+    { label: 'Profile visits', value: '3.2K', change: '-2%', up: false },
+    { label: 'New followers', value: '+31', change: '+4%', up: true },
+  ],
+  TikTok: [
+    { label: 'Views', value: '52.3K', change: '+34%', up: true },
+    { label: 'Likes', value: '4.1K', change: '+28%', up: true },
+    { label: 'Comments', value: '312', change: '+15%', up: true },
+    { label: 'New followers', value: '+892', change: '+41%', up: true },
+  ],
+};
+
+const SUGGESTIONS: Array<{ title: string; body: string; type: 'tip' | 'warn' }> = [
+  { title: 'Post at 6 PM', body: 'Your audience is most active between 6–8 PM. Schedule your next post then.', type: 'tip' },
+  { title: 'Reels engagement dropping', body: 'Reels reach is down 0.4%. Try adding a hook in the first 3 seconds.', type: 'warn' },
+];
 
 /** '#social/2026-09' → '2026-09-01', or null. */
 function periodFromHash() {
@@ -32,10 +74,8 @@ function periodFromHash() {
 }
 
 /**
- * The Social tab: one month of the user's own posts.
- *
- * The server hands over the current month; other months load on demand. The
- * month lives in the URL hash, so a reload stays where it was.
+ * The Social tab: Gemini-style AI chat at the top, analytics snapshot,
+ * then the full month planner (calendar + posts + insights).
  */
 export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
   const [period, setPeriod] = useState(initial.period);
@@ -45,6 +85,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [selected, setSelected] = useState<string | null>(() => indiaToday());
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  const [activeTab, setActiveTab] = useState<PlatformTab>('Instagram');
   const [isLoading, startLoading] = useTransition();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
   const today = indiaToday();
@@ -60,23 +101,19 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
     });
   }
 
-  // A reload onto #social/2026-11 opens that month rather than this one.
   useEffect(() => {
     const fromHash = periodFromHash();
-    // Only on first mount: later months are chosen with the switcher.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (fromHash && fromHash !== initial.period) load(fromHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The server re-reads the current month after every write; take its copy when it is the month on screen.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initial.period === period) setMonth(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
-  /** A post was created or changed: show it here, or drop it if it now belongs to another month. */
   function upsert(post: SocialPost) {
     setMonth((current) => {
       const others = current.posts.filter((item) => item.id !== post.id);
@@ -121,6 +158,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
 
   const posts = [...month.posts].sort((left, right) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999') || left.position - right.position);
   const ready = month.databaseReady && !month.loadError;
+  const stats = MOCK_STATS[activeTab];
 
   return (
     <div className="screen-body field">
@@ -134,17 +172,66 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
         </output>
       )}
 
-      {/* The two ways to add a post, side by side under the title. */}
+      {/* ── AI Chat Box ─────────────────────────────────────────────── */}
+      <AiSocialChat
+        period={period}
+        hasProfile={hasProfile}
+        onDrafted={(newPosts, message) => {
+          newPosts.forEach(upsert);
+          setNotice({ text: message, error: false });
+        }}
+      />
+
+      {/* ── Analytics snapshot ─────────────────────────────────────── */}
+      <section className="so-analytics" aria-label="Analytics snapshot">
+        {/* Platform tabs */}
+        <div className="so-platform-tabs" role="tablist" aria-label="Platform">
+          {PLATFORM_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`so-platform-tab${activeTab === tab ? ' active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Stat tiles — 2×2 grid */}
+        <div className="so-stat-grid" role="list">
+          {stats.map((stat) => (
+            <div key={stat.label} className="so-stat-tile" role="listitem">
+              <span className="so-stat-label">{stat.label}</span>
+              <span className="so-stat-value">{stat.value}</span>
+              <span className={`so-stat-change${stat.up ? ' up' : ' down'}`}>
+                {stat.up ? <TrendingUp size={11} aria-hidden="true" /> : <TrendingDown size={11} aria-hidden="true" />}
+                {stat.change}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Suggestion cards */}
+        <div className="so-suggestions" aria-label="Suggestions">
+          {SUGGESTIONS.map((s) => (
+            <div key={s.title} className={`so-suggestion-card ${s.type}`}>
+              <strong className="so-suggestion-title">{s.title}</strong>
+              <p className="so-suggestion-body">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Post actions ────────────────────────────────────────────── */}
       {ready && (
         <div className="so-actions">
-          <button type="button" className="so-action" onClick={() => setScreen({ name: 'ai' })}>
-            <span className="so-action-icon" aria-hidden="true"><Sparkles size={16} strokeWidth={2} /></span>
-            <span className="so-action-text"><b>Draft with AI</b><small>Orbis writes a few</small></span>
-          </button>
           <details className="so-new">
             <summary className="so-action primary">
               <span className="so-action-icon" aria-hidden="true"><Plus size={17} strokeWidth={2.4} /></span>
-              <span className="so-action-text"><b>New</b><small>Post, reel or story</small></span>
+              <span className="so-action-text"><b>New post</b><small>Post, reel or story</small></span>
             </summary>
             <div className="so-new-menu">
               {SOCIAL_FORMATS.map((format) => (
@@ -155,7 +242,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
         </div>
       )}
 
-      {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
+      {!month.databaseReady && <p className="so-problem">Social planning isn't available right now. Try again later.</p>}
       {month.databaseReady && month.loadError && !isLoading && (
         <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
       )}
@@ -171,12 +258,8 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
             </section>
           ) : (
             <>
-              {/* The calendar is one card, a week tall until asked for the month;
-                  every post of the month is the card under it, as rows or tiles. */}
               <SocialCalendar period={period} posts={posts} today={today} selected={selected} onSelect={setSelected} onOpen={openPost} onNew={(date) => newPost(date)} />
               <section className="mn-card" aria-label="Posts this month">
-                {/* One header line: the count on the left; the order and the
-                    view on the right, the same height, on the same baseline. */}
                 <div className="fd-label-row so-posts-head">
                   <FieldLabel>Posts · {posts.length}</FieldLabel>
                   <div className="so-posts-tools">
