@@ -67,7 +67,7 @@ export async function anonRateLimitAllows(addressKey: string, bucket: AnonRateBu
         // does not exist. Let sign-ups through then rather than shut the public
         // waitlist; every other failure still refuses.
         if (missingFunction(error)) {
-          console.warn('consume_anon_rate_limit is not deployed yet; waitlist is unthrottled');
+          console.warn(`consume_anon_rate_limit is not deployed yet; ${bucket} is unthrottled`);
           return true;
         }
         console.error('consume_anon_rate_limit failed', error);

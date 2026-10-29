@@ -2,6 +2,7 @@ import 'server-only';
 
 import { createHmac } from 'node:crypto';
 import { cookies } from 'next/headers';
+import { apiCaller } from '@/lib/api/context';
 import { hasFreshAuth, signUnlockToken, verifyUnlockToken, type MethodRule } from '@/lib/security/unlock-token';
 
 export const APP_LOCK_IDLE_MS = 5 * 60_000;
@@ -44,6 +45,10 @@ async function writeCookie(userId: string, sessionId: string) {
 export async function isAppUnlocked(claims: LockClaims | null | undefined) {
   const who = identity(claims);
   if (!who) return false;
+  // The lock guards a device left open. An API caller has no device here: the
+  // access token it signed in for is the proof, checked by lib/api/gate.ts.
+  const caller = apiCaller();
+  if (caller) return caller.claims.sub === who.userId;
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   return verifyUnlockToken(token, { ...who, nowSec: nowSec() }, lockSecret()) !== null;
 }

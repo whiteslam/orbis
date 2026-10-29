@@ -31,6 +31,8 @@ export default defineConfig({
       // explicitly open regardless of what .env.local says. The allowlist
       // itself is covered by lib/security/access.test.ts.
       ORBIS_ALLOWED_EMAILS: '',
+      // /api/v1 is off unless switched on; the suite tests it (tests/e2e/api/v1.spec.ts).
+      ORBIS_API_ENABLED: 'true',
     },
   },
   projects: [

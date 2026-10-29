@@ -52,7 +52,7 @@ export const RATE_LIMIT_UNAVAILABLE_MESSAGE = 'This isn’t available right now.
 
 // Signed-out writes, keyed by a hash of the caller's address (anon-rate-key.ts)
 // and by one global count, since an address header can be faked off Vercel.
-export type AnonRateBucket = 'waitlist';
+export type AnonRateBucket = 'waitlist' | 'api_sign_in';
 
 type Limit = { limit: number; windowSeconds: number };
 
@@ -61,6 +61,11 @@ export const ANON_RATE_LIMITS: Record<AnonRateBucket, { perAddress: Limit; globa
   // cap is far above a real launch day's hourly sign-ups and stops a script
   // from filling the table.
   waitlist: { perAddress: { limit: 5, windowSeconds: 3_600 }, global: { limit: 300, windowSeconds: 3_600 } },
+  // API sign-ins and refreshes all reach Supabase from this server's address,
+  // so its own per-IP limit can't tell callers apart; this one can. A script
+  // signs in once and refreshes about hourly, so ten in a quarter hour is
+  // plenty, and the global cap stops password guessing spread across addresses.
+  api_sign_in: { perAddress: { limit: 10, windowSeconds: 900 }, global: { limit: 120, windowSeconds: 900 } },
 };
 
 export function anonLimitsFor(bucket: AnonRateBucket) {
