@@ -1,82 +1,82 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { Send, Paperclip, ChevronDown, RotateCcw, Copy, Check, Sparkles } from 'lucide-react';
-import { draftMonthWithAiAction } from '@/app/social/actions';
+import { Check, Copy, PenLine, RotateCcw, Send, Sparkles } from 'lucide-react';
+import { deletePostAction, draftMonthWithAiAction } from '@/app/social/actions';
 import { safeAction } from '@/lib/client/safe-action';
-import type { SocialPost } from '@/lib/social/types';
+import { MAX_BRIEF_LENGTH } from '@/lib/social/ai-draft';
+import { SOCIAL_FORMATS, SOCIAL_PLATFORMS, formatLabel, platformLabel, type SocialFormat, type SocialPlatform, type SocialPost } from '@/lib/social/types';
 
-const CHIPS = [
-  { label: 'Instagram caption', platform: 'instagram' as const, format: 'post' as const },
-  { label: 'YouTube script', platform: 'youtube' as const, format: 'reel' as const },
-  { label: 'X post', platform: 'x' as const, format: 'post' as const },
-  { label: 'TikTok hook', platform: 'tiktok' as const, format: 'reel' as const },
-  { label: 'Post idea', platform: 'instagram' as const, format: 'post' as const },
+/** Shortcuts: each one only picks the platform and format; the user still says what it is about. */
+const CHIPS: ReadonlyArray<{ label: string; platform: SocialPlatform; format: SocialFormat }> = [
+  { label: 'Instagram caption', platform: 'instagram', format: 'post' },
+  { label: 'Instagram reel', platform: 'instagram', format: 'reel' },
+  { label: 'LinkedIn post', platform: 'linkedin', format: 'post' },
+  { label: 'X post', platform: 'x', format: 'post' },
+  { label: 'YouTube short', platform: 'youtube', format: 'reel' },
+  { label: 'TikTok hook', platform: 'tiktok', format: 'reel' },
 ];
 
-const PLATFORM_LABELS: Record<string, string> = {
-  instagram: 'IG',
-  x: 'X',
-  facebook: 'FB',
-  youtube: 'YT',
-  tiktok: 'TT',
-};
+/** The draft on show, and the request that made it, so "Try another" can ask again. */
+type Reply = { post: SocialPost; brief: string; platform: SocialPlatform; format: SocialFormat };
 
-interface AiResponse {
-  text: string;
-  platforms: string[];
-}
+const withHashtags = (post: SocialPost) => [post.caption, post.hashtags.map((tag) => `#${tag}`).join(' ')].filter(Boolean).join('\n\n');
 
 /**
- * Gemini-style AI content chat box for the Social screen.
- * Shows a greeting, suggestion chips, a chat input, and the last AI response.
+ * The chat box at the top of the Social tab: one sentence in, one draft out.
+ *
+ * Every draft is saved to the month straight away, like the month dialog's.
+ * "Try another" swaps the draft on show for a new one; "Edit" opens it. Only
+ * the sentence typed here is sent, never the profile.
  */
-export function AiSocialChat({ period, hasProfile, onDrafted }: Readonly<{
+export function AiSocialChat({ period, preferredName, onDrafted, onReplaced, onOpen }: Readonly<{
   period: string;
-  hasProfile: boolean;
-  onDrafted?: (posts: SocialPost[], message: string) => void;
+  preferredName: string | null;
+  onDrafted: (post: SocialPost, message: string) => void;
+  onReplaced: (id: string) => void;
+  onOpen: (post: SocialPost) => void;
 }>) {
-  const [prompt, setPrompt] = useState('');
-  const [activePlatform, setActivePlatform] = useState('All platforms');
-  const [response, setResponse] = useState<AiResponse | null>(null);
+  const [brief, setBrief] = useState('');
+  const [platform, setPlatform] = useState<SocialPlatform>('instagram');
+  const [format, setFormat] = useState<SocialFormat>('post');
+  const [reply, setReply] = useState<Reply | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const chipsRef = useRef<HTMLDivElement>(null);
 
-  function handleChip(chip: typeof CHIPS[number]) {
-    setPrompt(chip.label);
-    setActivePlatform(chip.platform === 'youtube' ? 'YouTube' : chip.platform === 'x' ? 'X' : chip.platform.charAt(0).toUpperCase() + chip.platform.slice(1));
+  function pickChip(chip: typeof CHIPS[number]) {
+    setPlatform(chip.platform);
+    setFormat(chip.format);
     inputRef.current?.focus();
   }
 
-  function submit(overridePrompt?: string) {
-    const text = (overridePrompt ?? prompt).trim();
-    if (!text || isPending) return;
+  /** Drafts one post; given the draft on show, the new one replaces it. */
+  function draft(request: Omit<Reply, 'post'>, replacing: SocialPost | null) {
+    if (!request.brief || isPending) return;
     setError(null);
-    setResponse(null);
-
     startTransition(async () => {
       const result = await safeAction(draftMonthWithAiAction)({
         period,
-        brief: text,
+        brief: request.brief,
         count: 1,
-        formats: ['post'],
-        platforms: ['instagram'],
+        formats: [request.format],
+        platforms: [request.platform],
         tone: 'friendly',
-        useProfile: hasProfile,
+        useProfile: false,
       });
-
-      if (result.success && result.posts?.length) {
-        const post = result.posts[0];
-        setResponse({
-          text: post.body ?? post.title ?? 'Here is your draft!',
-          platforms: ['IG', 'X', 'FB'],
-        });
-        onDrafted?.(result.posts, result.message ?? '');
-      } else {
-        setError(result.message ?? 'Something went wrong. Please try again.');
+      const post = result.success ? result.posts?.[0] : undefined;
+      if (!post) {
+        setError(result.message);
+        return;
+      }
+      setReply({ ...request, post });
+      setBrief('');
+      onDrafted(post, result.message);
+      // The old draft goes only once its replacement is saved; if it can't be deleted it simply stays in the list.
+      if (replacing) {
+        const removed = await safeAction(deletePostAction)(replacing.id);
+        if (removed.success) onReplaced(replacing.id);
       }
     });
   }
@@ -84,126 +84,112 @@ export function AiSocialChat({ period, hasProfile, onDrafted }: Readonly<{
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      submit();
+      draft({ brief: brief.trim(), platform, format }, null);
     }
   }
 
-  async function copyResponse() {
-    if (!response) return;
-    await navigator.clipboard.writeText(response.text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function copyReply() {
+    if (!reply) return;
+    try {
+      await navigator.clipboard.writeText(withHashtags(reply.post));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Copying is blocked in this browser. Open the draft and copy it from there.');
+    }
   }
 
-  // Auto-resize textarea
+  // The box grows with what is typed, up to a few lines.
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, [prompt]);
+  }, [brief]);
 
-  const firstName = 'there'; // could be passed as prop later
+  const name = preferredName?.trim();
+  const canSend = Boolean(brief.trim()) && !isPending;
 
   return (
-    <section className="ai-chat-section" aria-label="AI content assistant">
-      {/* Greeting */}
-      {!response && !isPending && (
-        <div className="ai-chat-greeting" aria-hidden={!!response}>
-          <p className="ai-chat-hello">
-            <span className="ai-chat-hello-line1">Hello, {firstName}.</span>
-            <span className="ai-chat-hello-line2">What would you like to create?</span>
-          </p>
-        </div>
+    <section className="ai-chat-section" aria-label="Draft a post with AI">
+      {!reply && !isPending && (
+        <>
+          <div className="ai-chat-greeting">
+            <p className="ai-chat-hello">
+              <span className="ai-chat-hello-line1">{name ? `Hello, ${name}.` : 'Hello.'}</span>
+              <span className="ai-chat-hello-line2">What would you like to post?</span>
+            </p>
+          </div>
+          <div className="ai-chat-chips">
+            {CHIPS.map((chip) => (
+              <button key={chip.label} type="button" className="ai-chip" aria-pressed={platform === chip.platform && format === chip.format} onClick={() => pickChip(chip)}>
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Suggestion chips */}
-      {!response && !isPending && (
-        <div className="ai-chat-chips" ref={chipsRef} role="list">
-          {CHIPS.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              role="listitem"
-              className="ai-chip"
-              onClick={() => handleChip(chip)}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Loading state */}
       {isPending && (
         <div className="ai-chat-thinking" aria-live="polite">
           <span className="ai-thinking-dot" /><span className="ai-thinking-dot" /><span className="ai-thinking-dot" />
-          <span className="ai-thinking-label">Creating your content…</span>
+          <span className="ai-thinking-label">Drafting… this can take half a minute</span>
         </div>
       )}
 
-      {/* AI Response card */}
-      {response && !isPending && (
-        <div className="ai-response-card" role="region" aria-label="AI generated content">
-          <div className="ai-response-icon" aria-hidden="true">
-            <Sparkles size={15} />
-          </div>
-          <p className="ai-response-text">{response.text}</p>
+      {reply && !isPending && (
+        <div className="ai-response-card" role="region" aria-label="AI draft">
+          <div className="ai-response-icon" aria-hidden="true"><Sparkles size={15} /></div>
+          {reply.post.title && <strong className="ai-response-title">{reply.post.title}</strong>}
+          <p className="ai-response-text">{withHashtags(reply.post) || 'This draft has no caption yet.'}</p>
           <div className="ai-response-footer">
-            <div className="ai-platform-badges" aria-label="Suggested platforms">
-              {response.platforms.map((p) => (
-                <span key={p} className="ai-badge">{p}</span>
-              ))}
+            <div className="ai-platform-badges" aria-label="Planned for">
+              <span className="ai-badge">{formatLabel(reply.post.format)}</span>
+              {reply.post.platforms.map((item) => <span key={item} className="ai-badge">{platformLabel(item)}</span>)}
             </div>
             <div className="ai-response-actions">
-              <button type="button" className="ai-action-btn primary" onClick={() => submit()}>
-                Use this
+              <button type="button" className="ai-action-btn primary" onClick={() => onOpen(reply.post)}>
+                <PenLine size={13} aria-hidden="true" /> Edit
               </button>
-              <button type="button" className="ai-action-btn" onClick={() => submit()} title="Regenerate">
+              <button type="button" className="ai-action-btn" onClick={() => draft(reply, reply.post)} title="Try another (replaces this draft)" aria-label="Try another, replacing this draft">
                 <RotateCcw size={13} aria-hidden="true" />
               </button>
-              <button type="button" className="ai-action-btn" onClick={copyResponse} title="Copy">
+              <button type="button" className="ai-action-btn" onClick={copyReply} title="Copy caption" aria-label="Copy caption">
                 {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
               </button>
             </div>
           </div>
+          <p className="ai-response-note">Saved to {reply.post.plannedFor ? 'the calendar' : 'this month'} as a draft.</p>
         </div>
       )}
 
-      {/* Error */}
       {error && <p className="ai-chat-error" role="alert">{error}</p>}
 
-      {/* Input area */}
-      <div className="ai-chat-input-wrap">
-        <button type="button" className="ai-input-btn" aria-label="Attach file">
-          <Paperclip size={16} aria-hidden="true" />
-        </button>
+      <form className="ai-chat-input-wrap" onSubmit={(event) => { event.preventDefault(); draft({ brief: brief.trim(), platform, format }, null); }}>
         <textarea
           ref={inputRef}
           className="ai-chat-input"
-          placeholder="Ask Orbis to write something…"
-          value={prompt}
+          placeholder={`What should the ${formatLabel(format).toLowerCase()} be about?`}
+          value={brief}
           rows={1}
+          maxLength={MAX_BRIEF_LENGTH}
           disabled={isPending}
-          onChange={(event) => setPrompt(event.currentTarget.value)}
+          onChange={(event) => setBrief(event.currentTarget.value)}
           onKeyDown={handleKeyDown}
-          aria-label="Content prompt"
+          aria-label="What the post is about"
         />
         <div className="ai-input-right">
-          <button type="button" className="ai-platform-select" aria-label="Select platform">
-            {activePlatform} <ChevronDown size={12} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={`ai-send-btn${prompt.trim() && !isPending ? ' active' : ''}`}
-            disabled={!prompt.trim() || isPending}
-            onClick={() => submit()}
-            aria-label="Send"
-          >
+          <select className="ai-platform-select" aria-label="Format" value={format} disabled={isPending} onChange={(event) => setFormat(event.currentTarget.value as SocialFormat)}>
+            {SOCIAL_FORMATS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+          <select className="ai-platform-select" aria-label="Platform" value={platform} disabled={isPending} onChange={(event) => setPlatform(event.currentTarget.value as SocialPlatform)}>
+            {SOCIAL_PLATFORMS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+          <button type="submit" className={`ai-send-btn${canSend ? ' active' : ''}`} disabled={!canSend} aria-label="Draft it">
             <Send size={15} aria-hidden="true" />
           </button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }

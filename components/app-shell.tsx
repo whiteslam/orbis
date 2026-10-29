@@ -253,7 +253,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     if (tab === 'health') return <HealthScreen intent={intent} stepsSummary={stepsSummary} healthLibrary={healthLibrary} savedContextCount={contextNotes.notes.length} hasSavedFitnessPersona={Boolean(fitnessPersona.persona)} fitnessPersona={fitnessPersona} hasSavedPersonalProfile={Boolean(personalProfile.profile)} savedWorkbookAdvice={savedWorkbookAdvice} />;
     if (tab === 'journal') return <JournalScreen journal={journal} contextNotes={contextNotes} />;
     if (tab === 'career') return <CareerScreen intent={intent} gmailNotice={careerGmailNotice} clearGmailNotice={() => setCareerGmailNotice(null)} />;
-    return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} connectNotice={socialNotice} clearConnectNotice={() => setSocialNotice(null)} />;
+    return <SocialScreen initial={socialMonth} hasProfile={Boolean(personalProfile.profile)} preferredName={personalProfile.profile?.preferredName ?? null} connectNotice={socialNotice} clearConnectNotice={() => setSocialNotice(null)} />;
     // openTarget only calls state setters, which are stable, so it needs no entry below.
   }, [tab, money, financeSummary, stepsSummary, healthLibrary, routines, socialMonth, personalProfile, aiPreferences, appConnections, gmailNotice, careerGmailNotice, savedPortfolioAdvice, zerodhaNotice, socialNotice, contextNotes, fitnessPersona, savedWorkbookAdvice, journal, intent]);
 
