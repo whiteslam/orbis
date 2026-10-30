@@ -6,12 +6,13 @@
 /* ─── Shared pieces ─────────────────────────────────────────────────────── */
 .hl-bar { display: block; height: 3px; margin-top: 8px; border-radius: var(--r-pill); background: var(--fd-ring-track); overflow: hidden; }
 .hl-bar.big { height: 6px; }
-.hl-bar i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); transition: width .2s; }
+.hl-bar i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); transform: scaleX(var(--fill, 1)); transform-origin: left; transition: transform .2s; }
+@media (prefers-reduced-motion: reduce) { .hl-bar i { transition: none; } }
 .hl-more { align-self: flex-start; display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 650; }
 .hl-back { display: inline-flex; align-items: center; gap: 4px; margin-left: -4px; padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
-.hl-back:disabled { opacity: .5; cursor: default; }
+.hl-back:disabled { opacity: .5; cursor: not-allowed; }
 .fd-round.hl-danger { color: var(--fd-alert); }
-.fd-round:disabled { opacity: .5; cursor: default; }
+.fd-round:disabled { opacity: .5; cursor: not-allowed; }
 
 /* A labelled row whose value is a bar: plans on the tab. */
 .hl-row { display: block; width: 100%; padding: 12px 2px; border: 0; border-bottom: 1px solid var(--fd-rule); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -86,7 +87,7 @@
 .hl-table { width: 100%; border-collapse: collapse; color: var(--fd-ink); font-size: 11px; font-variant-numeric: tabular-nums; }
 .hl-table thead tr { background: var(--fd-ring-track); }
 .hl-table th, .hl-table td { padding: 8px 9px; text-align: left; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-.hl-table thead th { color: var(--fd-faint); font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.hl-table thead th { color: var(--fd-faint); font-size: 9.5px; font-weight: 700; }
 .hl-table tbody tr { border-top: 1px solid var(--fd-rule); }
 .hl-table tbody th { color: var(--fd-faint); font-weight: 600; }
 .hl-calc { display: flex; flex-direction: column; }
@@ -128,7 +129,7 @@
 .hl-q-options button[aria-pressed="true"] { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); font-weight: 650; }
 .hl-q-free { display: flex; align-items: center; gap: 9px; margin-top: 11px; }
 .hl-q-free input { flex: 1; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; outline: none; }
-.hl-q-free input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.hl-q-free input:focus { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
 .hl-q-free span { flex: none; color: var(--fd-faint); font-size: 12.5px; }
 .hl-generate { margin-top: 22px; }
 
@@ -137,14 +138,14 @@
 .hl-plan-row > button:first-child { flex: 1; min-width: 0; padding: 12px 2px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 
 /* ─── A plan ────────────────────────────────────────────────────────────── */
-.hl-plan > header .fd-kicker { margin-top: 14px; }
+.hl-plan > header h1 { margin-top: 14px; }
 .hl-plan h1 { margin: 8px 0 0; color: var(--fd-ink); font-size: 28px; font-weight: 700; letter-spacing: -.032em; line-height: 1.16; text-wrap: balance; }
 .hl-plan-summary { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
 .hl-cautions { display: flex; gap: 11px; margin-top: 20px; padding: 14px 15px; border-radius: var(--r-lg); background: var(--fd-alert-wash); color: var(--fd-alert); }
 .hl-cautions svg { flex: none; margin-top: 1px; }
 .hl-cautions ul { margin: 0; padding-left: 16px; color: var(--fd-ink); font-size: 12px; line-height: 1.6; }
 .hl-plan-section { margin-top: 26px; }
-.hl-section-label { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.hl-section-label { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--fd-faint); font-size: 10px; font-weight: 700; }
 .hl-section-label svg { color: var(--fd-accent); }
 .hl-plan-note { margin: 9px 0 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
 .hl-plan-note b { color: var(--fd-ink); font-weight: 650; }
@@ -177,7 +178,7 @@
 .hl-milestones p { margin: 4px 0 0; color: var(--fd-soft); font-size: 12px; line-height: 1.55; }
 .hl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; margin: 13px 0 0; }
 .hl-stats > div { min-width: 0; padding: 11px 12px; border-radius: 13px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
-.hl-stats dt { color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.hl-stats dt { color: var(--fd-faint); font-size: 10px; font-weight: 700; }
 .hl-stats dd { margin: 3px 0 0; color: var(--fd-ink); font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hl-meal { margin-top: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--fd-rule); }
 .hl-stats + .hl-meal { margin-top: 14px; }

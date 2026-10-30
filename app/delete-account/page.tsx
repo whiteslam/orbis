@@ -15,7 +15,6 @@ export default function DeleteAccountPage() {
   return (
     <PublicShell>
       <div className="mkt-legal-head">
-        <p className="mkt-eyebrow">Account</p>
         <h1>Delete your account</h1>
       </div>
 

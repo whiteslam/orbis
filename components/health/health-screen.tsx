@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { FileSpreadsheet, FileText, Plus } from 'lucide-react';
+import { ChevronRight, FileSpreadsheet, FileText, Plus } from 'lucide-react';
 import { FieldHead, FieldSubHead, useScrollTop } from '@/components/field/field';
 import { FitnessPersonaEditor } from '@/components/health/fitness-persona';
 import { PartLoading } from '@/components/shell/loading';
@@ -56,8 +56,8 @@ function TodayWorkout({ today, onOpen }: Readonly<{ today: TodaysWorkout; onOpen
   return (
     <button className="hl-today" type="button" onClick={onOpen} suppressHydrationWarning>
       <span className="hl-today-head">
+        <small>{today.day.day}{today.day.durationMinutes ? ` · ${today.day.durationMinutes} min` : ''} · {today.plan.title}</small>
         <strong>{today.day.focus}</strong>
-        <small>{today.day.day}{today.day.durationMinutes ? ` · ${today.day.durationMinutes} min` : ''}</small>
       </span>
       {today.day.rest || !today.day.exercises.length ? (
         <span className="hl-today-rest">{today.day.rest ? 'Rest or light movement: a walk, stretching or mobility.' : 'No exercises listed for today.'}</span>
@@ -68,6 +68,7 @@ function TodayWorkout({ today, onOpen }: Readonly<{ today: TodaysWorkout; onOpen
           ))}
         </span>
       )}
+      <span className="hl-today-open">Open the plan <ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></span>
     </button>
   );
 }
@@ -78,23 +79,27 @@ function documentsTileLabel(count: number) {
   return count ? 'Add or manage' : 'Add a file';
 }
 
-/** The first few documents as tiles, then a tile into the Documents view. */
+/** The first few documents as rows, then a row into the Documents view. */
 function DocumentTiles({ documents, onOpen }: Readonly<{ documents: LibraryState['documents']; onOpen: () => void }>) {
   return (
-    <section className="fd-quiet">
-      <h2>Documents</h2>
-      <div className="hl-bento">
+    <section className="hl-sec">
+      <h2 className="hl-h">Documents</h2>
+      <div className="hl-docrows">
         {documents.slice(0, HEALTH_DOCS_ON_MAIN).map((document) => (
-          <button className="hl-tile" type="button" key={document.id} onClick={onOpen}>
-            <span className="fd-tile" aria-hidden="true">{document.kind === 'pdf' ? <FileText size={17} strokeWidth={1.8} /> : <FileSpreadsheet size={17} strokeWidth={1.8} />}</span>
-            <strong>{document.fileName}</strong>
-            <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small>
+          <button className="hl-docrow" type="button" key={document.id} onClick={onOpen}>
+            <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
+            <span className="hl-docrow-text">
+              <strong>{document.fileName}</strong>
+              <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small>
+            </span>
           </button>
         ))}
-        <button className="hl-tile add" type="button" onClick={onOpen}>
-          <span className="fd-tile" aria-hidden="true"><Plus size={17} strokeWidth={2} /></span>
-          <strong>{documentsTileLabel(documents.length)}</strong>
-          <small>Files Orbis reads when it builds a plan</small>
+        <button className="hl-docrow add" type="button" onClick={onOpen}>
+          <span className="hl-doc-tile add" aria-hidden="true"><Plus size={16} strokeWidth={2} /></span>
+          <span className="hl-docrow-text">
+            <strong>{documentsTileLabel(documents.length)}</strong>
+            <small>Files Orbis reads when it builds a plan</small>
+          </span>
         </button>
       </div>
     </section>
@@ -110,8 +115,8 @@ function coachingAction(coaching: boolean, persona: string | null) {
 /** Coaching style is set once and rarely touched, so it stays one row until opened. */
 function CoachingSection({ fitnessPersona, coaching, onToggle }: Readonly<{ fitnessPersona: FitnessPersonaSummary; coaching: boolean; onToggle: () => void }>) {
   return (
-    <section className="fd-quiet">
-      <h2>Coaching style</h2>
+    <section className="hl-sec">
+      <h2 className="hl-h">Coaching style</h2>
       <button className="fd-line" type="button" aria-expanded={coaching} onClick={onToggle}>
         <span className="fd-two hl-clip">{fitnessPersona.persona ? fitnessPersona.persona.trim().split('\n')[0].replace(/^#+\s*/, '') : 'Not set'}<small>Optional: how Orbis coaches you when you ask for advice</small></span>
         <b className="fd-yes">{coachingAction(coaching, fitnessPersona.persona)}</b>
@@ -139,28 +144,28 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
   const [coaching, setCoaching] = useState(false);
 
   if (view.name === 'ask') return (
-    <div className="screen-body field">
+    <div className="screen-body field hl-screen hl-v-ask">
       <span ref={top} hidden />
       <WorkbookAsk hasStepData={Boolean(stepsSummary.latest)} savedContextCount={savedContextCount} hasSavedFitnessPersona={hasSavedFitnessPersona} hasSavedPersonalProfile={hasSavedPersonalProfile} onAdvice={(next) => { setAdvice(next); setView({ name: 'advice' }); }} onBack={main} />
     </div>
   );
 
   if (view.name === 'advice' && advice) return (
-    <div className="screen-body field">
+    <div className="screen-body field hl-screen hl-v-advice">
       <span ref={top} hidden />
       <WorkbookAdviceView advice={advice} onDeleted={() => { setAdvice(null); main(); }} onPlan={() => setView({ name: 'plans', planId: null })} onBack={main} />
     </div>
   );
 
   if (view.name === 'plans') return (
-    <div className="screen-body field">
+    <div className="screen-body field hl-screen hl-v-plans">
       <span ref={top} hidden />
       <PlanBuilder plans={plans} state={healthLibrary.state} initialPlanId={view.planId} onBack={main} />
     </div>
   );
 
   if (view.name === 'docs') return (
-    <div className="screen-body field">
+    <div className="screen-body field hl-screen hl-v-docs">
       <span ref={top} hidden />
       <FieldSubHead crumb="Health · documents" title="Documents" onBack={main} backLabel="Back to Health" />
       <HealthLibrary documents={documents} state={healthLibrary.state} />
@@ -168,55 +173,59 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
   );
 
   return (
-    <div className="screen-body field">
+    <div className="screen-body field hl-screen hl-v-main">
       <span ref={top} hidden />
       <FieldHead title="Health" />
 
-      {/* Plans come first: in the gym, today's session is what the tab is opened
-          for, so it is on screen without scrolling. Every plan has a finish
-          line, so each row carries its bar; a row opens its own view. */}
-      <section className="fd-quiet">
-        <h2>{today ? 'Today’s workout' : 'Plans'}</h2>
-        {today && <TodayWorkout today={today} onOpen={() => setView({ name: 'plans', planId: today.plan.id })} />}
-        {plans.map((plan) => {
-          const { week, total, done } = planWeek(plan);
-          return (
-            <button className="hl-row" type="button" key={plan.id} onClick={() => setView({ name: 'plans', planId: plan.id })}>
-              <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
-              <span className="hl-bar" aria-hidden="true"><i style={{ width: `${done ? 100 : (week / total) * 100}%` }} /></span>
-            </button>
-          );
-        })}
-        <button className="fd-line" type="button" onClick={() => setView({ name: 'plans', planId: null })}>
-          <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
-          <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
-        </button>
-      </section>
+      {/* The body's dashboard leads: the latest day's steps, the rings and the
+          week, with the import beside them. Today's session follows straight
+          after, so in the gym it is still on screen with one short scroll; the
+          longer trend closes the page. On desktop the dashboard and trend sit
+          on the left and the plans, files and advice run down the right. */}
+      <div className="hl-main">
+        <StepsCard summary={stepsSummary} stepGoal={STEP_TARGET}>
+          <div className="hl-side">
+            <section className="hl-sec hl-plans">
+              <h2 className="hl-h">{today ? 'Today’s workout' : 'Plans'}</h2>
+              {today && <TodayWorkout today={today} onOpen={() => setView({ name: 'plans', planId: today.plan.id })} />}
+              {today && plans.length > 0 && <h3 className="hl-group">Your plans</h3>}
+              {plans.map((plan) => {
+                const { week, total, done } = planWeek(plan);
+                return (
+                  <button className="hl-row" type="button" key={plan.id} onClick={() => setView({ name: 'plans', planId: plan.id })}>
+                    <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+                    <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
+                  </button>
+                );
+              })}
+              <button className={`fd-line hl-next${plans.length ? '' : ' first'}`} type="button" onClick={() => setView({ name: 'plans', planId: null })}>
+                <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
+                <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
+              </button>
+            </section>
 
-      {/* Steps are one card: rings, chart, the 30-day comparison and the import
-          row. They used to be four cards under a headline number that the
-          rings repeated directly below it. */}
-      <StepsCard summary={stepsSummary} stepGoal={STEP_TARGET} />
+            {advice && (
+              <section className="hl-sec">
+                <h2 className="hl-h">Advice</h2>
+                <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
+                  <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
+                  <b className="fd-yes">Read</b>
+                </button>
+              </section>
+            )}
 
-      <DocumentTiles documents={documents} onOpen={() => setView({ name: 'docs' })} />
+            <DocumentTiles documents={documents} onOpen={() => setView({ name: 'docs' })} />
 
-      {advice && (
-        <section className="fd-quiet">
-          <h2>Advice</h2>
-          <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
-            <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
-            <b className="fd-yes">Read</b>
-          </button>
-        </section>
-      )}
+            <div className="hl-ask">
+              <span>Ask about a file. Orbis reads only what you pick, and shows it first.</span>
+              <button type="button" onClick={() => setView({ name: 'ask' })}>Ask about a file</button>
+            </div>
 
-      <CoachingSection fitnessPersona={fitnessPersona} coaching={coaching} onToggle={() => setCoaching(!coaching)} />
-
-      <div className="hl-ask">
-        <span>Ask about a file. Orbis reads only what you pick, and shows it first.</span>
-        <button type="button" onClick={() => setView({ name: 'ask' })}>Ask about a file</button>
+            <CoachingSection fitnessPersona={fitnessPersona} coaching={coaching} onToggle={() => setCoaching(!coaching)} />
+          </div>
+        </StepsCard>
       </div>
-      <p className="fd-note">Suggestions are informational and aren’t a medical diagnosis.</p>
+      <p className="fd-note hl-foot">Suggestions are informational and aren’t a medical diagnosis.</p>
     </div>
   );
 }

@@ -156,7 +156,6 @@ export function PortfolioAi({ advice, setAdvice, onBack }: Readonly<{ advice: Sa
     <>
       <FieldSubHead crumb="Investments · suggestions" onBack={onBack} backLabel="Back to Investments" />
       <section className="fd-focus fd-advice" aria-live="polite">
-        <p className="fd-kicker">What Orbis sees</p>
         <h1>{headline}</h1>
         {body && <p>{body}</p>}
         <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{meta}</p>

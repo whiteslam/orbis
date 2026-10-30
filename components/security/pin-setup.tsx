@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound } from 'lucide-react';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { setPinAction } from '@/app/security/actions';
 import { PinInput } from '@/components/security/pin-input';
@@ -52,7 +53,7 @@ export function PinSetup({ reset }: Readonly<{ reset: boolean }>) {
   return (
     <AuthShell centered>
       <div className="lock-heading">
-        <div className="lock-icon"><KeyRound size={22} strokeWidth={1.8} aria-hidden="true" /></div>
+        <div className="lock-ring" aria-hidden="true"><OrbisMark size={84} /><KeyRound size={20} strokeWidth={1.9} /></div>
         <h1>{reset ? 'Set a new Orbis PIN' : 'Set your Orbis PIN'}</h1>
         <p>
           {reset ? 'Your old PIN was switched off after too many wrong tries. ' : ''}

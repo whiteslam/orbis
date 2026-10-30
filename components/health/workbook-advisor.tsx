@@ -77,7 +77,7 @@ function sheetsToggleLabel(allSheets: boolean, hiddenSheets: number, sheetCount:
 /** The first step: choose a file. */
 function PickFile({ inputId, isPending, message, onFile, onBack }: Readonly<{ inputId: string; isPending: boolean; message: string | null; onFile: (file: File) => void; onBack: () => void }>) {
   return (
-    <>
+    <div className="hl-pick">
       <FieldSubHead crumb="Health · ask about a file" title="Ask about a file" lead="Upload a health, finance or activity Excel or PDF file. Orbis shows you what it read before anything is sent for advice." onBack={onBack} backLabel="Back to Health" />
       <label className={`hl-drop ${isPending ? 'busy' : ''}`} htmlFor={inputId}>
         {isPending ? <LoaderCircle className="workbook-spinner" size={18} aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
@@ -91,7 +91,7 @@ function PickFile({ inputId, isPending, message, onFile, onBack }: Readonly<{ in
       }} />
       {message && <output className="fd-msg bad">{message}</output>}
       <p className="fd-note">The file is read for this request and isn’t saved to Orbis. Suggestions are informational and aren’t a medical diagnosis.</p>
-    </>
+    </div>
   );
 }
 
@@ -167,10 +167,10 @@ function RequestExtras({ hasStepData, savedContextCount, hasSavedPersonalProfile
     <section className="hl-opts">
       <FieldLabel>Add to the request</FieldLabel>
       <p className="hl-opts-note">Only what is ticked is sent with the file summary.</p>
-      {hasStepData && <label className="hl-opt"><input type="checkbox" checked={steps.checked} onChange={steps.onChange} disabled={disabled} /><span>My <b>Apple Health steps</b> — daily averages, trend and the last 14 days</span></label>}
+      {hasStepData && <label className="hl-opt"><input type="checkbox" checked={steps.checked} onChange={steps.onChange} disabled={disabled} /><span>My <b>Apple Health steps</b>: daily averages, trend and the last 14 days</span></label>}
       {savedContextCount > 0 && <label className="hl-opt"><input type="checkbox" checked={notes.checked} onChange={notes.onChange} disabled={disabled} /><span>Up to <b>{noteCount} relevant saved {noteCount === 1 ? 'note' : 'notes'}</b> from Profile (up to 3,000 characters)</span></label>}
       {hasSavedPersonalProfile && <label className="hl-opt"><input type="checkbox" checked={profile.checked} onChange={profile.onChange} disabled={disabled} /><span>My <b>personal profile</b> and “More about me” details</span></label>}
-      {personaRelevant && <label className="hl-opt"><input type="checkbox" checked={persona.checked} onChange={persona.onChange} disabled={disabled} /><span>My saved <b>fitness persona</b> — this file has fitness fields</span></label>}
+      {personaRelevant && <label className="hl-opt"><input type="checkbox" checked={persona.checked} onChange={persona.onChange} disabled={disabled} /><span>My saved <b>fitness persona</b> (this file has fitness fields)</span></label>}
     </section>
   );
 }
@@ -271,8 +271,10 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
 
   return (
     <>
-      <FieldSubHead crumb="Health · ask about a file" title="Here is what I read" lead="Check it before anything is sent. The original file isn’t sent for advice or saved — only the summary below." onBack={onBack} backLabel="Back to Health" />
+      <FieldSubHead crumb="Health · ask about a file" title="Here is what I read" lead="Check it before anything is sent. The original file isn’t sent for advice or saved, only the summary below." onBack={onBack} backLabel="Back to Health" />
 
+      <div className="hl-read">
+      <div className="hl-read-file">
       <FileSummary preview={preview} bytes={bytes} isPdf={isPdf} disabled={isPending} onClear={clearWorkbook} />
 
       {sheets.map((sheet, index) => <SheetPreview key={`${sheet.name}-${index}`} sheet={sheet} index={index} sheetCount={preview.sheets.length} />)}
@@ -281,7 +283,9 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
           {sheetsToggleLabel(allSheets, hiddenSheets, preview.sheets.length)}
         </button>
       )}
+      </div>
 
+      <div className="hl-read-send">
       {preview.observations.length > 0 && (
         <Observations observations={preview.observations} isPdf={isPdf} showAll={allObservations} onToggle={() => setAllObservations((value) => !value)} />
       )}
@@ -317,6 +321,8 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
       )}
 
       {message && <output className="fd-msg bad">{message}</output>}
+      </div>
+      </div>
     </>
   );
 }
@@ -352,8 +358,9 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
   return (
     <>
       <FieldSubHead crumb="Health · advice" onBack={onBack} backLabel="Back to Health" />
+      <div className="hl-adv">
+      <div className="hl-adv-main">
       <section className="fd-focus fd-advice" aria-live="polite">
-        <p className="fd-kicker">What Orbis sees</p>
         <h1>{summary.headline}</h1>
         {summary.rest && <p>{summary.rest}</p>}
         <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</p>
@@ -382,9 +389,11 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
         <button className="fd-link alert" type="button" onClick={remove} disabled={isPending}><Trash2 size={13} aria-hidden="true" /> {isPending ? 'Deleting…' : 'Delete'}</button>
       </div>
       {message && <output className="fd-msg bad">{message}</output>}
+      </div>
 
-      <section className="fd-quiet">
-        <h2>What was sent</h2>
+      <div className="hl-adv-side">
+      <section className="hl-sec">
+        <h2 className="hl-h">What was sent</h2>
         <div className="fd-line"><span>{pdf ? 'PDF preview and text snippets, bounded' : 'Excel summary, bounded'}</span><b className="fd-yes">Included</b></div>
         {sent && [
           row('Step summary', sent.steps),
@@ -395,6 +404,8 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
         <div className="fd-line"><span>The file itself</span><b className="empty">Never sent</b></div>
       </section>
       {!sent && <p className="fd-note tight">Which profile details went with this request isn’t stored with saved advice.</p>}
+      </div>
+      </div>
     </>
   );
 }

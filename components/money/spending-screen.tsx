@@ -4,8 +4,8 @@ import { useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { PenLine, Plus } from 'lucide-react';
 import { CurrencyCard } from '@/components/money/currency-card';
-import { TransactionList } from '@/components/money/transaction-list';
-import { FieldHead, FieldHero, FieldLabel, useScrollTop } from '@/components/field/field';
+import { LedgerAmount, TransactionList } from '@/components/money/transaction-list';
+import { FieldHead, useScrollTop } from '@/components/field/field';
 import { MoneyIn } from '@/components/money/money-in';
 import { PartLoading } from '@/components/shell/loading';
 import { money } from '@/lib/finance/money';
@@ -17,8 +17,8 @@ const SpendingSummary = dynamic(() => import('@/components/money/spending-summar
 
 type FinanceView = 'main' | 'add';
 
-// The list sits at the foot of the tab and opens short; the rest is one tap away.
-const TRANSACTIONS_SHOWN = 3;
+// The ledger opens on the last week or so; the rest is one tap away.
+const TRANSACTIONS_SHOWN = 8;
 
 function monthLabel(month: FinanceSummary['month']) {
   return month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
@@ -34,16 +34,19 @@ function isFirstRun(summary: FinanceSummary, ready: boolean) {
 function emptyListText(summary: FinanceSummary) {
   if (!summary.databaseReady) return 'Saved transactions aren’t available right now.';
   if (summary.loadError) return 'Transactions could not be loaded. Refreshing the app tries again.';
-  return 'Nothing saved yet.';
+  return 'Nothing saved yet. Add a spend with the Add button and it lands here.';
 }
 
-/** The foot of the tab: the latest few transactions, all of them on request. */
-function LatestTransactions({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all: boolean; onAll: (all: boolean) => void }>) {
+/**
+ * The ledger: the latest transactions grouped by day, all of them on request.
+ * On the phone it follows the month; on desktop it runs down the right.
+ */
+function Ledger({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all: boolean; onAll: (all: boolean) => void }>) {
   const count = summary.transactions.length;
   return (
-    <>
-      <div className="fd-label-row">
-        <FieldLabel>Latest{count ? ` · ${count}` : ''}</FieldLabel>
+    <section className="mn-ledger" aria-labelledby="mn-ledger-title">
+      <div className="mn-h-row">
+        <h2 className="mn-h" id="mn-ledger-title">Transactions{count ? <span className="mn-h-count">{count}</span> : null}</h2>
         {count > TRANSACTIONS_SHOWN && (
           <button className="fd-link" type="button" aria-expanded={all} onClick={() => onAll(!all)}>
             {all ? 'Show less' : `Show all ${count}`}
@@ -53,9 +56,9 @@ function LatestTransactions({ summary, all, onAll }: Readonly<{ summary: Finance
       {count ? (
         <TransactionList transactions={all ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} />
       ) : (
-        <p className="fd-empty">{emptyListText(summary)}</p>
+        <p className="fd-empty mn-empty">{emptyListText(summary)}</p>
       )}
-    </>
+    </section>
   );
 }
 
@@ -88,7 +91,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
   }
 
   if (view === 'add') return (
-    <div className="screen-body field">
+    <div className="screen-body field mn-screen mn-entry-screen">
       <span ref={top} hidden />
       <ManualTransactionForm onClose={() => setView('main')} onSaved={saved} initialCategory={prefill} />
     </div>
@@ -97,66 +100,84 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
   const notices = actionMessage && <output className={`finance-notice spaced ${actionMessage.success ? 'success' : 'error'}`}>{actionMessage.text}</output>;
 
   if (firstRun) return (
-    <div className="screen-body field">
+    <div className="screen-body field mn-screen">
       <span ref={top} hidden />
       <FieldHead title="Money" />{switcher}
       {notices}
-      <section className="fd-focus">
-        <h2>Nothing saved this month.</h2>
-        <p>Add what you spend as it happens. Amount, category, done.</p>
-      </section>
+      <div className="mn mn-first">
+        <section className="mn-sheet">
+          <section className="fd-focus">
+            <h2>Nothing saved this month.</h2>
+            <p>Add what you spend as it happens. Amount, category, done.</p>
+          </section>
 
-      <div className="fd-option">
-        <span className="fd-tile" aria-hidden="true"><PenLine size={18} strokeWidth={1.8} /></span>
-        <div>
-          <strong>Add manually</strong>
-          <p>Cash spends, UPI payments, cards, anything. It takes a few seconds.</p>
-          <div className="fd-act"><button type="button" onClick={() => setView('add')}>Add one now</button></div>
+          <div className="fd-option">
+            <span className="fd-tile" aria-hidden="true"><PenLine size={18} strokeWidth={1.8} /></span>
+            <div>
+              <strong>Add manually</strong>
+              <p>Cash spends, UPI payments, cards, anything. It takes a few seconds.</p>
+              <div className="fd-act"><button type="button" onClick={() => setView('add')}>Add one now</button></div>
+            </div>
+          </div>
+        </section>
+
+        <div className="mn-foot">
+          <CurrencyCard note="works without any account" />
+          <p className="fd-note">Orbis only uses what you enter here. Nothing is inferred about you.</p>
         </div>
       </div>
-
-      <CurrencyCard note="works without any account" />
-      <p className="fd-note">Orbis only uses what you enter here. Nothing is inferred about you.</p>
     </div>
   );
 
+  // The month's pace, carried to its last day: a rate, not a comparison.
+  const daysInMonth = month ? new Date(Date.UTC(month.year, month.month, 0)).getUTCDate() : 0;
+  const pace = month && month.spent > 0 ? month.spent / Math.max(dayOfMonth, 1) : 0;
+  const onPace = month && pace > 0 && dayOfMonth < daysInMonth ? pace * daysInMonth : null;
+
   return (
-    <div className="screen-body field">
+    <div className="screen-body field mn-screen">
       <span ref={top} hidden />
       <FieldHead title="Money" />{switcher}
-      {/* Manual entry is the only way in, so it stays at the top — as a small
-          button beside the month's total rather than a row of its own. */}
-      <div className="mn-top">
-        {monthReady && month && month.spent > 0 && (
-          <FieldHero
-            value={money(month.spent, month.currency)}
-            label={`spent in ${monthName}`}
-            delta={{ text: `${money(month.spent / Math.max(dayOfMonth, 1), month.currency)} a day`, tone: 'flat' }}
-          />
-        )}
-        {ready && <button className="mn-add" type="button" onClick={() => setView('add')} aria-label="Add manually"><Plus size={14} strokeWidth={2.4} aria-hidden="true" />Add</button>}
-      </div>
-
       {notices}
 
-      {/* The tab reads top to bottom as: the month, what came in, rates, then
-          the transactions themselves. Each is one card, as on Health; the two
-          reference blocks at the foot open on demand so they cost a line each. */}
-      {summary.month && ready && (
-        <section className="mn-card" aria-label={`Spending in ${monthName}`}>
-          <SpendingSummary month={summary.month} highlight={highlight} incomeShown={incomeShown} />
-        </section>
-      )}
+      {/* The page reads as a ledger: the month's figure on one sheet with its
+          shape and where it went, then the transactions by day. What came in
+          and the rates follow; on desktop the ledger runs down the right. */}
+      <div className="mn">
+        {ready && (
+          <section className="mn-sheet" aria-label={monthName ? `Spending in ${monthName}` : 'Spending'}>
+            {/* Manual entry is the only way in, so it is the page's one primary button. */}
+            <div className="mn-lead">
+              {monthReady && month ? (
+                <p className="mn-figure">
+                  <span className="mn-figure-cap">Spent in {monthName}</span>
+                  <span className="mn-figure-value"><LedgerAmount amount={month.spent} currency={month.currency} /></span>
+                </p>
+              ) : <p className="mn-figure"><span className="mn-figure-cap">This month</span></p>}
+              <button className="mn-add" type="button" onClick={() => setView('add')} aria-label="Add manually"><Plus size={16} strokeWidth={2.4} aria-hidden="true" />Add</button>
+            </div>
+            {monthReady && month && month.spent > 0 && (
+              <p className="mn-pace" suppressHydrationWarning>
+                <span className="fd-delta flat">{money(pace, month.currency)} a day</span>
+                {onPace !== null && <span>On pace for {money(onPace, month.currency)} by {daysInMonth} {monthName}</span>}
+              </p>
+            )}
+            {month && <SpendingSummary month={month} highlight={highlight} incomeShown={incomeShown} />}
+          </section>
+        )}
 
-      {ready && (
-        <section className="mn-card" aria-label="Money in">
-          <MoneyIn summary={summary} shown={incomeShown} onShown={setIncomeShown} />
-        </section>
-      )}
+        <Ledger summary={summary} all={allTransactions} onAll={setAllTransactions} />
 
-      <CurrencyCard />
+        {ready && (
+          <section className="mn-in" aria-label="Money in">
+            <MoneyIn summary={summary} shown={incomeShown} onShown={setIncomeShown} />
+          </section>
+        )}
 
-      <LatestTransactions summary={summary} all={allTransactions} onAll={setAllTransactions} />
+        <div className="mn-foot">
+          <CurrencyCard />
+        </div>
+      </div>
     </div>
   );
 }

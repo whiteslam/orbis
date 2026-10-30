@@ -7,6 +7,7 @@ import { connectBrokerAction, disconnectBrokerAction } from '@/app/invest/action
 import type { BrokerMeta } from '@/lib/invest/brokers';
 import type { BrokerHolding, BrokerPortfolio, PriceSource } from '@/lib/invest/types';
 import { inr, signedInr } from '@/components/money/format';
+import { LedgerAmount } from '@/components/money/transaction-list';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
@@ -169,9 +170,9 @@ function notConnectedNote(setupRequired: boolean | undefined, expired: boolean) 
 }
 
 function connectionStatus(needsReconnect: boolean, connected: boolean) {
-  if (needsReconnect) return { className: 'groww-status warn', label: 'NEEDS RECONNECT' };
-  if (connected) return { className: 'groww-status', label: 'CONNECTED · READ-ONLY' };
-  return { className: 'groww-status off', label: 'NOT CONNECTED' };
+  if (needsReconnect) return { className: 'groww-status warn', label: 'Needs reconnect' };
+  if (connected) return { className: 'groww-status', label: 'Connected, read-only' };
+  return { className: 'groww-status off', label: 'Not connected' };
 }
 
 function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
@@ -179,7 +180,7 @@ function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
   const value = holding.lastPrice === null ? null : holding.quantity * holding.lastPrice;
   return (
     <div className="groww-row">
-      <div>
+      <div className="groww-row-name">
         <strong>{holding.symbol}</strong>
         <small>{holding.quantity.toLocaleString('en-IN')} shares · avg {inr(holding.averagePrice)}</small>
         {holding.lastPrice !== null && holding.priceSource
@@ -187,7 +188,7 @@ function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
           : <small className="groww-price missing">Price unavailable</small>}
       </div>
       <div className="groww-row-value">
-        <strong>{inr(value ?? cost)}</strong>
+        <strong><LedgerAmount amount={value ?? cost} currency="INR" /></strong>
         {value !== null ? <small className={value - cost >= 0 ? 'up' : 'down'}>{signedInr(value - cost)}</small> : <small>invested</small>}
       </div>
     </div>
@@ -256,8 +257,8 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
       <div className="groww-head">
         <div className="groww-icon"><Image src={meta.logo} alt={meta.name} width={24} height={24} /></div>
         <div>
-          <small className={status.className}>{status.label}</small>
           <h3 id={`broker-${meta.id}-title`}>{meta.name} holdings</h3>
+          <small className={status.className}>{status.label}{portfolio?.state === 'ok' && portfolio.holdings.length ? ` · ${portfolio.holdings.length} ${portfolio.holdings.length === 1 ? 'holding' : 'holdings'}` : ''}</small>
         </div>
         {connected && (
           <button className="groww-refresh" type="button" onClick={onRefresh} disabled={isLoading} aria-label={`Sync ${meta.name} holdings`}>
@@ -275,8 +276,8 @@ export function BrokerCard({ meta, portfolio, isLoading, onRefresh, onConnect }:
 
       {connected && connection?.source === 'account' && (
         <div className="groww-actions">
-          <button className="finance-button secondary" type="button" onClick={onRefresh} disabled={isLoading || isDisconnecting}><RefreshCw size={13} /> {isLoading ? 'Syncing…' : 'Sync now'}</button>
-          <button className="finance-button secondary groww-disconnect" type="button" onClick={disconnect} disabled={isLoading || isDisconnecting}><Unplug size={13} /> {isDisconnecting ? 'Disconnecting…' : 'Disconnect'}</button>
+          <button className="fd-link" type="button" onClick={onRefresh} disabled={isLoading || isDisconnecting}><RefreshCw size={13} aria-hidden="true" /> {isLoading ? 'Syncing…' : 'Sync now'}</button>
+          <button className="fd-link groww-disconnect" type="button" onClick={disconnect} disabled={isLoading || isDisconnecting}><Unplug size={13} aria-hidden="true" /> {isDisconnecting ? 'Disconnecting…' : 'Disconnect'}</button>
         </div>
       )}
       {connected && connection?.source === 'server' && <p className="groww-muted">Connected with the server’s {meta.name} keys.</p>}

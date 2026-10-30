@@ -41,10 +41,10 @@
 .rt-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .rt-actions button:first-child { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
 .rt-actions button:active { opacity: .85; }
-.rt-actions button:disabled { opacity: .55; cursor: wait; }
+.rt-actions button:disabled { opacity: .55; cursor: not-allowed; }
 .rt-other { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .rt-other input { flex: 1 1 200px; min-width: 0; box-sizing: border-box; min-height: 40px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-surface); color: var(--fd-ink); font: inherit; font-size: 13.5px; outline: none; }
-.rt-other input:focus { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
+.rt-other input:focus { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
 /* Once answered the block stops asking and just states what was recorded. */
 .rt-check.settled { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .rt-check.settled .rt-check-head { color: var(--fd-soft); font-weight: 550; }
@@ -79,7 +79,7 @@
 .fd-weather-button { cursor: pointer; }
 
 .fd-quiet { margin-top: 26px; }
-.fd-quiet h2, .fd-label { margin: 0; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-faint); font-weight: 700; }
+.fd-quiet h2, .fd-label { margin: 0; font-size: 10px; color: var(--fd-faint); font-weight: 700; }
 .fd-label { display: block; margin-top: 22px; }
 /* A section label with one control on its right, such as Money in's show/hide. */
 .fd-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }

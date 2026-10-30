@@ -1,0 +1,349 @@
+/* ─── Social: the content planner ───────────────────────────────────────
+   components/social/. The planner leads: the month, how far along it is and
+   the next post due, then the month itself as the page's one surface (a
+   wall planner on desktop, a week strip on the phone). The posts follow on
+   the page as a pipeline (idea, draft, ready, published), rows under
+   hairlines rather than cards; insights sit beside them on desktop.
+   Social's own accent is the brand violet; the format tints from
+   atlas-social.css colour the posts themselves. Loaded after desktop.css. */
+.so-screen, .so-drawer, .so-ai-dialog {
+  --so-accent: var(--brand-violet);
+  --so-accent-wash: color-mix(in srgb, var(--brand-violet) 16%, transparent);
+  --so-stage-idea: var(--fd-faint);
+  --so-stage-draft: var(--brand-gold);
+  --so-stage-ready: var(--so-ready);
+  --so-stage-published: var(--so-published);
+}
+
+/* Section heads: a plain h2 in the body face. */
+.so-h { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.2; }
+.so-count { margin-left: 4px; color: var(--fd-faint); font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* ─── The lead: the month, its progress, the next post, the one way to add ─── */
+.so-lead { display: flex; flex-direction: column; gap: 16px; margin-top: 2px; }
+.so-lead-month { min-width: 0; }
+.so-month-nav { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.so-month-name {
+  margin: 0 4px;
+  min-width: 0;
+  color: var(--fd-ink);
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+  overflow-wrap: break-word;
+}
+.so-round {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fd-soft);
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease;
+}
+.so-round:first-child { margin-left: -10px; }
+.so-round:hover:not(:disabled) { background: var(--fd-chip); color: var(--fd-ink); }
+.so-round:disabled { background: transparent; color: var(--fd-faint); cursor: not-allowed; }
+.so-today-link { margin-left: 6px; min-height: 40px; font-size: 13px; font-weight: 650; }
+.so-lead-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.45; }
+.so-lead-sep { display: none; width: 1px; height: 14px; background: var(--fd-rule); }
+.so-next {
+  display: block;
+  min-height: 32px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fd-soft);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.so-next b { color: var(--fd-ink); font-weight: 700; }
+.so-next:hover b { color: var(--so-accent); }
+
+/* One primary button; the AI as a quieter second beside it. */
+.so-lead .so-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+.so-screen .so-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--fd-chip);
+  box-shadow: inset 0 0 0 1px var(--fd-rule);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--fd-ink);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.so-screen .so-action svg { color: var(--so-accent); }
+.so-screen .so-action.primary { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.so-screen .so-action.primary svg { color: currentColor; }
+.so-lead .so-new { flex: 1 1 160px; }
+.so-lead .so-new .so-action { width: 100%; }
+.so-lead .so-actions > .so-action { flex: 1 1 140px; }
+.so-lead .so-new-menu { left: 0; right: auto; min-width: 180px; }
+.so-screen .so-new-menu button { min-height: 44px; font-size: 14.5px; }
+
+/* ─── The planner: the page's one surface ─── */
+.so-calcard {
+  margin-top: 22px;
+  padding: 16px 14px 18px;
+  border: var(--gl-edge);
+  border-radius: 28px;
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur);
+  backdrop-filter: var(--gl-blur);
+  box-shadow: var(--gl-shadow);
+  transition: opacity .2s ease;
+}
+.so-calcard[aria-busy="true"] { opacity: .55; }
+.so-calcard .so-cal { margin-top: 0; }
+.so-cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin: 0 2px 8px; }
+.so-calcard .so-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--fd-faint); font-size: 12px; }
+.so-calcard:not(.open) .so-cal-bar .so-legend { visibility: hidden; }
+.so-cal-toggle { flex: none; min-height: 36px; margin-left: auto; font-size: 13px; font-weight: 650; }
+
+.so-calcard .so-cal-head > span { padding-bottom: 6px; color: var(--fd-faint); font-size: 12px; font-weight: 650; text-align: center; }
+.so-calcard .so-cal-head > span > span { display: none; padding: 0; }
+.so-calcard .so-cal-head > span > b { font-weight: 650; }
+/* The phone shows one week until the month is asked for. */
+.so-calcard:not(.open) .so-cal-week:not(.anchor) { display: none; }
+
+.so-calcard .so-day { min-height: 54px; padding: 4px 2px 6px; border-radius: 14px; background: transparent; transition: background-color .18s ease; }
+.so-calcard .so-day b { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 650; line-height: 1; }
+.so-calcard .so-day.past b { color: var(--fd-soft); }
+.so-calcard .so-day.today b { background: var(--so-accent); color: var(--on-fill, var(--fd-btn-ink)); font-weight: 750; }
+.so-calcard .so-day[aria-pressed="true"] { background: var(--so-accent-wash); }
+.so-calcard .so-day:hover:not(.out) { background: color-mix(in srgb, var(--fd-ink) 6%, transparent); }
+.so-calcard .so-day[aria-pressed="true"]:hover { background: var(--so-accent-wash); }
+.so-calcard .so-day:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 1px; }
+.so-calcard .so-dot { width: 7px; height: 7px; }
+.so-day-posts { display: none; }
+
+/* The chosen day, under a hairline. */
+.so-dayplan { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fd-rule); }
+.so-dayplan-title { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; color: var(--fd-ink); font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
+.so-dayplan-title span { padding: 2px 9px; border-radius: var(--r-pill); background: var(--so-accent-wash); color: var(--so-accent); font-size: 12px; font-weight: 700; }
+.so-dayplan .fd-empty { margin: 8px 0 0; color: var(--fd-faint); font-size: 13.5px; }
+.so-dayplan-hint { margin: 0; color: var(--fd-faint); font-size: 13.5px; line-height: 1.5; }
+.so-dayplan .so-row:last-of-type { border-bottom: 0; }
+.so-screen .so-add-day { min-height: 44px; margin-top: 6px; font-size: 14px; }
+
+/* ─── Rows: one per post, under hairlines ─── */
+.so-screen .so-row { gap: 12px; min-height: 64px; padding: 11px 2px; border-radius: 0; transition: background-color .18s ease; }
+.so-screen .so-row:hover { background: color-mix(in srgb, var(--fd-ink) 3%, transparent); }
+.so-screen .so-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: -2px; border-radius: 10px; }
+.so-screen .so-thumb { width: 44px; height: 44px; border-radius: 12px; }
+.so-screen .so-row-text strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 15px; font-weight: 650; letter-spacing: -.01em; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+.so-screen .so-row-text small { gap: 4px 0; margin-top: 3px; color: var(--fd-soft); font-size: 12.5px; }
+.so-screen .so-row-text small > span:not(.so-ai) + span:not(.so-ai)::before { content: "·"; margin: 0 6px; color: var(--fd-faint); }
+.so-screen .so-row-text small .so-ai { margin-left: 8px; }
+.so-screen .so-row > .so-status { flex: none; }
+.so-screen .so-status { padding: 3px 9px; font-size: 11.5px; letter-spacing: 0; }
+.so-screen .so-ai { font-size: 11.5px; }
+
+/* ─── The pipeline: posts by stage, on the page ─── */
+.so-pipeline, .so-empty { margin-top: 34px; }
+.so-screen .so-posts-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; min-height: 36px; }
+.so-screen .so-sort-pick { height: 36px; font-size: 13px; }
+.so-screen .so-mini { height: 36px; }
+.so-screen .so-mini button { min-height: 32px; padding: 0 14px; font-size: 13px; }
+.so-screen .so-sort-pick:focus-visible, .so-screen .so-mini button:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+
+/* The four stages left to right, each with its count: the month as a pipeline. */
+.so-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 6px; margin: 16px 0 4px; padding: 0; list-style: none; }
+.so-stage { min-width: 0; color: var(--fd-soft); font-size: 12.5px; font-weight: 600; }
+.so-stage i { display: block; height: 4px; margin-bottom: 9px; border-radius: 2px; background: var(--so-stage); }
+.so-stage b { display: block; color: var(--fd-ink); font-size: 22px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.so-stage[data-empty] i { background: var(--fd-rule); }
+.so-stage[data-empty] b { color: var(--fd-faint); }
+.so-stage-idea { --so-stage: var(--so-stage-idea); }
+.so-stage-draft { --so-stage: var(--so-stage-draft); }
+.so-stage-ready { --so-stage: var(--so-stage-ready); }
+.so-stage-published { --so-stage: var(--so-stage-published); }
+
+.so-rows-group { margin-top: 22px; }
+.so-group-label { margin: 0 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; }
+.so-group-label > span { margin-left: 2px; font-variant-numeric: tabular-nums; }
+.so-group-label small { display: block; margin-top: 1px; color: var(--fd-faint); font-size: 12px; font-weight: 500; }
+.so-rows-group .so-row:last-child { border-bottom: 0; }
+/* Grouped by stage, the group already says the stage. */
+.so-rows[data-sort="status"] .so-row > .so-status { display: none; }
+
+/* Grid view: pictures first, no card around them. */
+.so-screen .so-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin-top: 20px; }
+.so-screen .so-card { overflow: visible; border-radius: 0; background: none; box-shadow: none; }
+.so-screen .so-card .so-thumb { border-radius: 16px; }
+.so-screen .so-card:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 3px; border-radius: 16px; }
+.so-screen .so-card-text { padding: 8px 2px 0; }
+.so-screen .so-card-text strong { font-size: 14px; }
+.so-screen .so-card-text small { gap: 5px 8px; font-size: 12px; color: var(--fd-soft); }
+
+/* Nothing planned: say what to do, with both ways to do it. */
+.so-screen .so-empty p { margin: 8px 0 0; color: var(--fd-soft); font-size: 14.5px; line-height: 1.6; max-width: 56ch; }
+.so-empty-act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 10px; }
+.so-empty .so-h, .so-posts-head .so-h { display: flex; align-items: center; min-height: 36px; }
+.so-empty-act .fd-link { min-height: 44px; font-size: 14px; font-weight: 650; }
+
+/* ─── Insights: on the page, each account a block under a hairline ─── */
+.so-screen .so-insights { margin-top: 40px; padding-top: 0; border-top: 0; }
+.so-screen .so-insights-head { min-height: 36px; }
+.so-screen .so-insights-head .fd-link { min-height: 36px; font-size: 13px; font-weight: 650; }
+.so-screen .so-insights > .so-summary { margin-top: 8px; color: var(--fd-soft); font-size: 14px; line-height: 1.55; }
+.so-screen .so-insights > .so-summary .fd-link { font-size: 14px; font-weight: 650; }
+.so-screen .so-insight-card { margin-top: 14px; padding: 16px 0 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; }
+.so-screen .so-insights-head + .so-insight-card, .so-screen .so-insights-head + .so-problem + .so-insight-card { border-top: 0; padding-top: 4px; }
+.so-screen .so-insight-top .fd-two { font-size: 15px; font-weight: 700; }
+.so-screen .so-followers { font-size: 13px; }
+.so-screen .so-followers b { font-size: 20px; font-weight: 750; letter-spacing: -.02em; }
+.so-screen .so-window { margin: 16px 0 6px; font-size: 12.5px; font-weight: 600; }
+.so-screen .so-stats { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 16px; }
+.so-screen .so-stats div { padding: 0; border-radius: 0; background: none; }
+.so-screen .so-stats dt { font-size: 12px; font-weight: 600; }
+.so-screen .so-stats dd { font-size: 22px; font-weight: 750; }
+.so-screen .so-insight-posts { margin-top: 12px; border-top: 1px solid var(--fd-rule); }
+.so-screen .so-insight-posts .so-thumb { width: 40px; height: 40px; }
+.so-screen .so-insight-posts .so-row-text strong { font-size: 14px; }
+.so-screen .so-insight-card > .so-problem { margin-top: 10px; padding: 0; background: none; font-size: 13.5px; }
+
+.so-screen .so-foot { margin-top: 36px; font-size: 12.5px; }
+
+/* ─── Post drawer and AI draft: the writing leads ─── */
+.so-drawer .so-edit-main, .so-drawer .so-edit-side, .so-ai-dialog .so-ai-brief, .so-ai-dialog .so-ai-options { display: flex; flex-direction: column; min-width: 0; }
+.so-drawer .so-edit-main > .fd-field:first-child, .so-ai-dialog .so-ai-brief > .fd-field:first-child { margin-top: 18px; }
+.so-drawer .so-edit-main textarea { min-height: 200px; font-size: 15.5px; line-height: 1.6; }
+.so-ai-dialog .so-ai-brief textarea { min-height: 150px; font-size: 15.5px; line-height: 1.6; }
+.so-drawer .so-edit-side { margin-top: 8px; }
+.so-ai-tone-label { margin-top: 20px; }
+.so-ai-dialog .so-ai-options .fd-seg { margin-top: 8px; }
+.so-drawer .so-publish { padding: 16px 0 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .so-round, .so-calcard, .so-calcard .so-day, .so-screen .so-row { transition: none; }
+}
+
+/* ─── Desktop: the planner across the page; the pipeline and insights below ─── */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop][data-tab="social"] .screen-body.so-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 0 48px;
+    align-items: start;
+    max-width: 1320px;
+  }
+  .stage[data-desktop][data-tab="social"] .screen-body.so-screen > * { grid-column: 1 / -1; min-width: 0; }
+  .stage[data-desktop][data-tab="social"] .screen-body.so-screen > :is(.so-pipeline, .so-empty) { grid-column: 1; }
+  .stage[data-desktop][data-tab="social"] .screen-body.so-screen > .so-insights { grid-column: 2; margin-top: 34px; padding-top: 0; }
+  .stage[data-desktop][data-tab="social"] .screen-body.so-screen > .so-foot { grid-column: 1; }
+  .stage[data-desktop][data-tab="social"] .so-screen .fd-head { margin-bottom: 18px; }
+
+  .stage[data-desktop] .so-lead { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .stage[data-desktop] .so-month-name { font-size: 34px; }
+  .stage[data-desktop] .so-lead-line { font-size: 15px; }
+  .stage[data-desktop] .so-lead-sep { display: block; }
+  .stage[data-desktop] .so-lead .so-actions { flex: none; flex-wrap: nowrap; }
+  .stage[data-desktop] .so-lead .so-new, .stage[data-desktop] .so-lead .so-actions > .so-action { flex: none; }
+  .stage[data-desktop] .so-lead .so-new-menu { left: auto; right: 0; }
+  .stage[data-desktop][data-tab="social"] .so-actions { max-width: none; }
+
+  /* The wall planner: the month on the left, the chosen day beside it. */
+  .stage[data-desktop] .so-calcard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 0 28px;
+    margin-top: 26px;
+    padding: 22px 26px 24px;
+    border-radius: 32px;
+  }
+  .stage[data-desktop] .so-calcard .so-cal-bar { margin: 0 0 10px; }
+  .stage[data-desktop] .so-calcard .so-cal-bar .so-legend { visibility: visible; }
+  .stage[data-desktop] .so-cal-toggle { display: none; }
+  .stage[data-desktop] .so-calcard .so-cal-week { display: grid; }
+  .stage[data-desktop][data-tab="social"] .so-calcard :is(.so-cal-head, .so-cal-week) { gap: 0; }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-cal-week + .so-cal-week { margin-top: 0; }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-cal-head > span { padding: 0 10px 8px; text-align: left; font-size: 12.5px; }
+  .stage[data-desktop] .so-calcard .so-cal-head > span > span { display: inline; padding: 0; font-weight: 650; }
+  .stage[data-desktop] .so-calcard .so-cal-week { border-top: 1px solid var(--fd-rule); }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-day {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    min-height: 96px;
+    margin: 4px 2px;
+    padding: 6px 6px 8px;
+    border-radius: 14px;
+    background: transparent;
+    box-shadow: none;
+  }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-day:hover:not(.out) { background: color-mix(in srgb, var(--fd-ink) 5%, transparent); }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-day[aria-pressed="true"] { background: var(--so-accent-wash); box-shadow: none; }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-day.out { background: transparent; }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-day b { width: 28px; height: 28px; font-size: 14px; }
+  .stage[data-desktop] .so-calcard .so-dots { display: none; }
+  .stage[data-desktop] .so-day-posts { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .so-chip {
+    min-width: 0;
+    padding: 3px 7px;
+    border-radius: 7px;
+    background: var(--so-tint);
+    color: var(--so-tint-ink);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.35;
+    text-align: left;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .so-chip:is(.idea, .draft) { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--so-tint-ink) 55%, transparent); }
+  .so-chip.published { opacity: .7; }
+  .stage[data-desktop] .so-day-posts .so-more { padding-left: 7px; color: var(--fd-faint); font-size: 11.5px; font-weight: 650; line-height: 1.4; }
+
+  .stage[data-desktop] .so-dayplan { margin-top: 0; padding: 4px 0 0 26px; border-top: 0; border-left: 1px solid var(--fd-rule); }
+  .stage[data-desktop] .so-dayplan-title { font-size: 19px; }
+
+  .stage[data-desktop] .so-pipeline, .stage[data-desktop] .so-empty { margin-top: 34px; }
+  .stage[data-desktop] .so-screen .so-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* The post and the AI brief: the words on the left, the settings beside them. */
+  .stage[data-desktop][data-tab="social"] .screen-body:has(> .so-drawer), .stage[data-desktop][data-tab="social"] .screen-body:has(> .so-ai-dialog) { display: block; max-width: 1180px; }
+  .stage[data-desktop] .so-drawer .fd-form, .stage[data-desktop] .so-ai-dialog .fd-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 0 44px;
+    align-items: start;
+  }
+  .stage[data-desktop] .so-drawer .fd-form > *, .stage[data-desktop] .so-ai-dialog .fd-form > * { grid-column: 1 / -1; min-width: 0; }
+  .stage[data-desktop] .so-drawer .fd-form > .so-edit-main, .stage[data-desktop] .so-ai-dialog .fd-form > .so-ai-brief { grid-column: 1; }
+  .stage[data-desktop] .so-drawer .fd-form > .so-edit-side, .stage[data-desktop] .so-ai-dialog .fd-form > .so-ai-options { grid-column: 2; margin-top: 18px; }
+  .stage[data-desktop] .so-drawer .so-edit-side > .fd-seg { margin-top: 26px; }
+  .stage[data-desktop] .so-drawer .so-edit-main textarea { min-height: 300px; font-size: 16px; }
+  .stage[data-desktop] .so-ai-dialog .so-ai-brief textarea { min-height: 260px; font-size: 16px; }
+  .stage[data-desktop] .so-ai-dialog .fd-form > .fd-act { justify-content: flex-start; }
+  /* The window scrolls on desktop and there is no tab bar: the action bar rests on the window's edge. */
+  .stage[data-desktop] .so-drawer .so-bar { bottom: 0; margin: 24px 0 0; padding: 14px 0 16px; }
+}

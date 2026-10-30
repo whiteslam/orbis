@@ -91,7 +91,6 @@ export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initi
   return (
     <>
       <div className="auth-heading">
-        <p className="eyebrow">YOUR PRIVATE SPACE</p>
         <h1>{isSignup ? 'Create your account' : 'Welcome back'}</h1>
         <p>{isSignup ? 'Start building a clearer picture of your life.' : 'Sign in to continue to Orbis.'}</p>
       </div>

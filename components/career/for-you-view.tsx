@@ -174,7 +174,9 @@ function useJobs(view: JobView, search: string, initial: CareerJob[]) {
  * For you: matches at or above the owner's bar, with Everything and
  * Shortlisted beside it, a search, "Paste a job" and "Run a search now".
  */
-export function ForYouView({ initial, threshold, onOpen, onOpenJobId }: Readonly<{
+export function ForYouView({ initial, threshold, onOpen, onOpenJobId, languages = [] }: Readonly<{
+  /** The owner's languages, for each job's fit check. */
+  languages?: readonly string[];
   /** The home's top matches, shown at once while the full list loads. */
   initial: CareerJob[];
   threshold: number | null;
@@ -231,7 +233,7 @@ export function ForYouView({ initial, threshold, onOpen, onOpenJobId }: Readonly
       {jobs.length === 0 && !loading ? <EmptyJobs view={view} searching={Boolean(search.trim())} /> : (
         <div className="cr-jobs">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} threshold={threshold} onOpen={onOpen} actions={<JobActions job={job} onOpen={onOpen} onChanged={changed} />} />
+            <JobCard key={job.id} job={job} threshold={threshold} languages={languages} onOpen={onOpen} actions={<JobActions job={job} onOpen={onOpen} onChanged={changed} />} />
           ))}
         </div>
       )}

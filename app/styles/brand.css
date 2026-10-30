@@ -15,6 +15,53 @@
   --brand-gold: #f0b429;
   --brand-gradient: linear-gradient(135deg, #5bb4e8, #42cca8);
   --brand-on-accent: #0e0e10; /* ink on teal/blue/gradient */
+  --brand-violet: #b49bf2;
+  --brand-frame: #0a0a0c; /* the desktop phone mock-up's bezel */
+  /* Near-white and near-black, tinted toward the teal anchor rather than pure. */
+  --on-fill: #f5fcfa; /* light ink on a solid blue/red fill, and switch knobs */
+  --void: #030706; /* the always-dark front door and the black-hole scene */
+
+  /* Soft fills of the brand accents, for pills and badges. */
+  --pill-teal-bg: rgba(66,204,168,.16);
+  --pill-blue-bg: rgba(91,180,232,.16);
+  --pill-red-bg: rgba(242,107,107,.16);
+  --pill-gold-bg: rgba(240,180,41,.16);
+  --pill-alert-bg: rgba(242,107,107,.14);
+
+  /* Shadows that do not change with the theme. */
+  --shadow-tab-active: 0 4px 14px rgba(66,204,168,.28);
+  --shadow-seg: 0 2px 8px rgba(17,19,21,.08); /* the selected segment of a glass control */
+  --shadow-seg-sm: 0 1px 4px rgba(17,19,21,.10);
+  --shadow-toggle: 0 2px 8px rgba(29,45,57,.08);
+  --shadow-knob: 0 1px 3px rgba(0,0,0,.25);
+  --shadow-fill: 0 10px 24px -18px rgba(0,0,0,.8); /* solid stage-coloured cards */
+  --shadow-fill-hover: 0 16px 28px -18px rgba(0,0,0,.85);
+  --shadow-fill-sm: 0 8px 18px -14px rgba(0,0,0,.8);
+  --on-fill-wash: rgba(14,14,16,.12); /* dark ink tint on a solid fill */
+  --on-fill-ring: inset 0 0 0 1.5px rgba(14,14,16,.3);
+
+  /* The front door (.wl-shell), dark whichever theme is chosen. */
+  --wl-ink: #f2f3f5;
+  --wl-soft: #a9adb4;
+  --wl-faint: #8a8e96;
+  --wl-rule: rgba(255,255,255,.1);
+  --wl-chip: rgba(255,255,255,.08);
+  --wl-wash: rgba(66,204,168,.15);
+  --wl-login-edge: rgba(255,255,255,.22);
+  --wl-headline-shadow: 0 1px 24px rgba(0,0,0,.6);
+  --wl-eyebrow-edge: rgba(255,255,255,.14);
+  --wl-eyebrow-bg: rgba(255,255,255,.05);
+  --wl-dot-glow: 0 0 0 3px rgba(66,204,168,.2), 0 0 12px rgba(66,204,168,.7);
+  --wl-lede: rgba(255,255,255,.6);
+  --wl-card-edge: rgba(255,255,255,.13);
+  --wl-card-fill: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.03));
+  --wl-card-shadow: 0 28px 60px -28px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.09);
+  --wl-submit-glow: 0 10px 28px -10px rgba(66,204,168,.6);
+
+  /* The logo ring. */
+  --mark-ring: conic-gradient(from 200deg, #5bb4e8, #42cca8, #3dc87a, #5bb4e8);
+  /* An alpha mask: only the opacity of the stop counts, not its colour. */
+  --mark-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
 
   /* DM Sans, here as well as in glass.css: the public pages never load glass.css. */
   --font-text: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -111,6 +158,16 @@
   --series-5: #b49bf2;
   --series-6: #3dc87a;
   --series-7: #8e95a3;
+
+  /* The wide panels (career, desktop): glass cards on the wallpaper, and the
+     scrim and veil behind drawers and dialogs. */
+  --panel-surface: var(--brand-s1);
+  --panel-card: var(--gl-fill);
+  --panel-card-edge: var(--gl-edge);
+  --panel-grid: rgba(255,255,255,.06);
+  --panel-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
+  --scrim: rgba(6,6,8,.5);
+  --veil: rgba(6,6,8,.55);
 }
 
 :root[data-theme="light"] {
@@ -157,6 +214,16 @@
   --series-5: #7a5bd1;
   --series-6: #166d3e;
   --series-7: #5b616b;
+
+  --panel-surface: #ffffff;
+  --panel-card: rgba(255,255,255,.72);
+  --panel-card-edge: 1px solid rgba(255,255,255,.9);
+  --panel-grid: rgba(20,22,26,.07);
+  --panel-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 14px 34px -20px rgba(30,40,50,.22);
+  --panel-blob-1: #cfe7de;
+  --panel-blob-2: #d7e7f3;
+  --scrim: rgba(30,36,44,.22);
+  --veil: rgba(30,36,44,.26);
 }
 
 /* Reduce Transparency: the older sheets drop the blur with a plain :root rule,
@@ -176,7 +243,7 @@
    the first :root block above. */
 body { font-weight: 400; }
 /* One label style everywhere; :not(#_) lifts it above every class-scoped label rule without !important. */
-:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 11px; font-weight: 500; letter-spacing: .5px; text-transform: uppercase; }
+:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 11px; font-weight: 500; }
 
 /* ─── Logo ─────────────────────────────────────────────────────────────
    A conic-gradient ring and a hole div at 45% — never an SVG stroke. The ring
@@ -190,9 +257,9 @@ body { font-weight: 400; }
   display: block;
   flex: none;
   border-radius: 50%;
-  background: conic-gradient(from 200deg, #5bb4e8, #42cca8, #3dc87a, #5bb4e8);
-  -webkit-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
-  mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
+  background: var(--mark-ring);
+  -webkit-mask: var(--mark-mask);
+  mask: var(--mark-mask);
   box-shadow: none;
 }
 .orbis-mark-hole {

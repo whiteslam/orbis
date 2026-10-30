@@ -1,8 +1,10 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { ArrowLeft, ClipboardPaste, FileDown, ListChecks, Moon, Radar, Search, Sun, type LucideIcon } from 'lucide-react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { ArrowLeft, ClipboardPaste, Ellipsis, FileDown, ListChecks, Moon, Radar, Search, Sun, type LucideIcon } from 'lucide-react';
 import { BusyIcon } from '@/components/career/bits';
+import { useDismiss } from '@/components/career/panel/panel-bits';
+import type { PanelPage } from '@/components/career/panel/panel-data';
 import { useTheme } from '@/components/career/panel/panel-hooks';
 import { TAB_ICONS } from '@/components/shell/tab-icons';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
@@ -102,7 +104,7 @@ export function PanelRail(props: ActionProps) {
     <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-nav' : 'cp-rail'} aria-label="Quick actions">
       {DESKTOP_LAYOUT && <AppNav />}
       <ul className="cp-rail-tools">
-        {careerActions(props).map(({ id, label, hint, Icon, onClick, busy, badge }) => (
+        {careerActions(props).filter((action) => action.id !== 'export').map(({ id, label, hint, Icon, onClick, busy, badge }) => (
           <RailButton key={id} label={label} hint={hint} onClick={onClick} busy={busy} badge={badge}>
             <BusyIcon on={Boolean(busy)} size={18}><Icon size={18} aria-hidden="true" /></BusyIcon>
           </RailButton>
@@ -123,22 +125,66 @@ export function PanelRail(props: ActionProps) {
   );
 }
 
+/** The one or two actions that matter on each page; the rest wait in More. */
+const PRIMARY: Record<PanelPage, readonly string[]> = {
+  overview: ['queue', 'search'],
+  jobs: ['run', 'paste'],
+  insights: ['run'],
+  pipeline: ['search', 'queue'],
+  interviews: ['search'],
+  offers: ['search'],
+  setup: [],
+};
+
+function ActionButton({ action, className }: Readonly<{ action: Action; className: string }>) {
+  const { label, short, hint, Icon, onClick, busy, badge } = action;
+  return (
+    <button type="button" className={className} onClick={onClick} aria-label={label} aria-busy={busy || undefined} aria-keyshortcuts={hint === '/' ? '/ Control+K Meta+K' : undefined}>
+      <BusyIcon on={Boolean(busy)} size={16}><Icon size={16} aria-hidden="true" /></BusyIcon>
+      {short}
+      {badge ? <span className="cp-actions-count" aria-hidden="true">{badge}</span> : null}
+      {hint && <kbd aria-hidden="true">{hint}</kbd>}
+    </button>
+  );
+}
+
+/** The quieter actions, behind one "More" button. */
+function MoreMenu({ actions }: Readonly<{ actions: Action[] }>) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, box, close);
+  if (!actions.length) return null;
+  return (
+    <div className="cp-more-wrap" ref={box}>
+      <button type="button" className="cp-tool-btn cp-more-btn" aria-expanded={open} aria-controls="cp-more-menu" onClick={() => setOpen((value) => !value)}>
+        <Ellipsis size={16} aria-hidden="true" />More
+      </button>
+      {open && (
+        <div className="cp-more-menu" id="cp-more-menu">
+          {actions.map((action) => (
+            <ActionButton key={action.id} action={{ ...action, onClick: () => { setOpen(false); action.onClick(); } }} className="cp-more-item" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * Career's actions as labelled buttons above the page, for the desktop layout,
- * where the rail is navigation instead. Hidden below 900px (career-panel.css),
+ * Career's actions as labelled buttons beside the page's title, for the desktop
+ * layout, where the rail is navigation instead: the one or two that matter on
+ * this page, then More for the rest. Hidden below 900px (career-panel.css),
  * where the bottom bar has them.
  */
-export function PanelActions(props: ActionProps) {
+export function PanelActions({ page, ...props }: ActionProps & Readonly<{ page: PanelPage }>) {
+  const all = careerActions(props);
+  const primary = PRIMARY[page].flatMap((id) => all.filter((action) => action.id === id));
+  const rest = all.filter((action) => !PRIMARY[page].includes(action.id));
   return (
     <section className="cp-actions" aria-label="Career actions">
-      {careerActions(props).map(({ id, label, short, hint, Icon, onClick, busy, badge }) => (
-        <button key={id} type="button" className="cp-tool-btn" onClick={onClick} aria-label={label} aria-busy={busy || undefined} aria-keyshortcuts={hint === '/' ? '/ Control+K Meta+K' : undefined}>
-          <BusyIcon on={Boolean(busy)} size={16}><Icon size={16} aria-hidden="true" /></BusyIcon>
-          {short}
-          {badge ? <span className="cp-actions-count" aria-hidden="true">{badge}</span> : null}
-          {hint && <kbd aria-hidden="true">{hint}</kbd>}
-        </button>
-      ))}
+      {primary.map((action, index) => <ActionButton key={action.id} action={action} className={`cp-tool-btn${index === 0 ? ' cp-tool-main' : ''}`} />)}
+      <MoreMenu actions={rest} />
     </section>
   );
 }

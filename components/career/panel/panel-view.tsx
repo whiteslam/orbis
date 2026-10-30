@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw, Upload } from 'lucide-react';
 import { exportTrackerAction, runSearchNowAction } from '@/app/career/actions';
 import { ApplicationSheet, type SheetContext } from '@/components/career/application-sheet';
+import { SkillsToBuild } from '@/components/career/fit-review-view';
 import { SetupView } from '@/components/career/setup/setup-view';
 import { useRun } from '@/components/career/use-run';
 import { ActivityChart } from '@/components/career/panel/activity-chart';
@@ -12,12 +13,12 @@ import { InsightsPage } from '@/components/career/panel/insights-page';
 import { InterviewsPage } from '@/components/career/panel/interviews-page';
 import { JobsPage } from '@/components/career/panel/jobs-page';
 import { OffersPage } from '@/components/career/panel/offers-page';
-import { HotMatches, Predictions, RecentActivity, StageMix, TodayCard, WeeklyGoal } from '@/components/career/panel/overview-cards';
+import { HomePage } from '@/components/career/panel/home-page';
 import { PanelEmpty } from '@/components/career/panel/panel-bits';
 import { PanelProvider, fallbackDetail, type PanelApi } from '@/components/career/panel/panel-context';
 import { allApplications, hrefFor, paletteIndex, type PaletteItem, type PanelPage } from '@/components/career/panel/panel-data';
 import { PanelHeader } from '@/components/career/panel/panel-header';
-import { datedName, downloadText, goTo, useHashPage, useHashQuery, usePaletteShortcut } from '@/components/career/panel/panel-hooks';
+import { datedName, downloadText, goTo, useHashPage, useHashQuery, useHashStage, usePaletteShortcut } from '@/components/career/panel/panel-hooks';
 import { PasteDialog, QueueDrawer, StatusToast, type Toast } from '@/components/career/panel/panel-overlays';
 import { PanelActions, PanelRail } from '@/components/career/panel/panel-rail';
 import { PipelinePage } from '@/components/career/panel/pipeline-page';
@@ -29,24 +30,6 @@ import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from
 
 type Drawer = { jobId: string; fallback: ApplicationDetail | null };
 type Overlay = 'palette' | 'paste' | 'queue' | null;
-
-function Overview({ home }: Readonly<{ home: CareerHome }>) {
-  return (
-    <div className="cp-bento">
-      <div className="cp-bento-main">
-        <ActivityChart home={home} />
-        <WeeklyGoal home={home} />
-        <StageMix home={home} />
-        <Predictions home={home} />
-        <TodayCard home={home} />
-      </div>
-      <div className="cp-bento-side">
-        <HotMatches home={home} />
-        <RecentActivity home={home} />
-      </div>
-    </div>
-  );
-}
 
 /** Before a resume and a spec, every page but Setup points there. */
 function FirstRun({ hasProfile }: Readonly<{ hasProfile: boolean }>) {
@@ -62,9 +45,10 @@ function FirstRun({ hasProfile }: Readonly<{ hasProfile: boolean }>) {
   );
 }
 
-function PageBody({ page, query, home, problem, loading, onRetry, onJobs, patchSetup }: Readonly<{
+function PageBody({ page, query, stage, home, problem, loading, onRetry, onJobs, patchSetup }: Readonly<{
   page: PanelPage;
   query: string;
+  stage: string;
   home: CareerHome | null;
   problem: string | null;
   loading: boolean;
@@ -86,12 +70,12 @@ function PageBody({ page, query, home, problem, loading, onRetry, onJobs, patchS
   }
   if (!home.state.ready) return <PanelEmpty title="Career isn’t available yet.">Its database hasn’t been set up. Try again later.</PanelEmpty>;
   if (!home.state.profile || !home.state.spec) return <FirstRun hasProfile={Boolean(home.state.profile)} />;
-  if (page === 'pipeline') return <PipelinePage key={query} home={home} initialSearch={query} />;
+  if (page === 'pipeline') return <PipelinePage key={`${query}|${stage}`} home={home} initialSearch={query} initialStage={stage} />;
   if (page === 'jobs') return <JobsPage home={home} onJobs={onJobs} />;
   if (page === 'interviews') return <InterviewsPage home={home} />;
   if (page === 'offers') return <OffersPage home={home} />;
-  if (page === 'insights') return <InsightsPage home={home} />;
-  return <Overview home={home} />;
+  if (page === 'insights') return <><SkillsToBuild jobs={[...home.hotMatches, ...allApplications(home).map((card) => card.job)]} /><ActivityChart home={home} /><InsightsPage home={home} /></>;
+  return <HomePage home={home} />;
 }
 
 /** Finds a job the panel knows about, and its application if it has one. */
@@ -144,6 +128,7 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
 }>) {
   const page = useHashPage();
   const query = useHashQuery();
+  const stage = useHashStage();
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [knownJobs, setKnownJobs] = useState<CareerJob[]>([]);
@@ -223,10 +208,9 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
         <div className="cp-frame" inert={covered}>
           <PanelHeader page={page} who={who} />
           <PanelRail {...actions} />
-          {DESKTOP_LAYOUT && <PanelActions {...actions} />}
           <main id="cp-main" className={`cp-main cp-page-${page}`} tabIndex={-1} aria-labelledby="cp-title">
-            <TitleRow page={page} home={home} />
-            <PageBody page={page} query={query} home={home} problem={problem} loading={loading} onRetry={onReload} onJobs={setKnownJobs} patchSetup={patchSetup} />
+            <TitleRow page={page} home={home} actions={DESKTOP_LAYOUT ? <PanelActions page={page} {...actions} /> : null} />
+            <PageBody page={page} query={query} stage={stage} home={home} problem={problem} loading={loading} onRetry={onReload} onJobs={setKnownJobs} patchSetup={patchSetup} />
           </main>
         </div>
         <StatusToast toast={rail.toast} onDismiss={() => rail.setToast(null)} />

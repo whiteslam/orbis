@@ -26,6 +26,13 @@ export function useHashQuery(): string {
   return at < 0 ? '' : new URLSearchParams(hash.slice(at + 1)).get('q') ?? '';
 }
 
+/** The `stage` in "#/pipeline?stage=sent", which Home's stage strip uses to open Applications at one stage. */
+export function useHashStage(): string {
+  const hash = useSyncExternalStore(subscribeHash, () => window.location.hash, () => '');
+  const at = hash.indexOf('?');
+  return at < 0 ? '' : new URLSearchParams(hash.slice(at + 1)).get('stage') ?? '';
+}
+
 export function goTo(page: PanelPage, query?: string) {
   window.location.hash = query ? `/${page}?q=${encodeURIComponent(query)}` : `/${page}`;
 }

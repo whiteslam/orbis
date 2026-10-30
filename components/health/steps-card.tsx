@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useRef, useState, useTransition, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Flame, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { deleteHealthStepsAction, importAppleHealthStepsAction } from '@/app/health/steps-actions';
@@ -11,6 +11,8 @@ import { safeAction } from '@/lib/client/safe-action';
 
 const number = (value: number) => Math.round(value).toLocaleString('en-IN');
 const dayLabel = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { ...options, timeZone: 'UTC' });
+// "Friday 30 October", built in two parts: Node and the browser punctuate the combined format differently.
+const longDay = (date: string) => `${dayLabel(date, { weekday: 'long' })} ${dayLabel(date, { day: 'numeric', month: 'long' })}`;
 const shiftDate = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 // Health used to carry Apple's Activity palette — pink, green, cyan, orange —
@@ -69,22 +71,57 @@ function tickInterval(span: number) {
   return span === 30 ? 6 : 29;
 }
 
+/** The latest day against the goal, in words: how far to go, or that it is reached. */
+function goalLine(steps: number, stepGoal: number) {
+  if (steps >= stepGoal) return `Your ${number(stepGoal)} step goal is reached`;
+  return `${number(stepGoal - steps)} to go for your ${number(stepGoal)} goal`;
+}
+
+/** The figure, the rings beside it, and what each ring means. */
 function StepRings({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummary; latest: Latest; stepGoal: number }>) {
   const goalDays = series(summary, 7).filter((day) => day.steps >= stepGoal).length;
   return (
-    <div className="hl-rings">
-      <ActivityRings rings={[
-        { label: 'Steps', value: latest.steps / stepGoal, color: COLORS.steps, track: TRACK },
-        { label: '7-day average', value: (summary.average7 ?? 0) / stepGoal, color: COLORS.average, track: TRACK },
-        { label: 'Goal days', value: goalDays / 7, color: COLORS.streak, track: TRACK },
-      ]} />
+    <>
+      <div className="hl-rings">
+        <div className="hl-figure">
+          <p className="hl-figure-num"><b>{number(latest.steps)}</b> steps</p>
+          <p className="hl-figure-sub">{goalLine(latest.steps, stepGoal)}</p>
+        </div>
+        <ActivityRings size={124} rings={[
+          { label: 'Steps', value: latest.steps / stepGoal, color: COLORS.steps, track: TRACK },
+          { label: '7-day average', value: (summary.average7 ?? 0) / stepGoal, color: COLORS.average, track: TRACK },
+          { label: 'Goal days', value: goalDays / 7, color: COLORS.streak, track: TRACK },
+        ]} />
+      </div>
       {/* The ring's colour is a swatch, not the label's text colour: an amber
           or cyan word is unreadable at this size against the card. */}
-      <dl className="rings-legend">
+      <dl className="rings-legend hl-legend">
         <div><dt><i style={{ background: COLORS.steps }} aria-hidden="true" />Steps</dt><dd><b>{number(latest.steps)}</b>/{number(stepGoal)}</dd></div>
         <div><dt><i style={{ background: COLORS.average }} aria-hidden="true" />7-day average</dt><dd><b>{number(summary.average7 ?? 0)}</b>/{number(stepGoal)}</dd></div>
         <div><dt><i style={{ background: COLORS.streak }} aria-hidden="true" />Goal days</dt><dd><b>{goalDays}</b>/7</dd></div>
       </dl>
+    </>
+  );
+}
+
+/** The last seven days as seven bars against the goal line: the week at a glance. */
+function StepWeek({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummary; latest: Latest; stepGoal: number }>) {
+  const week = series(summary, 7);
+  const goalDays = week.filter((day) => day.steps >= stepGoal).length;
+  const scale = Math.max(stepGoal * 1.15, ...week.map((day) => day.steps));
+  return (
+    <div className="hl-week">
+      <p className="hl-week-head"><span>Last 7 days</span><span><b>{goalDays} of 7</b> on goal</span></p>
+      <ol className="hl-week-days" style={{ '--goal': stepGoal / scale } as React.CSSProperties}>
+        {week.map((day) => (
+          <li key={day.date} data-goal={day.steps >= stepGoal || undefined} data-latest={day.date === latest.date || undefined}>
+            <small aria-hidden="true">{day.recorded ? `${(day.steps / 1000).toFixed(1)}k` : ''}</small>
+            <span className="hl-week-bar" aria-hidden="true"><i style={{ '--fill': Math.min(day.steps / scale, 1) } as React.CSSProperties} /></span>
+            <span aria-hidden="true">{dayLabel(day.date, { weekday: 'short' })}</span>
+            <span className="sr-only">{longDay(day.date)}: {day.recorded ? `${number(day.steps)} steps` : 'no data'}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -94,12 +131,15 @@ function StepsChart({ summary, latest, span, onSpan }: Readonly<{ summary: Steps
   const recorded = chart.filter((day) => day.recorded);
   const rangeAverage = recorded.length ? recorded.reduce((sum, day) => sum + day.steps, 0) / recorded.length : 0;
   return (
-    <div className="hl-part">
-      <fieldset className="apple-segmented" aria-label="Chart range">
-        {RANGES.map(([label, days]) => <button key={label} type="button" aria-pressed={span === days} onClick={() => onSpan(days)}>{label}</button>)}
-      </fieldset>
+    <div className="hl-part hl-chart">
+      <div className="hl-trend-head">
+        <h2 className="hl-h" id="trend-title">Trend</h2>
+        <fieldset className="apple-segmented" aria-label="Chart range">
+          {RANGES.map(([label, days]) => <button key={label} type="button" aria-pressed={span === days} onClick={() => onSpan(days)}>{label}</button>)}
+        </fieldset>
+      </div>
       {/* One line, not a second headline: over a week this is the ring's own number. */}
-      <p className="apple-metric-range hl-range">Daily average <b>{number(rangeAverage)}</b> · {dayLabel(chart[0].date, { day: 'numeric', month: 'short' })} – {dayLabel(latest.date, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+      <p className="apple-metric-range hl-range">Daily average <b>{number(rangeAverage)}</b> · {dayLabel(chart[0].date, { day: 'numeric', month: 'short' })} to {dayLabel(latest.date, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
       <ResponsiveContainer width="100%" height={170}>
         <BarChart data={chart} margin={{ top: 8, right: 0, bottom: 0, left: 0 }} barCategoryGap={span > 30 ? 1 : '22%'}>
           <CartesianGrid vertical={false} stroke={AXIS.line} strokeDasharray="2 3" />
@@ -127,12 +167,12 @@ function TrendBars({ average30, previous30 }: Readonly<{ average30: number; prev
       <div className="highlight-bars">
         <div>
           <p><b>{number(average30)}</b> steps/day</p>
-          <i style={{ width: `${(average30 / trendMax) * 100}%`, background: COLORS.activity }} />
+          <i style={{ '--fill': average30 / trendMax, background: COLORS.activity } as React.CSSProperties} />
           <small>Last 30 days</small>
         </div>
         <div>
           <p><b>{number(previous30)}</b> steps/day</p>
-          <i style={{ width: `${(previous30 / trendMax) * 100}%`, background: 'var(--fd-rule)' }} />
+          <i style={{ '--fill': previous30 / trendMax, background: 'var(--fd-faint)' } as React.CSSProperties} />
           <small>Previous 30 days</small>
         </div>
       </div>
@@ -140,8 +180,8 @@ function TrendBars({ average30, previous30 }: Readonly<{ average30: number; prev
   );
 }
 
-/** The card's body: why there is nothing to show, or the rings, chart and 30-day comparison. */
-function StepsBody({ summary, stepGoal, span, onSpan }: Readonly<{ summary: StepsSummary; stepGoal: number; span: number; onSpan: (span: number) => void }>) {
+/** The dashboard's body: why there is nothing to show, or the figure, rings and the week. */
+function StepsBody({ summary, stepGoal }: Readonly<{ summary: StepsSummary; stepGoal: number }>) {
   if (!summary.databaseReady) {
     return <p className="apple-card-empty">Apply the Health steps migration (202609240012_health_steps.sql) in Supabase to import step data.</p>;
   }
@@ -159,8 +199,7 @@ function StepsBody({ summary, stepGoal, span, onSpan }: Readonly<{ summary: Step
   return (
     <>
       <StepRings summary={summary} latest={latest} stepGoal={stepGoal} />
-      <StepsChart summary={summary} latest={latest} span={span} onSpan={onSpan} />
-      {summary.average30 !== null && summary.previous30 !== null && <TrendBars average30={summary.average30} previous30={summary.previous30} />}
+      <StepWeek summary={summary} latest={latest} stepGoal={stepGoal} />
     </>
   );
 }
@@ -171,7 +210,7 @@ function ImportProgress({ progress, isSaving }: Readonly<{ progress: Progress | 
     return (
       <div className="steps-progress">
         <output>{progress.stage}</output>
-        <div><i style={{ width: `${Math.round(progress.fraction * 100)}%` }} /></div>
+        <div><i style={{ '--fill': Math.round(progress.fraction * 100) / 100 } as React.CSSProperties} /></div>
       </div>
     );
   }
@@ -179,11 +218,17 @@ function ImportProgress({ progress, isSaving }: Readonly<{ progress: Progress | 
   return isSaving ? <p className="steps-progress"><output>Saving daily totals…</output></p> : null;
 }
 
-export function StepsCard({ summary, stepGoal }: Readonly<{ summary: StepsSummary; stepGoal: number }>) {
+/**
+ * Steps as the tab's dashboard: the latest day's figure and rings, the week as
+ * bars, and the import row, on one surface. `children` sits between that and
+ * the longer trend, so the plans come before the chart on the phone.
+ */
+export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: StepsSummary; stepGoal: number; children?: ReactNode }>) {
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
-  const [span, setSpan] = useState<number>(7);
+  // The week already shows as bars in the dashboard, so the chart opens on the month.
+  const [span, setSpan] = useState<number>(30);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const busy = Boolean(progress) || isSaving;
@@ -221,13 +266,13 @@ export function StepsCard({ summary, stepGoal }: Readonly<{ summary: StepsSummar
 
   return (
     <>
-      <section className="apple-card steps-card" aria-labelledby="steps-title">
-        <header className="apple-card-head">
-          <strong id="steps-title"><Flame size={15} fill="currentColor" aria-hidden="true" />Steps</strong>
-          {latest && <span>{dayLabel(latest.date, { day: 'numeric', month: 'short' })}</span>}
-        </header>
+      <section className="hl-dash steps-card" aria-labelledby="steps-title">
+        <h2 className="hl-dash-kicker" id="steps-title">
+          <Flame size={14} fill="currentColor" aria-hidden="true" />
+          <span>Steps{latest ? ` · ${longDay(latest.date)}` : ''}</span>
+        </h2>
 
-        <StepsBody summary={summary} stepGoal={stepGoal} span={span} onSpan={setSpan} />
+        <StepsBody summary={summary} stepGoal={stepGoal} />
 
         {ready && (
           <div className="apple-row health-source hl-source">
@@ -245,7 +290,7 @@ export function StepsCard({ summary, stepGoal }: Readonly<{ summary: StepsSummar
               {busy && <LoaderCircle size={13} className="spin" aria-hidden="true" />}
               {latest ? 'Import' : 'Upload export'}
             </button>
-            {latest && !confirmDelete && <button type="button" className="icon-action" disabled={busy} onClick={() => setConfirmDelete(true)} aria-label="Delete step data"><Trash2 size={15} /></button>}
+            {latest && !confirmDelete && <button type="button" className="icon-action hl-quiet-del" disabled={busy} onClick={() => setConfirmDelete(true)} aria-label="Delete step data"><Trash2 size={15} /></button>}
             {confirmDelete && (
               <div className="health-source-confirm">
                 <span>Delete all imported step data?</span>
@@ -256,8 +301,17 @@ export function StepsCard({ summary, stepGoal }: Readonly<{ summary: StepsSummar
             <ImportProgress progress={progress} isSaving={isSaving} />
           </div>
         )}
+        {message && <output className={`finance-notice ${message.tone}`}>{message.text}</output>}
       </section>
-      {message && <output className={`finance-notice ${message.tone}`}>{message.text}</output>}
+
+      {children}
+
+      {ready && latest && (
+        <section className="hl-trend" aria-labelledby="trend-title">
+          <StepsChart summary={summary} latest={latest} span={span} onSpan={setSpan} />
+          {summary.average30 !== null && summary.previous30 !== null && <TrendBars average30={summary.average30} previous30={summary.previous30} />}
+        </section>
+      )}
     </>
   );
 }

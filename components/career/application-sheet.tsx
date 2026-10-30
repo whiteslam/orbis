@@ -9,6 +9,7 @@ import { StatusChip } from '@/components/career/status-chip';
 import { AtsCard, FilesRow, RemovedList } from '@/components/career/sheet/checks';
 import { DraftEditor } from '@/components/career/sheet/draft-editor';
 import { DraftStart } from '@/components/career/sheet/draft-start';
+import { FitLead } from '@/components/career/fit-review-view';
 import { MatchSummary } from '@/components/career/sheet/match-summary';
 import { OfferSection } from '@/components/career/sheet/offer-section';
 import { OwnerMoves } from '@/components/career/sheet/owner-moves';
@@ -85,6 +86,7 @@ export function ApplicationDetailView({ detail, context, onDetail }: Readonly<{ 
 
   return (
     <div className="cr-detail">
+      <FitLead job={job} languages={context.profile?.languages ?? []} />
       <MatchSummary job={job} threshold={context.threshold} prediction={application?.prediction ?? null} />
       {sentNote && <NoticeLine notice={{ text: sentNote, ok: true }} onDismiss={() => setSentNote(null)} />}
       {application ? (

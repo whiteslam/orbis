@@ -115,14 +115,18 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
     return (
       <>
         <span ref={top} hidden />
+        <div className="hl-q-layout">
+        <div className="hl-q-aside">
         <BackLink onClick={allPlans} disabled={isPending} />
         <header className="fd-sub-head hl-plan-head">
           <h1>A few questions first</h1>
           <p className="fd-lead">Orbis has already read your documents and steps. These fill the gaps it cannot infer.</p>
         </header>
         {/* The drawn bar is the <i>; the native <progress> beside it is what assistive tech reads. */}
-        <div className="hl-bar big"><progress className="sr-only" aria-label="Questions answered" value={answered} max={total} /><i aria-hidden="true" style={{ width: `${(answered / total) * 100}%` }} /></div>
-        <p className="hl-bar-note"><b>{answered} of {total}</b> answered · at least {needed} to build your plan</p>
+        <div className="hl-bar big"><progress className="sr-only" aria-label="Questions answered" value={answered} max={total} /><i aria-hidden="true" style={{ '--fill': answered / total } as React.CSSProperties} /></div>
+        <p className="hl-bar-note"><b>{answered} of {total}</b> answered · {ready ? 'enough to build your plan' : `at least ${needed} to build your plan`}</p>
+        </div>
+        <div className="hl-q-main">
 
         <ol className="hl-questions">
           {visible.map((question, index) => {
@@ -148,6 +152,8 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
           </button>
         </div>
         <p className="fd-note tight">Writing a plan takes up to a minute. It reads your pinned documents and the passages that match, your steps and profile, and these answers.</p>
+        </div>
+        </div>
       </>
     );
   }
@@ -165,6 +171,8 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
   return (
     <>
       <span ref={top} hidden />
+      <div className="hl-plans-layout">
+      <div className="hl-plans-lead">
       <FieldSubHead crumb="Health · plans" title="Plans" lead="Orbis reads your saved documents, steps and profile, asks you at least 10 questions, then writes a workout, nutrition, targets and sleep plan." onBack={onBack} backLabel="Back to Health" />
 
       {state === 'setup' ? (
@@ -177,25 +185,26 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
         </div>
       )}
       {message && <output className="fd-msg bad">{message}</output>}
+      </div>
 
-      {plans.length > 0 && (
-        <section className="fd-quiet">
-          <h2>Saved</h2>
-          {plans.map((plan) => {
-            const { week, total, done } = planWeek(plan);
-            return (
-              <div className="hl-plan-row" key={plan.id}>
-                <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
-                  <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
-                  <span className="hl-bar" aria-hidden="true"><i style={{ width: `${done ? 100 : (week / total) * 100}%` }} /></span>
-                  <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
-                </button>
-                <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
-              </div>
-            );
-          })}
-        </section>
-      )}
+      <section className="hl-sec hl-plans-saved">
+        <h2 className="hl-h">Saved</h2>
+        {plans.length === 0 && <p className="hl-empty">No plans yet. Build one above: it takes a few questions and about a minute.</p>}
+        {plans.map((plan) => {
+          const { week, total, done } = planWeek(plan);
+          return (
+            <div className="hl-plan-row" key={plan.id}>
+              <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
+                <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+                <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
+                <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
+              </button>
+              <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
+            </div>
+          );
+        })}
+      </section>
+      </div>
       <p className="fd-note">Plans are general guidance, not medical advice.</p>
     </>
   );

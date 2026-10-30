@@ -1,6 +1,7 @@
 'use client';
 
-import { Settings, Sparkles } from 'lucide-react';
+import { Settings } from 'lucide-react';
+import { OrbisAiMark } from '@/components/brand/orbis-ai-mark';
 import { TABS, type TabId } from '@/lib/shell/tabs';
 import { TAB_ICONS } from '@/components/shell/tab-icons';
 
@@ -40,7 +41,7 @@ export function DesktopRail({ tab, onTab, onAsk, onSettings }: Readonly<{
       <ul>
         <li>
           <button type="button" className="cp-rail-btn dk-rail-ask" onClick={onAsk} aria-label="Ask Orbis">
-            <Sparkles size={19} aria-hidden="true" />
+            <OrbisAiMark size={24} />
             <span className="cp-tip" aria-hidden="true">Ask Orbis</span>
           </button>
         </li>

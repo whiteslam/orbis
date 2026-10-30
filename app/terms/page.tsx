@@ -13,7 +13,6 @@ export default function TermsPage() {
   return (
     <PublicShell>
       <div className="mkt-legal-head">
-        <p className="mkt-eyebrow">Legal</p>
         <h1>Terms of Service</h1>
         <p className="mkt-legal-updated">Last updated {LEGAL_UPDATED}</p>
       </div>

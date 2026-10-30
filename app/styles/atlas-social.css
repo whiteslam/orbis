@@ -52,7 +52,7 @@
 /* ─── Calendar ─── */
 .so-cal { margin-top: 14px; }
 .so-cal-head, .so-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
-.so-cal-head span { padding-bottom: 6px; text-align: center; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.so-cal-head span { padding-bottom: 6px; text-align: center; color: var(--fd-faint); font-size: 10px; font-weight: 700; }
 .so-cal-week + .so-cal-week { margin-top: 3px; }
 .so-day { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; min-height: 50px; padding: 6px 2px 5px; border: 0; border-radius: 10px; background: var(--fd-card); color: var(--fd-ink); font: inherit; cursor: pointer; }
 .so-day.out { background: transparent; color: var(--fd-faint); opacity: .55; }
@@ -120,7 +120,7 @@
 .so-diff { margin-top: 8px; font-size: 12px; }
 .so-diff summary { color: var(--fd-accent); font-weight: 650; cursor: pointer; }
 .so-diff dl { margin: 8px 0 0; }
-.so-diff dt { margin-top: 8px; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.so-diff dt { margin-top: 8px; color: var(--fd-faint); font-size: 10px; font-weight: 700; }
 .so-diff dd { margin: 3px 0 0; color: var(--fd-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
 .so-diff del { color: var(--fd-alert); }
 .so-diff ins { color: var(--so-ready); text-decoration: none; }
@@ -140,7 +140,7 @@
 .so-insight-top .fd-two { flex: 1; min-width: 0; }
 .so-followers { flex: none; color: var(--fd-faint); font-size: 12px; white-space: nowrap; }
 .so-followers b { color: var(--fd-ink); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.so-window { margin: 14px 0 8px; color: var(--fd-faint); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.so-window { margin: 14px 0 8px; color: var(--fd-faint); font-size: 11px; font-weight: 700; }
 .so-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 0; }
 .so-stats div { min-width: 0; padding: 10px 11px; border-radius: 12px; background: var(--fd-wash); }
 .so-stats dt { overflow: hidden; color: var(--fd-faint); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

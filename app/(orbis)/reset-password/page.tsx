@@ -32,7 +32,6 @@ export default async function ResetPasswordPage() {
       )}
     >
       <div className="auth-heading">
-        <p className="eyebrow">{needsCurrentPassword ? 'ACCOUNT' : 'ACCOUNT RECOVERY'}</p>
         <h1>{needsCurrentPassword ? 'Change your password' : 'Choose a new password'}</h1>
         <p>Make it at least {MIN_PASSWORD_LENGTH} characters long.</p>
       </div>

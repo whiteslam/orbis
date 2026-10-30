@@ -58,7 +58,7 @@
 
 /* Chrome: a floating glass tab bar, and Ask Orbis as its own glass circle to the right. */
 .bottom-nav { right: 84px; z-index: 20; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
-.bottom-nav button.active { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+.bottom-nav button.active { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: var(--shadow-seg); }
 .talk-fab { right: 16px; bottom: calc(var(--nav-gap) + var(--safe-bottom)); width: 62px; height: 62px; background: var(--gl-fill); color: var(--fd-ink); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); border: var(--gl-edge); box-shadow: var(--gl-shadow); }
 .avatar, .field .avatar { background: var(--gl-fill); color: var(--fd-ink); border: var(--gl-edge); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); font-weight: 700; }
 .fd-head h1 { font-weight: 800; letter-spacing: -.035em; }
@@ -111,7 +111,7 @@
 /* Segmented controls: a glass track with a white thumb. */
 .fd-tabs.glass-seg { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 12px; padding: 4px; border-radius: 18px; border: var(--gl-edge); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
 .fd-tabs.glass-seg button { min-height: 40px; border-radius: 14px; font-weight: 600; color: var(--fd-soft); }
-.fd-tabs.glass-seg button[aria-selected="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 2px 8px rgba(17,19,21,.08); }
+.fd-tabs.glass-seg button[aria-selected="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: var(--shadow-seg); }
 /* .fd-tabs's other job — a sticky underline tab bar (05-profile.css) — draws a
    bar under the selected button with ::after. The segmented track has its own
    selected state (the thumb above), so that underline is switched off here. */
@@ -195,7 +195,7 @@
 .so-calcard .so-add-day { margin-top: 6px; min-height: 32px; }
 .so-mini { display: inline-flex; align-items: center; height: 32px; padding: 2px; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
 .so-mini button { min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
-.so-mini button[aria-checked="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: 0 1px 4px rgba(17,19,21,.10); }
+.so-mini button[aria-checked="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: var(--shadow-seg-sm); }
 .so-posts-head { min-height: 32px; }
 .so-posts-tools { display: flex; align-items: center; gap: 6px; }
 .so-sort-pick { height: 32px; padding: 0 8px 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -226,7 +226,7 @@
 .talk-a { font-size: 16px; line-height: 1.55; color: var(--fd-ink); }
 .talk-error { color: var(--fd-alert); }
 .talk-sources-wrap { padding: 0 16px 10px; }
-.talk-sources-label { margin: 0 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-soft); }
+.talk-sources-label { margin: 0 2px 8px; font-size: 10px; font-weight: 700; color: var(--fd-soft); }
 .talk-sheet .talk-sources { gap: 7px; padding: 0; }
 .talk-sheet .talk-sources button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px 0 11px; border-radius: var(--r-pill); border: var(--gl-edge); background: var(--gl-fill); box-shadow: none; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); color: var(--fd-soft); font-size: 12.5px; font-weight: 600; opacity: .72; }
 .talk-sheet .talk-sources button svg { color: var(--fd-faint); }

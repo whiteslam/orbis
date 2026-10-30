@@ -24,8 +24,17 @@ import '../styles/career-panel.css';
 import '../styles/research.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
+import '../styles/orbis-ai.css';
+import '../styles/journal.css';
 // The desktop web layout: last, and only inside its own media query.
 import '../styles/desktop.css';
+// Per-page redesigns, each owning its own sheet; after desktop.css so they settle the desktop layout too.
+import '../styles/page-today.css';
+import '../styles/page-money.css';
+import '../styles/page-health.css';
+import '../styles/page-social.css';
+import '../styles/page-career.css';
+import '../styles/page-settings.css';
 
 export default function OrbisLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

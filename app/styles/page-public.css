@@ -1,0 +1,175 @@
+/* Public pages (waitlist, sign-in, recovery, lock): the diary-page treatment.
+   Loaded after marketing.css and brand.css. The sign-in and lock screens live
+   in app/(orbis), whose sheets (07-auth.css, brand-app.css) load after this
+   one, so every auth rule here is lifted one class (.auth-stage) to win.
+
+   The signature is the Orbis ring: big on the sign-in page beside the form,
+   wrapped around the lock on the lock screen, and the black hole on the front
+   door. One sentence, one action, no boxes beyond the one that holds it. */
+
+/* ─── Front door ───────────────────────────────────────────────────────── */
+
+/* The beta line is context for the headline, not a badge: a quiet line with
+   the live dot, no pill around it. */
+.wl-hero .wl-eyebrow { gap: 9px; margin: 0 0 20px; padding: 0; border: 0; background: none; color: var(--fd-soft); font-size: 13px; font-weight: 500; }
+
+/* The trust points read as one calm row under the form. */
+.wl-hero .wl-trust { gap: 10px 22px; }
+.wl-hero .wl-trust li { color: var(--wl-lede); font-size: 13px; }
+
+/* Below the hero: what Orbis does as rows on the ground. The number is a
+   faint gutter, the title and its sentence share a line on wide screens. */
+.wl-body { padding-top: 24px; }
+.wl-body > .wl-what { display: block; margin-top: 0; }
+.wl-what .wl-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); column-gap: 8px; padding: 20px 0; border-top: 1px solid var(--fd-rule); }
+.wl-what .wl-row:last-child { border-bottom: 1px solid var(--fd-rule); }
+.wl-what .wl-num { grid-row: 1 / span 2; margin: 3px 0 0; color: var(--fd-faint); font-size: 13px; font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.wl-what .wl-row h2 { min-width: 0; font-size: 17px; font-weight: 700; letter-spacing: -.015em; overflow-wrap: break-word; }
+.wl-what .wl-row p { margin-top: 6px; font-size: 14px; }
+.wl-body > .wl-note { margin-top: 36px; }
+.wl-note h2 { font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+.wl-note p { font-size: 14px; }
+.wl-footer a:focus-visible, .wl-note a:focus-visible, .wl-text-button:focus-visible, .wl-submit:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 4px; }
+.wl-submit:focus-visible { border-radius: var(--r-pill); }
+
+@media (min-width: 900px) {
+  /* Rows on the left, the privacy promise beside them: the width gets used
+     and nothing sits in a box. */
+  .wl-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 72px; align-items: start; padding-top: 40px; }
+  .wl-body > * { max-width: none; }
+  .wl-what .wl-row { grid-template-columns: 3rem minmax(0, 12rem) minmax(0, 1fr); column-gap: 20px; align-items: baseline; padding: 24px 0; }
+  .wl-what .wl-num { grid-row: auto; margin: 0; }
+  .wl-what .wl-row p { margin: 0; }
+  .wl-body > .wl-note { margin-top: 0; padding-top: 22px; }
+}
+
+@media (max-width: 767px) {
+  /* The hole sits under the copy; give it a clear band so the trust row never
+     lands on the bright disc. */
+  .wl-hero { padding-bottom: clamp(340px, 92vw, 440px); }
+  .wl-body { padding-top: 8px; }
+}
+
+/* Loading: the ring breathes while the page arrives. */
+.wl-loading-wrap { display: grid; justify-items: center; gap: 14px; padding: 30vh 24px 0; }
+.wl-loading-wrap .wl-loading { margin: 0; }
+.wl-loading-ring { animation: pub-breathe 1.6s ease-in-out infinite alternate; }
+@keyframes pub-breathe { from { opacity: .45; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+
+/* ─── Simple public pages: support, delete account, offline, legal ────── */
+
+/* One measure for header, page and footer, so the brand, the title and the
+   footer links start on the same line. */
+.mkt-header, .mkt-footer-inner { max-width: 1120px; }
+.mkt-header { padding-left: 24px; padding-right: 24px; }
+.mkt-main { max-width: 1120px; padding: 24px 24px 72px; }
+.mkt-footer { padding-left: 0; padding-right: 0; }
+.mkt-footer-inner { padding-inline: 24px; }
+.mkt-legal-head { padding-top: 16px; }
+.mkt-legal-head h1 { min-width: 0; margin-top: 0; font-size: 30px; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; overflow-wrap: break-word; }
+.mkt-legal-head > p:not(.mkt-legal-updated) { margin: 12px 0 0; max-width: 46ch; color: var(--fd-soft); font-size: 15px; line-height: 1.6; }
+.mkt-legal-body { max-width: 68ch; margin-top: 28px; }
+.mkt-legal-body h2 { margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--fd-rule); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.3; }
+.mkt-legal-body h2:first-child { padding-top: 0; border-top: 0; }
+.mkt-legal-body p, .mkt-legal-body ul { font-size: 15px; }
+.mkt-legal-body a:focus-visible, .mkt-footer-links a:focus-visible, .mkt-brand:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 4px; }
+
+@media (min-width: 900px) {
+  /* The title holds the left column and stays in view; the text reads at a
+     comfortable measure on the right. */
+  .mkt-main:has(.mkt-legal-body) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0 64px; align-items: start; }
+  .mkt-main:has(.mkt-legal-body) > .mkt-legal-head { position: sticky; top: 24px; padding-top: 22px; }
+  .mkt-main:has(.mkt-legal-body) > .mkt-legal-body { margin-top: 24px; }
+  .mkt-legal-head h1 { font-size: 40px; }
+}
+
+@media (max-width: 420px) {
+  .mkt-header, .mkt-main, .mkt-footer-inner { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Offline: the ring and one sentence, in the middle of the page. */
+.mkt-legal-head.mkt-offline { display: grid; justify-items: center; padding: 14vh 0 0; text-align: center; }
+.mkt-offline-ring { margin-bottom: 26px; }
+.mkt-legal-head.mkt-offline > p { margin-inline: auto; }
+
+/* ─── Sign in, recovery ───────────────────────────────────────────────── */
+
+/* Phone: the mark, then the form, one column with 16px gutters. */
+.auth-stage.auth-split { display: flex; flex-direction: column; align-items: center; }
+.auth-split .auth-side { width: min(100%, 420px); padding-top: 22px; }
+.auth-split .auth-orbit, .auth-split .auth-line { display: none; }
+.auth-split .auth-brand { margin-bottom: 0; }
+.auth-split .auth-card { width: min(100%, 420px); min-height: 0; max-height: none; flex: 1 0 auto; margin: 0; padding: 36px 0 12px; }
+
+.auth-stage .auth-heading { margin-bottom: 24px; }
+.auth-stage .auth-heading h1 { margin-top: 0; font-size: 28px; font-weight: 750; letter-spacing: -.03em; line-height: 1.12; overflow-wrap: break-word; min-width: 0; }
+.auth-stage .auth-heading > p:last-child { margin-top: 8px; font-size: 14.5px; }
+.auth-stage .auth-form { gap: 8px; }
+.auth-stage .auth-form label { margin-top: 10px; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.auth-stage .auth-form label:first-child { margin-top: 0; }
+/* Fields: comfortable to hit, 16px radius and the 1px brand border. */
+.auth-stage .auth-form input { min-height: 52px; padding: 0 16px; font-size: 16px; }
+.auth-stage .auth-form input:focus { outline: 0; }
+.auth-stage .auth-form input:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.auth-stage .auth-submit { min-height: 52px; margin-top: 18px; font-size: 15px; }
+.auth-stage .auth-passkey { min-height: 52px; font-size: 14.5px; }
+.auth-stage :is(.auth-submit, .auth-passkey, .auth-mode button, .auth-link, .auth-signout, .lock-alt, .auth-legal a):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; }
+.auth-stage .auth-mode { margin-bottom: 24px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.auth-stage .auth-mode button { min-height: 42px; font-size: 14px; }
+.auth-stage .auth-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 14px; }
+.auth-stage .auth-forgot, .auth-stage .auth-back { display: flex; margin-top: 12px; }
+.auth-stage .auth-divider { margin: 20px 0; font-size: 12.5px; }
+.auth-stage .auth-feedback { font-size: 13.5px; }
+.auth-stage .auth-foot { padding-top: 32px; }
+.auth-stage .auth-note { font-size: 12px; }
+.auth-stage .auth-legal a { display: inline-flex; align-items: center; min-height: 32px; font-size: 12.5px; }
+
+/* Desktop: the ring takes the left half, big and slowly turning; the form
+   sits on the right, centred in its half. No panel around either. */
+@media (min-width: 1100px) {
+  .auth-stage.auth-split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: stretch; padding: 32px 48px; }
+  .auth-split .auth-side { width: auto; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: 8px 0 24px 16px; border-right: 1px solid var(--fd-rule); }
+  .auth-split .auth-orbit { position: relative; display: grid; place-items: center; }
+  .auth-split .auth-orbit::before { content: ''; position: absolute; width: 420px; height: 420px; max-width: 100%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--brand-blue) 16%, transparent), color-mix(in srgb, var(--brand-teal) 6%, transparent) 60%, transparent); }
+  .auth-split .auth-ring { position: relative; animation: pub-turn 60s linear infinite; }
+  .auth-split .auth-line { display: block; max-width: 18ch; margin: 0; color: var(--fd-ink); font-size: 34px; font-weight: 750; letter-spacing: -.03em; line-height: 1.12; overflow-wrap: break-word; min-width: 0; }
+  .auth-split .auth-card { width: min(100%, 420px); align-self: center; justify-self: center; min-height: min(100%, 720px); padding: 24px 0 0; }
+  .auth-stage .auth-heading h1 { font-size: 34px; }
+}
+@keyframes pub-turn { to { transform: rotate(1turn); } }
+
+/* ─── Lock and PIN ────────────────────────────────────────────────────── */
+
+/* The ring is the lock: the glyph sits in its hole. */
+.lock-ring { position: relative; display: grid; place-items: center; width: max-content; margin: 0 auto; color: var(--fd-ink); }
+.lock-ring > * { grid-area: 1 / 1; }
+.auth-stage .lock-heading h1 { margin-top: 22px; font-size: 28px; font-weight: 750; overflow-wrap: break-word; min-width: 0; }
+.auth-stage .lock-heading p { font-size: 14.5px; }
+.auth-stage .lock-pin label { color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.auth-stage .lock-pin { margin-top: 32px; }
+.auth-stage .pin-field.keypad { height: 32px; margin-top: 14px; }
+.auth-stage .pin-field.keypad .pin-dots { gap: 14px; }
+.auth-stage .pin-dots span { width: 14px; height: 14px; }
+.auth-stage .pin-dots span.filled { background: var(--brand-gradient); }
+/* Keys: soft discs with no outline, bigger digits, a native feel. */
+.auth-stage .pin-pad { max-width: 288px; gap: 16px 22px; margin-top: 30px; }
+.auth-stage .pin-key { min-height: 72px; max-width: 76px; box-shadow: none; font-size: 28px; font-weight: 400; transition: transform .08s; }
+.auth-stage .pin-key.plain { background: none; }
+.auth-stage .lock-alt { min-height: 44px; font-size: 14px; }
+.auth-stage .lock-signout { border-top: 0; margin-top: 8px; padding-top: 4px; font-size: 13px; }
+.auth-stage .auth-signout { min-height: 44px; font-size: 13px; }
+.auth-stage .lock-password { margin-top: 28px; }
+.auth-stage .lock-pin-status { font-size: 13px; }
+.auth-stage.lock-cover { gap: 18px; font-size: 14px; }
+.auth-stage.lock-cover .lock-ring { animation: pub-breathe 1.2s ease-in-out infinite alternate; }
+
+/* ─── "Secure your Orbis" on Today ────────────────────────────────────── */
+/* "Maybe later" is a text link beside the one primary button. */
+.passkey-prompt .passkey-actions { align-items: center; gap: 6px 16px; }
+.passkey-prompt .finance-button.passkey-later { min-height: 40px; padding: 0 4px; border: 0; background: none; box-shadow: none; color: var(--fd-soft); font-weight: 600; }
+.passkey-prompt .finance-button.passkey-later:hover { color: var(--fd-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-loading-ring, .auth-split .auth-ring, .auth-stage.lock-cover .lock-ring { animation: none; }
+  .auth-stage .pin-key { transition: none; }
+}

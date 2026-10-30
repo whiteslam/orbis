@@ -4,7 +4,7 @@ import { useId, useState, useTransition } from 'react';
 import { Download, FileSpreadsheet, FileText, LoaderCircle, Pin, Trash2, Upload } from 'lucide-react';
 import { deleteHealthDocumentAction, downloadHealthDocumentAction, setHealthDocumentAlwaysAction, signHealthDocumentUploadAction, uploadHealthDocumentAction } from '@/app/health/library-actions';
 import type { HealthDocument } from '@/lib/health-docs/types';
-import { FieldHero, FieldLabel } from '@/components/field/field';
+import { FieldHero } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 import { documentAdded, documentSize } from '@/lib/health-docs/format';
 import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
@@ -79,7 +79,8 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
   const pinned = documents.filter((document) => document.alwaysInclude).length;
 
   return (
-    <>
+    <div className="hl-lib">
+      <div className="hl-lib-add">
       {documents.length > 0 && (
         <FieldHero
           value={String(documents.length)}
@@ -99,10 +100,12 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
         if (file) upload(file);
       }} />
       {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
+      </div>
 
+      <div className="hl-lib-list">
       {documents.length > 0 ? (
         <>
-          <FieldLabel>Saved</FieldLabel>
+          <h2 className="hl-h">Saved</h2>
           <ul className="hl-docs">
             {documents.map((document) => (
               <li key={document.id}>
@@ -127,9 +130,10 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
               </li>
             ))}
           </ul>
-          <p className="fd-note">Pinned documents are read into every plan. The rest are searched when they look relevant, and deleting one removes its search index — saved plans stay.</p>
+          <p className="fd-note">Pinned documents are read into every plan. The rest are searched when they look relevant, and deleting one removes its search index. Saved plans stay.</p>
         </>
-      ) : <p className="fd-note">Saved documents stay private to your account. Orbis searches them when building a plan — pin one and it is read every time.</p>}
-    </>
+      ) : <p className="fd-note">Saved documents stay private to your account. Orbis searches them when building a plan. Pin one and it is read every time.</p>}
+      </div>
+    </div>
   );
 }

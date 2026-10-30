@@ -1,3 +1,13 @@
+/* Hallmark · checked: 2026-10-31 · genre: modern-minimal (inferred) · shape: app screen
+ * floor: fixed 189 (48, 7a, 67, 54, 19, 39a, 10a, 34) · built: the project · redesign: polish · v2.0.0
+ * waive 19 · app/privacy, app/terms · legal text is never reworded
+ * waive 19 · date ranges and the empty-value dash (setup-profile, resume-preview, steps-card, insights-page) are data, not copy
+ * waive 19 · "unlock" names the app lock screen, the product's own function (passkey-prompt, pin-setup)
+ * waive 19 · global-error <title> uses the app-wide "%s — Orbis" title template; change all titles together
+ * waive 54 · waitlist "Private beta · opening in small batches" is a live status fact; its caps and tracking are gone
+ * waive 67 · .rd-typed input uppercases a ticker symbol, which is data formatting
+ * waive 34 · app/error.tsx is linted without the root stylesheets; 01-base clips html and body. .cp-pop's 100vw only applies under 412px, where scrollbars overlay
+ * waive 62 · .cp-tip is a CSS-only hover/focus tooltip, aria-hidden, with a reduced-motion fallback */
 /* ─── One system, two themes ──────────────────────────────────────────
    Every tab uses the iOS palette and SF Pro; the Health/Finance
    "grouped" look is now the baseline rather than a local override.
@@ -118,6 +128,13 @@
   --status-warning: var(--sys-amber);
   --status-critical: var(--sys-red);
 
+  /* The phone mock-up around the app on wide screens. */
+  --phone-bezel: linear-gradient(145deg, #111820, #3f4853 50%, #0d1116);
+  --phone-shadow: 0 28px 90px rgba(26,43,57,.25), inset 0 0 0 2px rgba(255,255,255,.14);
+  --phone-rim: rgba(255,255,255,.18);
+  --phone-speaker: #090d11;
+  --phone-speaker-ring: inset 0 0 0 1px #222;
+
   /* Screen geometry: see the note above the safe-area media query below. */
   --safe-top: 0px;
   --safe-bottom: 0px;
@@ -140,7 +157,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: var(--sys-bg); color: var(--sys-label); font-family: var(--font-text); font-variant-numeric: tabular-nums; }
 /* Keep iOS from inflating text on rotation, and never let the page itself scroll sideways. */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; }
 body { overflow-x: clip; }
 /* Taps act immediately (no double-tap zoom delay) while pinch-zoom stays available; no grey tap flash. */
 a, button, input, select, textarea, label, summary { touch-action: manipulation; }
@@ -156,9 +173,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .intro { position: absolute; top: 32px; left: 40px; z-index: 3; display: flex; gap: 12px; align-items: center; }
 .intro h1 { margin: 0; font-size: 28px; letter-spacing: -.05em; }
 .intro p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
-.phone { width: min(410px, 94vw); height: min(840px, 88vh); min-height: 690px; padding: 9px; border-radius: 48px; background: linear-gradient(145deg, #111820, #3f4853 50%, #0d1116); box-shadow: 0 28px 90px rgba(26,43,57,.25), inset 0 0 0 2px rgba(255,255,255,.14); position: relative; z-index: 2; }
-.phone::after { content: ''; position: absolute; inset: 5px; border-radius: 43px; border: 1px solid rgba(255,255,255,.18); pointer-events: none; }
-.phone-speaker { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; border-radius: var(--r-xl); background: #090d11; z-index: 10; box-shadow: inset 0 0 0 1px #222; }
+.phone { width: min(410px, 94vw); height: min(840px, 88vh); min-height: 690px; padding: 9px; border-radius: 48px; background: var(--phone-bezel); box-shadow: var(--phone-shadow); position: relative; z-index: 2; }
+.phone::after { content: ''; position: absolute; inset: 5px; border-radius: 43px; border: 1px solid var(--phone-rim); pointer-events: none; }
+.phone-speaker { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; border-radius: var(--r-xl); background: var(--phone-speaker); z-index: 10; box-shadow: var(--phone-speaker-ring); }
 .phone-screen { height: 100%; overflow: hidden; overflow: clip; border-radius: 40px; background: var(--sys-page); position: relative; }
 .screen-body { --screen-pad-top: 48px; --screen-pad-bottom: calc(var(--nav-clear) + 12px); height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: var(--screen-pad-top) 16px var(--screen-pad-bottom); scrollbar-width: none; }
 .screen-body::-webkit-scrollbar { display: none; }
@@ -166,7 +183,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
 .avatar { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-label); color: var(--sys-bg); font-size: 13px; cursor: pointer; }
 .icon-btn { position: relative; width: 34px; height: 34px; border: 0; background: var(--sys-surface); border-radius: var(--r-md); display: grid; place-items: center; box-shadow: var(--e2); color: var(--ink); }
-.eyebrow, .page-head small { text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; color: var(--accent); }
+.eyebrow, .page-head small { font-size: 10px; font-weight: 800; color: var(--accent); }
 
 /* ─── Screen geometry ─────────────────────────────────────────────────
    The floating tab bar and everything that has to keep clear of it or of

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { PublicShell } from '@/components/marketing/public-shell';
 
 // Precached by public/sw.js and served for any navigation the network can't
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
 export default function OfflinePage() {
   return (
     <PublicShell>
-      <div className="mkt-legal-head">
-        <p className="mkt-eyebrow">Offline</p>
+      <div className="mkt-legal-head mkt-offline">
+        <OrbisMark size={96} className="mkt-offline-ring" />
         <h1>You’re offline</h1>
         <p>Orbis will pick up where you left off when you’re back.</p>
       </div>

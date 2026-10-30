@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { BookOpen, Clock, Flame, LoaderCircle, Mic, Pin, Send, Sparkles, Square, WalletCards, X, type LucideIcon } from 'lucide-react';
+import { BookOpen, Clock, Flame, LoaderCircle, Mic, Pin, Send, Square, WalletCards, X, type LucideIcon } from 'lucide-react';
 import { askOrbisAction } from '@/app/ask/actions';
 import { talkAvailableAction, talkToOrbisAction, type TalkResult } from '@/app/ask/talk-actions';
+import { OrbisAiMark } from '@/components/brand/orbis-ai-mark';
 import { safeAction } from '@/lib/client/safe-action';
 import { ASK_SOURCES, type AskSource } from '@/lib/ask/select';
 import { ASK_EVENT, ASK_OPEN_EVENT, type AskAbout, type AskRequest } from '@/lib/ask/about';
@@ -298,12 +299,12 @@ export function TalkToOrbis() {
     <>
       {!open ? (
         <button type="button" className="talk-fab" onClick={() => setOpen(true)} aria-label="Ask Orbis">
-          <Sparkles size={20} />
+          <OrbisAiMark size={34} />
         </button>
       ) : (
         <section className="talk-sheet" aria-label="Ask Orbis">
           <header className="talk-head">
-            <strong><Sparkles size={17} aria-hidden="true" />Ask Orbis</strong>
+            <strong><OrbisAiMark size={24} phase={phase} />Ask Orbis</strong>
             <button type="button" onClick={close} aria-label="Close"><X size={18} /></button>
           </header>
           <div className="talk-log" aria-live="polite">

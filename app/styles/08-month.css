@@ -55,7 +55,7 @@
 .home-city-row { display: flex; gap: 6px; }
 .home-city-row input { flex: 1; min-width: 0; height: 35px; padding: 0 9px; border: 1px solid var(--line); border-radius: var(--r-sm); font: inherit; font-size: 12px; }
 .integrations { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
-.integrations-head small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.integrations-head small { color: var(--accent); font-size: 9px; font-weight: 850; }
 .integrations-head h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -.03em; }
 .integrations ul { list-style: none; margin: 8px 0 0; padding: 0; }
 .integrations li { display: grid; grid-template-columns: 9px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -90,7 +90,7 @@
 /* Specific enough to outrank .field .finance-button.secondary. */
 .groww-card .groww-actions .finance-button.groww-disconnect { color: var(--status-critical); }
 .profile-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
-.profile-head small { text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; color: var(--accent); }
+.profile-head small { font-size: 10px; font-weight: 800; color: var(--accent); }
 .profile-head h2 { margin: 2px 0 0; font-size: 23px; letter-spacing: -.04em; }
 .profile-head p { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
 .app-integrations { display: flex; flex-direction: column; gap: 9px; }
@@ -119,7 +119,7 @@
 .app-disconnect { color: var(--status-critical); }
 .journal-today { padding: 14px; border-radius: var(--r-xl); background: var(--sys-wash); border: 1px solid var(--sys-wash-border); }
 .journal-head { display: flex; justify-content: space-between; align-items: flex-start; }
-.journal-head small { color: var(--sys-amber); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.journal-head small { color: var(--sys-amber); font-size: 9px; font-weight: 850; }
 .journal-head h3 { margin: 2px 0 0; font-size: 17px; letter-spacing: -.03em; }
 .journal-streak { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--muted); font-size: 10px; font-weight: 800; }
 .journal-streak.on { background: var(--sys-tint-amber); color: var(--sys-amber); }
@@ -190,7 +190,8 @@
 .plan-generate { gap: 6px; align-self: stretch; min-height: 42px; font-size: 12px; }
 .plan-back { display: inline-flex; align-items: center; gap: 3px; align-self: flex-start; padding: 0; border: 0; background: none; color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; }
 .plan-progress { height: 6px; border-radius: var(--r-pill); background: var(--sys-surface-2); overflow: hidden; }
-.plan-progress i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); transition: width .2s; }
+.plan-progress i { display: block; height: 100%; border-radius: inherit; background: var(--fd-accent); transform: scaleX(var(--fill, 1)); transform-origin: left; transition: transform .2s; }
+@media (prefers-reduced-motion: reduce) { .plan-progress i { transition: none; } }
 .plan-note { margin: 0; color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
 .plan-note b { color: var(--fd-ink); font-weight: 650; }
 .plan-questions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; counter-reset: q; }
@@ -213,7 +214,7 @@
 /* Was a purple-to-blue-to-teal banner in white type — three hues no other
    surface uses. The plan opens on the ground now, like every other screen. */
 .plan-hero { padding: 0; border-radius: 0; color: var(--fd-ink); background: none; }
-.plan-hero small { display: block; color: var(--fd-accent); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.plan-hero small { display: block; color: var(--fd-accent); font-size: 10px; font-weight: 700; }
 .plan-hero h3 { margin: 8px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.032em; line-height: 1.16; color: var(--fd-ink); text-wrap: balance; }
 .plan-hero p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
 .plan-cautions { display: flex; gap: 11px; padding: 14px 15px; border-radius: var(--r-lg); background: var(--fd-alert-wash); border: 0; color: var(--fd-alert); }

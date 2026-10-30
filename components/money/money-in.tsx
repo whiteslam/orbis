@@ -5,7 +5,6 @@ import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { deleteIncomePlanAction, saveIncomePlanAction } from '@/app/finance/actions';
 import { INCOME_CATEGORIES } from '@/lib/finance/manual';
 import type { FinanceSummary } from '@/lib/finance/types';
-import { FieldLabel } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 
 function money(amount: number, currency: string) {
@@ -113,8 +112,8 @@ export function MoneyIn({ summary, shown, onShown }: Readonly<{ summary: Finance
 
   return (
     <>
-      <div className="fd-label-row">
-        <FieldLabel>Money in</FieldLabel>
+      <div className="mn-h-row">
+        <h2 className="mn-h">Money in</h2>
         <button className="fd-link" type="button" aria-pressed={shown} onClick={() => onShown(!shown)}>
           {shown ? <EyeOff size={13} aria-hidden="true" /> : <Eye size={13} aria-hidden="true" />} {shown ? 'Hide amounts' : 'Show amounts'}
         </button>
@@ -141,7 +140,7 @@ export function MoneyIn({ summary, shown, onShown }: Readonly<{ summary: Finance
 
       {extra.length > 0 && (
         <>
-          <p className="fd-label">Extra money · {amount(extraTotal, currency)}</p>
+          <h3 className="mn-sub">Extra money · {amount(extraTotal, currency)}</h3>
           <section className="fd-quiet">
             {extra.map((source) => (
               <div className="fd-line" key={source.category}>

@@ -1,7 +1,7 @@
 /* ─── Talk to Orbis ─────────────────────────────────────────────────
    A mic above the bottom nav on every screen, opening a panel that
    holds the spoken conversation. */
-.talk-fab { position: absolute; right: 18px; bottom: 84px; z-index: 20; width: 48px; height: 48px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: #fff; box-shadow: var(--e2); }
+.talk-fab { position: absolute; right: 18px; bottom: 84px; z-index: 20; width: 48px; height: 48px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); box-shadow: var(--e2); }
 .talk-fab:active { background: var(--sys-blue-press); }
 /* Sits 10px above the tab bar (--nav-clear), and never grows up under the notch. */
 .talk-sheet { position: absolute; left: 10px; right: 10px; bottom: var(--nav-clear); z-index: 20; max-height: min(70%, calc(100% - var(--nav-clear) - var(--safe-top) - 12px)); display: flex; flex-direction: column; border-radius: 24px; border: var(--glass-hairline); background: var(--sys-surface); color: var(--sys-label); box-shadow: var(--e2); overflow: hidden; }
@@ -14,16 +14,16 @@
 .talk-a { max-width: 90%; margin: 0; font-size: 15px; line-height: 1.45; }
 .talk-error { margin: 0; color: var(--sys-red); font-size: 13px; }
 .talk-foot { display: flex; align-items: center; gap: 12px; padding: 10px 16px 14px; border-top: 1px solid var(--sys-separator); }
-.talk-mic { width: 56px; height: 56px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: #fff; transition: transform .15s ease, background .15s ease; }
+.talk-mic { width: 56px; height: 56px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); transition: transform .15s ease, background .15s ease; }
 .talk-mic.listening { background: var(--sys-red); animation: fd-pulse 1.2s ease-in-out infinite; }
-.talk-mic:disabled { opacity: .7; }
+.talk-mic:disabled { opacity: .7; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .talk-mic.listening { animation: none; } }
 .keyboard-open .talk-fab { display: none; }
 .talk-sources { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 16px 8px; }
 .talk-type { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .talk-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--sys-separator); border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--sys-label); font-size: 15px; }
-.talk-type button { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-blue); color: #fff; }
-.talk-type button:disabled { opacity: .5; }
+.talk-type button { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); }
+.talk-type button:disabled { opacity: .5; cursor: not-allowed; }
 
 /* The item an "Ask Orbis" button attached: a headline, the market read, or a holding. */
 .talk-about { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; margin: 0 16px 8px; padding: 8px 4px 8px 12px; border-radius: 14px; background: var(--sys-tint-blue); }

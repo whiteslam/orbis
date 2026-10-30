@@ -1,0 +1,321 @@
+/* ─── Money: the ledger and the holdings ──────────────────────────────
+   components/money/. Loaded after desktop.css, so it settles Money's desktop
+   layout too. Spending leads with the month's figure on one sheet (its pace,
+   its daily shape and where it went); the transactions follow as a ledger
+   grouped by day, each day carrying its own total. Investments leads with the
+   portfolio's value on the same kind of sheet; the holdings follow as rows
+   grouped by account. Figures are tabular throughout and the paise are set
+   quieter than the rupees, so columns of money line up and read at a glance.
+   On the phone it is one column; on desktop the figure and its context stay
+   on the left while the ledger (or the holdings) runs down the right.
+   One surface per view: the sheet. Everything else sits on the page as rows
+   under hairlines. Prefix: .mn- */
+
+.mn-screen .mn { display: flex; flex-direction: column; gap: 34px; margin-top: 14px; }
+.mn-screen .mn > * { min-width: 0; }
+
+/* ─── The sheet: the one surface ─── */
+.mn-sheet {
+  padding: 20px 18px 18px;
+  border: var(--gl-edge);
+  border-radius: 28px;
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur);
+  backdrop-filter: var(--gl-blur);
+  box-shadow: var(--gl-shadow);
+}
+.mn-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.mn-figure { display: flex; flex-direction: column; min-width: 0; margin: 0; }
+.mn-figure-cap { margin-bottom: 6px; color: var(--fd-faint); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.mn-figure-value {
+  min-width: 0;
+  color: var(--fd-ink);
+  font-size: clamp(36px, 11vw, 46px);
+  font-weight: 750;
+  letter-spacing: -.035em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+/* The page's one primary action. */
+.mn-screen .mn-add {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 18px 0 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--fd-btn);
+  box-shadow: none;
+  color: var(--fd-btn-ink);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.mn-screen .mn-add:active { transform: scale(.97); }
+.mn-screen .mn-add:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; }
+
+/* The pace: what a day costs, and where the month lands at that rate. */
+.mn-pace { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 12px 0 0; color: var(--fd-soft); font-size: 13px; font-variant-numeric: tabular-nums; }
+.mn-pace .fd-delta { font-size: 12px; padding: 3px 10px; }
+
+/* The month's shape, then where it went. */
+.mn-sheet .fd-bars { height: 64px; margin-top: 22px; gap: 3px; }
+.mn-sheet .fd-bars-axis { margin-top: 8px; font-size: 11.5px; }
+.mn-sub { margin: 24px 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
+.mn-sheet .fd-cat { gap: 12px; padding: 12px 0; }
+.mn-sheet .fd-cat-dot { width: 9px; height: 9px; }
+.mn-sheet .fd-cat-name { font-size: 14.5px; }
+.mn-sheet .fd-cat-bar { width: 26%; max-width: 160px; height: 4px; }
+.mn-sheet .fd-cat-bar i { height: 4px; }
+.mn-sheet .fd-cat b { min-width: 76px; font-size: 14.5px; font-weight: 700; }
+.mn-sheet .fd-cat + .fd-empty { margin-top: 10px; font-size: 13px; }
+.mn-sheet > .fd-empty:first-of-type { margin-top: 18px; font-size: 14px; color: var(--fd-soft); }
+
+/* Received and net: the month's closing lines. */
+.mn-screen .mn-totals { gap: 24px; margin-top: 16px; padding-top: 14px; }
+.mn-screen .fd-cat + .mn-totals { margin-top: 0; border-top: 0; }
+.mn-screen .mn-totals span { color: var(--fd-faint); font-size: 13px; font-weight: 600; }
+.mn-screen .mn-totals b { margin-top: 4px; font-family: inherit; font-size: 21px; font-weight: 750; letter-spacing: -.02em; }
+
+/* ─── Headings: plain h2 in the body face ─── */
+.mn-h { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; }
+.mn-h-count { margin-left: 8px; color: var(--fd-faint); font-size: 15px; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.mn-h-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.mn-h-row .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13.5px; font-weight: 650; }
+.mn-screen .fd-link:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 6px; }
+.mn-empty { margin: 8px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
+
+/* ─── The ledger: transactions grouped by day ─── */
+.mn-days { margin-top: 0; }
+.mn-ledger .transaction-day h4.mn-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--fd-rule);
+  color: var(--fd-faint);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.mn-ledger .transaction-day:first-child h4.mn-day-head { margin-top: 6px; }
+.mn-day-total { color: var(--fd-soft); font-variant-numeric: tabular-nums; }
+.mn-ledger .finance-transaction {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--fd-rule);
+}
+.mn-ledger .mn-rows .finance-transaction:last-child { border-bottom: 0; }
+.mn-ledger .category-tile { width: 32px; height: 32px; margin-top: 1px; border-radius: 10px; }
+.mn-ledger .finance-transaction-copy { gap: 3px; }
+.mn-ledger .finance-transaction strong { color: var(--fd-ink); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.mn-ledger .finance-transaction small { color: var(--fd-faint); font-size: 12.5px; }
+.mn-ledger .finance-transaction-meta { gap: 5px; }
+.mn-ledger .finance-transaction-note { margin-top: 3px; color: var(--fd-soft); font-size: 13px; line-height: 1.5; }
+.mn-ledger .finance-transaction-side { gap: 2px; }
+.mn-ledger .finance-transaction-side strong { font-size: 15px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mn-ledger .finance-transaction-side strong.income { color: var(--fd-accent); }
+.mn-paise { color: var(--fd-faint); font-size: .82em; font-weight: 600; }
+.mn-ledger .finance-transaction-side strong.income .mn-paise { color: inherit; opacity: .7; }
+.mn-ledger .finance-transaction-delete {
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  margin-right: -7px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--fd-faint);
+  font-size: 12px;
+  transition: color .18s ease, background-color .18s ease;
+}
+.mn-ledger .finance-transaction-delete:hover { background: var(--fd-chip); color: var(--fd-alert); }
+.mn-ledger .finance-transaction-delete:focus-visible { outline: 2px solid var(--fd-alert); outline-offset: 1px; }
+
+/* ─── Money in: rows on the page ─── */
+.mn-in .fd-quiet { margin-top: 4px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-in .fd-line { padding: 14px 0; }
+.mn-in .fd-line span, .mn-in .fd-two { color: var(--fd-ink); font-size: 14.5px; }
+.mn-in .fd-two small { color: var(--fd-faint); font-size: 12.5px; }
+.mn-in .fd-line b { font-size: 14.5px; font-weight: 700; }
+.mn-in .fd-line b.up { color: var(--fd-accent); }
+.mn-in .mn-sub { margin-top: 20px; }
+.mn-in > .fd-empty { margin-top: 8px; color: var(--fd-soft); font-size: 14px; }
+.mn-in .fd-pair { margin-top: 12px; }
+.mn-in .fd-pair span { font-size: 13px; }
+.mn-in .fd-pair b { font-size: 18px; }
+.mn-in .fd-act { margin-top: 16px; }
+.mn-in .fd-act button:not(.fd-link) { min-height: 44px; }
+.mn-in .rt-form { margin-top: 12px; }
+
+/* ─── The foot: rates as one quiet line, notes ─── */
+.mn-foot { display: flex; flex-direction: column; gap: 10px; }
+.mn-foot .fd-rates { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--fd-rule); border-bottom: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-foot .fd-rates-head { min-height: 52px; }
+.mn-foot .fd-rates-head .fd-label:not(#_) { color: var(--fd-soft); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.mn-foot .fd-rates-head:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 8px; }
+.mn-foot .fd-rates-src { font-size: 12px; }
+.mn-foot .fd-rates-grid { margin: 12px 0 14px; }
+.mn-foot .fd-note { margin: 0; font-size: 12px; }
+
+/* ─── First run: the sheet is a doorway ─── */
+.mn-first .mn-sheet .fd-focus { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-first .mn-sheet .fd-focus h2 { font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; min-width: 0; }
+.mn-first .mn-sheet .fd-focus p { font-size: 15px; }
+.mn-first .mn-sheet .fd-option { margin-top: 20px; padding: 18px 0 0; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-first .fd-option strong { font-size: 15.5px; }
+.mn-first .fd-option p { font-size: 13.5px; }
+.mn-first .fd-option .fd-act button { min-height: 44px; padding: 0 20px; font-size: 14px; }
+
+/* ─── Manual entry: the form is the sheet ─── */
+.mn-entry { margin-top: 18px; }
+.mn-entry .fd-seg { margin-top: 0; }
+.mn-entry .fd-seg button { min-height: 42px; font-size: 14px; }
+.mn-entry .fd-form > .fd-label:not(#_), .mn-entry .fd-chips .fd-label:not(#_) { color: var(--fd-soft); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
+.mn-entry .fd-amount input { font-size: 44px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.mn-entry .fd-chips button { min-height: 40px; padding: 0 15px; font-size: 13.5px; }
+.mn-entry .fd-field { color: var(--fd-soft); font-size: 13px; }
+.mn-entry .fd-field input, .mn-entry .fd-field textarea { font-size: 15px; }
+.mn-entry .fd-act button { min-height: 46px; padding: 0 22px; font-size: 14.5px; }
+
+/* ─── Investments: the value on the sheet, then the holdings as rows ─── */
+.mn-statement { margin: 14px 0 0; color: var(--fd-soft); font-size: 14.5px; line-height: 1.6; text-wrap: pretty; }
+.mn-invest .mn-pace .fd-delta { display: inline-flex; align-items: center; gap: 4px; }
+/* What the accounts say, when there is no figure yet: the sheet's headline. */
+.mn-invest .mn-sheet > .fd-focus { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-invest .mn-sheet > .fd-focus h2 { font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; min-width: 0; }
+.mn-invest .mn-sheet > .fd-focus p { font-size: 14.5px; line-height: 1.6; }
+.mn-invest .mn-sheet > .mn-lead + .fd-focus, .mn-invest .mn-sheet > .mn-pace + .fd-focus { margin-top: 16px; }
+.mn-invest .mn-sheet > .mn-lead + .fd-focus h2, .mn-invest .mn-sheet > .mn-pace + .fd-focus h2 { font-size: 17px; letter-spacing: -.015em; }
+/* The position: rows of the sheet. */
+.mn-sheet .fd-quiet { margin-top: 18px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-sheet .fd-quiet > h2 { margin: 0 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
+.mn-sheet .fd-quiet .fd-line { padding: 12px 0; }
+.mn-sheet .fd-quiet .fd-line span { color: var(--fd-soft); font-size: 14px; }
+.mn-sheet .fd-quiet .fd-line b { font-size: 14.5px; font-weight: 700; text-align: right; }
+
+/* Holdings: one group per account, rows under hairlines, no card. */
+.mn-holdings .pf-group { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-holdings .fd-line { min-height: 60px; padding: 10px 0; border-bottom: 1px solid var(--fd-rule); }
+.mn-holdings .fd-line .fd-two { color: var(--fd-ink); font-size: 15px; font-weight: 650; }
+.mn-holdings .fd-line .fd-two small { color: var(--fd-faint); font-size: 12.5px; font-weight: 500; }
+/* Connecting is the next step here, so it gets a real target. */
+.mn-holdings .fd-line .fd-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 13.5px; font-weight: 700; }
+.mn-holdings .pf-group .groww-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-holdings .groww-card + .groww-card, .mn-holdings .fd-line + .groww-card, .mn-holdings .groww-card + .fd-line { margin-top: 26px; }
+.mn-holdings .groww-head { gap: 12px; padding: 8px 0 10px; border-bottom: 1px solid var(--fd-rule); }
+.mn-holdings .groww-icon { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--fd-chip); }
+.mn-holdings .groww-head h3 { margin: 0; color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.mn-holdings .groww-head small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.mn-holdings .groww-head small.warn { color: var(--fd-alert); }
+.mn-holdings .groww-refresh { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--fd-soft); }
+.mn-holdings .groww-refresh:hover { background: var(--fd-chip); color: var(--fd-ink); }
+.mn-holdings .groww-refresh:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
+.mn-holdings .groww-list { margin-top: 0; }
+.mn-holdings .groww-row { align-items: flex-start; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--fd-rule); }
+.mn-holdings .groww-row:last-child { border-bottom: 0; }
+.mn-holdings .groww-row strong { color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
+.mn-holdings .groww-row small { color: var(--fd-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.mn-holdings .groww-row .groww-price { color: var(--fd-soft); font-weight: 600; }
+.mn-holdings .groww-row .groww-price.missing { color: var(--fd-faint); font-weight: 500; }
+.mn-holdings .groww-row-value small { font-size: 13px; font-weight: 650; }
+.mn-holdings .groww-card .up { color: var(--fd-accent); }
+.mn-holdings .groww-card .down { color: var(--fd-alert); }
+.mn-holdings .groww-muted { margin: 10px 0 0; color: var(--fd-faint); font-size: 12px; line-height: 1.55; }
+.mn-holdings .groww-actions { gap: 22px; margin-top: 10px; }
+.mn-holdings .groww-actions .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13.5px; font-weight: 650; }
+.mn-holdings .groww-actions .fd-link:disabled { opacity: .5; cursor: not-allowed; }
+.mn-holdings .groww-actions .groww-disconnect { color: var(--fd-faint); transition: color .18s ease; }
+.mn-holdings .groww-actions .groww-disconnect:hover { color: var(--fd-alert); }
+.mn-holdings .groww-card .fd-act button { min-height: 44px; }
+
+/* The rest of the page: news, suggestions, the mix and your own entries, as sections on the ground. */
+.mn-side { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
+.mn-side .fd-quiet { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-side .fd-quiet > h2 { margin: 0 0 4px; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; text-transform: none; }
+.mn-side .fd-quiet > h2:not(#_) { font-size: 19px; }
+.mn-side .fd-line { padding: 13px 0; }
+.mn-side .fd-line span { color: var(--fd-ink); font-size: 14.5px; line-height: 1.5; }
+.mn-side .fd-line b { font-size: 14.5px; font-weight: 700; }
+.mn-side .fd-line .fd-link { min-height: 40px; font-size: 13.5px; font-weight: 650; }
+.mn-side .fd-hint { color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
+.mn-side > .fd-weather-quiet { margin: 0; font-size: 13.5px; }
+.mn-side .fd-news-market { padding: 4px 0 6px; }
+.mn-side .fd-news-summary { font-size: 14.5px; line-height: 1.6; }
+.mn-side .fd-news-sectors { gap: 0; margin: 10px 0 4px; }
+.mn-side .fd-news-sector { padding: 12px 0; border-top: 1px solid var(--fd-rule); }
+.mn-side .fd-news-sector-name { font-size: 14px; }
+.mn-side .fd-news-sector-why { font-size: 13px; color: var(--fd-soft); }
+.mn-side .fd-news-foot { margin: 10px 0 0; font-size: 12px; }
+.mn-mix .invest-health { margin-top: 6px; }
+.mn-mix .invest-reading { padding: 14px 0; border-bottom: 1px solid var(--fd-rule); }
+.mn-mix .invest-reading > span { color: var(--fd-ink); font-size: 14.5px; }
+.mn-mix .invest-reading > b { color: var(--fd-ink); font-size: 17px; font-weight: 750; }
+.mn-mix .invest-reading > small { color: var(--fd-soft); font-size: 13px; }
+.mn-mix .invest-allocation { margin-top: 10px; }
+.mn-mix .invest-strip { height: 12px; border-radius: var(--r-pill); }
+.mn-mix .invest-legend { gap: 0; margin-top: 12px; }
+.mn-mix .invest-legend li { gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--fd-rule); font-size: 14px; }
+.mn-mix .invest-legend strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+.mn-mix .invest-legend small { color: var(--fd-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.mn-mix .invest-sublabel { margin: 20px 0 10px; color: var(--fd-faint); font-size: 13px; font-weight: 650; }
+.mn-mix .invest-bars { gap: 11px; }
+.mn-mix .invest-bar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 46px; gap: 12px; font-size: 13.5px; }
+.mn-mix .invest-bar > div { height: 6px; border-radius: var(--r-pill); background: var(--fd-chip); }
+.mn-mix .invest-bar i { border-radius: var(--r-pill); }
+.mn-mix .invest-bar strong { font-size: 13.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-screen .mn-add, .mn-ledger .finance-transaction-delete, .mn-holdings .groww-actions .groww-disconnect { transition: none; }
+  .mn-screen .mn-add:active { transform: none; }
+}
+
+/* ─── Desktop: the figure and its context on the left; the ledger down the right ───
+   The ledger spans every row and the last row is 1fr, so a long ledger never
+   opens gaps between the sheet and what follows it. */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop][data-tab="money"] .screen-body.mn-screen { columns: auto; }
+  .stage[data-desktop][data-tab="money"] .screen-body.mn-screen:is(:not(:has(> .fd-sub-head)), .mn-entry-screen) { max-width: 1320px; }
+  .stage[data-desktop] .mn-screen .mn {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 34px 48px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .stage[data-desktop] .mn-screen .mn > * { grid-column: 1; }
+  .stage[data-desktop] .mn > .mn-sheet { grid-row: 1; padding: 30px 32px 26px; border-radius: 32px; }
+  .stage[data-desktop] .mn > .mn-in, .stage[data-desktop] .mn > .mn-side { grid-row: 2; }
+  .stage[data-desktop] .mn > .mn-foot { grid-row: 3; }
+  .stage[data-desktop] .mn-screen .mn > .mn-ledger { grid-column: 2; grid-row: 1 / -1; padding-top: 4px; }
+  .stage[data-desktop] .mn:not(:has(> .mn-sheet)) > .mn-ledger { grid-column: 1; }
+  .stage[data-desktop] .mn-figure-value { font-size: 60px; }
+  .stage[data-desktop] .mn-figure-cap { font-size: 15px; }
+  .stage[data-desktop] .mn-sheet .fd-bars { height: 92px; margin-top: 26px; }
+  .stage[data-desktop] .mn-first .mn-sheet .fd-focus h2,
+  .stage[data-desktop] .mn-invest .mn-sheet > .fd-focus:first-child h2 { font-size: 34px; }
+
+  /* Manual entry: the form on the left, the reference on the right. */
+  .stage[data-desktop] .mn-entry { grid-template-rows: auto; }
+  .stage[data-desktop] .mn-entry > .mn-foot { grid-column: 2; grid-row: 1; padding-top: 6px; }
+  /* First run: the doorway on the left, the reference beside it. */
+  .stage[data-desktop] .mn-first { grid-template-rows: auto; }
+  .stage[data-desktop] .mn-screen .mn-first > .mn-foot { grid-column: 2; grid-row: 1; padding-top: 6px; }
+}
+
+/* The big figures carry their paise small, as a statement does. */
+.mn-figure-value .mn-paise { font-size: .5em; font-weight: 650; letter-spacing: -.01em; }

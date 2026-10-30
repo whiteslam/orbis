@@ -1,25 +1,43 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Settings2, Upload } from 'lucide-react';
 import { loadCareerAction } from '@/app/career/actions';
 import { FieldHead, useScrollTop } from '@/components/field/field';
 import { ApplicationSheet, type SheetContext } from '@/components/career/application-sheet';
 import { NoticeLine } from '@/components/career/bits';
+import { SkillsToBuild } from '@/components/career/fit-review-view';
 import { ForYouView } from '@/components/career/for-you-view';
-import { homeHeadline } from '@/components/career/format';
+import { StageStrip, attentionItems } from '@/components/career/attention';
 import { InsightsView } from '@/components/career/insights-view';
-import { QueueView } from '@/components/career/queue-view';
 import { SetupView } from '@/components/career/setup/setup-view';
+import { TodayView } from '@/components/career/today-view';
 import { TrackerView } from '@/components/career/tracker-view';
+import { allApplications } from '@/components/career/panel/panel-data';
 import { useRun } from '@/components/career/use-run';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import type { CareerJob } from '@/lib/career/types';
 import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from '@/lib/career/view';
 
-export type CareerTab = 'for_you' | 'queue' | 'tracker' | 'insights' | 'setup';
+/**
+ * The views. Three are on the switch: Today (what needs you, then where things
+ * stand), Jobs (find and judge, with the market numbers folded below) and
+ * Applications (every one by stage). The older names still land somewhere:
+ * 'queue' is Today, 'insights' is Jobs with the numbers open, and 'setup' is
+ * Profile and settings, reached from its link under the title.
+ */
+export type CareerTab = 'today' | 'for_you' | 'queue' | 'tracker' | 'insights' | 'setup';
 
-const TABS: Array<[CareerTab, string]> = [['for_you', 'For you'], ['queue', 'Queue'], ['tracker', 'Tracker'], ['insights', 'Insights'], ['setup', 'Setup']];
+type SwitchTab = 'today' | 'for_you' | 'tracker';
+const TABS: Array<[SwitchTab, string]> = [['today', 'Today'], ['for_you', 'Jobs'], ['tracker', 'Applications']];
+
+/** Which switch button a view belongs under; Setup belongs under none. */
+function switchOf(tab: CareerTab): SwitchTab | null {
+  if (tab === 'queue' || tab === 'today') return 'today';
+  if (tab === 'insights' || tab === 'for_you') return 'for_you';
+  if (tab === 'tracker') return 'tracker';
+  return null;
+}
 
 type OpenSheet = { jobId: string; initial: ApplicationDetail | null };
 
@@ -29,26 +47,53 @@ function findApplication(home: CareerHome, applicationId: string): ApplicationCa
   return all.find((card) => card.application.id === applicationId) ?? null;
 }
 
-function WeekLine({ week }: Readonly<{ week: CareerHome['week'] }>) {
-  const share = Math.min(1, week.sent / Math.max(1, week.goal));
+/** The tab's switch: three views, with what needs you counted beside Today. */
+function CareerTabs({ tab, onTab, waiting }: Readonly<{ tab: CareerTab; onTab: (tab: CareerTab) => void; waiting: number }>) {
+  const on = switchOf(tab);
   return (
-    <div className="cr-week">
-      <p><b>{week.sent}</b> of {week.goal} sent this week<span>{week.sentLastWeek} last week</span></p>
-      <div className="cr-meter" aria-hidden="true"><i style={{ width: `${share * 100}%` }} /></div>
+    <div className="fd-tabs glass-seg cr-seg" role="tablist" aria-label="Career">
+      {TABS.map(([id, label]) => (
+        <button key={id} id={`cr-tab-${id}`} type="button" role="tab" aria-selected={on === id} aria-controls="cr-panel" onClick={() => onTab(id)}>
+          {label}
+          {id === 'today' && waiting > 0 && <span className="cr-badge"><span className="sr-only">, </span>{waiting}<span className="sr-only"> need you</span></span>}
+        </button>
+      ))}
     </div>
   );
 }
 
-/** The tab's switch: five views, with the queue's count beside its name. */
-function CareerTabs({ tab, onTab, queue }: Readonly<{ tab: CareerTab; onTab: (tab: CareerTab) => void; queue: number }>) {
+/** Jobs: find and judge, with the market numbers folded underneath until asked for. */
+function JobsView({ home, threshold, openJobId, numbersOpen }: Readonly<{ home: CareerHome; threshold: number | null; openJobId: (jobId: string) => void; numbersOpen: boolean }>) {
+  const [open, setOpen] = useState(numbersOpen);
   return (
-    <div className="fd-tabs glass-seg cr-seg" role="tablist" aria-label="Career">
-      {TABS.map(([id, label]) => (
-        <button key={id} id={`cr-tab-${id}`} type="button" role="tab" aria-selected={tab === id} aria-controls="cr-panel" onClick={() => onTab(id)}>
-          {label}
-          {id === 'queue' && queue > 0 && <span className="cr-badge"><span className="sr-only">, </span>{queue}<span className="sr-only"> waiting</span></span>}
-        </button>
-      ))}
+    <>
+      <ForYouView initial={home.hotMatches} threshold={threshold} languages={home.state.profile?.languages ?? []} onOpen={(job: CareerJob) => openJobId(job.id)} onOpenJobId={openJobId} />
+      <details className="cr-fold" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <summary><span><b>Market and your numbers</b><small>Salaries, skill gaps, the best day to apply and your forecast</small></span></summary>
+        {open && (
+          <>
+            <SkillsToBuild jobs={[...home.hotMatches, ...allApplications(home).map((card) => card.job)]} />
+            <InsightsView initial={home.insights} spec={home.state.spec} />
+          </>
+        )}
+      </details>
+    </>
+  );
+}
+
+/** Applications: the stage strip, then every application as a row under its stage. */
+function ApplicationsView({ home, onOpen, onReload }: Readonly<{ home: CareerHome; onOpen: (card: ApplicationCard) => void; onReload: () => void }>) {
+  const jump = (stage: string) => {
+    const target = document.getElementById(`cr-stage-${stage}`);
+    if (!target) return;
+    const box = target.closest('details');
+    if (box) box.open = true;
+    target.scrollIntoView({ block: 'start' });
+  };
+  return (
+    <div className="cr-apps">
+      <StageStrip cards={allApplications(home)} onPick={jump} label="Jump to a stage" />
+      <TrackerView home={home} onOpen={onOpen} onReload={onReload} />
     </div>
   );
 }
@@ -85,8 +130,9 @@ function FirstRun({ onSetup, hasProfile }: Readonly<{ onSetup: () => void; hasPr
   );
 }
 
-function ViewBody({ tab, home, context, openJobId, openCard, onSetup, reload, patchSetup }: Readonly<{
+function ViewBody({ tab, home, context, openJobId, openCard, onSetup, onTab, reload, patchSetup }: Readonly<{
   tab: CareerTab;
+  onTab: (tab: CareerTab) => void;
   home: CareerHome;
   context: SheetContext;
   openJobId: (jobId: string) => void;
@@ -99,10 +145,9 @@ function ViewBody({ tab, home, context, openJobId, openCard, onSetup, reload, pa
   const setup: CareerSetup = { profile: state.profile, spec: state.spec, settings: state.settings, resumeFileName: state.resumeFileName };
   if (tab === 'setup') return <SetupView initial={setup} gmail={state.gmail} onChanged={patchSetup} />;
   if (!state.profile || !state.spec) return <FirstRun onSetup={onSetup} hasProfile={Boolean(state.profile)} />;
-  if (tab === 'queue') return <QueueView queue={home.queue} followUps={home.followUps} threshold={context.threshold} onOpen={openCard} />;
-  if (tab === 'tracker') return <TrackerView home={home} onOpen={openCard} onReload={reload} />;
-  if (tab === 'insights') return <InsightsView initial={home.insights} spec={state.spec} />;
-  return <ForYouView initial={home.hotMatches} threshold={context.threshold} onOpen={(job: CareerJob) => openJobId(job.id)} onOpenJobId={openJobId} />;
+  if (tab === 'tracker') return <ApplicationsView home={home} onOpen={openCard} onReload={reload} />;
+  if (tab === 'for_you' || tab === 'insights') return <JobsView home={home} threshold={context.threshold} openJobId={openJobId} numbersOpen={tab === 'insights'} />;
+  return <TodayView home={home} onOpenJobId={openJobId} onApplications={() => onTab('tracker')} onJobs={() => onTab('for_you')} />;
 }
 
 /**
@@ -110,7 +155,7 @@ function ViewBody({ tab, home, context, openJobId, openCard, onSetup, reload, pa
  * the application sheet over it. CareerScreen below loads the data; the web
  * panel or a preview can render this directly.
  */
-export function CareerView({ home, intent = null, onReload, onHome, initialTab = 'for_you', initialSheet = null, gmailNotice = null, clearGmailNotice }: Readonly<{
+export function CareerView({ home, intent = null, onReload, onHome, initialTab = 'today', initialSheet = null, gmailNotice = null, clearGmailNotice }: Readonly<{
   home: CareerHome;
   intent?: HeadsupAction | null;
   /** The ?gmail= result of Setup's "Allow sending", shown once until dismissed. */
@@ -128,6 +173,7 @@ export function CareerView({ home, intent = null, onReload, onHome, initialTab =
   const handledIntent = useRef(false);
   const { state } = home;
   const context: SheetContext = { profile: state.profile, threshold: state.settings.threshold, canSend: state.gmail.canSend };
+  const waiting = state.profile && state.spec ? attentionItems(home).length : 0;
 
   // A heads-up's application opens once, as the tab mounts from that tap.
   useEffect(() => {
@@ -155,15 +201,18 @@ export function CareerView({ home, intent = null, onReload, onHome, initialTab =
         <span ref={top} hidden />
         <FieldHead title="Career" />
         <div className="cr-lead">
-          <p suppressHydrationWarning>{homeHeadline(home)}</p>
+          {tab === 'setup' ? (
+            <button type="button" className="cr-panel-link cr-back" onClick={() => setTab('today')}><ArrowLeft size={13} aria-hidden="true" />Back to Today</button>
+          ) : (
+            <button type="button" className="cr-panel-link cr-setup-link" onClick={() => setTab('setup')}><Settings2 size={13} aria-hidden="true" />Profile and settings</button>
+          )}
           <a className="cr-panel-link" href="/active/career">Open full panel<ArrowUpRight size={13} aria-hidden="true" /></a>
         </div>
-        {state.profile && state.spec && <WeekLine week={home.week} />}
         {gmailNotice && <NoticeLine notice={careerGmailNotice(gmailNotice)} onDismiss={clearGmailNotice} />}
         {intentMiss && <NoticeLine notice={{ text: 'That application couldn’t be found. It may have been closed.', ok: false }} onDismiss={() => setIntentMiss(false)} />}
-        <CareerTabs tab={tab} onTab={setTab} queue={home.counts.queue} />
-        <div id="cr-panel" role="tabpanel" aria-labelledby={`cr-tab-${tab}`}>
-          <ViewBody tab={tab} home={home} context={context} openJobId={openJobId} openCard={openCard} onSetup={() => setTab('setup')} reload={onReload} patchSetup={patchSetup} />
+        {tab === 'setup' ? <h2 className="cr-big cr-setup-title">Profile and settings</h2> : <CareerTabs tab={tab} onTab={setTab} waiting={waiting} />}
+        <div id="cr-panel" role={tab === 'setup' ? undefined : 'tabpanel'} aria-labelledby={tab === 'setup' ? undefined : `cr-tab-${switchOf(tab)}`}>
+          <ViewBody tab={tab} home={home} context={context} openJobId={openJobId} openCard={openCard} onSetup={() => setTab('setup')} onTab={setTab} reload={onReload} patchSetup={patchSetup} />
         </div>
       </div>
       {sheet && <ApplicationSheet key={sheet.jobId} jobId={sheet.jobId} initial={sheet.initial} context={context} onClose={closeSheet} onChanged={onReload} />}
@@ -215,7 +264,7 @@ export function CareerScreen({ intent, gmailNotice = null, clearGmailNotice }: R
         onReload={load}
         onHome={(update) => setHome((current) => (current ? update(current) : current))}
         // "Allow sending" is pressed in Setup, so the round trip lands back there.
-        initialTab={gmailNotice ? 'setup' : 'for_you'}
+        initialTab={gmailNotice ? 'setup' : 'today'}
         gmailNotice={gmailNotice}
         clearGmailNotice={clearGmailNotice}
       />

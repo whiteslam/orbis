@@ -1,0 +1,274 @@
+/* ─── Health: the body's dashboard ────────────────────────────────────
+   components/health/*. Loaded after desktop.css and atlas-health.css.
+   The tab leads with one surface: the latest day's steps as a big figure,
+   the rings beside it and the last seven days as bars against the goal line,
+   with the Apple Health import at its foot. Everything else sits on the page
+   as rows under hairlines: today's session, plans with their progress,
+   documents, advice, coaching. The longer trend closes the phone page.
+   Health's own colour is green: the goal days, the bars that made it. */
+.hl-screen { --hl-accent: var(--brand-green); }
+
+/* Shared: plain section heads, rows under hairlines, no glass per section. */
+.hl-screen .hl-sec { margin: 0; }
+.hl-screen .hl-h { margin: 0 0 6px; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; }
+.hl-screen .hl-group { margin: 18px 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; }
+.hl-screen .hl-empty { margin: 8px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
+.hl-screen .fd-line { min-height: 52px; padding: 12px 2px; }
+.hl-screen .fd-line span { font-size: 14px; }
+.hl-screen .fd-line b { font-size: 13.5px; }
+.hl-screen .fd-two small { font-size: 12px; }
+.hl-screen .hl-sec .fd-line:last-child { border-bottom: 0; }
+.hl-screen :is(.fd-line, .hl-row, .hl-docrow, .hl-today, .hl-plan-row > button):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 10px; }
+.hl-screen .fd-note { font-size: 12px; }
+
+/* ─── The tab ─── */
+.hl-main { display: flex; flex-direction: column; gap: 34px; margin-top: 6px; }
+.hl-side { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
+.hl-v-main > .hl-foot { margin-top: 28px; }
+
+/* The dashboard: the one surface on the tab. */
+.hl-dash {
+  margin: 0;
+  padding: 18px 18px 6px;
+  border: var(--gl-edge);
+  border-radius: 28px;
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur);
+  backdrop-filter: var(--gl-blur);
+  box-shadow: var(--gl-shadow);
+}
+.hl-dash-kicker { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--fd-soft); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.hl-dash-kicker svg { flex: none; color: var(--brand-gold); }
+.hl-dash-kicker span { min-width: 0; overflow-wrap: break-word; }
+.hl-dash .apple-card-empty { margin: 12px 0 4px; color: var(--fd-soft); font-size: 14px; line-height: 1.65; }
+.hl-dash .apple-card-empty b { color: var(--fd-ink); }
+
+.hl-screen .hl-rings { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 6px; }
+.hl-figure { min-width: 0; }
+.hl-figure-num { margin: 0; color: var(--fd-soft); font-size: 15px; font-weight: 600; overflow-wrap: break-word; min-width: 0; }
+.hl-figure-num b { display: block; color: var(--fd-ink); font-size: 44px; font-weight: 750; letter-spacing: -.035em; line-height: 1.02; font-variant-numeric: tabular-nums; }
+.hl-figure-sub { margin: 8px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.45; }
+
+/* The three rings, read as one row of figures under hairlines. */
+.hl-screen .hl-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--fd-rule); border-bottom: 1px solid var(--fd-rule); }
+.hl-screen .hl-legend > div { min-width: 0; padding: 0 8px; border-left: 1px solid var(--fd-rule); }
+.hl-screen .hl-legend > div:first-child { padding-left: 0; border-left: 0; }
+.hl-screen .hl-legend dt { color: var(--fd-soft); font-size: 12px; font-weight: 600; }
+.hl-screen .hl-legend dd { margin-top: 3px; color: var(--fd-faint); font-family: inherit; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hl-screen .hl-legend dd b { color: var(--fd-ink); font-size: 15px; font-weight: 750; }
+
+/* The week: seven bars rising to the goal line. Green when a day made it. */
+.hl-week { margin-top: 16px; }
+.hl-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.hl-week-head b { color: var(--fd-ink); font-weight: 750; }
+.hl-week-days { --goal: .8; position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.hl-week-days li { display: grid; justify-items: center; gap: 5px; min-width: 0; }
+.hl-week-days li > small { color: var(--fd-faint); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hl-week-days li > span[aria-hidden] { color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
+.hl-week-bar { position: relative; display: block; width: 100%; max-width: 30px; height: 92px; border-radius: 9px; background: var(--fd-ring-track); overflow: hidden; }
+/* The goal line: drawn on every bar at the same height, so it reads as one line across. */
+.hl-week-bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: calc(var(--goal) * 100%); border-top: 1.5px dashed color-mix(in srgb, var(--fd-ink) 30%, transparent); }
+.hl-week-bar i { position: absolute; inset: 0; border-radius: inherit; background: color-mix(in srgb, var(--fd-ink) 28%, transparent); transform: scaleY(var(--fill, 0)); transform-origin: bottom; animation: hl-rise .7s cubic-bezier(.2, .8, .2, 1) both; }
+.hl-week-days li[data-goal] .hl-week-bar i { background: var(--hl-accent); }
+.hl-week-days li[data-latest] > span[aria-hidden] { color: var(--fd-ink); font-weight: 750; }
+.hl-week-days li[data-latest] > small { color: var(--fd-ink); }
+@keyframes hl-rise { from { transform: scaleY(0); } }
+
+/* The import row closes the dashboard under a hairline. */
+.hl-dash .hl-source { margin: 16px 0 0; padding: 14px 0 12px; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.hl-dash .hl-source strong { font-size: 14px; }
+.hl-dash .hl-source small { font-size: 12px; }
+.hl-dash .hl-source .finance-button.primary { min-height: 44px; padding: 0 20px; font-size: 13.5px; }
+.hl-dash .hl-quiet-del { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--fd-faint); cursor: pointer; transition: color .18s ease, background-color .18s ease; }
+.hl-dash .hl-quiet-del:hover { background: var(--fd-chip); color: var(--fd-alert); }
+.hl-dash .hl-quiet-del:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.hl-dash > .finance-notice { display: block; margin: 0 0 12px; }
+
+/* Today's session: the lead of the right-hand rows, not a box of its own. */
+.hl-screen .hl-today { margin: 4px 0 0; padding: 4px 0 0; border-radius: 0; background: none; }
+.hl-screen .hl-today-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.hl-screen .hl-today-head small { color: var(--fd-faint); font-size: 13px; font-weight: 600; }
+.hl-screen .hl-today-head strong { color: var(--fd-ink); font-size: 24px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; }
+.hl-screen .hl-today-rest { margin-top: 10px; font-size: 14px; }
+.hl-screen .hl-today-list { margin-top: 12px; }
+.hl-screen .hl-today-list > span { padding: 11px 0; border-top: 1px solid var(--fd-rule); }
+.hl-screen .hl-today-list b { font-size: 14.5px; }
+.hl-screen .hl-today-list i { font-size: 13.5px; color: var(--fd-soft); }
+.hl-today-open { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; color: var(--fd-accent); font-size: 13.5px; font-weight: 650; }
+.hl-screen .hl-today:hover .hl-today-head strong { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+/* Plans: a row each with its progress bar, then the way in. */
+.hl-screen .hl-row { min-height: 56px; padding: 13px 2px; }
+.hl-screen .hl-row-top strong { font-size: 15px; }
+.hl-screen .hl-row-top small { font-size: 12.5px; color: var(--fd-soft); }
+.hl-screen .hl-bar { height: 5px; margin-top: 10px; }
+.hl-screen .hl-bar i { background: var(--hl-accent); }
+.hl-screen .hl-plans .hl-row:hover strong, .hl-docrow:hover strong { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+/* No plan yet: the way in is the next action, so it reads as one. */
+.hl-screen .hl-next.first { margin-top: 4px; padding: 14px 16px; border: 0; border-radius: 18px; background: var(--fd-wash); }
+.hl-screen .hl-next.first span { color: var(--fd-ink); font-weight: 600; }
+
+/* Documents: rows, not tiles. */
+.hl-docrows { display: flex; flex-direction: column; }
+.hl-docrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 10px 2px; border: 0; border-bottom: 1px solid var(--fd-rule); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.hl-docrow:last-child { border-bottom: 0; }
+.hl-docrow-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hl-docrow-text strong { overflow: hidden; color: var(--fd-ink); font-size: 14.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.hl-docrow-text small { color: var(--fd-faint); font-size: 12px; }
+.hl-docrow.add strong { color: var(--fd-accent); }
+.hl-screen .hl-doc-tile { width: 36px; height: 36px; }
+.hl-doc-tile.add { color: var(--fd-accent); }
+
+/* Ask about a file: a sentence and its button, on the page. */
+.hl-screen .hl-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 0; padding: 18px 0 0; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.hl-screen .hl-ask span { flex: 1 1 200px; color: var(--fd-soft); font-size: 14px; }
+.hl-screen .hl-ask button { min-height: 44px; padding: 0 20px; font-size: 13.5px; }
+.hl-screen .hl-ask button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+
+.hl-screen .hl-coach { padding: 4px 2px 12px; }
+
+/* The longer trend, on the page under the plans. */
+.hl-trend { margin: 0; }
+.hl-trend .hl-part { margin: 0; padding: 0; border: 0; }
+.hl-trend .hl-part + .hl-part { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--fd-rule); }
+.hl-trend-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hl-trend-head .hl-h { margin: 0; }
+.hl-screen .hl-trend .apple-segmented { flex: 0 0 168px; margin: 0; padding: 3px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); }
+.hl-screen .hl-trend .apple-segmented button { height: 34px; border-radius: var(--r-pill); color: var(--fd-soft); font-size: 12.5px; }
+.hl-screen .hl-trend .apple-segmented button[aria-pressed="true"] { background: var(--fd-btn); color: var(--fd-btn-ink); box-shadow: none; }
+.hl-screen .hl-trend .apple-segmented button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
+.field .hl-trend .apple-metric-range.hl-range { margin: 12px 0 8px; color: var(--fd-soft); font-size: 13px; }
+.field .hl-trend .hl-part-label { color: var(--fd-soft); font-size: 13px; }
+.hl-trend .highlight-bars { gap: 14px; }
+.hl-trend .highlight-bars p { color: var(--fd-soft); font-size: 13px; }
+.hl-trend .highlight-bars b { font-family: inherit; font-size: 19px; font-weight: 750; color: var(--fd-ink); }
+.hl-trend .highlight-bars i { width: 100%; height: 8px; transform: scaleX(var(--fill, 1)); transform-origin: left; }
+.hl-trend .highlight-bars small { color: var(--fd-faint); font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-week-bar i { animation: none; }
+  .hl-dash .hl-quiet-del { transition: none; }
+}
+
+/* ─── Sub-views: plain sections, no glass per block ─── */
+.hl-screen .hl-plans-saved { margin-top: 34px; }
+.hl-screen .hl-plan-row { min-height: 64px; }
+.hl-screen .hl-plan-row > button:first-child { padding: 14px 2px; }
+.hl-screen .hl-plan-row .fd-round.hl-danger { width: 40px; height: 40px; background: transparent; color: var(--fd-faint); transition: color .18s ease, background-color .18s ease; }
+.hl-screen .hl-plan-row .fd-round.hl-danger:hover { background: var(--fd-chip); color: var(--fd-alert); }
+.hl-screen .hl-plans-lead .fd-act button { min-height: 48px; padding: 0 22px; font-size: 14px; }
+
+/* The interview. */
+.hl-screen .hl-questions strong { font-size: 15.5px; }
+.hl-screen .hl-questions small { font-size: 12.5px; }
+.hl-screen .hl-q-options button { min-height: 40px; padding: 0 16px; font-size: 13.5px; }
+.hl-screen .hl-q-options button:focus-visible, .hl-screen .hl-days button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.hl-screen .hl-q-free input { min-height: 48px; font-size: 15px; }
+.hl-screen .hl-bar-note { font-size: 13px; }
+.hl-screen .hl-generate button { min-height: 48px; padding: 0 22px; font-size: 14px; }
+
+/* A plan: section heads in the body face, figures as one hairline row. */
+.hl-screen .hl-plan h1 { font-size: 30px; font-weight: 750; letter-spacing: -.03em; overflow-wrap: break-word; min-width: 0; }
+.hl-screen .hl-plan-summary { font-size: 14.5px; }
+.hl-screen .hl-plan-section { margin-top: 34px; }
+.hl-screen .hl-section-label { gap: 8px; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+.hl-screen .hl-section-label svg { color: var(--hl-accent); }
+.hl-screen .hl-plan-note, .hl-screen .hl-meal p, .hl-screen .hl-bullets, .hl-screen .hl-milestones p { font-size: 13.5px; line-height: 1.65; }
+.hl-screen .hl-exercises strong, .hl-screen .hl-milestones strong, .hl-screen .hl-meal strong { font-size: 14.5px; }
+.hl-screen .hl-exercises span { font-size: 13px; }
+.hl-screen .hl-days button { min-height: 54px; font-size: 12px; }
+.hl-screen .hl-days button:not(.rest) i { background: var(--hl-accent); }
+.hl-screen .hl-day-head strong { font-size: 17px; font-weight: 700; }
+.hl-screen .hl-stats { display: flex; flex-wrap: wrap; gap: 0; margin-top: 14px; padding: 12px 0; border-top: 1px solid var(--fd-rule); border-bottom: 1px solid var(--fd-rule); }
+.hl-screen .hl-stats > div { flex: 1 1 92px; padding: 2px 12px; border-radius: 0; background: none; box-shadow: none; border-left: 1px solid var(--fd-rule); }
+.hl-screen .hl-stats > div:first-child { padding-left: 0; border-left: 0; }
+.hl-screen .hl-stats dt { color: var(--fd-soft); font-size: 12px; font-weight: 600; }
+.hl-screen .hl-stats dd { font-size: 18px; font-weight: 750; }
+.hl-screen .hl-sleep-track i { background: var(--hl-accent); }
+
+/* Documents view. */
+.hl-screen .hl-lib-list { margin-top: 30px; }
+.hl-screen .hl-docs li { min-height: 60px; }
+.hl-screen .hl-docs strong { font-size: 14.5px; }
+.hl-screen .hl-docs small { font-size: 12px; }
+.hl-screen .hl-docs .fd-round { width: 40px; height: 40px; }
+.hl-screen .hl-docs .fd-round.hl-danger { background: transparent; color: var(--fd-faint); transition: color .18s ease, background-color .18s ease; }
+.hl-screen .hl-docs .fd-round.hl-danger:hover { background: var(--fd-chip); color: var(--fd-alert); }
+.hl-screen .fd-round:focus-visible, .hl-screen .hl-back:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.hl-screen .hl-drop { min-height: 140px; border-radius: 22px; }
+.hl-screen .hl-drop strong { font-size: 15px; }
+.hl-screen .hl-drop span { font-size: 12.5px; }
+
+/* Ask and advice. */
+.hl-screen .hl-file strong { font-size: 14.5px; }
+.hl-screen .hl-file small, .hl-screen .hl-sheet-meta, .hl-screen .hl-opts-note { font-size: 12.5px; }
+.hl-screen .hl-calc-row b, .hl-screen .hl-opt span { font-size: 14px; }
+.hl-screen .hl-calc-row span, .hl-screen .hl-calc-row.text { font-size: 13px; }
+.hl-screen .hl-table { font-size: 12px; }
+.hl-screen .fd-consent.hl-consent { font-size: 13px; }
+.hl-screen .hl-read-send .fd-act button, .hl-screen .hl-adv .fd-act button { min-height: 48px; padding: 0 22px; font-size: 14px; }
+.hl-screen .hl-adv-side { margin-top: 34px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-screen :is(.hl-plan-row, .hl-docs) .fd-round.hl-danger { transition: none; }
+}
+
+/* ─── Desktop: use the width ───
+   The dashboard and the trend on the left; plans, advice, documents and
+   coaching down the right. The right column spans every row and the last row
+   is 1fr, so neither side opens gaps in the other. The balanced columns in
+   desktop.css are switched off for Health: this grid replaces them. */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop][data-tab="health"] .screen-body.hl-screen.hl-screen { max-width: 1320px; columns: auto; column-gap: normal; }
+  .stage[data-desktop][data-tab="health"] .screen-body.hl-screen > * { break-inside: auto; }
+
+  .stage[data-desktop] .hl-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 36px 48px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .stage[data-desktop] .hl-dash { grid-column: 1; grid-row: 1; padding: 28px 32px 10px; border-radius: 32px; }
+  .stage[data-desktop] .hl-trend { grid-column: 1; grid-row: 2; }
+  .stage[data-desktop] .hl-side { grid-column: 2; grid-row: 1 / -1; padding-top: 4px; }
+  .stage[data-desktop] .hl-figure-num b { font-size: 64px; }
+  .stage[data-desktop] .hl-figure-sub { font-size: 15px; }
+  .stage[data-desktop] .hl-dash .activity-rings { width: 168px; height: 168px; }
+  .stage[data-desktop] .hl-week-bar { max-width: 44px; height: 132px; border-radius: 12px; }
+  .stage[data-desktop] .hl-week-days { gap: 12px; }
+  .stage[data-desktop] .hl-screen .hl-legend dd { font-size: 12.5px; }
+  .stage[data-desktop] .hl-screen .hl-legend dd b { font-size: 20px; }
+  .stage[data-desktop] .hl-screen .hl-legend > div:not(:first-child) { padding: 0 14px; }
+
+  /* Plans list: the build action on the left, the saved plans on the right. */
+  .stage[data-desktop] .hl-plans-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-screen .hl-plans-saved { margin-top: 44px; }
+
+  /* The interview: progress stays in view on the left while the questions run down the right. */
+  .stage[data-desktop] .hl-q-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-q-aside { position: sticky; top: 24px; }
+
+  /* A plan: the training on the left, food and sleep on the right. */
+  .stage[data-desktop] .hl-plan-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-screen .hl-plan h1 { font-size: 38px; max-width: 24ch; }
+  .stage[data-desktop] .hl-screen .hl-plan-summary { max-width: 70ch; font-size: 15px; }
+
+  /* Documents: add on the left, the saved list on the right. */
+  .stage[data-desktop] .hl-lib { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-screen .hl-lib-list { margin-top: 22px; }
+  .stage[data-desktop] .hl-screen .hl-lib-add .hl-drop { min-height: 200px; }
+
+  /* Ask: the explanation on the left, the drop target on the right. */
+  .stage[data-desktop] .hl-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); grid-template-rows: auto 1fr; gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-pick > .fd-sub-head { grid-column: 1; grid-row: 1; }
+  .stage[data-desktop] .hl-pick > .fd-note { grid-column: 1; grid-row: 2; }
+  .stage[data-desktop] .hl-pick > .hl-drop { grid-column: 2; grid-row: 1 / span 2; min-height: 240px; margin-top: 10px; }
+  .stage[data-desktop] .hl-pick > .fd-msg { grid-column: 2; grid-row: 3; }
+  /* What was read on the left, what will be sent on the right. */
+  .stage[data-desktop] .hl-read { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 48px; align-items: start; }
+  /* Advice: the answer on the left, what went with it on the right. */
+  .stage[data-desktop] .hl-adv { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 56px; align-items: start; }
+  .stage[data-desktop] .hl-screen .hl-adv-side { margin-top: 18px; }
+}

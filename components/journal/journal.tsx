@@ -64,12 +64,17 @@ function pastToggleLabel(showAll: boolean, pastCount: number, loadedCount: numbe
   return loadedCount >= 60 ? `Latest ${pastCount} past entries` : `All ${pastCount} past entries`;
 }
 
+/** A day's initial, under its dot on the week strip. */
+function initial(date: string) {
+  return new Intl.DateTimeFormat('en-IN', { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+}
+
 /**
- * The streak as a number and the last seven days as a segmented bar: filled
- * where there is an entry, empty where a day was missed, and a faint fill for
- * today while it is still open.
+ * The streak as one line and the last seven days as a strip of dots: filled
+ * where there is an entry, hollow where a day was missed, and ringed for today
+ * while it is still open.
  */
-function StreakHero({ journal, todayKey }: Readonly<{ journal: JournalSummary; todayKey: string }>) {
+function StreakStrip({ journal, todayKey }: Readonly<{ journal: JournalSummary; todayKey: string }>) {
   const written = new Set(journal.entries.map((entry) => entry.date));
   const days = lastSevenDays(todayKey);
   const missed = days.filter((day) => day !== todayKey && !written.has(day)).map(weekday);
@@ -82,18 +87,38 @@ function StreakHero({ journal, todayKey }: Readonly<{ journal: JournalSummary; t
   ].join('; ');
 
   return (
-    <div className="fd-hero pf-streak">
-      <p className="fd-hero-value">{journal.streak}</p>
-      <div className="fd-hero-meta">
-        <span>{journal.streak === 1 ? 'day in a row' : 'days in a row'}{journal.streak === 0 && !count ? ' · write today to start one' : ''}</span>
-        {count > 0 && <span className="fd-delta flat"><Flame size={10} strokeWidth={2.4} aria-hidden="true" />{countLabel}</span>}
-      </div>
-      <div className="pf-week" role="img" aria-label={`Last seven days: ${summary}.`}>
-        {days.map((day) => <i key={day} className={weekDayClass(day, written, todayKey)} />)}
-      </div>
+    <div className="pf-streak jr-streak">
+      <p className="jr-streak-line">
+        <Flame size={15} strokeWidth={2.2} aria-hidden="true" />
+        <b>{journal.streak}</b> {journal.streak === 1 ? 'day in a row' : 'days in a row'}
+        {count > 0 && <span className="jr-count">{countLabel}</span>}
+      </p>
+      <ol className="jr-week" role="img" aria-label={`Last seven days: ${summary}.`}>
+        {days.map((day) => <li key={day} className={weekDayClass(day, written, todayKey)}><i /><span>{initial(day)}</span></li>)}
+      </ol>
     </div>
   );
 }
+
+/** Past entries in groups a diary reads by: this week, last week, then by month. */
+function groupByWeek(entries: JournalEntry[], todayKey: string) {
+  const now = Date.parse(`${todayKey}T00:00:00Z`);
+  const month = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const groups: { label: string; entries: JournalEntry[] }[] = [];
+  for (const entry of entries) {
+    const ago = Math.round((now - Date.parse(`${entry.date}T00:00:00Z`)) / 86_400_000);
+    let label = month.format(new Date(`${entry.date}T00:00:00Z`));
+    if (ago < 7) label = 'This week';
+    else if (ago < 14) label = 'Last week';
+    const last = groups.at(-1);
+    if (last?.label === label) last.entries.push(entry);
+    else groups.push({ label, entries: [entry] });
+  }
+  return groups;
+}
+
+/** Long entries fold to a few lines in the timeline. */
+const FOLD_AT = 240;
 
 /** A version to bring back, saved as a new edit of that day. */
 function restoreVersion(date: string, version: NonNullable<JournalRevision['previous']>) {
@@ -166,8 +191,8 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
   if (isPending) submitLabel = <><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> Saving…</>;
 
   return (
-    <form className="fd-form pf-editor" onSubmit={save}>
-      <p className="pf-prompt">{isToday ? 'How are you feeling today?' : `How were you feeling on ${prettyDate(date)}?`}</p>
+    <form className="fd-form pf-editor jr-editor" onSubmit={save}>
+      <p className="pf-prompt jr-prompt">{isToday ? 'How are you feeling today?' : `How were you feeling on ${prettyDate(date)}?`}</p>
       <div className="pf-moods" role="radiogroup" aria-label="Mood">
         {MOODS.map((item) => (
           <button key={item.value} type="button" role="radio" aria-checked={mood === item.value} onClick={() => setMood(item.value)} disabled={isPending}>
@@ -176,7 +201,7 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
         ))}
       </div>
       <label className="sr-only" htmlFor={`journal-body-${date}`}>Journal entry</label>
-      <textarea id={`journal-body-${date}`} className="pf-textarea" value={body} onChange={(event) => setBody(event.currentTarget.value)} rows={4} maxLength={4000} placeholder="What happened, what you’re grateful for, what’s on your mind…" disabled={isPending} />
+      <textarea id={`journal-body-${date}`} className="pf-textarea jr-paper" value={body} onChange={(event) => setBody(event.currentTarget.value)} rows={8} maxLength={4000} placeholder="What happened, what you’re grateful for, what’s on your mind…" disabled={isPending} />
       <fieldset className="fd-chips pf-tags" aria-label="Tags">
         <div>
           {SUGGESTED_TAGS.map((tag) => (
@@ -184,26 +209,27 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
           ))}
         </div>
       </fieldset>
-      <div className="fd-act pf-save">
-        <button type="submit" disabled={isPending}>{submitLabel}</button>
-        {entry && <button className="ghost" type="button" onClick={onDone} disabled={isPending}>Cancel</button>}
+      <div className="fd-act pf-save jr-save">
         <span className="pf-count">{body.length}/4000</span>
+        {entry && <button className="ghost" type="button" onClick={onDone} disabled={isPending}>Cancel</button>}
+        <button type="submit" disabled={isPending}>{submitLabel}</button>
       </div>
       {message && <output className={`fd-msg ${message.success ? 'ok' : 'bad'}`}>{message.text}</output>}
     </form>
   );
 }
 
-export function Journal({ journal }: Readonly<{ journal: JournalSummary }>) {
+export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; notes?: ReactNode }>) {
   const router = useRouter();
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [historyDate, setHistoryDate] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [opened, setOpened] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (journal.state === 'setup') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal isn’t set up yet. Apply the profile/journal migration in Supabase, then refresh.</p></>;
-  if (journal.state === 'unavailable') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal could not be loaded. Refresh the app and try again.</p></>;
+  if (journal.state === 'setup') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal isn’t set up yet. Apply the profile/journal migration in Supabase, then refresh.</p>{notes}</>;
+  if (journal.state === 'unavailable') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal could not be loaded. Refresh the app and try again.</p>{notes}</>;
 
   const todayKey = today();
   const todayEntry = journal.entries.find((entry) => entry.date === todayKey) ?? null;
@@ -222,16 +248,19 @@ export function Journal({ journal }: Readonly<{ journal: JournalSummary }>) {
     });
   }
 
-  return (
-    <>
-      <StreakHero journal={journal} todayKey={todayKey} />
+  const groups = groupByWeek(shown, todayKey);
 
-      <section className="pf-today" aria-label="Today’s entry">
-        <FieldLabel>Today · {longDate(todayKey)}</FieldLabel>
+  return (
+    <div className="jr">
+      <section className="pf-today jr-write" aria-label="Today’s entry">
+        <header className="jr-write-head">
+          <h2 className="jr-date"><span>{weekday(todayKey)}</span>{longDate(todayKey)}</h2>
+          <StreakStrip journal={journal} todayKey={todayKey} />
+        </header>
         {todayEntry && editingDate !== todayKey ? (
-          <div className="pf-entry-view">
-            <p className="pf-prompt"><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
-            {todayEntry.body && <p className="fd-prose">{todayEntry.body}</p>}
+          <div className="pf-entry-view jr-today">
+            <p className="jr-feeling" data-mood={todayEntry.mood}><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
+            {todayEntry.body && <p className="fd-prose jr-prose">{todayEntry.body}</p>}
             {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{hashtags(todayEntry.tags)}</p>}
             <div className="fd-act">
               <button className="ghost" type="button" onClick={() => setEditingDate(todayKey)}>Edit today’s entry</button>
@@ -245,43 +274,66 @@ export function Journal({ journal }: Readonly<{ journal: JournalSummary }>) {
         <VoiceNotes date={todayKey} notes={voiceOf(todayKey)} />
       </section>
 
-      <FieldLabel>Past entries</FieldLabel>
-      {past.length ? (
-        <div className="pf-entries">
-          {shown.map((entry) => (
-            <article key={entry.date} className="pf-entry">
-              {editingDate === entry.date ? (
-                <Editor entry={entry} date={entry.date} onDone={() => setEditingDate(null)} />
-              ) : (
-                <>
-                  <div className="pf-entry-head">
-                    <span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}>{moodOf(entry.mood).emoji}</span>
-                    <div><strong>{prettyDate(entry.date)}</strong><small>{moodOf(entry.mood).label}{entry.tags.length ? ` · ${hashtags(entry.tags)}` : ''}</small></div>
-                    <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
-                  </div>
-                  {entry.body && <p className="pf-entry-body">{entry.body}</p>}
-                  {voiceOf(entry.date).length > 0 && <VoiceNotes date={entry.date} notes={voiceOf(entry.date)} />}
-                  <div className="hs-links">
-                    <button type="button" className="fd-link pf-edit" onClick={() => setEditingDate(entry.date)}>Edit</button>
-                    <button type="button" className="fd-link pf-edit" aria-expanded={historyDate === entry.date} onClick={() => toggleHistory(entry.date)}>History</button>
-                  </div>
-                  {historyDate === entry.date && <HistoryPanel title={`Changes to ${prettyDate(entry.date)}`} load={() => loadHistory(entry.date)} empty="No changes recorded yet." />}
-                </>
+      <div className="jr-side">
+        <section className="jr-past" aria-label="Past entries">
+          <h2 className="jr-h">Past entries</h2>
+          {past.length ? (
+            <div className="pf-entries">
+              {groups.map((group) => (
+                <div key={group.label} className="jr-group">
+                  <h3>{group.label}</h3>
+                  <ol className="jr-timeline">
+                    {group.entries.map((entry) => {
+                      const long = entry.body.length > FOLD_AT;
+                      const open = opened === entry.date;
+                      return (
+                        <li key={entry.date} className="pf-entry jr-entry" data-mood={entry.mood}>
+                          {editingDate === entry.date ? (
+                            <Editor entry={entry} date={entry.date} onDone={() => setEditingDate(null)} />
+                          ) : (
+                            <>
+                              <div className="pf-entry-head jr-entry-head">
+                                <span className="jr-dot" aria-hidden="true" />
+                                <div>
+                                  <strong>{prettyDate(entry.date)}</strong>
+                                  <small><span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}>{moodOf(entry.mood).emoji}</span> {moodOf(entry.mood).label}</small>
+                                </div>
+                                <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
+                              </div>
+                              {entry.body && <p className={`pf-entry-body jr-entry-body${long && !open ? ' folded' : ''}`}>{entry.body}</p>}
+                              {entry.tags.length > 0 && <p className="jr-entry-tags">{hashtags(entry.tags)}</p>}
+                              {voiceOf(entry.date).length > 0 && <VoiceNotes date={entry.date} notes={voiceOf(entry.date)} />}
+                              <div className="hs-links jr-links">
+                                {long && <button type="button" className="fd-link" aria-expanded={open} onClick={() => setOpened(open ? null : entry.date)}>{open ? 'Show less' : 'Read all'}</button>}
+                                <button type="button" className="fd-link pf-edit" onClick={() => setEditingDate(entry.date)}>Edit</button>
+                                <button type="button" className="fd-link pf-edit" aria-expanded={historyDate === entry.date} onClick={() => toggleHistory(entry.date)}>History</button>
+                              </div>
+                              {historyDate === entry.date && <HistoryPanel title={`Changes to ${prettyDate(entry.date)}`} load={() => loadHistory(entry.date)} empty="No changes recorded yet." />}
+                            </>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))}
+              {past.length > PAST_PREVIEW && (
+                <button type="button" className="fd-link pf-more" onClick={() => setShowAll(!showAll)} aria-expanded={showAll}>
+                  {pastToggleLabel(showAll, past.length, journal.entries.length)}
+                </button>
               )}
-            </article>
-          ))}
-          {past.length > PAST_PREVIEW && (
-            <button type="button" className="fd-link pf-more" onClick={() => setShowAll(!showAll)} aria-expanded={showAll}>
-              {pastToggleLabel(showAll, past.length, journal.entries.length)}
-            </button>
-          )}
-        </div>
-      ) : <p className="fd-empty">Your past entries will show up here.</p>}
+            </div>
+          ) : <p className="fd-empty jr-empty">Your past entries will show up here, one day at a time.</p>}
+        </section>
 
-      <button type="button" className="fd-link pf-more" aria-expanded={showDeleted} onClick={() => setShowDeleted(!showDeleted)}>{showDeleted ? 'Hide deleted entries' : 'Deleted entries'}</button>
-      {showDeleted && <HistoryPanel title="Deleted entries" load={loadDeleted} empty="Nothing deleted. Entries you delete wait here." />}
+        {notes}
 
-      <p className="fd-note">Entries and voice notes stay private to your account. Orbis doesn’t use them for advice or notifications; Ask reads them only when you ask a question with Journal ticked.</p>
-    </>
+        <footer className="jr-foot">
+          <button type="button" className="fd-link pf-more" aria-expanded={showDeleted} onClick={() => setShowDeleted(!showDeleted)}>{showDeleted ? 'Hide deleted entries' : 'Deleted entries'}</button>
+          {showDeleted && <HistoryPanel title="Deleted entries" load={loadDeleted} empty="Nothing deleted. Entries you delete wait here." />}
+          <p className="fd-note">Entries and voice notes stay private to your account. Orbis doesn’t use them for advice or notifications; Ask reads them only when you ask a question with Journal ticked.</p>
+        </footer>
+      </div>
+    </div>
   );
 }

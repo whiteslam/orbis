@@ -29,7 +29,7 @@
 .field .manual-entry-icon { border-radius: 50%; background: var(--fd-chip); color: var(--fd-accent); }
 .field .manual-entry-closed strong { font-size: 14px; color: var(--fd-ink); }
 .field .manual-entry-closed p { color: var(--fd-faint); font-size: 11.5px; }
-.field .manual-entry-head small { color: var(--fd-faint); font-size: 10px; letter-spacing: .15em; }
+.field .manual-entry-head small { color: var(--fd-faint); font-size: 10px; }
 .field .manual-entry-head h3 { color: var(--fd-ink); font-size: 18px; }
 .field .manual-entry-close { border: 0; border-radius: 50%; background: var(--fd-chip); color: var(--fd-faint); }
 .field .manual-entry-toggle { padding: 0; border-radius: 0; background: none; border-bottom: 1px solid var(--fd-rule); }
@@ -47,7 +47,7 @@
 .field .currency-grid strong { color: var(--fd-ink); font-size: 13px; }
 
 /* Alerts waiting on a decision. */
-.field .gmail-review-queue-title small { color: var(--fd-faint); font-size: 10px; letter-spacing: .15em; }
+.field .gmail-review-queue-title small { color: var(--fd-faint); font-size: 10px; }
 .field .gmail-review-queue-title h3 { color: var(--fd-ink); font-size: 18px; }
 .field .gmail-review-queue-title > span, .field .gmail-review-privacy { color: var(--fd-faint); font-size: 11.5px; }
 .field .gmail-review-card { padding: 14px 15px; }
@@ -88,9 +88,9 @@
 .privacy-note { margin-top: 3px; line-height: 1.4; }
 .finance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .finance-button { display: inline-flex; align-items: center; justify-content: center; min-height: 35px; padding: 0 12px; border: 1px solid transparent; border-radius: var(--r-sm); text-decoration: none; font-size: 11px; font-weight: 750; cursor: pointer; }
-.finance-button.primary { background: var(--sys-blue); color: #fff; }
+.finance-button.primary { background: var(--sys-blue); color: var(--on-fill); }
 .finance-button.secondary { background: var(--sys-surface); border-color: var(--line); color: var(--ink); }
-.finance-button:disabled { opacity: .6; cursor: wait; }
+.finance-button:disabled { opacity: .6; cursor: not-allowed; }
 .finance-notice { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: var(--r-md); font-size: 11px; line-height: 1.45; }
 .finance-notice.success { background: var(--sys-tint-green); border: 1px solid var(--sys-separator); color: var(--sys-green); }
 .finance-notice.error { background: var(--sys-tint-red); border: 1px solid var(--sys-separator); color: var(--sys-red); }
@@ -103,7 +103,7 @@
 .finance-candidate-summary small { flex-basis: 100%; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .gmail-review-queue { margin-top: 14px; }
 .gmail-review-queue-title { display: flex; justify-content: space-between; align-items: end; gap: 10px; }
-.gmail-review-queue-title small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.gmail-review-queue-title small { color: var(--accent); font-size: 9px; font-weight: 850; }
 .gmail-review-queue-title h3 { margin: 3px 0 0; font-size: 16px; }
 .gmail-review-queue-title > span { color: var(--muted); font-size: 10px; }
 .gmail-review-privacy { margin: 7px 0 10px; color: var(--muted); font-size: 10px; line-height: 1.5; }
@@ -138,7 +138,7 @@
 .finance-transaction-side strong.income { color: var(--sys-green); }
 .finance-transaction-delete { display: inline-flex; align-items: center; gap: 3px; padding: 3px 5px; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--muted); font-size: 9px; cursor: pointer; }
 .finance-transaction-delete:hover { background: var(--sys-tint-red); color: var(--sys-red); }
-.finance-transaction-delete:disabled { opacity: .5; cursor: wait; }
+.finance-transaction-delete:disabled { opacity: .5; cursor: not-allowed; }
 .manual-entry-closed { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; margin-top: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
 .manual-entry-closed > div:nth-child(2) { flex: 1; min-width: 0; }
 .manual-entry-closed strong { font-size: 13px; }
@@ -148,14 +148,14 @@
 .manual-entry-icon { width: 34px; height: 34px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
 .manual-entry { margin-top: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); box-shadow: var(--e2); }
 .manual-entry-head { display: flex; justify-content: space-between; align-items: flex-start; }
-.manual-entry-head small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+.manual-entry-head small { color: var(--accent); font-size: 9px; font-weight: 850; }
 .manual-entry-head h3 { margin: 3px 0 0; font-size: 16px; letter-spacing: -.03em; }
 .manual-entry-close { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sys-surface); color: var(--muted); cursor: pointer; }
 .manual-entry-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 12px; padding: 4px; border-radius: var(--r-md); background: var(--sys-surface-2); }
 .manual-entry-toggle button { height: 32px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-.manual-entry-toggle button.active { background: var(--sys-surface); color: var(--ink); box-shadow: 0 2px 8px rgba(29,45,57,.08); }
+.manual-entry-toggle button.active { background: var(--sys-surface); color: var(--ink); box-shadow: var(--shadow-toggle); }
 .manual-entry-amount { margin-top: 12px; }
-.manual-entry-amount label, .manual-entry-group legend { display: block; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.manual-entry-amount label, .manual-entry-group legend { display: block; color: var(--fd-faint); font-size: 10px; font-weight: 700; }
 .manual-entry-fields label, .manual-entry-note { display: flex; flex-direction: column; gap: 4px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
 /* What you are typing is the largest thing on the screen, as on the Atlas
    hero — a figure sitting on a rule rather than inside a box. */

@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Bell, CalendarClock, HandCoins, Inbox, MessageCircleQuestion, Moon, Reply, Sun } from 'lucide-react';
+import { Bell, CalendarClock, HandCoins, Inbox, MessageCircleQuestion, Moon, Reply, Settings2, Sun } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { UnmatchedReply } from '@/components/career/tracker-view';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { usePanel } from '@/components/career/panel/panel-context';
 import { useTheme } from '@/components/career/panel/panel-hooks';
-import { PAGE_META, PANEL_PAGES, allApplications, hrefFor, panelHeadsups, type PanelHeadsup, type PanelPage } from '@/components/career/panel/panel-data';
+import { PANEL_NAV, allApplications, hrefFor, navOf, panelHeadsups, type PanelHeadsup, type PanelPage } from '@/components/career/panel/panel-data';
 import { isOpen } from '@/lib/career/status';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 
@@ -113,9 +113,13 @@ function ThemeButton() {
   );
 }
 
-/** The top bar: the mark and "Career", the page pills, then the inbox, the heads-ups and who's signed in. */
+/**
+ * The top bar: the mark and "Career", the three destinations (Home, Jobs,
+ * Applications), then Profile and settings, the inbox, the heads-ups and who's signed in.
+ */
 export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: string | null }>) {
   const initial = (who?.trim()[0] ?? 'O').toUpperCase();
+  const here = navOf(page)?.id ?? null;
   return (
     <header className="cp-header">
       <a className="cp-brand" href={hrefFor('overview')}>
@@ -124,15 +128,19 @@ export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: stri
       </a>
       <nav className="cp-nav" aria-label="Career pages">
         <ul>
-          {PANEL_PAGES.map((id) => (
+          {PANEL_NAV.map(({ id, label }) => (
             <li key={id}>
-              <a href={hrefFor(id)} aria-current={page === id ? 'page' : undefined}>{PAGE_META[id].label}</a>
+              <a href={hrefFor(id)} aria-current={here === id ? 'page' : undefined}>{label}</a>
             </li>
           ))}
         </ul>
       </nav>
       <div className="cp-head-tools">
         {DESKTOP_LAYOUT && <ThemeButton />}
+        <a className={`cp-head-btn cp-head-setup${page === 'setup' ? ' on' : ''}`} href={hrefFor('setup')} aria-current={page === 'setup' ? 'page' : undefined} title="Profile and settings">
+          <Settings2 size={18} aria-hidden="true" />
+          <span className="sr-only">Profile and settings</span>
+        </a>
         <InboxButton />
         <NotifyButton />
         <span className="cp-avatar" role="img" aria-label={who ? `Signed in as ${who}` : 'Signed in'} title={who ?? undefined}>{initial}</span>

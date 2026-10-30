@@ -59,14 +59,14 @@ export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiP
 
       <p className="fd-note">When it is on, each feature sends only what it needs, and only when it runs:</p>
       <ul className="pf-scopes">
-        <li>Home brief: your first name, this month’s spending total and top category, the routine due now and how many you missed, how many health documents you keep, and the weather. Only if the brief setting below is on.</li>
-        <li>Daily notification: your first name, today’s and this month’s spending totals, today’s routines and your notes on them, today’s steps, your fitness persona, and any social posts planned for today.</li>
-        <li>Workbook advice: a summary of the file you upload, plus the saved notes, fitness persona, profile and steps you tick.</li>
-        <li>Portfolio suggestions: your holdings’ names, values, amounts invested and asset mix.</li>
-        <li>Health plans: passages from your health documents, your profile, fitness persona, step averages and your answers.</li>
-        <li>Ask Orbis: your question, plus the last six months of only the sources you tick for it: journal entries (moods, tags and the entries that match your question), saved notes, weekly spending totals and top places, weekly routine answers, and weekly step averages.</li>
-        <li>Social drafts: your brief for the month and the platforms you chose, plus your profile if you tick “Use my profile”.</li>
-        <li>Career: your resume and career profile, what you’re looking for, the job descriptions it reads, and replies from employers in your Gmail, to score jobs, tailor applications, classify replies and advise on offers.</li>
+        <li><b>Home brief:</b> your first name, this month’s spending total and top category, the routine due now and how many you missed, how many health documents you keep, and the weather. Only if the brief setting below is on.</li>
+        <li><b>Daily notification:</b> your first name, today’s and this month’s spending totals, today’s routines and your notes on them, today’s steps, your fitness persona, and any social posts planned for today.</li>
+        <li><b>Workbook advice:</b> a summary of the file you upload, plus the saved notes, fitness persona, profile and steps you tick.</li>
+        <li><b>Portfolio suggestions:</b> your holdings’ names, values, amounts invested and asset mix.</li>
+        <li><b>Health plans:</b> passages from your health documents, your profile, fitness persona, step averages and your answers.</li>
+        <li><b>Ask Orbis:</b> your question, plus the last six months of only the sources you tick for it: journal entries (moods, tags and the entries that match your question), saved notes, weekly spending totals and top places, weekly routine answers, and weekly step averages.</li>
+        <li><b>Social drafts:</b> your brief for the month and the platforms you chose, plus your profile if you tick “Use my profile”.</li>
+        <li><b>Career:</b> your resume and career profile, what you’re looking for, the job descriptions it reads, and replies from employers in your Gmail, to score jobs, tailor applications, classify replies and advise on offers.</li>
       </ul>
       <p className="fd-note">
         Requests go to Groq, Google Gemini, Mistral, OpenRouter or Anthropic (Claude), whichever is most capable for the job and available. Requests built from your personal data are no longer limited to providers that don’t train on what they receive, so some of these providers may keep or learn from what they’re sent.

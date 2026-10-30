@@ -10,13 +10,13 @@
    meaning alone: every filled card prints its stage or status in words. */
 
 .cp-panel {
-  --cp-on-fill: #0e0e10;
-  --cp-violet: #b49bf2;
-  --cp-surface: var(--brand-s1);
-  --cp-card: var(--gl-fill);
-  --cp-card-edge: var(--gl-edge);
-  --cp-grid: rgba(255, 255, 255, .06);
-  --cp-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 18px 40px -24px rgba(0, 0, 0, .7);
+  --cp-on-fill: var(--brand-on-accent);
+  --cp-violet: var(--brand-violet);
+  --cp-surface: var(--panel-surface);
+  --cp-card: var(--panel-card);
+  --cp-card-edge: var(--panel-card-edge);
+  --cp-grid: var(--panel-grid);
+  --cp-shadow: var(--panel-shadow);
   --cp-gap: 16px;
   --cp-rail-w: 60px;
   position: relative;
@@ -26,13 +26,6 @@
   background: var(--sys-bg);
   color: var(--fd-ink);
   font-family: var(--font-text);
-}
-:root[data-theme="light"] .cp-panel {
-  --cp-surface: #ffffff;
-  --cp-card: rgba(255, 255, 255, .72);
-  --cp-card-edge: 1px solid rgba(255, 255, 255, .9);
-  --cp-grid: rgba(20, 22, 26, .07);
-  --cp-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 14px 34px -20px rgba(30, 40, 50, .22);
 }
 
 /* The wallpaper: the app's ground with its two soft blobs, fixed behind the glass. */
@@ -51,8 +44,8 @@
 :root[data-theme="light"] .cp-wall {
   background:
     radial-gradient(circle, var(--gl-dot) 1px, transparent 1.3px) 0 0 / 16px 16px,
-    radial-gradient(60% 50% at 8% -6%, #cfe7de, transparent 70%),
-    radial-gradient(48% 46% at 100% 4%, #d7e7f3, transparent 72%),
+    radial-gradient(60% 50% at 8% -6%, var(--panel-blob-1), transparent 70%),
+    radial-gradient(48% 46% at 100% 4%, var(--panel-blob-2), transparent 72%),
     var(--gl-ground);
 }
 
@@ -203,12 +196,12 @@
 
 /* Hot matches: solid stage fills. */
 .cp-hot-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0 0; padding: 0; list-style: none; }
-.cp-hot { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 176px; padding: 14px 15px 15px; box-sizing: border-box; border: 0; border-radius: 16px; background: var(--cp-fill); color: var(--cp-on-fill); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 10px 24px -18px rgba(0, 0, 0, .8); transition: transform .15s ease, box-shadow .15s ease; }
-.cp-hot:hover { transform: translateY(-2px); box-shadow: 0 16px 28px -18px rgba(0, 0, 0, .85); }
+.cp-hot { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 176px; padding: 14px 15px 15px; box-sizing: border-box; border: 0; border-radius: 16px; background: var(--cp-fill); color: var(--cp-on-fill); font: inherit; text-align: left; cursor: pointer; box-shadow: var(--shadow-fill); transition: transform .15s ease, box-shadow .15s ease; }
+.cp-hot:hover { transform: translateY(-2px); box-shadow: var(--shadow-fill-hover); }
 .cp-hot:focus-visible { outline: 2px solid var(--fd-ink); outline-offset: 3px; }
 .cp-hot-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .cp-hot-stage { font-size: 11.5px; font-weight: 600; opacity: .78; }
-.cp-hot-score { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(14, 14, 16, .12); box-shadow: inset 0 0 0 1.5px rgba(14, 14, 16, .3); }
+.cp-hot-score { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--on-fill-wash); box-shadow: var(--on-fill-ring); }
 .cp-hot-score b { font-size: 14px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .cp-hot-title { display: -webkit-box; margin-top: 10px; overflow: hidden; font-size: 16px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .cp-hot-company { margin-top: 3px; font-size: 12.5px; font-weight: 500; opacity: .78; }
@@ -300,7 +293,7 @@
 .cp-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--fd-accent); }
 .cp-check:focus-within { box-shadow: 0 0 0 2px var(--fd-accent); }
 .cp-tool-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 16px; border: var(--cp-card-edge); border-radius: 999px; background: var(--cp-card); color: var(--fd-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.cp-tool-btn:disabled { opacity: .7; cursor: wait; }
+.cp-tool-btn:disabled { opacity: .7; cursor: not-allowed; }
 .cp-count-line { margin: 4px 2px 12px; color: var(--fd-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 /* ─── Pipeline ─── */
@@ -324,7 +317,7 @@
 .cp-lane.can.over, .cp-zone.can.over { box-shadow: inset 0 0 0 2px var(--fd-accent), 0 0 0 4px var(--fd-wash); }
 .cp-lane.cannot.over, .cp-zone.cannot.over { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fd-alert) 60%, transparent); }
 
-.cp-kcard { display: grid; gap: 4px; padding: 12px 12px 12px 14px; border-radius: 14px; background: var(--cp-fill); color: var(--cp-on-fill); cursor: grab; box-shadow: 0 8px 18px -14px rgba(0, 0, 0, .8); }
+.cp-kcard { display: grid; gap: 4px; padding: 12px 12px 12px 14px; border-radius: 14px; background: var(--cp-fill); color: var(--cp-on-fill); cursor: grab; box-shadow: var(--shadow-fill-sm); }
 .cp-kcard:active { cursor: grabbing; }
 .cp-kcard.moving { opacity: .7; cursor: progress; }
 .cp-kcard.flash { animation: cp-snap .5s ease; }
@@ -480,17 +473,15 @@
 .cp-setup .cr-jump { position: sticky; top: 10px; z-index: 5; }
 
 /* ─── Drawers, dialogs and the toast ─── */
-.cp-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(6, 6, 8, .5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: cp-fade .18s ease; }
-:root[data-theme="light"] .cp-scrim { background: rgba(30, 36, 44, .22); }
+.cp-scrim { position: fixed; inset: 0; z-index: 44; background: var(--scrim); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: cp-fade .18s ease; }
 /* The phone's application sheet, as a right-hand drawer. */
-.cr-sheet.cp-drawer { position: fixed; inset: 0 0 0 auto; z-index: 45; width: min(620px, 100vw); padding: 26px 28px 0; box-sizing: border-box; border-left: 1px solid var(--sys-separator); background: var(--cp-surface); box-shadow: var(--e3); animation: cp-slide .22s ease; }
+.cr-sheet.cp-drawer { position: fixed; inset: 0 0 0 auto; z-index: 45; width: min(620px, 100%); padding: 26px 28px 0; box-sizing: border-box; border-left: 1px solid var(--sys-separator); background: var(--cp-surface); box-shadow: var(--e3); animation: cp-slide .22s ease; }
 .cr-sheet.cp-drawer .cr-sendbar { bottom: 0; margin: 24px -28px 0; padding: 14px 28px 18px; }
 .cr-sheet.cp-drawer > .cr-detail { padding-bottom: 28px; }
-.cp-side { position: fixed; inset: 0 0 0 auto; z-index: 45; width: min(520px, 100vw); padding: 24px 24px 32px; box-sizing: border-box; overflow-y: auto; border-left: 1px solid var(--sys-separator); background: var(--cp-surface); box-shadow: var(--e3); color: var(--fd-ink); animation: cp-slide .22s ease; }
+.cp-side { position: fixed; inset: 0 0 0 auto; z-index: 45; width: min(520px, 100%); padding: 24px 24px 32px; box-sizing: border-box; overflow-y: auto; border-left: 1px solid var(--sys-separator); background: var(--cp-surface); box-shadow: var(--e3); color: var(--fd-ink); animation: cp-slide .22s ease; }
 .cp-side-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cp-side-head h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
-.cp-veil { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(6, 6, 8, .55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: cp-fade .15s ease; }
-:root[data-theme="light"] .cp-veil { background: rgba(30, 36, 44, .26); }
+.cp-veil { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: cp-fade .15s ease; }
 .cp-veil-top { align-items: start; padding-top: min(14vh, 120px); }
 .cp-modal { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; border-radius: 26px; }
 .cp-modal .cr-paste-job { margin: 0; background: var(--cp-surface); box-shadow: var(--e3); }

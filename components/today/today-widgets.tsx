@@ -48,7 +48,7 @@ export function TodayWidgets({ steps, month, openTab }: Readonly<{ steps: StepsS
         <span className="today-widget-cap">Activity</span>
         {latest ? (
           <>
-            <ActivityRings size={70} rings={[
+            <ActivityRings size={52} rings={[
               { label: 'Steps', value: latest.steps / STEP_GOAL, color: 'var(--series-3)', track: 'var(--fd-ring-track)' },
               { label: '7-day average', value: (steps.average7 ?? 0) / STEP_GOAL, color: 'var(--series-1)', track: 'var(--fd-ring-track)' },
             ]} />

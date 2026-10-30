@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import { categoryStyle } from '@/components/money/category-style';
-import { FieldLabel } from '@/components/field/field';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
 
@@ -69,7 +68,7 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
         <span suppressHydrationWarning>{month.daily.length} {shortMonth}</span>
       </div>
 
-      <FieldLabel>Where it went</FieldLabel>
+      <h3 className="mn-sub">Where it went</h3>
       {shown.map((item) => (
         <div className={item.category === highlight ? 'fd-cat is-focus' : 'fd-cat'} key={item.category} ref={item.category === highlight ? focusRef : undefined}>
           <i className="fd-cat-dot" style={{ background: categoryStyle(item.category).color }} aria-hidden="true" />
@@ -84,7 +83,7 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
         <p className="fd-empty">{rest.length} more {rest.length === 1 ? 'category' : 'categories'} · {money(restTotal, month.currency)}</p>
       )}
 
-      <div className="fd-pair">
+      <div className="fd-pair mn-totals">
         <div>
           <span>Received</span>
           <b className="up">{incomeShown ? money(month.received, month.currency) : '••••'}</b>

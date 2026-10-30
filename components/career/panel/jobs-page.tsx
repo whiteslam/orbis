@@ -127,7 +127,7 @@ export function JobsPage({ home, onJobs }: Readonly<{ home: CareerHome; onJobs: 
       ) : (
         <div className="cp-job-grid">
           {shown.map((job) => (
-            <JobCard key={job.id} job={job} threshold={sheet.threshold} onOpen={(picked) => openJob(picked)} actions={<JobActions job={job} onOpen={(picked) => openJob(picked)} onChanged={changed} />} />
+            <JobCard key={job.id} job={job} threshold={sheet.threshold} languages={sheet.profile?.languages ?? []} onOpen={(picked) => openJob(picked)} actions={<JobActions job={job} onOpen={(picked) => openJob(picked)} onChanged={changed} />} />
           ))}
         </div>
       )}

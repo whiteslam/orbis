@@ -8,7 +8,7 @@ import type { OwnInvestments } from '@/lib/finance/types';
 /** The investments view: the dashboard in its own scroll area. */
 export function InvestmentsScreen({ ownInvestments, savedAdvice, notice, clearNotice, switcher }: Readonly<{ ownInvestments: OwnInvestments; savedAdvice: SavedPortfolioAdvice | null; notice: string | null; clearNotice: () => void; switcher?: ReactNode }>) {
   return (
-    <div className="screen-body field">
+    <div className="screen-body field mn-screen">
       <InvestDashboard ownInvestments={ownInvestments} savedAdvice={savedAdvice} notice={notice} clearNotice={clearNotice} switcher={switcher} />
     </div>
   );

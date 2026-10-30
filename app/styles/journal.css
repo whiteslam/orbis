@@ -1,0 +1,154 @@
+/* ─── Journal: a diary page ───────────────────────────────────────────
+   components/journal/journal.tsx. Writing leads: the date, the week strip and
+   one open page to write on. Past days follow as a timeline grouped by week,
+   marked by a mood dot rather than a card each; saved notes and the quiet
+   footer close it. On the phone it is one column; on desktop the page stays on
+   the left while the timeline scrolls on the right. No boxes inside boxes:
+   only the writing page and the saved notes sit on a surface. */
+:root {
+  --jr-mood-1: var(--brand-red);
+  --jr-mood-2: var(--brand-gold);
+  --jr-mood-3: var(--fd-faint);
+  --jr-mood-4: var(--brand-teal);
+  --jr-mood-5: var(--brand-green);
+}
+
+.jr { display: flex; flex-direction: column; gap: 34px; margin-top: 18px; }
+.jr [data-mood="1"] { --jr-mood: var(--jr-mood-1); }
+.jr [data-mood="2"] { --jr-mood: var(--jr-mood-2); }
+.jr [data-mood="3"] { --jr-mood: var(--jr-mood-3); }
+.jr [data-mood="4"] { --jr-mood: var(--jr-mood-4); }
+.jr [data-mood="5"] { --jr-mood: var(--jr-mood-5); }
+
+/* ─── The page you write on ─── */
+.jr-write {
+  padding: 20px 18px 18px;
+  border: var(--gl-edge);
+  border-radius: 28px;
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur);
+  backdrop-filter: var(--gl-blur);
+  box-shadow: var(--gl-shadow);
+}
+.jr-write-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 20px; }
+.jr-date { margin: 0; color: var(--fd-ink); font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; overflow-wrap: break-word; min-width: 0; }
+.jr-date span { display: block; margin-bottom: 4px; color: var(--fd-faint); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+
+/* The streak: one line and seven dots. */
+.jr-streak { margin: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.jr-streak-line { margin: 0; display: flex; align-items: center; gap: 5px; color: var(--fd-soft); font-size: 13px; }
+.jr-streak-line svg { color: var(--brand-gold); }
+.jr-streak-line b { color: var(--fd-ink); font-size: 15px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.jr-count { margin-left: 6px; padding-left: 9px; border-left: 1px solid var(--fd-rule); color: var(--fd-faint); }
+.jr-week { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.jr-week li { display: grid; justify-items: center; gap: 4px; width: 20px; }
+.jr-week i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fd-ink) 22%, transparent); }
+.jr-week li.on i { background: var(--fd-accent); box-shadow: none; }
+.jr-week li.open i { box-shadow: inset 0 0 0 2px var(--fd-accent); }
+.jr-week span { color: var(--fd-faint); font-size: 10.5px; font-weight: 600; }
+
+/* The editor: the mood row, then the page itself, then tags and save. */
+.jr .pf-editor { margin-top: 22px; }
+.jr .jr-prompt { margin: 0; color: var(--fd-soft); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.jr .pf-moods { gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+.jr .pf-moods button {
+  flex: 1 0 auto;
+  flex-direction: row;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+}
+.jr .pf-moods button span { font-size: 17px; }
+.jr .jr-paper {
+  min-height: 190px;
+  margin-top: 16px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fd-ink);
+  font-size: 16.5px;
+  line-height: 1.75;
+  resize: vertical;
+}
+.jr .jr-paper:focus { border: 0; box-shadow: none; outline: none; }
+.jr .jr-paper:focus-visible { outline: 2px solid color-mix(in srgb, var(--fd-accent) 55%, transparent); outline-offset: 6px; }
+.jr .pf-tags { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fd-rule); }
+.jr .pf-tags button { min-height: 30px; font-size: 12.5px; }
+.jr .jr-save { align-items: center; margin-top: 16px; }
+.jr .jr-save .pf-count { margin-left: 0; margin-right: auto; }
+
+/* Today, written: the entry reads as the page. */
+.jr-today { margin-top: 20px; }
+.jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--jr-mood) 16%, transparent); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
+.jr-feeling span { font-size: 17px; }
+.jr .jr-prose { margin-top: 16px; color: var(--fd-ink); font-size: 16.5px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jr .jr-today .pf-entry-tags { margin-top: 14px; }
+.jr .jr-today .fd-act { margin-top: 18px; }
+
+/* ─── The timeline ─── */
+.jr-side { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
+.jr-h { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+.jr-past .pf-entries { margin-top: 6px; }
+.jr-group h3 { margin: 18px 0 4px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; }
+.jr-timeline { position: relative; margin: 0; padding: 0; list-style: none; }
+/* The thread the dots hang on. */
+.jr-timeline::before { content: ""; position: absolute; top: 14px; bottom: 14px; left: 5px; width: 2px; border-radius: 1px; background: var(--fd-rule); }
+.jr .jr-entry { position: relative; padding: 12px 0 14px 26px; border-bottom: 0; }
+.jr-entry-head { gap: 10px; }
+.jr-dot { position: absolute; top: 17px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--jr-mood, var(--fd-accent)); box-shadow: 0 0 0 3px var(--fd-bg, var(--sys-bg)); }
+.jr .jr-entry-head strong { font-size: 14.5px; }
+.jr .jr-entry-head small { margin-top: 1px; font-size: 12.5px; color: var(--fd-soft); }
+.jr .jr-entry-head .pf-entry-mood { font-size: 13px; }
+.jr .jr-entry .pf-delete { width: 34px; height: 34px; background: transparent; color: var(--fd-faint); transition: color .18s ease, background-color .18s ease; }
+.jr .jr-entry .pf-delete:hover { background: var(--fd-chip); color: var(--fd-alert); }
+.jr .jr-entry-body { margin-top: 8px; color: var(--fd-soft); font-size: 14.5px; line-height: 1.7; }
+.jr .jr-entry-body.folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+.jr-entry-tags { margin: 8px 0 0; color: var(--fd-accent); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
+.jr .jr-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
+.jr .jr-links .pf-edit { display: inline; margin-top: 0; }
+.jr .jr-entry .pf-editor { margin-top: 0; }
+.jr-empty { margin-top: 12px; }
+
+/* ─── Saved notes and the footer ─── */
+.jr-notes { padding: 18px; border: var(--gl-edge); border-radius: 24px; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--gl-shadow); }
+.jr-sub { margin: 6px 0 0; color: var(--fd-faint); font-size: 13px; line-height: 1.5; }
+.jr-foot { display: flex; flex-direction: column; gap: 10px; }
+.jr-foot .pf-more { margin-top: 0; }
+.jr-foot .fd-note { margin: 0; font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jr .jr-entry .pf-delete { transition: none; }
+}
+
+/* ─── Desktop: the page and saved notes on the left; the timeline down the right ───
+   .jr-side dissolves into the grid so its parts can sit on either side. The
+   timeline spans every row, and the last row is 1fr, so a long timeline never
+   opens gaps between the page and the notes. */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop][data-tab="journal"] .screen-body.jr-screen { max-width: 1320px; }
+  .stage[data-desktop] .jr {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 28px 44px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .stage[data-desktop] .jr-side { display: contents; }
+  .stage[data-desktop] .jr-write { grid-column: 1; grid-row: 1; padding: 30px 32px 26px; border-radius: 32px; }
+  .stage[data-desktop] .jr-notes { grid-column: 1; grid-row: 2; }
+  .stage[data-desktop] .jr-foot { grid-column: 1; grid-row: 3; }
+  .stage[data-desktop] .jr-past { grid-column: 2; grid-row: 1 / -1; padding-top: 6px; }
+  .stage[data-desktop] .jr-date { font-size: 34px; }
+  .stage[data-desktop] .jr .jr-paper { min-height: 300px; font-size: 17px; }
+  .stage[data-desktop] .jr .jr-prose { font-size: 17px; }
+  .stage[data-desktop] .jr .pf-moods button { flex: 1 1 0; }
+}
+
+/* Saved notes sit on one surface: each note is a row under a hairline, not a card of its own. */
+.jr-notes .pf-notes { gap: 0; }
+.jr-notes .pf-card { padding: 14px 0; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }

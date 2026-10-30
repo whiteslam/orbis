@@ -42,18 +42,18 @@
   /* Always dark. The picture behind the hero is a black hole on black, and a
      pale page under it would read as a mistake, so this page keeps the dark
      Field values whichever appearance the visitor has chosen. */
-  --fd-field: #000;
-  --fd-surface: #141416;
-  --fd-ink: #f2f3f5;
-  --fd-soft: #a9adb4;
-  --fd-faint: #8a8e96;
-  --fd-rule: rgba(255,255,255,.1);
-  --fd-accent: #42cca8;
-  --fd-btn: #42cca8;
-  --fd-btn-ink: #0e0e10;
-  --fd-chip: rgba(255,255,255,.08);
-  --fd-wash: rgba(66,204,168,.15);
-  --fd-alert: #f26b6b;
+  --fd-field: var(--void);
+  --fd-surface: var(--brand-s1);
+  --fd-ink: var(--wl-ink);
+  --fd-soft: var(--wl-soft);
+  --fd-faint: var(--wl-faint);
+  --fd-rule: var(--wl-rule);
+  --fd-accent: var(--brand-teal);
+  --fd-btn: var(--brand-teal);
+  --fd-btn-ink: var(--brand-on-accent);
+  --fd-chip: var(--wl-chip);
+  --fd-wash: var(--wl-wash);
+  --fd-alert: var(--brand-red);
   position: relative; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--fd-field); color: var(--fd-ink); color-scheme: dark;
 }
 .wl-header { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 1120px; margin: 0 auto; padding: max(22px, env(safe-area-inset-top, 0px)) 24px 0; }
@@ -62,11 +62,11 @@
 .wl-brand strong { font-size: 17px; font-weight: 700; letter-spacing: -.04em; }
 .wl-actions { display: flex; align-items: center; gap: 10px; }
 .wl-login, .wl-join-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border-radius: var(--r-pill); font-size: 13.5px; text-decoration: none; white-space: nowrap; }
-.wl-login { border: 1px solid rgba(255,255,255,.22); color: #fff; font-weight: 500; }
-.wl-login:hover { background: rgba(255,255,255,.08); }
+.wl-login { border: 1px solid var(--wl-login-edge); color: var(--on-fill); font-weight: 500; }
+.wl-login:hover { background: var(--wl-chip); }
 .wl-join-link { background: var(--brand-gradient); color: var(--brand-on-accent); font-weight: 600; }
 .wl-join-link:hover { filter: brightness(1.06); }
-.wl-login:focus-visible, .wl-join-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.wl-login:focus-visible, .wl-join-link:focus-visible { outline: 2px solid var(--on-fill); outline-offset: 2px; }
 .wl-main { flex: 1 0 auto; width: 100%; }
 .wl-body { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px 72px; }
 .wl-body > * { max-width: 640px; }
@@ -78,28 +78,28 @@
 /* Large and light, white on the picture: the headline is the one place the
    page gets to be quiet and big. Weight 300 resolves to the system's own Light
    cut (Segoe UI Light, SF Pro Light), so it costs no extra font download. */
-.wl-hero h1 { margin: 0; max-width: 34rem; color: #fff; font-size: clamp(2.5rem, 1.4rem + 4vw, 4rem); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; text-wrap: balance; text-shadow: 0 1px 24px rgba(0,0,0,.6); }
-.wl-eyebrow { display: inline-flex; align-items: center; gap: 9px; margin: 0 0 22px; padding: 6px 13px 6px 11px; border: 1px solid rgba(255,255,255,.14); border-radius: var(--r-pill); background: rgba(255,255,255,.05); color: var(--fd-soft); font-size: 11.5px; font-weight: 500; letter-spacing: .5px; text-transform: uppercase; }
-.wl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-teal); box-shadow: 0 0 0 3px rgba(66,204,168,.2), 0 0 12px rgba(66,204,168,.7); }
+.wl-hero h1 { margin: 0; max-width: 34rem; color: var(--on-fill); font-size: clamp(2.5rem, 1.4rem + 4vw, 4rem); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; text-wrap: balance; text-shadow: var(--wl-headline-shadow); }
+.wl-eyebrow { display: inline-flex; align-items: center; gap: 9px; margin: 0 0 22px; padding: 6px 13px 6px 11px; border: 1px solid var(--wl-eyebrow-edge); border-radius: var(--r-pill); background: var(--wl-eyebrow-bg); color: var(--fd-soft); font-size: 11.5px; font-weight: 500; }
+.wl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-teal); box-shadow: var(--wl-dot-glow); }
 /* "one calm page." in the brand gradient. The fill is the gradient clipped to
    the glyphs; the shadow the headline carries would show through it, so it goes. */
 .wl-grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-weight: 400; text-shadow: none; white-space: nowrap; }
-.wl-lede { margin: 24px 0 0; max-width: 28rem; color: rgba(255,255,255,.6); font-size: .95rem; line-height: 1.625; }
+.wl-lede { margin: 24px 0 0; max-width: 28rem; color: var(--wl-lede); font-size: .95rem; line-height: 1.625; }
 
 /* The join form: one panel, the field and the button side by side. A translucent
    fill rather than backdrop blur, which is costly over a live canvas on weak phones. */
-.wl-card { max-width: 34rem; margin-top: 32px; padding: 18px; scroll-margin-top: 96px; border: 1px solid rgba(255,255,255,.13); border-radius: 20px; background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.03)); box-shadow: 0 28px 60px -28px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.09); }
+.wl-card { max-width: 34rem; margin-top: 32px; padding: 18px; scroll-margin-top: 96px; border: 1px solid var(--wl-card-edge); border-radius: 20px; background: var(--wl-card-fill); box-shadow: var(--wl-card-shadow); }
 .wl-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 0 10px; }
 .wl-form > .wl-error, .wl-form > .wl-fineprint { grid-column: 1 / -1; }
 .wl-field { display: flex; flex-direction: column; gap: 8px; }
-.wl-field > span { color: var(--fd-faint); font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.wl-field > span { color: var(--fd-faint); font-size: 11.5px; font-weight: 650; }
 .wl-field input { box-sizing: border-box; width: 100%; min-height: 52px; padding: 0 17px; border: 0; border-radius: 16px; background: var(--fd-surface); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 16px; outline: none; }
 .wl-field input::placeholder { color: var(--fd-faint); }
 .wl-field input:focus-visible { box-shadow: inset 0 0 0 1px var(--fd-accent), 0 0 0 3px var(--fd-wash); }
 .wl-error { margin: 9px 0 0; color: var(--fd-alert); font-size: 12.5px; }
-.wl-submit { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 24px; border: 0; border-radius: var(--r-pill); background: var(--brand-gradient); color: var(--brand-on-accent); font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: 0 10px 28px -10px rgba(66,204,168,.6); }
+.wl-submit { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 24px; border: 0; border-radius: var(--r-pill); background: var(--brand-gradient); color: var(--brand-on-accent); font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: var(--wl-submit-glow); }
 .wl-submit:hover { filter: brightness(1.06); }
-.wl-submit:disabled { opacity: .55; cursor: default; }
+.wl-submit:disabled { opacity: .55; cursor: not-allowed; }
 .wl-fineprint { margin: 14px 0 0; color: var(--fd-faint); font-size: 12.5px; line-height: 1.6; }
 .wl-fineprint strong { color: var(--fd-soft); font-weight: 650; }
 .wl-joined { margin: 16px 0 0; color: var(--fd-soft); font-size: 12.5px; }
@@ -161,6 +161,6 @@
 /* The black-hole scene (components/ui/blackhole-hero-section.tsx). It fills
    whatever box it is put in; black is the fallback when WebGL is unavailable,
    because a canvas that has died would otherwise paint white. */
-.bh-host { position: relative; isolation: isolate; width: 100%; height: 100%; overflow: hidden; background: #000; }
+.bh-host { position: relative; isolation: isolate; width: 100%; height: 100%; overflow: hidden; background: var(--void); }
 .bh-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .bh-copy { position: relative; z-index: 10; width: 100%; height: 100%; }

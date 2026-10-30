@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockKeyhole } from 'lucide-react';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { lockAppAction, touchAppLockAction } from '@/app/security/actions';
 import { heartbeatDue } from '@/lib/security/lock-heartbeat';
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const;
@@ -57,7 +58,7 @@ export function AppLockGuard({ idleMs, children }: Readonly<{ idleMs: number; ch
 
   return locked ? (
     <main className="auth-stage lock-cover" aria-live="polite">
-      <div className="lock-icon"><LockKeyhole size={20} aria-hidden="true" /></div>
+      <div className="lock-ring" aria-hidden="true"><OrbisMark size={72} /><LockKeyhole size={18} strokeWidth={1.9} /></div>
       <p>Locking Orbis…</p>
     </main>
   ) : children;

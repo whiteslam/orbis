@@ -14,12 +14,13 @@ import { datedName, downloadText } from '@/components/career/panel/panel-hooks';
 import { MoveMenu } from '@/components/career/panel/move-menu';
 import { LANES, PipelineBoard, laneOf, type BoardCard, type CardHandlers, type DragState, type DropHandlers, type Lane } from '@/components/career/panel/pipeline-board';
 import { CONFIRM_MOVES, useMoveCache } from '@/components/career/panel/use-moves';
-import { isOpen } from '@/lib/career/status';
+import { StageStrip } from '@/components/career/attention';
+import { STAGE_GROUPS, groupOf, isOpen, type StageGroupId } from '@/lib/career/status';
 import type { ApplicationStatus, SourceId } from '@/lib/career/types';
 import type { CareerHome, OwnerMove } from '@/lib/career/view';
 
 type View = 'board' | 'list';
-const VIEWS: ReadonlyArray<readonly [View, string]> = [['board', 'Board'], ['list', 'List']];
+const VIEWS: ReadonlyArray<readonly [View, string]> = [['list', 'List'], ['board', 'Board']];
 
 const CONFIRM_TEXT: Partial<Record<ApplicationStatus, string>> = {
   withdrawn: 'Orbis stops watching for replies to it.',
@@ -54,33 +55,39 @@ function ConfirmMove({ confirm, onPick, onCancel }: Readonly<{ confirm: Confirm;
   );
 }
 
-/** List view: every application as a table row, with the same menu as the board's cards. */
+/** One application as a row: what it is, where it stands, its odds, its latest news, and its menu. */
+function PipelineRow({ card, handlers }: Readonly<{ card: BoardCard; handlers: CardHandlers }>) {
+  const prediction = card.application.prediction;
+  const chance = prediction && isOpen(card.status) ? rangeText(prediction.replyRange) : null;
+  return (
+    <li className="cp-row">
+      <button type="button" className="cp-row-open" onClick={() => handlers.onOpen(card)}>
+        <b>{card.job.title}</b>
+        <small>{card.job.company}</small>
+      </button>
+      <span className="cp-row-stage"><StatusChip status={card.status} /></span>
+      <span className="cp-row-num" title="Match score"><b>{card.job.score ?? '–'}</b><small>match</small></span>
+      <span className="cp-row-num" title="Reply chance">{chance ? <><b>{chance}</b><small>reply chance{prediction?.early ? ', early' : ''}</small></> : <small>{isOpen(card.status) ? 'Reply chance once more are out' : ''}</small>}</span>
+      <span className="cp-row-latest">{card.latest ? <><span>{card.latest.summary}</span><time dateTime={card.latest.at}>{dayMonth(card.latest.at)}</time></> : <span className="none">No news yet</span>}</span>
+      <span className="cp-row-menu"><MoveMenu title={`${card.job.title}, ${card.job.company}`} loadMoves={() => handlers.loadMoves(card)} onMove={(move) => handlers.onMove(card, move)} onOpen={() => handlers.onOpen(card)} /></span>
+    </li>
+  );
+}
+
+/** List view: every application as a row, grouped under its stage, with the same menu as the board's cards. */
 function PipelineList({ cards, handlers }: Readonly<{ cards: BoardCard[]; handlers: CardHandlers }>) {
   return (
-    <div className="cp-table-wrap">
-      <table className="cp-table">
-        <caption className="sr-only">Applications</caption>
-        <thead>
-          <tr><th scope="col">Role</th><th scope="col">Stage</th><th scope="col">Match</th><th scope="col">Reply chance</th><th scope="col">Latest</th><th scope="col"><span className="sr-only">Actions</span></th></tr>
-        </thead>
-        <tbody>
-          {cards.map((card) => {
-            const prediction = card.application.prediction;
-            return (
-              <tr key={card.application.id}>
-                <th scope="row">
-                  <button type="button" className="cp-row-open" onClick={() => handlers.onOpen(card)}><b>{card.job.title}</b><small>{card.job.company}</small></button>
-                </th>
-                <td><StatusChip status={card.status} /></td>
-                <td className="num">{card.job.score ?? '–'}</td>
-                <td className="num">{prediction && isOpen(card.status) ? rangeText(prediction.replyRange) : '–'}</td>
-                <td className="cp-table-latest">{card.latest ? <><span>{card.latest.summary}</span><time dateTime={card.latest.at}>{dayMonth(card.latest.at)}</time></> : '–'}</td>
-                <td><MoveMenu title={`${card.job.title}, ${card.job.company}`} loadMoves={() => handlers.loadMoves(card)} onMove={(move) => handlers.onMove(card, move)} onOpen={() => handlers.onOpen(card)} /></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="cp-rows">
+      {LANES.map((lane) => {
+        const inLane = cards.filter((card) => lane.statuses.includes(card.status));
+        if (!inLane.length) return null;
+        return (
+          <section key={lane.id} className={`cp-rowgroup cr-stage-${lane.id === 'accepted' ? 'offer' : lane.id}`} aria-labelledby={`cp-rows-${lane.id}`}>
+            <h2 id={`cp-rows-${lane.id}`}><span className={`cp-dot cp-fill-${lane.id}`} aria-hidden="true" />{lane.label}<span>{inLane.length}</span></h2>
+            <ul>{inLane.map((card) => <PipelineRow key={card.application.id} card={card} handlers={handlers} />)}</ul>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -154,11 +161,12 @@ function usePipeline(home: CareerHome) {
 }
 
 /** Pipeline: the kanban (or a table), with search, a source filter and the CSV. */
-export function PipelinePage({ home, initialSearch = '' }: Readonly<{ home: CareerHome; initialSearch?: string }>) {
+export function PipelinePage({ home, initialSearch = '', initialStage = '' }: Readonly<{ home: CareerHome; initialSearch?: string; initialStage?: string }>) {
   const { openJob } = usePanel();
   const searchId = useId();
   const sourceId = useId();
-  const [view, setView] = useState<View>('board');
+  const [view, setView] = useState<View>('list');
+  const [stage, setStage] = useState<StageGroupId | null>(STAGE_GROUPS.some((group) => group.id === initialStage) ? (initialStage as StageGroupId) : null);
   const [search, setSearch] = useState(initialSearch);
   const [source, setSource] = useState<SourceId | ''>('');
   const [zone, setZone] = useState<string | null>(null);
@@ -174,6 +182,7 @@ export function PipelinePage({ home, initialSearch = '' }: Readonly<{ home: Care
   const cards = all
     .map((card) => ({ ...card, status: pipe.live.get(card.application.id) ?? card.status }))
     .filter((card) => !source || card.job.source === source)
+    .filter((card) => !stage || groupOf(card.status) === stage)
     .filter((card) => words.every((word) => `${card.job.title} ${card.job.company}`.toLowerCase().includes(word)));
   const draggedCard = useRef<BoardCard | null>(null);
 
@@ -226,6 +235,12 @@ export function PipelinePage({ home, initialSearch = '' }: Readonly<{ home: Care
 
   return (
     <div className="cp-pipeline">
+      <StageStrip cards={all.map((card) => ({ ...card, application: { ...card.application, status: pipe.live.get(card.application.id) ?? card.status } }))} onPick={(id) => setStage((current) => (current === id ? null : id))} active={stage} label="Show one stage" />
+      {stage && (
+        <p className="cp-filter-line">
+          Showing {STAGE_GROUPS.find((group) => group.id === stage)?.label.toLowerCase()} only. <button type="button" className="cp-link" onClick={() => setStage(null)}>Show all stages</button>
+        </p>
+      )}
       <div className="cp-toolbar">
         <div className="cp-search">
           <Search size={16} aria-hidden="true" />
@@ -249,7 +264,7 @@ export function PipelinePage({ home, initialSearch = '' }: Readonly<{ home: Care
       <NoticeLine notice={csv.notice} onDismiss={() => csv.setNotice(null)} />
       <NoticeLine notice={pipe.notice} onDismiss={() => pipe.setNotice(null)} />
       {view === 'board' && <p className="cp-board-help">Drag a card to record what happened, or use its <span className="sr-only">actions</span> menu. Only the moves you can make by hand are offered; Gmail moves cards forward by itself.</p>}
-      {cards.length === 0 && <p className="cp-quiet">No applications match that search.</p>}
+      {cards.length === 0 && <p className="cp-quiet">No applications match. Clear the search or pick another stage.</p>}
       {cards.length > 0 && view === 'board' && (
         <PipelineBoard cards={cards} drag={pipe.drag} over={pipe.over} moving={pipe.moving} flash={pipe.flash} handlers={handlers} drop={drop} onZone={(lane) => setZone((current) => (current === lane.id ? null : lane.id))} />
       )}

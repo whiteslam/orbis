@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from 'reac
 import { useRouter } from 'next/navigation';
 import { LockKeyhole, UserKey } from 'lucide-react';
 import { AuthShell } from '@/components/auth/auth-shell';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { confirmUnlockAction, unlockWithPasswordAction, unlockWithPinAction } from '@/app/security/actions';
 import { PinInput } from '@/components/security/pin-input';
@@ -99,7 +100,7 @@ export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
   return (
     <AuthShell centered>
       <div className="lock-heading">
-        <div className="lock-icon"><LockKeyhole size={22} strokeWidth={1.8} aria-hidden="true" /></div>
+        <div className="lock-ring" aria-hidden="true"><OrbisMark size={84} /><LockKeyhole size={20} strokeWidth={1.9} /></div>
         <h1>Orbis is locked</h1>
         {/* No address here. The lock screen is the one authenticated page a
             passer-by can reach on an unattended phone, and naming who is

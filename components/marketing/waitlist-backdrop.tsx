@@ -73,7 +73,7 @@ export function WaitlistBackdrop() {
   return (
     <div className="wl-backdrop" aria-hidden="true">
       <BlackHole
-        focus={narrow ? [0.5, 0.8] : [0.74, 0.5]}
+        focus={narrow ? [0.5, 0.86] : [0.74, 0.5]}
         scrim={narrow ? 'top' : 'left'}
         scrimStrength={0.9}
         distance={24}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { Bell, ChevronRight, Clock, HardDrive, Lock, Plug, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
 import { AppIntegrations } from '@/components/settings/app-integrations';
@@ -14,6 +14,7 @@ import { RoutineSettings } from '@/components/settings/routine-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
 import { keepTabInside } from '@/components/shell/dialog-focus';
 import { isDesktop } from '@/lib/shell/desktop';
+import { aiAllowed } from '@/lib/ai/consent';
 import { SETTINGS_SECTIONS, type SettingsSection } from '@/lib/shell/tabs';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import type { StepsSummary } from '@/lib/health/types';
@@ -46,6 +47,33 @@ export type SettingsData = {
 
 const LABEL = Object.fromEntries(SETTINGS_SECTIONS.map((section) => [section.id, section.label])) as Record<SettingsSection, string>;
 
+// Each section's glyph in the index; its colour comes from app/styles/page-settings.css.
+const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, security: Lock, data: HardDrive };
+
+type Hint = { text: string; warn?: boolean };
+const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Where each section stands, in a word or two, beside its row in the index. Read from the same data the sections show. */
+function sectionHints(data: SettingsData): Partial<Record<SettingsSection, Hint>> {
+  const { appConnections: apps, socialConnections: social } = data;
+  const brokers = Object.values(apps.brokers).filter((item) => item !== undefined);
+  const linked = (apps.google ? 1 : 0) + brokers.length + social.items.length + (data.stepsSummary.lastImport ? 1 : 0);
+  const reconnect = (apps.google?.status === 'reconnect_required' ? 1 : 0)
+    + brokers.filter((item) => item.status === 'reconnect_required').length
+    + social.items.filter((item) => item.status === 'reconnect_required').length;
+  const name = data.personalProfile.profile?.preferredName.trim();
+  const routines = data.routines.routines.filter((routine) => routine.active).length;
+  let connections: Hint = { text: linked ? `${linked} connected` : 'None yet' };
+  if (reconnect) connections = { text: `${reconnect} to reconnect`, warn: true };
+  return {
+    you: { text: name || 'Add your name' },
+    connections,
+    ai: data.aiPreferences.state === 'ready' ? { text: aiAllowed(data.aiPreferences) ? 'On' : 'Off' } : undefined,
+    notifications: data.notificationSettings.state === 'ready' ? { text: data.notificationSettings.preferences.enabled ? 'On' : 'Off' } : undefined,
+    day: data.routines.state === 'ready' ? { text: routines ? count(routines, 'routine') : 'None yet' } : undefined,
+  };
+}
+
 function jumpTo(section: SettingsSection) {
   document.getElementById(`settings-${section}`)?.scrollIntoView({ block: 'start' });
 }
@@ -53,9 +81,9 @@ function jumpTo(section: SettingsSection) {
 // `shown` marks the section picked in the list; only the desktop layout hides the rest (app/styles/desktop.css).
 function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; shown: SettingsSection; note?: string; children: ReactNode }>) {
   return (
-    <section className="pf-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} data-shown={shown === id || undefined}>
-      <h2 className="fd-label" id={`settings-${id}-title`}>{LABEL[id]}</h2>
-      {note && <p className="fd-note tight">{note}</p>}
+    <section className="pf-group st-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} data-shown={shown === id || undefined}>
+      <h2 className="fd-label st-h" id={`settings-${id}-title`}>{LABEL[id]}</h2>
+      {note && <p className="fd-note tight st-lede">{note}</p>}
       {children}
     </section>
   );
@@ -133,6 +161,8 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
   const profile = data.personalProfile.profile;
   // Gmail and Groww are already in the list above as account connections.
   const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
+  const hints = sectionHints(data);
+  const who = [profile?.preferredName.trim(), profile?.role.trim()].filter(Boolean).join(', ');
 
   return (
     <>
@@ -140,14 +170,27 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
       <div className="settings-veil" aria-hidden="true" onClick={onClose} />
       <dialog open ref={dialogRef} className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
         <header className="settings-head">
-          <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
+          <div className="st-title">
+            <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
+            {who && <p className="st-who">{who}</p>}
+          </div>
           <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
         </header>
         {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
-        <fieldset className="settings-jump" aria-label="Settings sections">
-          {SETTINGS_SECTIONS.map((item) => (
-            <button key={item.id} type="button" aria-current={shown === item.id || undefined} onClick={() => { setShown(item.id); jumpTo(item.id); }}>{item.label}</button>
-          ))}
+        {/* The index: every section as a row, with where it stands. On a desktop it is the list down the left. */}
+        <fieldset className="settings-jump st-index" aria-label="Settings sections">
+          {SETTINGS_SECTIONS.map((item) => {
+            const Icon = GLYPH[item.id];
+            const hint = hints[item.id];
+            return (
+              <button key={item.id} className="st-row" data-section={item.id} type="button" aria-current={shown === item.id || undefined} onClick={() => { setShown(item.id); jumpTo(item.id); }}>
+                <span className="st-glyph" aria-hidden="true"><Icon size={16} strokeWidth={2} /></span>
+                <span className="st-row-label">{item.label}</span>
+                {hint && <small className={hint.warn ? 'st-row-hint warn' : 'st-row-hint'}>{hint.text}</small>}
+                <ChevronRight className="st-chev" size={16} aria-hidden="true" />
+              </button>
+            );
+          })}
         </fieldset>
 
         <Group id="you" shown={shown} note="The name Orbis calls you, what you do, and where you are.">
@@ -164,13 +207,13 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
           )}
           <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
           <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
-          <p className="fd-note tight">Services Orbis uses for weather, rates, prices and AI.</p>
+          <p className="fd-note tight st-subnote">Services Orbis uses for weather, rates, prices and AI.</p>
           <Integrations items={dataServices} heading={false} />
         </Group>
 
         <Group id="ai" shown={shown} note="One switch for every AI feature. Nothing is sent to an AI provider until it is on.">
           <HomeBriefSetting preferences={data.aiPreferences} />
-          <h3 className="fd-label">Heads-ups</h3>
+          <h3 className="fd-label st-sub">Heads-ups</h3>
           <HeadsupSettings />
         </Group>
 

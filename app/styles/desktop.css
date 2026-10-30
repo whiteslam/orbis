@@ -28,10 +28,10 @@
 
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   .stage[data-desktop] {
-    --cp-surface: var(--brand-s1);
-    --cp-card: var(--gl-fill);
-    --cp-card-edge: var(--gl-edge);
-    --cp-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 18px 40px -24px rgba(0, 0, 0, .7);
+    --cp-surface: var(--panel-surface);
+    --cp-card: var(--panel-card);
+    --cp-card-edge: var(--panel-card-edge);
+    --cp-shadow: var(--panel-shadow);
     --cp-rail-w: 60px;
     --dk-gap: 20px;
     --dk-gap-wide: clamp(20px, 1.6vw, 32px);
@@ -44,12 +44,6 @@
     padding: 0;
     overflow: visible;
     background: var(--sys-bg);
-  }
-  :root[data-theme="light"] .stage[data-desktop] {
-    --cp-surface: #ffffff;
-    --cp-card: rgba(255, 255, 255, .72);
-    --cp-card-edge: 1px solid rgba(255, 255, 255, .9);
-    --cp-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 14px 34px -20px rgba(30, 40, 50, .22);
   }
 
   /* ─── The frame: no phone, no intro, the window is the screen ─── */
@@ -111,7 +105,7 @@
   .stage[data-desktop] .dk-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
   .stage[data-desktop] .dk-tools .icon-btn, .stage[data-desktop] .dk-tools .avatar { width: 42px; height: 42px; border: var(--cp-card-edge); border-radius: 50%; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: none; color: var(--fd-ink); cursor: pointer; }
   .stage[data-desktop] .dk-tools .avatar { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); font-size: 15px; font-weight: 600; }
-  .stage[data-desktop] .dk-pop { width: min(420px, calc(100vw - 32px)); }
+  .stage[data-desktop] .dk-pop { width: 420px; }
   .stage[data-desktop] .dk-pop .hu-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .stage[data-desktop] :is(.dk-search, .dk-tools .icon-btn, .dk-tools .avatar):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
 
@@ -131,8 +125,7 @@
   .stage[data-desktop]:has(.talk-sheet) .dk-rail { left: 24px; }
 
   /* ─── Settings: a large dialog, the sections down the left, the chosen one on the right ─── */
-  .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(6, 6, 8, .55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-  :root[data-theme="light"] .stage[data-desktop] .settings-veil { background: rgba(30, 36, 44, .26); }
+  .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: var(--veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .stage[data-desktop] .settings-sheet {
     position: fixed;
     inset: 0;
@@ -142,7 +135,7 @@
     grid-template-rows: auto 1fr;
     align-items: start;
     column-gap: 36px;
-    width: min(1080px, calc(100vw - 80px));
+    width: min(1080px, calc(100% - 80px));
     height: min(860px, calc(100dvh - 64px));
     margin: auto;
     padding: 28px 36px 40px;
@@ -242,7 +235,7 @@
   .stage[data-desktop][data-tab="today"] .fd-news > .fd-news-foot { grid-column: 1 / -1; margin: -4px 0 0; font-size: 11.5px; }
 
   .stage[data-desktop][data-tab="today"] .fd-news-market { grid-column: -2; grid-row: 2 / span 2; align-self: stretch; padding: 20px 22px; border: 0; border-radius: 22px; background: color-mix(in srgb, var(--fd-ink) 4.5%, transparent); }
-  .stage[data-desktop][data-tab="today"] .fd-news-market-head { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fd-faint); }
+  .stage[data-desktop][data-tab="today"] .fd-news-market-head { margin-bottom: 8px; font-size: 11px; font-weight: 700; color: var(--fd-faint); }
   .stage[data-desktop][data-tab="today"] .fd-news-summary { font-size: 15px; line-height: 1.5; font-weight: 500; }
   .stage[data-desktop][data-tab="today"] .fd-news-sectors { gap: 0; margin: 14px 0 12px; }
   .stage[data-desktop][data-tab="today"] .fd-news-sector { gap: 2px; padding: 10px 0; border-top: 1px solid var(--fd-rule); }
@@ -255,7 +248,7 @@
   .stage[data-desktop][data-tab="today"] .fd-news-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
   .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-photo img { transform: scale(1.03); }
   .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(140deg, color-mix(in srgb, var(--brand-teal) 20%, transparent), color-mix(in srgb, var(--fd-ink) 5%, transparent) 70%); color: var(--fd-soft); }
-  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank span { max-width: 80%; overflow: hidden; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank span { max-width: 80%; overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
   .stage[data-desktop][data-tab="today"] .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.35; letter-spacing: -.01em; }
   .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   .stage[data-desktop][data-tab="today"] .fd-news-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; }
@@ -268,20 +261,20 @@
   .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-title { font-size: clamp(22px, 1.6vw, 28px); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
   .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-line { -webkit-line-clamp: 3; font-size: 15px; }
 
-  /* ─── Two balanced columns: Money, Health, Journal ───
+  /* ─── Two balanced columns: Money, Health ───
      The title and anything that leads the page span both; the cards then flow
      down the left and on down the right, each kept whole. */
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body:not(:has(> .fd-sub-head)) {
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body:not(:has(> .fd-sub-head)) {
     max-width: none;
     columns: 2;
     column-gap: calc(var(--dk-gap) + 8px);
   }
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > * { break-inside: avoid; }
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-head, .fd-tabs, .mn-top, .fd-hero, .finance-notice, .fd-focus, .fd-option) { column-span: all; }
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-label, .fd-label-row) { break-after: avoid; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body > * { break-inside: avoid; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body > :is(.fd-head, .fd-tabs, .mn-top, .fd-hero, .finance-notice, .fd-focus, .fd-option) { column-span: all; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body > :is(.fd-label, .fd-label-row) { break-after: avoid; }
   /* A card that starts a column sits level with its neighbour's top. */
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > :is(.fd-quiet, .mn-card, .pf-group, .apple-card, .fd-rates) { margin-top: 0; margin-bottom: var(--dk-gap); }
-  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"], [data-tab="journal"]) .screen-body > .fd-tabs { max-width: 420px; }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body > :is(.fd-quiet, .mn-card, .pf-group, .apple-card, .fd-rates) { margin-top: 0; margin-bottom: var(--dk-gap); }
+  .stage[data-desktop]:is([data-tab="money"], [data-tab="health"]) .screen-body > .fd-tabs { max-width: 420px; }
 
   /* Money · Spending: the month on the left, the transactions on the right. */
   .stage[data-desktop][data-money="spending"] .screen-body > .fd-label-row { break-before: column; margin-top: 0; }
@@ -290,25 +283,7 @@
   .stage[data-desktop][data-money="investments"] .screen-body > .fd-label:not(.fd-label ~ .fd-label) { break-before: column; }
   .stage[data-desktop][data-money="investments"] .screen-body > .fd-focus { margin-bottom: var(--dk-gap); }
 
-  /* Journal: today's entry and the past ones down the left; saved notes down the right.
-     A grid rather than the balanced columns, so the notes stay on their own side
-     whatever the entries' length. The trailing 1fr row takes the notes' height,
-     so the left column never opens gaps to match it. */
-  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) {
-    display: grid;
-    columns: auto;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    grid-template-rows: repeat(12, auto) 1fr;
-    column-gap: calc(var(--dk-gap-wide) + 16px);
-    align-items: start;
-    align-content: start;
-  }
-  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > * { grid-column: 1; min-width: 0; }
-  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > :is(.fd-head, .fd-hero) { grid-column: 1 / -1; }
-  .stage[data-desktop][data-tab="journal"] .screen-body:not(:has(> .fd-sub-head)) > .pf-group { grid-column: 2; grid-row: 3 / -1; }
-  .stage[data-desktop][data-tab="journal"] .screen-body > .fd-hero { margin-bottom: 28px; }
-  .stage[data-desktop][data-tab="journal"] .screen-body > .pf-today > :first-child { margin-top: 0; }
-  .stage[data-desktop][data-tab="journal"] .screen-body > .pf-more { justify-self: start; }
+  /* Journal lays itself out: app/styles/journal.css. */
 
   /* ─── Social: the month planner gets the full width; posts and insights share the row below ─── */
   .stage[data-desktop][data-tab="social"] .screen-body:not(:has(> .fd-sub-head)) {

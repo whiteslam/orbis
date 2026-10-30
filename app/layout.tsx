@@ -11,6 +11,7 @@ import './styles/01-base.css';
 import './styles/09-boundaries.css';
 import './styles/marketing.css';
 import './styles/brand.css';
+import './styles/page-public.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';

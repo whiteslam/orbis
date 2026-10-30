@@ -16,6 +16,31 @@ function money(amount: number, currency: string) {
   }
 }
 
+/**
+ * A ledger amount: always to the paisa, so the figures in a column line up,
+ * with the fraction set quieter than the whole.
+ */
+export function LedgerAmount({ amount, currency, sign = '' }: Readonly<{ amount: number; currency: string; sign?: string }>) {
+  let parts: Intl.NumberFormatPart[];
+  try {
+    parts = new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).formatToParts(amount);
+  } catch {
+    return <>{sign}{money(amount, currency)}</>;
+  }
+  const cut = parts.findIndex((part) => part.type === 'decimal');
+  const whole = (cut < 0 ? parts : parts.slice(0, cut)).map((part) => part.value).join('');
+  const fraction = cut < 0 ? '' : parts.slice(cut).map((part) => part.value).join('');
+  return <>{sign}{whole}{fraction && <span className="mn-paise">{fraction}</span>}</>;
+}
+
+// What a day cost: its expenses, when there are several and they share one currency.
+function dayTotal(items: FinanceTransactionSummary[]) {
+  const spent = items.filter((item) => item.direction === 'expense');
+  // A day of one spend already says its total on the row.
+  if (spent.length < 2 || new Set(spent.map((item) => item.currency)).size > 1) return null;
+  return { amount: spent.reduce((sum, item) => sum + item.amount, 0), currency: spent[0].currency };
+}
+
 const dayKey = (value: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(value));
 const transactionTime = (value: string) => new Intl.DateTimeFormat('en-IN', { timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
 
@@ -50,40 +75,47 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
   }
 
   return (
-    <div className="finance-transactions">
-      {[...days].map(([key, items]) => (
-        <section key={key} className="transaction-day">
-          <h4>{dayHeading(key)}</h4>
-          <div className="apple-list">
-            {items.map((transaction) => {
-              const style = categoryStyle(transaction.category);
-              const Icon = style.icon;
-              const details = [transaction.merchant ? transaction.category : null, paymentMethodLabel(transaction.paymentMethod)].filter(Boolean).join(', ');
-              return (
-                <div className="finance-transaction" key={transaction.id}>
-                  <span className="category-tile" style={{ background: style.color }} aria-hidden="true"><Icon size={16} strokeWidth={2.2} /></span>
-                  <div className="finance-transaction-copy">
-                    <strong>{transaction.merchant || transaction.category || 'Transaction'}</strong>
-                    <small className="finance-transaction-meta">
-                      {transaction.source === 'manual' ? <PenLine size={10} aria-label="Added manually" /> : <Mail size={10} aria-label="From Gmail" />}
-                      {[transactionTime(transaction.occurredAt), details].filter(Boolean).join(' · ')}
-                    </small>
-                    {transaction.note && <p className="finance-transaction-note">{transaction.note}</p>}
+    <div className="finance-transactions mn-days">
+      {[...days].map(([key, items]) => {
+        const total = dayTotal(items);
+        return (
+          <section key={key} className="transaction-day">
+            <h4 className="mn-day-head">
+              <span>{dayHeading(key)}</span>
+              {total && <span className="mn-day-total"><span className="sr-only">Spent </span><LedgerAmount amount={total.amount} currency={total.currency} /></span>}
+            </h4>
+            <div className="mn-rows">
+              {items.map((transaction) => {
+                const style = categoryStyle(transaction.category);
+                const Icon = style.icon;
+                const details = [transaction.merchant ? transaction.category : null, paymentMethodLabel(transaction.paymentMethod)].filter(Boolean).join(', ');
+                const income = transaction.direction === 'income';
+                return (
+                  <div className="finance-transaction" key={transaction.id}>
+                    <span className="category-tile" style={{ background: style.color }} aria-hidden="true"><Icon size={15} strokeWidth={2.2} /></span>
+                    <div className="finance-transaction-copy">
+                      <strong>{transaction.merchant || transaction.category || 'Transaction'}</strong>
+                      <small className="finance-transaction-meta">
+                        {transaction.source === 'manual' ? <PenLine size={10} aria-label="Added manually" /> : <Mail size={10} aria-label="From Gmail" />}
+                        {[transactionTime(transaction.occurredAt), details].filter(Boolean).join(' · ')}
+                      </small>
+                      {transaction.note && <p className="finance-transaction-note">{transaction.note}</p>}
+                    </div>
+                    <div className="finance-transaction-side">
+                      <strong className={income ? 'income' : ''}><LedgerAmount amount={transaction.amount} currency={transaction.currency} sign={income ? '+' : ''} /></strong>
+                      {transaction.source === 'manual' && (
+                        <button type="button" className="finance-transaction-delete" onClick={() => remove(transaction)} disabled={isPending} aria-label="Delete transaction">
+                          <Trash2 size={14} />{deletingId === transaction.id ? 'Deleting…' : ''}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="finance-transaction-side">
-                    <strong className={transaction.direction === 'income' ? 'income' : ''}>{transaction.direction === 'income' ? '+' : ''}{money(transaction.amount, transaction.currency)}</strong>
-                    {transaction.source === 'manual' && (
-                      <button type="button" className="finance-transaction-delete" onClick={() => remove(transaction)} disabled={isPending} aria-label="Delete transaction">
-                        <Trash2 size={12} />{deletingId === transaction.id ? 'Deleting…' : ''}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
       {message && <output className="gmail-review-message">{message}</output>}
     </div>
   );

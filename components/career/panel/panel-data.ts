@@ -20,16 +20,33 @@ const IST_OFFSET_MS = 330 * MINUTE_MS;
 export const PANEL_PAGES = ['overview', 'pipeline', 'jobs', 'interviews', 'offers', 'insights', 'setup'] as const;
 export type PanelPage = (typeof PANEL_PAGES)[number];
 
-/** The nav's word, and the page's two-line title. */
+/** The page's name (the palette's word too), and its title: a faint context line over the big one. */
 export const PAGE_META: Record<PanelPage, { label: string; title: readonly [string, string] }> = {
-  overview: { label: 'Overview', title: ['Career', 'Overview'] },
-  pipeline: { label: 'Pipeline', title: ['Application', 'Pipeline'] },
-  jobs: { label: 'Jobs', title: ['Job', 'Matches'] },
-  interviews: { label: 'Interviews', title: ['Interview', 'Agenda'] },
-  offers: { label: 'Offers', title: ['Offer', 'Desk'] },
-  insights: { label: 'Insights', title: ['Market', 'Insights'] },
-  setup: { label: 'Setup', title: ['Career', 'Setup'] },
+  overview: { label: 'Home', title: ['Career', 'Home'] },
+  pipeline: { label: 'Applications', title: ['Every application, by stage', 'Applications'] },
+  jobs: { label: 'Jobs', title: ['Find and judge', 'Jobs'] },
+  interviews: { label: 'Interviews', title: ['Applications', 'Interviews'] },
+  offers: { label: 'Offers', title: ['Applications', 'Offers'] },
+  insights: { label: 'Market insights', title: ['Jobs', 'Market insights'] },
+  setup: { label: 'Profile and settings', title: ['Career', 'Profile and settings'] },
 };
+
+/**
+ * The header's three destinations, by what a job seeker comes to do: see what
+ * needs them (Home), find and judge jobs (Jobs), and see where each application
+ * stands (Applications). The other pages live under one of them and keep their
+ * own address; Profile and settings is a quiet button beside the bell.
+ */
+export const PANEL_NAV: ReadonlyArray<{ id: PanelPage; label: string; pages: readonly PanelPage[] }> = [
+  { id: 'overview', label: 'Home', pages: ['overview'] },
+  { id: 'jobs', label: 'Jobs', pages: ['jobs', 'insights'] },
+  { id: 'pipeline', label: 'Applications', pages: ['pipeline', 'interviews', 'offers'] },
+];
+
+/** The destination a page sits under; Setup sits under none. */
+export function navOf(page: PanelPage) {
+  return PANEL_NAV.find((item) => item.pages.includes(page)) ?? null;
+}
 
 /** "#/pipeline" → 'pipeline'; anything unknown is the Overview. */
 export function pageFromHash(hash: string): PanelPage {

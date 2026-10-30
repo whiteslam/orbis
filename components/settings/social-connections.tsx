@@ -55,12 +55,12 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
         return (
           <article className="pf-app" key={platform.id}>
             <div className="pf-app-head">
-              <span className="pf-app-tile"><BrandMark id={platform.id} /></span>
+              <span className="pf-app-tile fd-tile pf-tile" aria-hidden="true"><BrandMark id={platform.id} /></span>
               <span className="fd-two">
                 {platform.name}
                 <small>{linked?.username ? `@${linked.username}` : platform.detail}</small>
               </span>
-              <span className={`app-status ${status.tone}`}>
+              <span className={`app-status pf-status ${status.tone}`}>
                 <i aria-hidden="true" />{status.label}
               </span>
             </div>

@@ -1,0 +1,313 @@
+/* settings: the diary-page treatment (see app/styles/journal.css for the pattern). Loaded after desktop.css. */
+/* ─── Settings: a calm control panel ───────────────────────────────────
+   components/settings/settings-sheet.tsx. The index leads: every section as a
+   row with its own coloured glyph and where it stands ("2 connected", "On"),
+   like a native settings app. The sections follow on the page itself, not a
+   card each: a plain heading, one line on what it is for, then rows on
+   hairlines. On the phone the index is the only surface; on desktop the dialog
+   is the surface, the index runs down a tinted left pane and the chosen section
+   fills the right. Every rule is scoped to .settings-sheet: .settings-jump is
+   shared with Career's setup (cr-jump). */
+
+.settings-sheet {
+  --st-you: var(--brand-blue);
+  --st-connections: var(--brand-teal);
+  --st-ai: var(--brand-violet);
+  --st-notifications: var(--brand-red);
+  --st-day: var(--brand-gold);
+  --st-security: var(--brand-green);
+  --st-data: var(--fd-soft);
+}
+.settings-sheet :is([data-section="you"], #settings-you) { --st-tone: var(--st-you); }
+.settings-sheet :is([data-section="connections"], #settings-connections) { --st-tone: var(--st-connections); }
+.settings-sheet :is([data-section="ai"], #settings-ai) { --st-tone: var(--st-ai); }
+.settings-sheet :is([data-section="notifications"], #settings-notifications) { --st-tone: var(--st-notifications); }
+.settings-sheet :is([data-section="day"], #settings-day) { --st-tone: var(--st-day); }
+.settings-sheet :is([data-section="security"], #settings-security) { --st-tone: var(--st-security); }
+.settings-sheet :is([data-section="data"], #settings-data) { --st-tone: var(--st-data); }
+
+/* ─── The title ─── */
+.settings-sheet .settings-head { align-items: flex-start; }
+.st-title { min-width: 0; }
+/* Focused by script on open so a screen reader starts here; it is not a control, so no ring (as on desktop). */
+.settings-sheet .settings-head h1:focus { outline: none; }
+.settings-sheet .settings-head h1 { font-size: 30px; font-weight: 750; letter-spacing: -.03em; overflow-wrap: break-word; }
+.st-who { margin: 5px 0 0; color: var(--fd-faint); font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.settings-sheet .settings-head button { flex: none; }
+.settings-sheet .settings-head button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+
+/* Opened on its first section (the avatar does this), the sheet stays at the top so the index shows;
+   any other section is still jumped to below the notch (settings.css). */
+.settings-sheet #settings-you { scroll-margin-top: 100vh; }
+
+/* ─── The index: one glass list, a row per section ─── */
+.settings-sheet .settings-jump.st-index {
+  display: block;
+  min-width: 0;
+  margin: 18px 0 0;
+  padding: 4px 0;
+  border: var(--gl-edge);
+  border-radius: 22px;
+  background: var(--gl-fill);
+  -webkit-backdrop-filter: var(--gl-blur);
+  backdrop-filter: var(--gl-blur);
+  box-shadow: var(--gl-shadow);
+}
+.settings-sheet .st-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--fd-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+/* Hairlines start after the glyph, as a native list's do. */
+.settings-sheet .st-row + .st-row::before { content: ""; position: absolute; top: 0; left: 56px; right: 0; height: 1px; background: var(--fd-rule); }
+.settings-sheet .st-row:active { background: var(--fd-chip); }
+.settings-sheet .st-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: -2px; border-radius: 14px; }
+.st-glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--st-tone) 18%, transparent);
+  color: var(--st-tone);
+}
+.st-row-label { flex: 1; min-width: 0; }
+.st-row-hint { flex: 0 1 auto; min-width: 0; max-width: 46%; overflow: hidden; color: var(--fd-faint); font-size: 13.5px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.st-row-hint.warn { color: var(--fd-alert); font-weight: 650; }
+.st-chev { flex: none; margin-right: -2px; color: var(--fd-faint); }
+
+/* ─── A section: a plain heading on the page, then rows ─── */
+.settings-sheet .pf-group.st-group {
+  min-width: 0;
+  margin-top: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.settings-sheet .pf-group > .st-h:not(#_) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--fd-ink);
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+/* The section's colour from the index, as a small key beside its name. */
+.settings-sheet .pf-group > .st-h::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--st-tone); }
+.settings-sheet .pf-group > .fd-note.st-lede { margin-top: 6px; color: var(--fd-soft); font-size: 14px; line-height: 1.55; }
+.settings-sheet .st-sub:not(#_) { margin: 34px 0 0; color: var(--fd-ink); font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.settings-sheet .pf-group > .fd-note.st-subnote { margin-top: 30px; color: var(--fd-soft); font-size: 13.5px; }
+
+/* Readable type in every row: the old 11px small print grows to 13. */
+.settings-sheet .fd-note { font-size: 13px; line-height: 1.55; }
+.settings-sheet .fd-note.tight { font-size: 13px; }
+.settings-sheet .fd-msg { font-size: 13.5px; }
+.settings-sheet .fd-act { flex-wrap: wrap; gap: 10px 18px; }
+.settings-sheet .fd-act .fd-link, .settings-sheet .fd-link { font-size: 13.5px; min-height: 36px; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Form labels you can read, not 11px captions. */
+.settings-sheet .fd-field { color: var(--fd-soft); font-size: 13.5px; font-weight: 600; }
+.settings-sheet .rt-form .fd-label:not(#_) { margin-top: 4px; color: var(--fd-soft); font-size: 13.5px; font-weight: 600; }
+.settings-sheet .rt-flex b { font-size: 14.5px; }
+.settings-sheet .rt-flex small { font-size: 13px; color: var(--fd-soft); }
+.settings-sheet .rt-flex input { width: 18px; height: 18px; accent-color: var(--fd-accent); }
+
+/* Rows that speak in a title and a line: one size everywhere. */
+.settings-sheet .fd-source { margin-top: 0; padding: 16px 0; border-top: 0; border-bottom: 1px solid var(--fd-rule); }
+.settings-sheet .fd-source strong { font-size: 15px; font-weight: 650; }
+.settings-sheet .fd-source p { margin-top: 4px; color: var(--fd-soft); font-size: 13.5px; }
+.settings-sheet .fd-source .fd-act { margin-top: 12px; }
+.settings-sheet .fd-source .fd-field.wide { margin-top: 14px; }
+.settings-sheet .pf-group > :is(.pf-security, .pf-account) .fd-source:first-child,
+.settings-sheet .pf-group > .fd-source:first-of-type { margin-top: 14px; }
+.settings-sheet .pf-group .fd-source:last-child { border-bottom: 0; }
+.settings-sheet .pf-security { margin-top: 14px; }
+
+.settings-sheet .pf-master { gap: 16px; margin-top: 18px; padding: 4px 0 18px; }
+.settings-sheet .pf-master strong { display: flex; align-items: center; gap: 7px; font-size: 16px; }
+.settings-sheet .pf-master strong svg { color: var(--st-tone, var(--fd-accent)); }
+.settings-sheet .pf-master small { margin-top: 5px; color: var(--fd-soft); font-size: 13.5px; }
+
+/* You: the saved profile reads as a page, the form gets room. */
+.settings-sheet .fd-pairs dt { font-size: 14px; }
+.settings-sheet .fd-pairs dd { font-size: 15px; }
+.settings-sheet .fd-pairs > div { padding: 14px 0; }
+.settings-sheet #settings-you .fd-prose { margin-top: 16px; color: var(--fd-ink); font-size: 15.5px; line-height: 1.7; }
+.settings-sheet #settings-you .fd-form textarea { min-height: 170px; font-size: 15px; line-height: 1.6; }
+.settings-sheet .pf-group .fd-form > .fd-field.wide.pf-city { margin-top: 32px; color: var(--fd-ink); font-size: 16px; font-weight: 700; }
+.settings-sheet .pf-city-row input { min-height: 48px; font-size: 15px; }
+.settings-sheet .pf-city-row .pf-pill { min-height: 48px; }
+
+/* Connections: an app per row. Its tile on the left, everything else lines up under its name. */
+.settings-sheet .pf-apps > .fd-msg { margin-top: 14px; }
+.settings-sheet .pf-app { margin-top: 0; padding: 16px 0; border-bottom: 1px solid var(--fd-rule); }
+.settings-sheet .pf-apps .pf-app:first-of-type { margin-top: 10px; }
+.settings-sheet .pf-app-head { gap: 12px; }
+.settings-sheet .pf-app-head > :is(div, .fd-two) { flex: 1; min-width: 0; }
+.settings-sheet .pf-app-head strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 15px; }
+.settings-sheet .pf-app-head .fd-two { color: var(--fd-ink); font-size: 15px; font-weight: 650; }
+.settings-sheet .pf-app-head small { margin-top: 3px; color: var(--fd-soft); font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+.settings-sheet .pf-app-head .fd-two small { font-weight: 400; }
+.settings-sheet .fd-tile.pf-tile { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--fd-chip); }
+.settings-sheet .pf-readonly { padding: 0; background: none; color: var(--fd-faint); font-size: 12px; font-weight: 600; }
+.settings-sheet .pf-status { font-size: 13px; font-weight: 650; white-space: nowrap; }
+.settings-sheet .pf-status.on { color: var(--fd-accent); }
+.settings-sheet .pf-status.off { color: var(--fd-faint); }
+.settings-sheet .pf-status.warn { color: var(--fd-alert); }
+.settings-sheet .pf-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.settings-sheet .pf-app > :not(.pf-app-head) { margin-left: 48px; }
+.settings-sheet .pf-app .pf-scopes { margin-top: 10px; }
+.settings-sheet .pf-app .pf-scopes li { padding: 4px 0; color: var(--fd-faint); font-size: 13px; }
+.settings-sheet .pf-app .pf-scopes li.on { color: var(--fd-soft); }
+.settings-sheet .pf-app .fd-act.pf-act { margin-top: 10px; }
+.settings-sheet .pf-app .fd-act:empty { display: none; }
+/* Once an app is connected, its remaining button (Refresh, Add Calendar access) is a quiet one: the next
+   action on this list is whatever still needs connecting, so that is the only filled button. */
+.settings-sheet .pf-app:has(.pf-status.on) .fd-act :is(.fd-button, button:not(.fd-link)) { background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); }
+.settings-sheet .pf-app .fd-act :is(.fd-button, button:not(.fd-link)) { min-height: 40px; padding: 0 16px; font-size: 13.5px; }
+
+/* The data services: the same rows, smaller voice. */
+.settings-sheet .pf-services { margin-top: 6px; }
+.settings-sheet .pf-service { padding: 14px 0; }
+.settings-sheet .pf-service .fd-two { color: var(--fd-ink); font-size: 14.5px; font-weight: 600; }
+.settings-sheet .pf-service .fd-two small { color: var(--fd-faint); font-size: 12.5px; font-weight: 400; }
+.settings-sheet .pf-service-state b { font-size: 13px; }
+.settings-sheet .pf-service-state small { font-size: 12px; }
+
+/* AI & privacy: the switch leads; what each feature sends is a list on hairlines, its name first. */
+.settings-sheet .pf-notify > .fd-note { margin-top: 18px; color: var(--fd-soft); font-size: 13.5px; }
+.settings-sheet .pf-notify > .pf-scopes { margin-top: 8px; }
+.settings-sheet .pf-notify > .pf-scopes li { display: block; padding: 11px 0; border-bottom: 1px solid var(--fd-rule); color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.settings-sheet .pf-notify > .pf-scopes li b { color: var(--fd-ink); font-weight: 650; }
+.settings-sheet .pf-notify + .pf-notify { margin-top: 30px; }
+
+/* Heads-ups: switches like the ones above, not bare checkboxes. */
+.settings-sheet .pf-headsups > .fd-note.tight { margin-top: 6px; color: var(--fd-soft); font-size: 13.5px; }
+.settings-sheet .pf-headsups .fd-line { min-height: 52px; padding: 8px 0; cursor: pointer; }
+.settings-sheet .pf-headsups .fd-line span { color: var(--fd-ink); font-size: 14.5px; }
+.settings-sheet .pf-headsups input[role="switch"] { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border-radius: var(--r-pill); background: color-mix(in srgb, var(--fd-ink) 18%, transparent); cursor: pointer; }
+.settings-sheet .pf-headsups input[role="switch"]::before { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--on-fill); box-shadow: var(--shadow-knob); transition: transform .18s ease; }
+.settings-sheet .pf-headsups input[role="switch"]:checked { background: var(--fd-accent); }
+.settings-sheet .pf-headsups input[role="switch"]:checked::before { transform: translateX(18px); }
+.settings-sheet .pf-headsups input[role="switch"]:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.settings-sheet .pf-headsups input[role="switch"]:disabled { opacity: .5; cursor: not-allowed; }
+.settings-sheet .pf-headsups .fd-act { margin-top: 14px; }
+.settings-sheet .pf-headsups .fd-act button { background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); }
+
+/* Notifications: the slots are rows; this device is a row too, not a box. */
+.settings-sheet .pf-slot { min-height: 56px; padding: 10px 0; }
+.settings-sheet .pf-slot input[type="checkbox"] { width: 20px; height: 20px; }
+.settings-sheet .pf-slot strong { font-size: 15px; }
+.settings-sheet .pf-slot small { margin-top: 3px; color: var(--fd-soft); font-size: 13px; }
+.settings-sheet .pf-slot.off small { color: var(--fd-faint); }
+.settings-sheet .pf-slot input[type="time"] { min-height: 40px; font-size: 14px; }
+.settings-sheet .pf-device { margin-top: 22px; padding: 16px 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; }
+.settings-sheet .pf-device strong { font-size: 15px; }
+.settings-sheet .pf-device small { margin-top: 3px; color: var(--fd-soft); font-size: 13px; }
+.settings-sheet .pf-device .pf-pill { min-height: 40px; padding: 0 16px; font-size: 13.5px; }
+.settings-sheet .pf-test { margin-top: 4px; }
+
+/* Your day: routines as rows with room to tap. */
+.settings-sheet .rt-settings { margin-top: 10px; }
+.settings-sheet .rt-row { min-height: 56px; }
+.settings-sheet .rt-row-open { padding: 14px 0; }
+.settings-sheet .rt-row .fd-two { font-size: 15px; font-weight: 650; }
+.settings-sheet .rt-row .fd-two small { color: var(--fd-soft); font-size: 13px; font-weight: 400; }
+.settings-sheet .rt-settings > .fd-button { margin-top: 6px; }
+.settings-sheet .rt-settings > .rt-archive-toggle { display: flex; margin: 14px 0 4px; }
+
+/* Your data: the account rows. Sign out sits on its line; deleting is the last, quiet row. */
+.settings-sheet .pf-account { padding-top: 0; }
+.settings-sheet .pf-account .auth-signout { font-size: 13.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-sheet .pf-headsups input[role="switch"]::before { transition: none; }
+}
+
+/* ─── Desktop: the dialog is the one surface. The title and the index fill a
+   tinted pane down the left; the chosen section fills the right, its heading
+   set large, and only that pane scrolls. ─── */
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop] .settings-sheet {
+    grid-template-columns: 288px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
+    column-gap: 0;
+    width: min(1200px, calc(100% - 80px));
+    height: min(880px, calc(100dvh - 64px));
+    padding: 0;
+  }
+  /* The left pane's tint, as a grid item under the title and the index. */
+  .stage[data-desktop] .settings-sheet::before { content: ""; grid-column: 1; grid-row: 1 / -1; background: var(--fd-chip); border-right: 1px solid var(--fd-rule); }
+  .stage[data-desktop] .settings-sheet .settings-head { grid-column: 1; grid-row: 1; margin: 0; padding: 34px 24px 0 30px; }
+  .stage[data-desktop] .settings-sheet .settings-head h1 { font-size: 30px; font-weight: 750; letter-spacing: -.03em; }
+  .stage[data-desktop] .settings-sheet .st-who { font-size: 13.5px; }
+  /* Close sits in the dialog's corner, over the section pane. */
+  .stage[data-desktop] .settings-sheet .settings-head button { position: absolute; top: 18px; right: 18px; z-index: 1; margin: 0; }
+
+  .stage[data-desktop] .settings-sheet .settings-jump.st-index {
+    grid-column: 1;
+    grid-row: 2;
+    position: static;
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    margin: 0;
+    padding: 22px 14px 24px;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .stage[data-desktop] .settings-sheet .st-row { min-height: 46px; padding: 0 12px; border-radius: 12px; color: var(--fd-soft); font-size: 14.5px; font-weight: 600; box-shadow: none; }
+  .stage[data-desktop] .settings-sheet .st-row + .st-row::before { display: none; }
+  .stage[data-desktop] .settings-sheet .st-row:hover { background: var(--fd-chip); color: var(--fd-ink); }
+  .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] { background: color-mix(in srgb, var(--fd-ink) 8%, transparent); color: var(--fd-ink); font-weight: 650; box-shadow: none; }
+  .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-glyph { background: var(--st-tone); color: var(--fd-btn-ink); }
+  .stage[data-desktop] .settings-sheet .st-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 0; border-radius: 12px; }
+  .stage[data-desktop] .settings-sheet .st-glyph { width: 28px; height: 28px; border-radius: 8px; }
+  .stage[data-desktop] .settings-sheet .st-row-hint { font-size: 12.5px; }
+  .stage[data-desktop] .settings-sheet .st-chev { display: none; }
+
+  .stage[data-desktop] .settings-sheet .pf-group.st-group {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    justify-self: stretch;
+    width: auto;
+    max-height: none;
+    height: 100%;
+    margin: 0;
+    padding: 46px 64px 56px 56px;
+    overflow-y: auto;
+  }
+  .stage[data-desktop] .settings-sheet .pf-group.st-group > * { max-width: 780px; }
+  .stage[data-desktop] .settings-sheet .pf-group > .st-h:not(#_) { font-size: 32px; letter-spacing: -.03em; gap: 14px; }
+  .stage[data-desktop] .settings-sheet .pf-group > .st-h::before { width: 12px; height: 12px; border-radius: 4px; }
+  .stage[data-desktop] .settings-sheet .pf-group > .fd-note.st-lede { margin-top: 8px; font-size: 15px; }
+}

@@ -75,7 +75,7 @@ export function PasskeyPrompt() {
         {message && <p className="passkey-error" role="alert">{message}</p>}
         <div className="passkey-actions">
           <button className="finance-button primary" type="button" onClick={enable} disabled={isPending}>{isPending ? 'Waiting for your device…' : 'Enable passkey'}</button>
-          <button className="finance-button secondary" type="button" onClick={later} disabled={isPending}>Maybe later</button>
+          <button className="finance-button secondary passkey-later" type="button" onClick={later} disabled={isPending}>Maybe later</button>
         </div>
       </div>
     </section>

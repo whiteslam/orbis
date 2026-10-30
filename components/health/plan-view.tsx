@@ -66,7 +66,7 @@ function Stats({ items }: Readonly<{ items: Array<{ label: string; value: string
   );
 }
 
-const ICON = { size: 13, strokeWidth: 2, 'aria-hidden': true } as const;
+const ICON = { size: 16, strokeWidth: 2, 'aria-hidden': true } as const;
 
 /** A generated plan, read top to bottom on the ground: no cards except the day picker and the figures. */
 export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
@@ -77,9 +77,8 @@ export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
   return (
     <article className="hl-plan">
       <header>
-        <p className="fd-kicker">{plan.durationWeeks}-week plan</p>
         <h1>{plan.title}</h1>
-        <p className="hl-plan-summary">{plan.summary}</p>
+        <p className="hl-plan-summary"><b>{plan.durationWeeks}-week plan.</b> {plan.summary}</p>
       </header>
 
       {plan.cautions.length > 0 && (
@@ -89,6 +88,8 @@ export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
         </div>
       )}
 
+      <div className="hl-plan-cols">
+      <div className="hl-plan-main">
       <Section icon={<Dumbbell {...ICON} />} title="Workout week">
         {plan.workout.overview && <p className="hl-plan-note">{plan.workout.overview}</p>}
         <div className="hl-days" role="tablist" aria-label="Days">
@@ -138,6 +139,8 @@ export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
         </Section>
       )}
 
+      </div>
+      <div className="hl-plan-side">
       <Section icon={<Apple {...ICON} />} title="Nutrition">
         {plan.nutrition.overview && <p className="hl-plan-note">{plan.nutrition.overview}</p>}
         {plan.nutrition.dailyTargets.length > 0 && <Stats items={plan.nutrition.dailyTargets} />}
@@ -155,6 +158,8 @@ export function PlanView({ plan }: Readonly<{ plan: HealthPlan }>) {
         {plan.sleep.habits.length > 0 && <ul className="hl-bullets">{plan.sleep.habits.map((habit) => <li key={habit}>{habit}</li>)}</ul>}
         {plan.sleep.recovery.length > 0 && <><p className="hl-plan-note"><b>Recovery</b></p><ul className="hl-bullets tight">{plan.sleep.recovery.map((item) => <li key={item}>{item}</li>)}</ul></>}
       </Section>
+      </div>
+      </div>
 
       {plan.sources.length > 0 && <p className="fd-note">Based on: {plan.sources.join(' · ')}</p>}
       <p className="fd-note tight">This plan is general guidance, not medical advice. Check with a doctor before starting if you have a health condition.</p>

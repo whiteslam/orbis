@@ -16,7 +16,7 @@
 
 /* The desktop phone frame: near-black body, 40px radius, 1.5px border. */
 @media (min-width: 721px) {
-  .phone { background: #0a0a0c; border-radius: 40px; box-shadow: var(--e3); }
+  .phone { background: var(--brand-frame); border-radius: 40px; box-shadow: var(--e3); }
   .phone::after { border: 1.5px solid var(--brand-border); border-radius: 36px; }
   .phone-screen { border-radius: 32px; }
 }
@@ -26,7 +26,7 @@
    labels shrink with the bar (down to 8px) and never wrap; icons keep 20px. */
 .bottom-nav { container-type: inline-size; padding-inline: 4px; }
 .bottom-nav button span { font-size: clamp(8px, 3.6cqi, 10px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
-.bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 4px 14px rgba(66,204,168,.28); font-weight: 600; }
+.bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: var(--shadow-tab-active); font-weight: 600; }
 .bottom-nav button.active svg { stroke: var(--brand-on-accent); }
 .talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }
 
@@ -41,13 +41,13 @@
   border-color: var(--brand-teal);
   color: var(--brand-on-accent);
 }
-.pf-pill.alert { background: rgba(242,107,107,.14); color: var(--fd-alert); }
+.pf-pill.alert { background: var(--pill-alert-bg); color: var(--fd-alert); }
 
 .pill { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
-.pill.teal { background: rgba(66,204,168,.16); color: var(--brand-teal); }
-.pill.blue { background: rgba(91,180,232,.16); color: var(--brand-blue); }
-.pill.red  { background: rgba(242,107,107,.16); color: var(--brand-red); }
-.pill.gold { background: rgba(240,180,41,.16); color: var(--brand-gold); }
+.pill.teal { background: var(--pill-teal-bg); color: var(--brand-teal); }
+.pill.blue { background: var(--pill-blue-bg); color: var(--brand-blue); }
+.pill.red  { background: var(--pill-red-bg); color: var(--brand-red); }
+.pill.gold { background: var(--pill-gold-bg); color: var(--brand-gold); }
 
 /* Ask Orbis: the user speaks in the gradient, Orbis answers on a dark card. */
 .talk-q { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); border-radius: 16px 16px 4px 16px; font-weight: 500; }

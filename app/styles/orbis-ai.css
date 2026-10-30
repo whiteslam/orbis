@@ -1,0 +1,128 @@
+/* ─── Ask Orbis's mark ────────────────────────────────────────────────
+   components/brand/orbis-ai-mark.tsx. The Orbis ring from brand.css, plus a
+   moon on its orbit, a comet trail, a halo, listening ripples and three
+   points in the hole. data-phase picks the pose: idle, listening, thinking,
+   speaking. Outside the motion query every phase is a still pose, so Reduce
+   Motion still shows which one it is. Only transform (as rotate/scale/
+   translate) and opacity ever animate. */
+:root {
+  /* The logo's own ring and hole (brand.css), so the mark matches it exactly. */
+  --oai-ring: var(--mark-ring);
+  --oai-band: var(--mark-mask);
+  /* Masks read alpha only; any opaque colour cuts the same shape. */
+  --oai-thin: radial-gradient(circle closest-side, transparent 90%, var(--brand-teal) 92%, var(--brand-teal) 98%, transparent 100%);
+  --oai-glow: var(--brand-teal);
+  --oai-light: var(--on-fill);
+  --oai-ease: cubic-bezier(.2, .8, .2, 1);
+  --oai-spring: cubic-bezier(.2, 1.5, .4, 1);
+}
+
+.oai {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--oai-size, 28px);
+  height: var(--oai-size, 28px);
+  vertical-align: middle;
+}
+.oai > span,
+.oai-orbit > span { position: absolute; border-radius: 50%; }
+.oai-halo, .oai-ripple, .oai-ring, .oai-orbit, .oai-trail { inset: 0; }
+
+.oai-ring { background: var(--oai-ring); -webkit-mask: var(--oai-band); mask: var(--oai-band); transition: scale .3s var(--oai-spring); }
+.oai-halo { background: var(--oai-ring); filter: blur(calc(var(--oai-size, 28px) * .2)); opacity: .3; scale: .85; }
+.oai-ripple { background: var(--oai-glow); -webkit-mask: var(--oai-thin); mask: var(--oai-thin); opacity: 0; }
+
+/* The trail is a conic arc that brightens the ring behind the moon; it turns with the orbit. */
+.oai-trail {
+  background: conic-gradient(from 0deg, transparent 0turn .62turn, var(--oai-light) 1turn);
+  -webkit-mask: var(--oai-band);
+  mask: var(--oai-band);
+  opacity: 0;
+  mix-blend-mode: soft-light;
+  transition: opacity .35s ease;
+}
+/* The moon sits on the middle of the ring's band (72% of the radius out). */
+.oai-moon {
+  top: 6.5%;
+  left: 42.5%;
+  width: 15%;
+  height: 15%;
+  background: var(--oai-light);
+  box-shadow: 0 0 calc(var(--oai-size, 28px) * .18) var(--oai-glow);
+  transition: scale .3s var(--oai-spring);
+}
+
+/* Three points in the hole. Idle shows only the middle one, as a spark. */
+.oai-core { inset: 28%; display: flex; align-items: center; justify-content: center; gap: 9%; }
+.oai-core > span {
+  width: 18%;
+  height: 18%;
+  border-radius: 99px;
+  background: var(--oai-light);
+  opacity: 0;
+  scale: 0;
+  transition: opacity .25s ease, scale .3s var(--oai-spring);
+}
+.oai-core > span:nth-child(2) { opacity: 1; scale: 1; box-shadow: 0 0 calc(var(--oai-size, 28px) * .12) var(--oai-glow); }
+
+/* Still poses (also what Reduce Motion sees). */
+.oai[data-phase="listening"] .oai-ripple:nth-of-type(2) { opacity: .45; scale: 1.25; }
+.oai[data-phase="listening"] .oai-halo { opacity: .5; }
+.oai[data-phase="thinking"] .oai-trail { opacity: 1; }
+.oai:not([data-phase="idle"]) .oai-core > span { opacity: 1; scale: 1; }
+.oai[data-phase="speaking"] .oai-core > span { scale: 1 1.8; }
+
+/* Hover and keyboard focus on whatever holds the mark. */
+:is(button, a):is(:hover, :focus-visible) > .oai .oai-ring { scale: 1.08; }
+:is(button, a):is(:hover, :focus-visible) > .oai .oai-moon { scale: 1.35; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Arrival: the ring springs open and the orbit swings in. */
+  .oai { animation: oai-in .7s var(--oai-spring) both; }
+  .oai-orbit { animation: oai-swing .9s var(--oai-ease) both, oai-turn 6s linear .9s infinite; }
+
+  /* Idle: the ring turns slowly, the halo breathes, the spark twinkles. */
+  .oai-ring { animation: oai-turn 16s linear infinite; }
+  .oai-halo { animation: oai-breathe 4.2s ease-in-out infinite; }
+  .oai[data-phase="idle"] .oai-core > span:nth-child(2) { animation: oai-twinkle 2.8s ease-in-out infinite; }
+
+  /* Listening: ripples leave the ring, the points rise and fall like a voice. */
+  .oai[data-phase="listening"] .oai-ripple { animation: oai-ripple 1.8s var(--oai-ease) infinite; }
+  .oai[data-phase="listening"] .oai-ripple:nth-of-type(3) { animation-delay: .9s; }
+  .oai[data-phase="listening"] .oai-halo { animation-duration: 1.2s; }
+  .oai[data-phase="listening"] .oai-orbit { animation: oai-turn 3s linear infinite; }
+  .oai[data-phase="listening"] .oai-core > span { animation: oai-level .9s ease-in-out infinite; }
+  .oai[data-phase="listening"] .oai-core > span:nth-child(2) { animation-delay: -.3s; animation-duration: .7s; }
+  .oai[data-phase="listening"] .oai-core > span:nth-child(3) { animation-delay: -.6s; }
+
+  /* Thinking: the orbit races with its comet trail, the points take turns to hop. */
+  .oai[data-phase="thinking"] .oai-ring { animation-duration: 2.4s; }
+  .oai[data-phase="thinking"] .oai-orbit { animation: oai-turn .95s linear infinite; }
+  .oai[data-phase="thinking"] .oai-core > span { animation: oai-hop 1.05s ease-in-out infinite; }
+  .oai[data-phase="thinking"] .oai-core > span:nth-child(2) { animation-delay: .15s; }
+  .oai[data-phase="thinking"] .oai-core > span:nth-child(3) { animation-delay: .3s; }
+
+  /* Speaking: the points are an equaliser and the halo pulses with it. */
+  .oai[data-phase="speaking"] .oai-halo { animation-duration: .8s; }
+  .oai[data-phase="speaking"] .oai-orbit { animation: oai-turn 4s linear infinite; }
+  .oai[data-phase="speaking"] .oai-core > span { animation: oai-eq .6s ease-in-out infinite alternate; }
+  .oai[data-phase="speaking"] .oai-core > span:nth-child(2) { animation-duration: .42s; }
+  .oai[data-phase="speaking"] .oai-core > span:nth-child(3) { animation-duration: .73s; animation-delay: -.2s; }
+  .oai[data-phase="speaking"] .oai-moon { animation: oai-pulse .8s ease-in-out infinite; }
+}
+
+@keyframes oai-in { from { opacity: 0; scale: .4; rotate: -120deg; } to { opacity: 1; scale: 1; rotate: 0deg; } }
+@keyframes oai-swing { from { rotate: -200deg; opacity: 0; } to { rotate: 0deg; opacity: 1; } }
+@keyframes oai-turn { to { rotate: 1turn; } }
+@keyframes oai-breathe { 0%, 100% { opacity: .22; scale: .82; } 50% { opacity: .5; scale: 1.06; } }
+@keyframes oai-twinkle { 0%, 100% { opacity: .55; scale: .7; } 45% { opacity: 1; scale: 1.25; } 60% { opacity: .9; scale: 1; } }
+@keyframes oai-ripple { from { opacity: .7; scale: 1; } to { opacity: 0; scale: 1.75; } }
+@keyframes oai-level { 0%, 100% { scale: 1 1; } 50% { scale: 1 2.4; } }
+@keyframes oai-hop { 0%, 60%, 100% { translate: 0 0; opacity: .5; } 30% { translate: 0 -70%; opacity: 1; } }
+@keyframes oai-eq { from { scale: 1 .8; } to { scale: 1 2.6; } }
+@keyframes oai-pulse { 0%, 100% { scale: 1; } 50% { scale: 1.45; } }
+
+/* ─── Where the mark sits ─── */
+/* The Ask button is glass so the gradient ring reads against it, not on a gradient. */
+.talk-fab:has(.oai) { background: var(--gl-fill); overflow: visible; }

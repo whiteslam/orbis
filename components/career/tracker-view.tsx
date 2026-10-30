@@ -7,6 +7,7 @@ import { BusyIcon, NoticeLine } from '@/components/career/bits';
 import { dayMonth, dayTime, replyChance } from '@/components/career/format';
 import { StatusChip } from '@/components/career/status-chip';
 import { useRun } from '@/components/career/use-run';
+import { allApplications } from '@/components/career/panel/panel-data';
 import { STAGE_GROUPS, isOpen } from '@/lib/career/status';
 import type { CareerEvent } from '@/lib/career/types';
 import type { ApplicationCard, CareerHome } from '@/lib/career/view';
@@ -97,8 +98,8 @@ export function TrackerView({ home, onOpen, onReload }: Readonly<{ home: CareerH
     if (event.applicationId && !latestById.has(event.applicationId)) latestById.set(event.applicationId, event.summary);
   }
   const interviewById = new Map(home.upcoming.map((item) => [item.application.id, item.at]));
-  // Ready drafts live in the Queue; only the ones the owner has opened belong here.
-  const cards = home.pipeline.filter((card) => card.application.status !== 'ready' && card.application.status !== 'drafting');
+  // Every application, the drafts waiting for Send included (they lead, as "Waiting on you").
+  const cards = allApplications(home).filter((card) => card.application.status !== 'drafting');
   const attachable = home.pipeline.filter((card) => isOpen(card.application.status) || card.application.status === 'ghosted');
 
   return (
@@ -117,8 +118,8 @@ export function TrackerView({ home, onOpen, onReload }: Readonly<{ home: CareerH
 
       {cards.length === 0 && (
         <section className="fd-focus cr-empty">
-          <h2>No applications out yet.</h2>
-          <p>Once you send one, it shows here with every reply Orbis finds, its chance of a reply, and what to do next.</p>
+          <h2>No applications yet.</h2>
+          <p>When a job clears your bar, Orbis drafts the application and it waits here for your Send. Look through Jobs to find one, or paste a job you found yourself.</p>
         </section>
       )}
 
@@ -135,7 +136,7 @@ export function TrackerView({ home, onOpen, onReload }: Readonly<{ home: CareerH
         );
         if (group.id === 'closed') {
           return (
-            <details className={`cr-stage cr-stage-${group.id}`} key={group.id}>
+            <details className={`cr-stage cr-stage-${group.id}`} key={group.id} id={`cr-stage-${group.id}`}>
               <summary><span className="cr-stage-dot" aria-hidden="true" />{label}<span className="cr-stage-n">{inGroup.length}</span></summary>
               {rows}
             </details>

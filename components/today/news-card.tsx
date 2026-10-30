@@ -28,10 +28,9 @@ function ago(iso: string) {
 }
 
 /**
- * The story's picture, for the desktop's news grid only: the phone's list has
- * no pictures, and app/styles/desktop.css keeps this hidden below the desktop
- * breakpoint (a lazy image that is never shown is never fetched). A story with
- * no picture, or one that fails to load, gets a quiet tile with its source.
+ * The story's picture: every story carries one, on the desktop's magazine grid
+ * and as a thumbnail in the phone's list (app/styles/page-today.css). A story
+ * with no picture, or one that fails to load, gets a quiet tile with its source.
  */
 function NewsPhoto({ article }: Readonly<{ article: NewsArticle }>) {
   const [failed, setFailed] = useState(false);
@@ -52,13 +51,13 @@ function NewsPhoto({ article }: Readonly<{ article: NewsArticle }>) {
   );
 }
 
-function Headline({ article, line }: Readonly<{ article: NewsArticle; line?: string }>) {
+function Headline({ article, line, lead }: Readonly<{ article: NewsArticle; line?: string; lead?: boolean }>) {
   const ask = () => openAsk(
     { kind: 'news', title: article.title, detail: [line, article.description, `Source: ${article.source}`].filter(Boolean).join(' '), url: article.url },
     'What does this mean, and could it affect my money or investments?',
   );
   return (
-    <div className="fd-news-item">
+    <div className={`fd-news-item${lead ? ' is-lead' : ''}`}>
       <a className="fd-news-row" href={article.url} target="_blank" rel="noopener noreferrer">
         {DESKTOP_LAYOUT && <NewsPhoto article={article} />}
         <span className="fd-news-title">{article.title}</span>
@@ -116,8 +115,13 @@ export function NewsCard() {
     : digest.articles.slice(0, PLAIN_HEADLINES).map((article) => ({ article, line: undefined }));
 
   return (
-    <section className="fd-quiet fd-news" aria-labelledby="news-title">
-      <h2 id="news-title">News</h2>
+    <section className="fd-quiet fd-news td-news" aria-labelledby="news-title">
+      <div className="td-news-head">
+        <h2 id="news-title">News</h2>
+        <p suppressHydrationWarning>India and the world, updated {ago(digest.fetchedAt)}</p>
+      </div>
+
+      {picked.map(({ article, line }, index) => <Headline key={article.id} article={article} line={line} lead={index === 0} />)}
 
       {analysis && (
         <div className="fd-news-market">
@@ -155,8 +159,6 @@ export function NewsCard() {
           </div>
         </div>
       )}
-
-      {picked.map(({ article, line }) => <Headline key={article.id} article={article} line={line} />)}
 
       <p className="fd-news-foot">
         {analysis ? 'Reasons and market read are written by AI from the headlines. A reading of the news, not investment advice.' : 'Headlines via NewsData.'}

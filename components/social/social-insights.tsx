@@ -45,7 +45,7 @@ export function SocialInsights() {
   return (
     <section className="so-insights" aria-labelledby="so-insights-title">
       <div className="so-insights-head">
-        <h2 id="so-insights-title" className="fd-label">Insights</h2>
+        <h2 id="so-insights-title" className="so-h">Insights</h2>
         {connected.length > 0 && (
           <button type="button" className="fd-link" onClick={load} disabled={isLoading} aria-label="Refresh insights">
             <RefreshCw size={13} aria-hidden="true" className={isLoading ? 'so-spin' : undefined} /> {isLoading ? 'Loading' : 'Refresh'}
@@ -54,7 +54,7 @@ export function SocialInsights() {
       </div>
 
       {problem && <p className="so-problem">{problem}</p>}
-      {!platforms && !problem && <p className="so-summary">Loading your numbers…</p>}
+      {!platforms && !problem && <p className="so-summary" aria-busy="true">Loading your numbers…</p>}
 
       {platforms && !connected.length && (
         <p className="so-summary">

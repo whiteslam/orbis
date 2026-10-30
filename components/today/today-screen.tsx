@@ -55,8 +55,9 @@ function gmailNoticeText(notice: string) {
   }
 }
 
-// Home leads with one decision on a single lifted surface; everything else is a
-// quiet row. What that decision is comes from composeFocus, not from the layout.
+// Home is the day at a glance: the brief leads on the ground, what needs you
+// shares one surface, and everything else is a ruled row. Styled by
+// app/styles/page-today.css.
 export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan, routines, preferredName, aiBriefEnabled, gmailNotice, clearGmailNotice, openTab, openHeadsup, setup }: Readonly<{ financeSummary: FinanceSummary; stepsSummary: StepsSummary; documentCount: number; plan: HealthPlanRecord | null; routines: RoutinesSummary; preferredName: string | null; aiBriefEnabled: boolean; gmailNotice: string | null; clearGmailNotice: () => void; openTab: (target: FocusTarget) => void; openHeadsup: (action: HeadsupAction) => void; setup: SetupStep[] }>) {
   const [weather, setWeather] = useState<BriefWeather | null>(null);
   const [weatherPhase, setWeatherPhase] = useState<WeatherPhase>('loading');
@@ -133,7 +134,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   }, [aiBriefEnabled, dataKey, ready, weather]);
 
   return (
-    <div className="screen-body field">
+    <div className="screen-body field td">
       <header className="fd-top">
         {/* The date is rendered in IST on both sides, but the day can turn between them. */}
         <div className="fd-brand">
@@ -149,41 +150,48 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
       <PasskeyPrompt />
 
-      {/* Home reads in the order the day is lived: what Orbis has to say, what
-          is due now, what it noticed, then the day's numbers and weather. The
-          things to read at leisure — mail, news — come after, and the reminders
-          about Orbis itself sit at the foot, out of the way of all of it. */}
-      <FocusNote note={brief} />
+      {/* Home reads like a morning paper. The brief leads, set large, with the
+          one thing due now right under it; then the day at a glance (weather,
+          steps, spend) as one ruled strip. What needs you (heads-ups, Career,
+          mail) shares the page's one surface; the news is the magazine below,
+          and the reminders about Orbis itself sit at the foot. */}
+      <div className="td-lead">
+        <FocusNote note={brief} />
 
-      {/* The brief says what is due; this records what happened to it. */}
-      {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
-      {current && canAnswer(current) && <RoutineCheck current={current} />}
+        {/* The brief says what is due; this records what happened to it. */}
+        {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
+        {current && canAnswer(current) && <RoutineCheck current={current} />}
+      </div>
 
-      {/* What Orbis noticed on its own, each with its next step ready. */}
-      <Headsups onAction={openHeadsup} />
+      <div className="td-glance">
+        <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
+        <TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />
+      </div>
 
-      <TodayWidgets steps={stepsSummary} month={financeSummary.month} openTab={openTab} />
-
-      {/* The job hunt's most pressing fact, once Career is set up. */}
-      <CareerRow openTab={openTab} />
-
-      <WeatherCard onWeather={setWeather} onPhase={setWeatherPhase} openPersonal={() => openTab('personal')} />
-
-      {/* Mail you have not said "Got it" to yet. */}
-      {gmailNotice && (
-        <output className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`}>
-          <span>{gmailNoticeText(gmailNotice)}</span>
-          <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
-        </output>
-      )}
-      <ImportantMail />
+      {/* What needs you: what Orbis noticed, the job hunt's most pressing fact,
+          and mail you have not said "Got it" to yet. Drawn as nothing at all
+          when every part of it is empty. */}
+      <div className="td-desk">
+        <Headsups onAction={openHeadsup} />
+        <CareerRow openTab={openTab} />
+        {gmailNotice && (
+          <output className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`}>
+            <span>{gmailNoticeText(gmailNotice)}</span>
+            <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
+          </output>
+        )}
+        <ImportantMail />
+      </div>
 
       {/* What is happening in the world, and what it may mean for the market. */}
-      <NewsCard />
+      <div className="td-paper">
+        <NewsCard />
+      </div>
 
-      <SetupChecklist steps={setup} />
-
-      <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
+      <div className="td-foot">
+        <SetupChecklist steps={setup} />
+        <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
+      </div>
     </div>
   );
 }

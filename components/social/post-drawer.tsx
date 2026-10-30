@@ -162,7 +162,7 @@ function CaptionCounter({ platforms, length }: Readonly<{ platforms: SocialPlatf
           const over = length > CAPTION_LIMIT[platform];
           return (
             <span key={platform} className={over ? 'over' : undefined}>
-              {platformLabel(platform)} {used} / {CAPTION_LIMIT[platform].toLocaleString('en-IN')}{over ? ' — too long' : ''}
+              {platformLabel(platform)} {used} / {CAPTION_LIMIT[platform].toLocaleString('en-IN')}{over ? ', too long' : ''}
             </span>
           );
         })
@@ -378,7 +378,7 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
       return null;
     }
     const droppedToDraft = saved?.status === 'ready' && result.post.status === 'draft';
-    accept(result.post, droppedToDraft ? 'Saved. It is back to draft — mark it ready again when you are happy with it.' : result.message);
+    accept(result.post, droppedToDraft ? 'Saved. It is back to draft. Mark it ready again when you are happy with it.' : result.message);
     return result.post;
   }
 
@@ -522,55 +522,61 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
         <form className="fd-form" onSubmit={(event) => { event.preventDefault(); save(); }}>
           {locked && saved?.published && <PublishedNote published={saved.published} />}
 
-          <div className="fd-seg" role="radiogroup" aria-label="Format">
-            {SOCIAL_FORMATS.map((format) => (
-              <button key={format.id} type="button" role="radio" aria-checked={form.format === format.id} disabled={locked} onClick={() => setForm({ ...form, format: format.id })}>{format.label}</button>
-            ))}
-          </div>
-
-          <div className="so-row-2">
-            <label className="fd-field wide">Day{' '}
-              <input type="date" value={form.plannedFor} min={postPeriod} max={lastDay} disabled={locked} onChange={(event) => setForm({ ...form, plannedFor: event.currentTarget.value })} />
+          {/* The words lead; the format, day, platforms and picture sit beside them on desktop. */}
+          <div className="so-edit-main">
+            <label className="fd-field wide">Title{' '}
+              <input value={form.title} maxLength={SOCIAL_CAPS.title} required disabled={locked} placeholder="What this post is about" onChange={(event) => setForm({ ...form, title: event.currentTarget.value })} />
             </label>
-            {saved && saved.status !== 'ready' && saved.status !== 'published' ? (
-              <label className="fd-field wide">Stage{' '}
-                <select value={saved.status} disabled={busy !== null} onChange={(event) => setDraftStatus(event.currentTarget.value as 'idea' | 'draft')}>
-                  <option value="idea">Idea</option>
-                  <option value="draft">Draft</option>
-                </select>
-              </label>
-            ) : <span />}
+            <label className="fd-field wide">Headline <span>(optional, the words on the image)</span>
+              <input value={form.headline} maxLength={SOCIAL_CAPS.headline} disabled={locked} onChange={(event) => setForm({ ...form, headline: event.currentTarget.value })} />
+            </label>
+            <label className="fd-field wide">Caption{' '}
+              <textarea rows={7} value={form.caption} maxLength={SOCIAL_CAPS.caption} disabled={locked} onChange={(event) => setForm({ ...form, caption: event.currentTarget.value })} />
+            </label>
+            <CaptionCounter platforms={form.platforms} length={length} />
+            <label className="fd-field wide">Hashtags{' '}
+              <input value={form.hashtags} disabled={locked} placeholder="#autumn #recipes" onChange={(event) => setForm({ ...form, hashtags: event.currentTarget.value })} />
+            </label>
+
           </div>
-
-          <label className="fd-field wide">Title{' '}
-            <input value={form.title} maxLength={SOCIAL_CAPS.title} required disabled={locked} placeholder="What this post is about" onChange={(event) => setForm({ ...form, title: event.currentTarget.value })} />
-          </label>
-          <label className="fd-field wide">Headline <span>(optional, the words on the image)</span>
-            <input value={form.headline} maxLength={SOCIAL_CAPS.headline} disabled={locked} onChange={(event) => setForm({ ...form, headline: event.currentTarget.value })} />
-          </label>
-          <label className="fd-field wide">Caption{' '}
-            <textarea rows={7} value={form.caption} maxLength={SOCIAL_CAPS.caption} disabled={locked} onChange={(event) => setForm({ ...form, caption: event.currentTarget.value })} />
-          </label>
-          <CaptionCounter platforms={form.platforms} length={length} />
-          <label className="fd-field wide">Hashtags{' '}
-            <input value={form.hashtags} disabled={locked} placeholder="#autumn #recipes" onChange={(event) => setForm({ ...form, hashtags: event.currentTarget.value })} />
-          </label>
-
-          <fieldset className="fd-chips">
-            <legend className="fd-label">Platforms</legend>
-            <div>
-              {SOCIAL_PLATFORMS.map((platform) => (
-                <button key={platform.id} type="button" aria-pressed={form.platforms.includes(platform.id)} disabled={locked} onClick={() => togglePlatform(platform.id)}>{platform.label}</button>
+          <div className="so-edit-side">
+            <div className="fd-seg" role="radiogroup" aria-label="Format">
+              {SOCIAL_FORMATS.map((format) => (
+                <button key={format.id} type="button" role="radio" aria-checked={form.format === format.id} disabled={locked} onClick={() => setForm({ ...form, format: format.id })}>{format.label}</button>
               ))}
             </div>
-          </fieldset>
 
-          <section className={`so-media so-fmt-${form.format}`}>
-            <FieldLabel>Picture or video</FieldLabel>
-            <MediaPreview saved={saved} format={form.format} />
-            {!locked && <MediaUpload hasMedia={Boolean(saved?.mediaPath)} busy={busy} onUpload={upload} onRemove={removeMedia} />}
-            <p className="fd-note tight">Up to 50 MB. JPG, PNG, WebP, GIF, MP4, MOV or WebM. Only you can see it.</p>
-          </section>
+            <div className="so-row-2">
+              <label className="fd-field wide">Day{' '}
+                <input type="date" value={form.plannedFor} min={postPeriod} max={lastDay} disabled={locked} onChange={(event) => setForm({ ...form, plannedFor: event.currentTarget.value })} />
+              </label>
+              {saved && saved.status !== 'ready' && saved.status !== 'published' ? (
+                <label className="fd-field wide">Stage{' '}
+                  <select value={saved.status} disabled={busy !== null} onChange={(event) => setDraftStatus(event.currentTarget.value as 'idea' | 'draft')}>
+                    <option value="idea">Idea</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </label>
+              ) : <span />}
+            </div>
+
+            <fieldset className="fd-chips">
+              <legend className="fd-label">Platforms</legend>
+              <div>
+                {SOCIAL_PLATFORMS.map((platform) => (
+                  <button key={platform.id} type="button" aria-pressed={form.platforms.includes(platform.id)} disabled={locked} onClick={() => togglePlatform(platform.id)}>{platform.label}</button>
+                ))}
+              </div>
+            </fieldset>
+
+            <section className={`so-media so-fmt-${form.format}`}>
+              <FieldLabel>Picture or video</FieldLabel>
+              <MediaPreview saved={saved} format={form.format} />
+              {!locked && <MediaUpload hasMedia={Boolean(saved?.mediaPath)} busy={busy} onUpload={upload} onRemove={removeMedia} />}
+              <p className="fd-note tight">Up to 50 MB. JPG, PNG, WebP, GIF, MP4, MOV or WebM. Only you can see it.</p>
+            </section>
+
+          </div>
 
           {problem && <p className="so-problem" role="alert">{problem}</p>}
           {message && <output className={`so-message${message.error ? ' error' : ''}`}>{message.text}</output>}

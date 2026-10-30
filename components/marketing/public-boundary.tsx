@@ -6,6 +6,8 @@
 // component tree, and the service names inside it, being bundled into every
 // public page.
 
+import { OrbisMark } from '@/components/brand/orbis-mark';
+
 export function PublicBoundary({ onRetry }: Readonly<{ onRetry?: () => void }>) {
   return (
     <div className="wl-shell">
@@ -29,7 +31,10 @@ export function PublicLoading() {
   return (
     <div className="wl-shell">
       <main className="wl-main" aria-busy="true">
-        <output className="wl-loading">Loading…</output>
+        <div className="wl-loading-wrap">
+          <OrbisMark size={56} className="wl-loading-ring" />
+          <output className="wl-loading">Loading…</output>
+        </div>
       </main>
     </div>
   );

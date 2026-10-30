@@ -87,7 +87,8 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Rea
     <>
       <FieldSubHead crumb="Spending · manual entry" title={`Add ${noun}`} lead="Cash, UPI, or anything Gmail never saw." onClose={onClose} backLabel="Close manual entry" />
 
-      <form className="fd-form" onSubmit={submit}>
+      <div className="mn mn-entry">
+      <form className="fd-form mn-sheet" onSubmit={submit}>
         <div className="fd-seg" role="radiogroup" aria-label="Transaction type">
           {(['expense', 'income', 'investment'] as const).map((value) => (
             <button key={value} type="button" role="radio" aria-checked={direction === value} onClick={() => changeDirection(value)} disabled={isPending}>
@@ -145,7 +146,11 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Rea
         </div>
       </form>
 
-      <CurrencyCard />
+      <div className="mn-foot">
+        <p className="fd-note">Saved entries appear in Transactions straight away.</p>
+        <CurrencyCard />
+      </div>
+      </div>
     </>
   );
 }

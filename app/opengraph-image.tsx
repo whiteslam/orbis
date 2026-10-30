@@ -5,6 +5,15 @@ export const alt = `${SITE_NAME} — one calm daily brief for your money, health
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
+// The brand values, copied from app/styles/brand.css: ImageResponse renders
+// outside the page, so CSS variables do not reach it.
+const tokens = {
+  ground: '#0e0e10',
+  ink: '#f2f3f5',
+  ring: 'linear-gradient(135deg, #5bb4e8, #42cca8)',
+  font: 'sans-serif',
+} as const;
+
 // A generated share preview using the Orbis brand ring and colours, so links to
 // Orbis look intentional wherever they're shared — no static asset to keep in sync.
 export default function Image() {
@@ -18,9 +27,9 @@ export default function Image() {
           flexDirection: 'column',
           justifyContent: 'center',
           padding: '80px',
-          background: '#0e0e10',
-          color: '#f2f3f5',
-          fontFamily: 'sans-serif',
+          background: tokens.ground,
+          color: tokens.ink,
+          fontFamily: tokens.font,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -29,13 +38,13 @@ export default function Image() {
               width: 56,
               height: 56,
               borderRadius: 28,
-              background: 'linear-gradient(135deg, #5bb4e8, #42cca8)',
+              background: tokens.ring,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <div style={{ width: 25, height: 25, borderRadius: 13, background: '#0e0e10' }} />
+            <div style={{ width: 25, height: 25, borderRadius: 13, background: tokens.ground }} />
           </div>
           <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.03em' }}>{SITE_NAME}</div>
         </div>

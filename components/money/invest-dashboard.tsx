@@ -16,8 +16,10 @@ import { OwnInvestmentsList } from '@/components/money/own-investments';
 import { PortfolioNewsCard } from '@/components/money/portfolio-news';
 import { ResearchDeskSection } from '@/components/research/research-desk';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
-import { FieldHead, FieldHero, FieldLabel, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { FieldHead, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { inr } from '@/components/money/format';
+import { LedgerAmount } from '@/components/money/transaction-list';
 
 type InvestView = { name: 'main' } | { name: 'connect'; broker: BrokerId; reconnect: boolean } | { name: 'advice' };
 
@@ -62,12 +64,6 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
 
   useEffect(load, []);
 
-  const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
-  const hasData = analysis.positions.length > 0;
-  const failures = (live?.brokers ?? [])
-    .filter((broker) => broker.state === 'error')
-    .map((broker) => ({ name: brokerMeta(broker.broker).name, message: broker.message ?? 'The connection failed.' }));
-  const connected = (live?.brokers ?? []).some((broker) => broker.state !== 'not_connected');
   const portfolioOf = (id: BrokerId) => live?.brokers.find((broker) => broker.broker === id) ?? null;
 
   if (view.name === 'connect') {
@@ -98,6 +94,53 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
     );
   }
 
+  return (
+    <>
+      <span ref={top} hidden />
+      <InvestMain
+        live={live}
+        isLoading={isLoading}
+        onRefresh={load}
+        advice={advice}
+        ownInvestments={ownInvestments}
+        notice={notice}
+        clearNotice={clearNotice}
+        switcher={switcher}
+        onConnect={(broker, reconnect) => setView({ name: 'connect', broker, reconnect })}
+        onAdvice={() => setView({ name: 'advice' })}
+      />
+    </>
+  );
+}
+
+// The headline of these two only restates the figure above it, so the sheet keeps their sentence alone.
+const FIGURE_FOCUS = new Set(['live-position', 'cost-basis']);
+
+/**
+ * The main Investments view, drawn from one load of the accounts. The value
+ * leads on the sheet with what it means; the holdings follow as rows grouped
+ * by account; the shape of the mix, the news and suggestions close it.
+ */
+export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments, notice, clearNotice, switcher, onConnect, onAdvice }: Readonly<{
+  live: LivePortfolioData | null;
+  isLoading: boolean;
+  onRefresh: () => void;
+  advice: SavedPortfolioAdvice | null;
+  ownInvestments?: OwnInvestments;
+  notice?: string | null;
+  clearNotice?: () => void;
+  switcher?: ReactNode;
+  onConnect: (broker: BrokerId, reconnect: boolean) => void;
+  onAdvice: () => void;
+}>) {
+  const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
+  const hasData = analysis.positions.length > 0;
+  const failures = (live?.brokers ?? [])
+    .filter((broker) => broker.state === 'error')
+    .map((broker) => ({ name: brokerMeta(broker.broker).name, message: broker.message ?? 'The connection failed.' }));
+  const connected = (live?.brokers ?? []).some((broker) => broker.state !== 'not_connected');
+  const portfolioOf = (id: BrokerId) => live?.brokers.find((broker) => broker.broker === id) ?? null;
+
   const focus = composeInvestFocus({
     analysis,
     loaded: Boolean(live),
@@ -110,15 +153,7 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
 
   return (
     <>
-      <span ref={top} hidden />
       <FieldHead title="Money" />{switcher}
-      {hasData && (
-        <FieldHero
-          value={inr(analysis.total)}
-          label={analysis.positions.length === 1 ? 'in 1 holding' : `across ${analysis.positions.length} holdings`}
-          delta={gain}
-        />
-      )}
 
       {notice && (
         <output className={`finance-notice ${notice === 'connected' ? 'success' : 'error'}`}>
@@ -127,37 +162,72 @@ export function InvestDashboard({ ownInvestments, savedAdvice, notice, clearNoti
         </output>
       )}
 
-      <FocusSurface focus={focus} />
+      <div className="mn mn-invest">
+        <section className="mn-sheet" aria-label="Portfolio">
+          {hasData && (
+            <div className="mn-lead">
+              <p className="mn-figure">
+                <span className="mn-figure-cap">{analysis.positions.length === 1 ? 'Worth today, in 1 holding' : `Worth today, across ${analysis.positions.length} holdings`}</span>
+                <span className="mn-figure-value"><LedgerAmount amount={analysis.total} currency="INR" /></span>
+              </p>
+            </div>
+          )}
+          {hasData && gain && (
+            <p className="mn-pace">
+              <span className={`fd-delta ${gain.tone}`}>
+                {gain.tone === 'up' ? <ArrowUp size={10} strokeWidth={2.8} aria-hidden="true" /> : <ArrowDown size={10} strokeWidth={2.8} aria-hidden="true" />}
+                {gain.text}
+              </span>
+              <span>on what you paid</span>
+            </p>
+          )}
+          {hasData && FIGURE_FOCUS.has(focus.id)
+            ? <p className="mn-statement" suppressHydrationWarning>{focus.body}</p>
+            : <FocusSurface focus={focus} />}
 
-      {/* Six rows of dashes tell a new user nothing, so the numbers wait until there are numbers. */}
-      {hasData && <QuietList heading="Position" rows={composeInvestRows({ analysis })} />}
+          {/* Six rows of dashes tell a new user nothing, so the numbers wait until there are numbers. */}
+          {hasData && <QuietList heading="Position" rows={composeInvestRows({ analysis })} />}
+        </section>
 
-      {/* Waits for the broker load, so it is asked once with the holdings known. */}
-      {live && (hasData || Boolean(ownInvestments?.categories.length)) && <PortfolioNewsCard />}
+        <section className="mn-ledger mn-holdings" aria-labelledby="mn-holdings-title">
+          <div className="mn-h-row">
+            <h2 className="mn-h" id="mn-holdings-title">{hasData ? 'Holdings' : 'Accounts'}</h2>
+          </div>
+          <div className="pf-group mn-accounts">
+            {BROKERS.map((meta) => (
+              <BrokerCard
+                key={meta.id}
+                meta={meta}
+                portfolio={portfolioOf(meta.id)}
+                isLoading={isLoading}
+                onRefresh={onRefresh}
+                onConnect={(reconnect) => onConnect(meta.id, reconnect)}
+              />
+            ))}
+          </div>
+        </section>
 
-      {hasData && <><FieldLabel>Health of the mix</FieldLabel><PortfolioHealth analysis={analysis} /></>}
-      {hasData && <><FieldLabel>Allocation</FieldLabel><AllocationBreakdown analysis={analysis} /></>}
+        <div className="mn-side">
+          {/* Waits for the broker load, so it is asked once with the holdings known. */}
+          {live && (hasData || Boolean(ownInvestments?.categories.length)) && <PortfolioNewsCard />}
 
-      <section className="pf-group">
-        <FieldLabel>Accounts</FieldLabel>
-        {BROKERS.map((meta) => (
-          <BrokerCard
-            key={meta.id}
-            meta={meta}
-            portfolio={portfolioOf(meta.id)}
-            isLoading={isLoading}
-            onRefresh={load}
-            onConnect={(reconnect) => setView({ name: 'connect', broker: meta.id, reconnect })}
-          />
-        ))}
-      </section>
+          {hasData && <PortfolioAiRow advice={advice} onOpen={onAdvice} />}
 
-      {ownInvestments && <OwnInvestmentsList own={ownInvestments} />}
+          {hasData && (
+            <section className="mn-mix" aria-labelledby="mn-mix-title">
+              <h2 className="mn-h" id="mn-mix-title">Health of the mix</h2>
+              <PortfolioHealth analysis={analysis} />
+              <h3 className="mn-sub">Allocation</h3>
+              <AllocationBreakdown analysis={analysis} />
+            </section>
+          )}
 
-      {hasData && <PortfolioAiRow advice={advice} onOpen={() => setView({ name: 'advice' })} />}
+          {ownInvestments && <OwnInvestmentsList own={ownInvestments} />}
 
-      {/* Owner only: renders nothing for anyone the Research desk isn't for. */}
-      {live && <ResearchDeskSection brokers={live.brokers} />}
+          {/* Owner only: renders nothing for anyone the Research desk isn't for. */}
+          {live && <ResearchDeskSection brokers={live.brokers} />}
+        </div>
+      </div>
     </>
   );
 }

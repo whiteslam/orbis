@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Check, Circle, CircleDot, ExternalLink, MapPin } from 'lucide-react';
 import { SafeLink } from '@/components/career/bits';
+import { FitTag } from '@/components/career/fit-review-view';
 import { ScoreRing } from '@/components/career/score-ring';
 import { creditFor, freshness, salaryText } from '@/components/career/format';
 import type { CareerJob, MatchLine } from '@/lib/career/types';
@@ -37,7 +38,7 @@ export function RequirementToken({ line }: Readonly<{ line: MatchLine }>) {
  *
  * Presentational: actions arrive through the `actions` slot.
  */
-export function JobCard({ job, threshold = null, onOpen, actions, now }: Readonly<{
+export function JobCard({ job, threshold = null, onOpen, actions, now, languages = [] }: Readonly<{
   job: CareerJob;
   /** The owner's bar, marked on the ring. */
   threshold?: number | null;
@@ -46,6 +47,8 @@ export function JobCard({ job, threshold = null, onOpen, actions, now }: Readonl
   actions?: ReactNode;
   /** For stable rendering in tests and previews. */
   now?: Date;
+  /** The owner's languages, for the fit review's language check. */
+  languages?: readonly string[];
 }>) {
   const { met, missing } = topLines(job);
   const salary = salaryText(job.salary ?? job.requirements?.salary ?? null);
@@ -61,7 +64,7 @@ export function JobCard({ job, threshold = null, onOpen, actions, now }: Readonl
           <h3 id={`job-${job.id}`}>
             {onOpen ? <button type="button" onClick={() => onOpen(job)}>{job.title}</button> : job.title}
           </h3>
-          <p className="cr-job-company">{job.company}</p>
+          <p className="cr-job-company">{job.company}<FitTag job={job} languages={languages} /></p>
           <p className="cr-job-meta">
             {place && <span><MapPin size={11} aria-hidden="true" />{place}</span>}
             <span className={fresh.stale ? 'stale' : undefined}>{fresh.text}</span>

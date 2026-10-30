@@ -15,7 +15,6 @@ export default function SupportPage() {
   return (
     <PublicShell>
       <div className="mkt-legal-head">
-        <p className="mkt-eyebrow">Help</p>
         <h1>Support</h1>
       </div>
 
@@ -47,7 +46,7 @@ export default function SupportPage() {
 
         <h2>Does the AI train on my data?</h2>
         <p>
-          Personal requests — anything touching your finances, health documents, notes or journal — are only sent to
+          Personal requests (anything touching your finances, health documents, notes or journal) are only sent to
           AI providers flagged as not training on submitted data. See the <Link href="/privacy">Privacy Policy</Link> for details.
         </p>
 

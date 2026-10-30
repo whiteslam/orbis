@@ -50,7 +50,7 @@ export function ProfileEditor({ state, profile }: Readonly<{ state: PersonalData
       </dl>
       {profile.aboutMe.trim()
         ? <p className="fd-prose">{profile.aboutMe.trim()}</p>
-        : <p className="fd-note">Nothing written under “more about me” yet — that is the part Orbis leans on most.</p>}
+        : <p className="fd-note">Nothing written under “more about me” yet. That is the part Orbis leans on most.</p>}
       <div className="fd-act pf-act">
         <button type="button" onClick={() => setEditing(true)}>Edit</button>
         <button className="fd-link alert" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deletePersonalProfileAction)()))}>{pending ? 'Removing…' : 'Remove'}</button>
