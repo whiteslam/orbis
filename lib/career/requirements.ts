@@ -9,6 +9,7 @@ import { normaliseSkill } from './skills.ts';
 import { cleanList, cleanNullable, cleanNumber, cleanText, isRecord, readJsonObject } from '../ai/json.ts';
 import { isEmailLike } from './profile.ts';
 import { SENIORITIES, WORK_MODES } from './spec.ts';
+import { cleanPosting } from './posting-guard.ts';
 
 export const REQUIREMENTS_VERSION = 1;
 export const DESCRIPTION_PROMPT_CAP = 12_000;
@@ -49,7 +50,7 @@ export function buildRequirementsPrompt(job: NormalizedJob): { system: string; u
     remote: job.remote,
     salary: job.salary,
   };
-  const description = (job.description ?? '').slice(0, DESCRIPTION_PROMPT_CAP);
+  const description = cleanPosting(job.description ?? '').slice(0, DESCRIPTION_PROMPT_CAP);
   return { system: SYSTEM, user: `Listing:\n${JSON.stringify(header)}\n\nDescription:\n"""\n${description}\n"""` };
 }
 

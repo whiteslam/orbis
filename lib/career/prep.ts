@@ -6,6 +6,7 @@
 import type { CareerProfile, InterviewPrep, Match, ReplyClassification, Requirements } from './types.ts';
 import { cleanList, cleanNullable, cleanText, readJsonObject } from '../ai/json.ts';
 import { httpsLink, isoWithOffset } from './mail.ts';
+import { cleanPosting } from './posting-guard.ts';
 
 const MAX_FACTS = 120;
 const MAX_TOPICS = 8;
@@ -59,7 +60,7 @@ export function buildPrepPrompt(input: {
     gapLines(input.match),
     input.profile.headline ? `Candidate: ${input.profile.headline}` : '',
     `Facts:\n${facts.join('\n') || 'none'}`,
-    input.job.description ? `Job description:\n${input.job.description.slice(0, 6000)}` : '',
+    input.job.description ? `Job description:\n${cleanPosting(input.job.description).slice(0, 6000)}` : '',
   ];
   return { system, user: lines.filter(Boolean).join('\n\n') };
 }

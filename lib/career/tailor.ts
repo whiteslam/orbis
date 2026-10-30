@@ -12,6 +12,7 @@ import type {
 } from './types.ts';
 import { cleanText, isRecord, readJsonObject } from '../ai/json.ts';
 import { normaliseSkill } from './skills.ts';
+import { cleanPosting } from './posting-guard.ts';
 
 export const MAX_BULLETS_PER_ROLE = 6;
 export const MAX_PROJECT_BULLETS = 3;
@@ -61,7 +62,7 @@ const SYSTEM = [
 const listOrNone = (items: string[]) => (items.length ? items.join('; ') : 'none');
 
 function jobBlock(job: TailorJob): string {
-  const description = (job.description ?? '').trim().slice(0, MAX_DESCRIPTION) || 'Not available: only the title is known.';
+  const description = cleanPosting(job.description ?? '').trim().slice(0, MAX_DESCRIPTION) || 'Not available: only the title is known.';
   return [
     'TARGET JOB',
     `Title: ${job.title}`,
