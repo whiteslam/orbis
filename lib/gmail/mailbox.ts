@@ -14,8 +14,10 @@
  * comments and quoted strings, else the whole value with its comments taken
  * out. An empty `<>` is skipped, as if it were not there.
  *
- * Null when the header is ambiguous: more than one `<…>`, or an unquoted `@`
- * outside it (a decoded display name such as `HR <hr@acme.com> <a@evil.example>`).
+ * Null when the header is ambiguous: more than one `<…>`, an unquoted `@`
+ * outside it (a decoded display name such as `HR <hr@acme.com> <a@evil.example>`),
+ * or a comment or quoted string left open, which would otherwise swallow the
+ * real address (`hr@acme.com ( <a@evil.example>`).
  * Which address the provider authenticated can't be told, so no sender is
  * trusted.
  */
@@ -68,6 +70,6 @@ export function mailboxOf(header: string): string | null {
     if (angle !== null) ambiguous = true;
     angle = current;
   }
-  if (ambiguous || (angle !== null && phraseAt)) return null;
+  if (ambiguous || depth > 0 || quoted || (angle !== null && phraseAt)) return null;
   return (angle ?? bare).trim().toLowerCase();
 }

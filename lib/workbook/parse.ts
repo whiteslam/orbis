@@ -5,7 +5,7 @@ import yauzl from 'yauzl';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import { UserFacingError } from '@/lib/errors';
-import { ambiguousEntryName, entryNameKey } from '@/lib/workbook/entries';
+import { ambiguousEntryName, entryNameKey, unusualEntryPath, zipLayoutIsExact } from '@/lib/workbook/entries';
 import { declaredColumnExtent, definedNameRangeCells, expandedRangeCells, type RangeCells } from '@/lib/workbook/ranges';
 import type { ParsedWorkbookPreview, WorkbookObservation } from '@/lib/workbook/types';
 
@@ -48,6 +48,7 @@ const MAX_PDF_TEXT_ITEMS = 20_000;
 const MAX_PDF_TEXT_CHARS = 120_000;
 
 async function checkXlsxArchiveSize(bytes: Buffer) {
+  if (!zipLayoutIsExact(bytes)) throw new UserFacingError('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
   const archive = await yauzl.fromBufferPromise(bytes, { lazyEntries: true, validateEntrySizes: true });
   let declaredExpandedBytes = 0;
   let streamedExpandedBytes = 0;
@@ -59,7 +60,7 @@ async function checkXlsxArchiveSize(bytes: Buffer) {
     for await (const entry of archive.eachEntry()) {
       // Measured entries must be the ones ExcelJS loads under the same names; see lib/workbook/entries.ts.
       const nameKey = entryNameKey(entry.fileName);
-      if (ambiguousEntryName(entry.fileNameRaw, entry.extraFields.map((field) => field.id)) || entryNames.has(nameKey)) {
+      if (ambiguousEntryName(entry.fileNameRaw, entry.extraFields.map((field) => field.id)) || unusualEntryPath(entry.fileName) || entryNames.has(nameKey)) {
         archive.close();
         throw new UserFacingError('Orbis could not safely open this workbook. Check that it is a valid .xlsx file.');
       }

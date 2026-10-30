@@ -38,3 +38,13 @@ test('files are told apart by their signature', () => {
   assert.equal(resumeKind(strToU8('%PDF-1.7 …')), 'pdf');
   assert.equal(resumeKind(strToU8('hello')), null);
 });
+
+test('a zip naming word/document.xml twice is refused, not inflated twice', () => {
+  const zip = zipSync({ 'word/document.xml': strToU8(XML), 'word/documenX.xml': strToU8(XML) });
+  // Rename the second entry in both its local header and the central directory.
+  const twin = strToU8('word/documenX.xml');
+  for (let i = 0; i + twin.length <= zip.length; i += 1) {
+    if (twin.every((byte, offset) => zip[i + offset] === byte)) zip[i + twin.length - 5] = 't'.charCodeAt(0);
+  }
+  assert.equal(docxText(zip), null);
+});

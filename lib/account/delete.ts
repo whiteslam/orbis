@@ -7,6 +7,7 @@ import { disconnectGmail } from '@/lib/gmail/connection';
 import { deleteGrowwConnection } from '@/lib/invest/groww-connection';
 import { deleteZerodhaConnection } from '@/lib/invest/zerodha-connection';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isMissingTable } from '@/lib/supabase/errors';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -39,6 +40,8 @@ async function revokeConnections(userId: string) {
 async function removeResearch(admin: Admin, userId: string) {
   for (const table of RESEARCH_TABLES) {
     const { error } = await admin.from(table).delete().eq('user_id', userId); // NOSONAR: children go before the rows they reference
+    // A project without the Research desk migration has no such table, so nothing of the user's is in it.
+    if (error && isMissingTable(error)) continue;
     if (error) throw new Error(`Deleting ${table} failed: ${error.code ?? error.message}`);
   }
 }

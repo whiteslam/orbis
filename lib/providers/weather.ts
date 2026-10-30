@@ -61,10 +61,16 @@ function hourLabel(iso: string) {
 /** How many hours ahead the rain outlook looks. */
 const RAIN_WINDOW_HOURS = 12;
 
-export async function getWeather(latitude: number, longitude: number): Promise<Fetched<Weather>> {
+/**
+ * The weather at a point, cached 30 minutes. The cache is per account: a shared
+ * entry would tell any other account, through its fetch time, that someone asked
+ * for that square kilometre lately, which in a one-owner install is where the
+ * owner is.
+ */
+export async function getWeather(latitude: number, longitude: number, userId: string): Promise<Fetched<Weather>> {
   const lat = Math.round(latitude * 100) / 100;
   const lon = Math.round(longitude * 100) / 100;
-  return cached('open_meteo', `weather:${lat},${lon}`, 30 * 60, async () => {
+  return cached('open_meteo', `weather:${userId}:${lat},${lon}`, 30 * 60, async () => {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
       + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
       // Two days, so an outlook taken at 11pm still has a full window ahead of

@@ -79,3 +79,10 @@ test('a header with two addresses, or an address in its name, names no sender', 
   assert.throws(() => formatAddress('"Acme <hr@acme.com>" <a@attacker.example>'));
   assert.equal(formatAddress('Jane Doe <jane@acme.com>'), 'Jane Doe <jane@acme.com>');
 });
+
+test('a comment or quoted string left open names no sender', () => {
+  for (const header of ['hr@acme.com ( <a@attacker.example>', '"HR <hr@acme.com> a@attacker.example']) {
+    assert.equal(mailboxOf(header), null, header);
+    assert.equal(senderAddress(header), null, header);
+  }
+});

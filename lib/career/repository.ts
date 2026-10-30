@@ -397,18 +397,26 @@ export async function releaseCareerRun(admin: CareerDb, userId: string, kind: Cr
   await writeBookkeeping(admin, userId, { [CRON_COLUMN[kind]]: previous });
 }
 
+/** How far ahead a refused person is stamped: past every admitted person's own stamp from the same run. */
+const REFUSED_DELAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Stamps people a cron listed but refused (not admitted) as if their run
- * happened at `at`, so they rotate behind everyone else instead of holding the
- * head of the list, and the LIMIT, on every run. One update; best effort.
+ * happened a day after `at`, the run's start, so they sort behind everyone the
+ * run does serve (whose own stamps land minutes after `at`) instead of holding
+ * the head of the list, and the LIMIT, on every run. In chunks, so a long
+ * refused list never builds a URL past the gateway's limit. Best effort.
  */
 export async function deferCareerUsers(admin: CareerDb, kind: CronKind, userIds: readonly string[], at: string) {
   if (!userIds.length) return;
-  try {
-    const { error } = await admin.from('career_profiles').update({ [CRON_COLUMN[kind]]: at }).in('user_id', [...userIds]);
-    if (error) console.error('Deferring refused career profiles failed', error);
-  } catch (error) {
-    console.error('Deferring refused career profiles failed', error);
+  const stamp = new Date(Date.parse(at) + REFUSED_DELAY_MS).toISOString();
+  for (const ids of chunks([...userIds])) {
+    try {
+      const { error } = await admin.from('career_profiles').update({ [CRON_COLUMN[kind]]: stamp }).in('user_id', ids);
+      if (error) console.error('Deferring refused career profiles failed', error);
+    } catch (error) {
+      console.error('Deferring refused career profiles failed', error);
+    }
   }
 }
 

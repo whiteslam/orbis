@@ -63,11 +63,22 @@ export function documentXmlText(xml: string): string {
 /** The DOCX's text, or null when it isn't a readable DOCX. */
 export function docxText(bytes: Uint8Array): string | null {
   let files: Record<string, Uint8Array>;
+  // A real DOCX names word/document.xml once. A zip listing it many times (each
+  // record pointing at the same compressed bytes) would be inflated once per
+  // record, so only the first is read and a repeat refuses the file.
+  let seen = 0;
   try {
-    files = unzipSync(bytes, { filter: (file) => file.name === DOCUMENT && file.originalSize <= MAX_XML });
+    files = unzipSync(bytes, {
+      filter: (file) => {
+        if (file.name !== DOCUMENT) return false;
+        seen += 1;
+        return seen === 1 && file.originalSize <= MAX_XML;
+      },
+    });
   } catch {
     return null;
   }
+  if (seen !== 1) return null;
   const xml = files[DOCUMENT];
   if (!xml) return null;
   return documentXmlText(strFromU8(xml)) || null;

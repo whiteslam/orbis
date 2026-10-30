@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const weather = await getWeather(latitude, longitude);
+    const weather = await getWeather(latitude, longitude, userId);
     return Response.json({ ...weather.data, place, fetchedAt: weather.fetchedAt, stale: weather.stale }, { headers: { 'cache-control': 'private, max-age=600' } });
   } catch (error) {
     return Response.json({ error: friendlyProviderMessage(error) }, { status: 503 });
