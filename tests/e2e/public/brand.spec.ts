@@ -1,38 +1,45 @@
 import { expect, test } from '@playwright/test';
 
-test('dark brand palette is the default, whatever the OS prefers', async ({ browser }) => {
-  const context = await browser.newContext({ colorScheme: 'light' });
-  const page = await context.newPage();
-  await page.goto('/login');
-  const read = (n: string) =>
-    page.evaluate((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim().toLowerCase(), n);
-  expect(await read('--sys-bg')).toBe('#0e0e10');
-  expect(await read('--sys-surface')).toBe('#141416');
-  expect(await read('--sys-surface-2')).toBe('#1a1a1e');
-  expect(await read('--sys-separator')).toBe('#242428');
-  expect(await read('--brand-teal')).toBe('#42cca8');
-  const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bodyBg).toBe('rgb(14, 14, 16)');
-  await context.close();
+// docs/design/apple.md: Apple's grouped palette in both appearances, the
+// device's appearance unless one was chosen, and the system font.
+// The production build minifies colours (#ffffff becomes #fff), so short hex is expanded.
+const readRoot = async (page: import('@playwright/test').Page, name: string) => {
+  const value = await page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase(), name);
+  return /^#[\da-f]{3}$/.test(value) ? `#${[...value.slice(1)].map((c) => c + c).join('')}` : value;
+};
+
+test('the appearance follows the device until one is chosen', async ({ browser }) => {
+  for (const [scheme, theme, bg, surface, body] of [
+    ['light', 'light', '#f2f2f7', '#ffffff', 'rgb(242, 242, 247)'],
+    ['dark', 'dark', '#000000', '#1c1c1e', 'rgb(0, 0, 0)'],
+  ] as const) {
+    const context = await browser.newContext({ colorScheme: scheme });
+    const page = await context.newPage();
+    await page.goto('/login');
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme);
+    expect(await readRoot(page, '--sys-bg')).toBe(bg);
+    expect(await readRoot(page, '--sys-surface')).toBe(surface);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(body);
+    await context.close();
+  }
 });
 
-test('a stored light choice still wins', async ({ browser }) => {
+test('a stored light choice still wins over a dark device', async ({ browser }) => {
   const context = await browser.newContext({ colorScheme: 'dark' });
   await context.addInitScript(() => localStorage.setItem('orbis-theme', 'light'));
   const page = await context.newPage();
   await page.goto('/login');
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
-  const bg = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--sys-bg').trim().toLowerCase());
-  expect(bg).not.toBe('#0e0e10');
+  expect(await readRoot(page, '--sys-bg')).toBe('#f2f2f7');
   await context.close();
 });
 
-test('DM Sans is the body font and ships without a request to Google', async ({ page }) => {
+test('the body font is the system font, and no web font is fetched', async ({ page }) => {
   const external: string[] = [];
-  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) external.push(r.url()); });
+  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com|\.woff2?(\?|$)/.test(r.url())) external.push(r.url()); });
   await page.goto('/login');
   const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-  expect(family).toMatch(/DM Sans|dm_sans|__DM_Sans/i);
+  expect(family).toMatch(/^-apple-system, BlinkMacSystemFont, system-ui/);
   expect(external).toEqual([]);
 });
 
@@ -51,22 +58,19 @@ test('the logo is a conic-gradient ring with a 45% hole, not an image', async ({
   await expect(page.locator('.orbis-mark svg')).toHaveCount(0);
 });
 
-test('cards and fields use the 16px radius and the 1px brand border', async ({ page }) => {
+test('cells are 22px with no border, and fields are filled with no border', async ({ page }) => {
   await page.goto('/login');
-  const root = (n: string) => page.evaluate((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim(), n);
-  expect(await root('--r-lg')).toBe('16px');
-  expect(await root('--r-xl')).toBe('16px');
+  expect(await readRoot(page, '--r-card')).toBe('22px');
+  expect(await readRoot(page, '--r-field')).toBe('10px');
   const input = page.locator('.auth-form input').first();
-  const style = await input.evaluate((el) => {
-    const s = getComputedStyle(el);
-    return { radius: s.borderTopLeftRadius, width: s.borderTopWidth, color: s.borderTopColor };
-  });
-  expect(style).toEqual({ radius: '16px', width: '1px', color: 'rgb(36, 36, 40)' });
+  expect(await input.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('0px');
 });
 
 // The bottom nav only renders when signed in, so inject its markup into a page that
 // ships the same stylesheets and read what the shipped CSS makes of it.
-test('bottom nav is 60px with 10px labels and a gradient on the active tab', async ({ page }) => {
+test('bottom nav is 60px with 10px labels, and the active tab is the tint on grey, not a gradient', async ({ browser }) => {
+  const context = await browser.newContext({ colorScheme: 'light' });
+  const page = await context.newPage();
   await page.goto('/login');
   await page.evaluate(() => {
     document.body.insertAdjacentHTML('beforeend',
@@ -74,53 +78,47 @@ test('bottom nav is 60px with 10px labels and a gradient on the active tab', asy
       '<button class="active"><svg width="20" height="20"></svg><span>Today</span></button>' +
       '<button><svg width="20" height="20"></svg><span>Money</span></button></nav></div>');
   });
-  const nav = await page.locator('.bottom-nav').evaluate((el) => getComputedStyle(el).height);
-  expect(nav).toBe('60px');
-  const label = await page.locator('.bottom-nav button span').first().evaluate((el) => getComputedStyle(el).fontSize);
-  expect(label).toBe('10px');
-  const active = await page.locator('.bottom-nav button.active').evaluate((el) => getComputedStyle(el).backgroundImage);
-  expect(active).toContain('linear-gradient');
-  expect(active.replaceAll(/\s/g, '')).toContain('rgb(91,180,232)');
-  expect(active.replaceAll(/\s/g, '')).toContain('rgb(66,204,168)');
+  expect(await page.locator('.bottom-nav').evaluate((el) => getComputedStyle(el).height)).toBe('60px');
+  expect(await page.locator('.bottom-nav button span').first().evaluate((el) => getComputedStyle(el).fontSize)).toBe('10px');
+  const active = await page.locator('.bottom-nav button.active').evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { image: s.backgroundImage, color: s.color };
+  });
+  expect(active.image).toBe('none');
+  // --tint-label in light: #066452, 6.2:1 on the grey fill.
+  expect(active.color).toBe('rgb(6, 100, 82)');
+  await context.close();
 });
 
-test('primary buttons and the user bubble take the brand gradient; pills have teal, blue, red and gold fills', async ({ page }) => {
+test('primary buttons and the user bubble are the flat tint; badges use system colours', async ({ browser }) => {
+  const context = await browser.newContext({ colorScheme: 'dark' });
+  const page = await context.newPage();
   await page.goto('/login');
   await page.evaluate(() => {
     document.body.insertAdjacentHTML('beforeend',
       '<div id="probe" style="position:fixed;inset:0;z-index:99">' +
       '<button class="fd-button">Go</button><button class="fd-button ghost">Later</button>' +
       '<p class="talk-q">hi</p><p class="talk-a">hello</p>' +
-      '<span class="pill teal">t</span><span class="pill blue">b</span><span class="pill red">r</span><span class="pill gold">g</span></div>');
+      '<span class="pill teal">t</span><span class="pill red">r</span></div>');
   });
-  const bg = (sel: string) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundImage);
-  const color = (sel: string) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(await bg('#probe .fd-button:not(.ghost)')).toContain('linear-gradient');
-  expect(await bg('#probe .fd-button.ghost')).not.toContain('linear-gradient');
-  expect(await bg('#probe .talk-q')).toContain('linear-gradient');
-  expect(await color('#probe .talk-a')).not.toBe('rgb(66, 204, 168)');
-  expect(await color('#probe .pill.teal')).toBe('rgba(66, 204, 168, 0.16)');
-  expect(await color('#probe .pill.blue')).toBe('rgba(91, 180, 232, 0.16)');
-  expect(await color('#probe .pill.red')).toBe('rgba(242, 107, 107, 0.16)');
-  expect(await color('#probe .pill.gold')).toBe('rgba(240, 180, 41, 0.16)');
-});
-
-test('sheets that kept their own dark values follow the default, not the OS setting', async ({ browser }) => {
-  const context = await browser.newContext({ colorScheme: 'light' });
-  const page = await context.newPage();
-  await page.goto('/login');
-  const read = (n: string) =>
-    page.evaluate((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim().toLowerCase(), n);
-  expect(await read('--so-post-ink')).toBe('#9fd3d8');
-  expect(await read('--talk-sun')).toBe('#42cca842');
-  expect(await read('--fd-alert-ink')).toBe('#0e0e10');
+  const look = (sel: string) => page.locator(sel).first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { image: s.backgroundImage, color: s.backgroundColor };
+  });
+  const tint = 'rgb(66, 204, 168)';
+  expect(await look('#probe .fd-button:not(.ghost)')).toEqual({ image: 'none', color: tint });
+  expect((await look('#probe .fd-button.ghost')).color).not.toBe(tint);
+  expect(await look('#probe .talk-q')).toEqual({ image: 'none', color: tint });
+  expect((await look('#probe .talk-a')).color).toBe('rgba(0, 0, 0, 0)');
+  expect((await look('#probe .pill.teal')).color).toBe('rgba(66, 204, 168, 0.16)');
+  expect((await look('#probe .pill.red')).color).toBe('rgba(255, 69, 58, 0.16)');
   await context.close();
 });
 
-test('DM Sans also reaches the public pages that never load the app stylesheets', async ({ page }) => {
+test('the public pages that never load the app stylesheets use the system font too', async ({ page }) => {
   await page.goto('/privacy');
   const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-  expect(family).toMatch(/DM Sans/i);
+  expect(family).toMatch(/^-apple-system/);
 });
 
 test('the logo hole is see-through: the ring is masked, not painted over', async ({ page }) => {

@@ -42,6 +42,12 @@
   /* Always dark. The picture behind the hero is a black hole on black, and a
      pale page under it would read as a mistake, so this page keeps the dark
      Field values whichever appearance the visitor has chosen. */
+  /* The front door keeps the brand gradient and dark-ink teal. The app turned
+     these into its flat tint (docs/design/apple.md); the marketing pages were
+     not part of that pass, and the app's light tint is too dim on this black. */
+  --brand-gradient: linear-gradient(135deg, #5bb4e8, #42cca8);
+  --brand-teal: #42cca8;
+  --brand-on-accent: #0e0e10;
   --fd-field: var(--void);
   --fd-surface: var(--brand-s1);
   --fd-ink: var(--wl-ink);
