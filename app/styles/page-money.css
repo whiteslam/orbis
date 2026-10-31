@@ -1,44 +1,50 @@
 /* ─── Money: the ledger and the holdings ──────────────────────────────
-   components/money/. Loaded after desktop.css, so it settles Money's desktop
-   layout too. Spending leads with the month's figure on one sheet (its pace,
-   its daily shape and where it went); the transactions follow as a ledger
-   grouped by day, each day carrying its own total. Investments leads with the
-   portfolio's value on the same kind of sheet; the holdings follow as rows
-   grouped by account. Figures are tabular throughout and the paise are set
-   quieter than the rupees, so columns of money line up and read at a glance.
+   components/money/ and the Research desk's section on Investments.
+   Loaded after the shared layer and desktop.css, so it settles Money's look
+   and its desktop layout. The rules are docs/design/apple.md's: solid cells
+   on the grouped background, Apple's text styles, one tint for the primary
+   action and selection, system colours for status.
+
+   Spending leads with the month on one cell (the figure, its pace, its daily
+   shape and where it went); the transactions follow as an inset grouped list,
+   one group per day. Investments leads with the portfolio on the same kind of
+   cell; the accounts and holdings follow as grouped rows. Page sections carry
+   a title-3 heading at the cell's edge; groups inside a section carry Apple's
+   13px header, inset to the text. Figures are tabular throughout.
    On the phone it is one column; on desktop the figure and its context stay
    on the left while the ledger (or the holdings) runs down the right.
-   One surface per view: the sheet. Everything else sits on the page as rows
-   under hairlines. Prefix: .mn- */
+   Prefix: .mn- */
 
-.mn-screen .mn { display: flex; flex-direction: column; gap: 34px; margin-top: 14px; }
+.mn-screen { --mn-in: 16px; }
+.mn-screen .mn { display: flex; flex-direction: column; gap: 32px; margin-top: 16px; }
 .mn-screen .mn > * { min-width: 0; }
 
-/* ─── The sheet: the one surface ─── */
-.mn-sheet {
-  padding: 20px 18px 18px;
-  border: var(--gl-edge);
-  border-radius: 28px;
-  background: var(--gl-fill);
-  -webkit-backdrop-filter: var(--gl-blur);
-  backdrop-filter: var(--gl-blur);
-  box-shadow: var(--gl-shadow);
+/* ─── The cell every view leads with ─── */
+.mn-screen .mn-sheet {
+  padding: var(--mn-in);
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
-.mn-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.mn-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .mn-figure { display: flex; flex-direction: column; min-width: 0; margin: 0; }
-.mn-figure-cap { margin-bottom: 6px; color: var(--fd-faint); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.mn-figure-cap { margin-bottom: 2px; font: var(--t-subhead); color: var(--sys-secondary); }
 .mn-figure-value {
   min-width: 0;
-  color: var(--fd-ink);
-  font-size: clamp(36px, 11vw, 46px);
-  font-weight: 750;
-  letter-spacing: -.035em;
-  line-height: 1;
+  font: var(--t-title-1);
+  letter-spacing: -.02em;
+  color: var(--sys-label);
   font-variant-numeric: tabular-nums;
   overflow-wrap: break-word;
 }
+/* The paise sit quieter than the rupees, as a statement sets them. */
+.mn-paise { color: var(--sys-secondary); font-size: .82em; font-weight: inherit; letter-spacing: 0; }
+.mn-figure-value .mn-paise { font-size: .6em; }
 
-/* The page's one primary action. */
+/* The page's one primary action: a tinted capsule. Press feedback is the app's. */
 .mn-screen .mn-add {
   flex: none;
   display: inline-flex;
@@ -49,239 +55,475 @@
   padding: 0 18px 0 14px;
   border: 0;
   border-radius: var(--r-pill);
-  background: var(--fd-btn);
+  background: var(--tint);
   box-shadow: none;
-  color: var(--fd-btn-ink);
-  font: inherit;
-  font-size: 14.5px;
-  font-weight: 700;
+  color: var(--on-tint);
+  font: var(--t-headline);
   cursor: pointer;
-  transition: transform .15s ease, opacity .15s ease;
 }
-.mn-screen .mn-add:active { transform: scale(.97); }
-.mn-screen .mn-add:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; }
+.mn-screen .mn-add:focus-visible { outline: 2px solid var(--tint); outline-offset: 3px; }
 
-/* The pace: what a day costs, and where the month lands at that rate. */
-.mn-pace { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 12px 0 0; color: var(--fd-soft); font-size: 13px; font-variant-numeric: tabular-nums; }
-.mn-pace .fd-delta { font-size: 12px; padding: 3px 10px; }
+/* The pace is information, not status: plain secondary text, the rate in the label colour. */
+.mn-pace { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 6px 0 0; font: var(--t-subhead); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.mn-screen .mn-pace .fd-delta { padding: 0; border-radius: 0; background: none; font: inherit; font-weight: 600; color: var(--sys-label); }
+/* A gain or a loss is status, so it takes the system green or red. */
+.mn-screen .mn-pace .fd-delta.up { color: var(--sys-green); }
+.mn-screen .mn-pace .fd-delta.down { color: var(--sys-red); }
+.mn-invest .mn-pace .fd-delta { display: inline-flex; align-items: center; gap: 3px; }
 
-/* The month's shape, then where it went. */
-.mn-sheet .fd-bars { height: 64px; margin-top: 22px; gap: 3px; }
-.mn-sheet .fd-bars-axis { margin-top: 8px; font-size: 11.5px; }
-.mn-sub { margin: 24px 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
-.mn-sheet .fd-cat { gap: 12px; padding: 12px 0; }
-.mn-sheet .fd-cat-dot { width: 9px; height: 9px; }
-.mn-sheet .fd-cat-name { font-size: 14.5px; }
-.mn-sheet .fd-cat-bar { width: 26%; max-width: 160px; height: 4px; }
-.mn-sheet .fd-cat-bar i { height: 4px; }
-.mn-sheet .fd-cat b { min-width: 76px; font-size: 14.5px; font-weight: 700; }
-.mn-sheet .fd-cat + .fd-empty { margin-top: 10px; font-size: 13px; }
-.mn-sheet > .fd-empty:first-of-type { margin-top: 18px; font-size: 14px; color: var(--fd-soft); }
+/* ─── The month's shape: one series, today in full colour ───
+   Past days are the series blue mixed into the cell, so the bar that says
+   "where we are" is the only saturated one; days still to come leave the
+   baseline empty. A hairline baseline anchors the bars, as in Health. */
+.mn-sheet .fd-bars { height: 72px; margin-top: 20px; gap: 2px; border-bottom: .5px solid var(--sys-separator); }
+.mn-sheet .fd-bars i { border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--series-1) 42%, var(--sys-surface)); opacity: 1; }
+.mn-sheet .fd-bars .today i { background: var(--series-1); }
+.mn-sheet .fd-bars .future i { opacity: 0; }
+.mn-sheet .fd-bars-axis { margin-top: 6px; font: var(--t-caption); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
 
-/* Received and net: the month's closing lines. */
-.mn-screen .mn-totals { gap: 24px; margin-top: 16px; padding-top: 14px; }
-.mn-screen .fd-cat + .mn-totals { margin-top: 0; border-top: 0; }
-.mn-screen .mn-totals span { color: var(--fd-faint); font-size: 13px; font-weight: 600; }
-.mn-screen .mn-totals b { margin-top: 4px; font-family: inherit; font-size: 21px; font-weight: 750; letter-spacing: -.02em; }
+/* Section headers inside a cell or above a group: 13px, secondary, sentence case. */
+.mn-screen .mn-sub { margin: 24px 0 4px; font: var(--t-footnote); color: var(--sys-secondary); letter-spacing: 0; text-transform: none; }
 
-/* ─── Headings: plain h2 in the body face ─── */
-.mn-h { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; }
-.mn-h-count { margin-left: 8px; color: var(--fd-faint); font-size: 15px; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.mn-h-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
-.mn-h-row .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13.5px; font-weight: 650; }
-.mn-screen .fd-link:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 6px; }
-.mn-empty { margin: 8px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
+/* Where it went: rows of the cell, the share drawn inline. */
+.mn-sheet .fd-cat { position: relative; gap: 12px; min-height: 44px; padding: 10px 0; border: 0; }
+.mn-sheet .fd-cat + .fd-cat::before { content: ''; position: absolute; top: 0; left: 22px; right: 0; border-top: .5px solid var(--sys-separator); }
+.mn-sheet .fd-cat-dot { width: 10px; height: 10px; }
+.mn-sheet .fd-cat-name { font: var(--t-body); color: var(--sys-label); }
+.mn-sheet .fd-cat-bar { width: 20%; max-width: 160px; height: 6px; background: var(--sys-fill); }
+.mn-sheet .fd-cat-bar i { height: 6px; }
+.mn-sheet .fd-cat b { min-width: 72px; font: var(--t-body); color: var(--sys-label); font-variant-numeric: tabular-nums; }
+/* A heads-up's category is selected, so it takes the tint, drawn inside the row. */
+.mn-sheet .fd-cat.is-focus { outline: 0; border-radius: 0; }
+.mn-sheet .fd-cat.is-focus .fd-cat-name { color: var(--tint); font-weight: 600; }
+.mn-sheet .fd-cat + .fd-empty { margin: 2px 0 0; padding-left: 22px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-sheet > .fd-empty:first-of-type { margin-top: 16px; font: var(--t-subhead); color: var(--sys-secondary); }
 
-/* ─── The ledger: transactions grouped by day ─── */
+/* Received and net: the month's closing figures, under a hairline. */
+.mn-screen .mn-totals { gap: 16px; margin-top: 8px; padding-top: 12px; border-top: .5px solid var(--sys-separator); }
+.mn-screen .mn-totals span { font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .mn-totals b { margin-top: 2px; font: var(--t-title-3); letter-spacing: -.01em; color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.mn-screen .fd-pair b.up { color: var(--sys-green); }
+.mn-screen .fd-pair b.down { color: var(--sys-red); }
+
+/* ─── Page section headings: title 3 at the cell's edge ─── */
+.mn-h { margin: 0; font: var(--t-title-3); letter-spacing: -.01em; color: var(--sys-label); }
+.mn-h-count { margin-left: 8px; font: var(--t-body); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.mn-h-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-bottom: 4px; }
+.mn-h-row .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: var(--t-body); color: var(--tint); cursor: pointer; }
+.mn-screen .fd-link:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 6px; }
+.mn-empty { margin: 0; padding: 0 var(--mn-in); font: var(--t-subhead); color: var(--sys-secondary); }
+
+/* ─── The ledger: an inset grouped list, one group per day ─── */
 .mn-days { margin-top: 0; }
 .mn-ledger .transaction-day h4.mn-day-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin: 18px 0 0;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--fd-rule);
-  color: var(--fd-faint);
-  font-size: 13px;
-  font-weight: 650;
+  margin: 20px 0 6px;
+  padding: 0 var(--mn-in);
+  border: 0;
+  font: var(--t-footnote);
+  color: var(--sys-secondary);
   letter-spacing: 0;
   text-transform: none;
 }
-.mn-ledger .transaction-day:first-child h4.mn-day-head { margin-top: 6px; }
-.mn-day-total { color: var(--fd-soft); font-variant-numeric: tabular-nums; }
+.mn-ledger .transaction-day:first-child h4.mn-day-head { margin-top: 2px; }
+.mn-day-total { color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.mn-day-total .mn-paise { font-size: 1em; }
+.mn-ledger .mn-rows { border-radius: var(--r-card); background: var(--sys-surface); }
 .mn-ledger .finance-transaction {
+  position: relative;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--fd-rule);
+  min-height: 44px;
+  padding: 11px var(--mn-in);
+  border: 0;
 }
-.mn-ledger .mn-rows .finance-transaction:last-child { border-bottom: 0; }
-.mn-ledger .category-tile { width: 32px; height: 32px; margin-top: 1px; border-radius: 10px; }
-.mn-ledger .finance-transaction-copy { gap: 3px; }
-.mn-ledger .finance-transaction strong { color: var(--fd-ink); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
-.mn-ledger .finance-transaction small { color: var(--fd-faint); font-size: 12.5px; }
+/* Separators are inset to the text, past the icon. */
+.mn-ledger .finance-transaction + .finance-transaction::before { content: ''; position: absolute; top: 0; left: calc(var(--mn-in) + 42px); right: 0; border-top: .5px solid var(--sys-separator); }
+/* Apple's settings-icon tile: the category colour with a white glyph. */
+.mn-ledger .category-tile { width: 30px; height: 30px; margin-top: 1px; border-radius: 7px; color: #fff; }
+.mn-ledger .finance-transaction-copy { gap: 1px; }
+.mn-ledger .finance-transaction strong { font: var(--t-headline); color: var(--sys-label); overflow-wrap: anywhere; }
+.mn-ledger .finance-transaction small { font: var(--t-subhead); color: var(--sys-secondary); }
 .mn-ledger .finance-transaction-meta { gap: 5px; }
-.mn-ledger .finance-transaction-note { margin-top: 3px; color: var(--fd-soft); font-size: 13px; line-height: 1.5; }
-.mn-ledger .finance-transaction-side { gap: 2px; }
-.mn-ledger .finance-transaction-side strong { font-size: 15px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mn-ledger .finance-transaction-side strong.income { color: var(--fd-accent); }
-.mn-paise { color: var(--fd-faint); font-size: .82em; font-weight: 600; }
-.mn-ledger .finance-transaction-side strong.income .mn-paise { color: inherit; opacity: .7; }
+.mn-ledger .finance-transaction-meta svg { flex: none; color: var(--sys-tertiary); }
+.mn-ledger .finance-transaction-note { margin-top: 2px; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-ledger .finance-transaction-side { gap: 0; }
+.mn-ledger .finance-transaction-side strong { font: var(--t-body); color: var(--sys-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Money in is good news, so it takes the system green. */
+.mn-ledger .finance-transaction-side strong.income { color: var(--sys-green); }
+.mn-ledger .finance-transaction-side strong.income .mn-paise { color: inherit; }
 .mn-ledger .finance-transaction-delete {
+  position: relative;
   justify-content: center;
   min-width: 32px;
   height: 32px;
-  margin-right: -7px;
-  padding: 0 7px;
+  margin: 2px -8px 0 0;
+  padding: 0 8px;
   border-radius: var(--r-pill);
   background: transparent;
-  color: var(--fd-faint);
-  font-size: 12px;
-  transition: color .18s ease, background-color .18s ease;
+  color: var(--sys-secondary);
+  font: var(--t-footnote);
 }
-.mn-ledger .finance-transaction-delete:hover { background: var(--fd-chip); color: var(--fd-alert); }
-.mn-ledger .finance-transaction-delete:focus-visible { outline: 2px solid var(--fd-alert); outline-offset: 1px; }
+/* A 44pt hit area around the 32px glyph button, without growing the row. */
+.mn-ledger .finance-transaction-delete::after { content: ''; position: absolute; inset: -6px; }
+.mn-ledger .finance-transaction-delete:hover { background: var(--sys-fill); color: var(--sys-red); }
+.mn-ledger .finance-transaction-delete:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.mn-ledger .gmail-review-message { display: block; margin: 8px 0 0; padding: 0 var(--mn-in); font: var(--t-footnote); }
 
-/* ─── Money in: rows on the page ─── */
-.mn-in .fd-quiet { margin-top: 4px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-in .fd-line { padding: 14px 0; }
-.mn-in .fd-line span, .mn-in .fd-two { color: var(--fd-ink); font-size: 14.5px; }
-.mn-in .fd-two small { color: var(--fd-faint); font-size: 12.5px; }
-.mn-in .fd-line b { font-size: 14.5px; font-weight: 700; }
-.mn-in .fd-line b.up { color: var(--fd-accent); }
-.mn-in .mn-sub { margin-top: 20px; }
-.mn-in > .fd-empty { margin-top: 8px; color: var(--fd-soft); font-size: 14px; }
-.mn-in .fd-pair { margin-top: 12px; }
-.mn-in .fd-pair span { font-size: 13px; }
-.mn-in .fd-pair b { font-size: 18px; }
-.mn-in .fd-act { margin-top: 16px; }
-.mn-in .fd-act button:not(.fd-link) { min-height: 44px; }
-.mn-in .rt-form { margin-top: 12px; }
+/* ─── Grouped rows, wherever Money uses them ───
+   .fd-quiet is a section of rows: its h2 is the group's header, the rows are
+   the cell. Each row carries the cell colour; the first and last round the
+   corners; separators are hairlines inset to the text. */
+.mn-screen .fd-quiet {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.mn-screen .fd-quiet > h2 { margin: 0 0 6px; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); letter-spacing: 0; text-transform: none; }
+.mn-screen .fd-quiet > .fd-line {
+  position: relative;
+  min-height: 44px;
+  padding: 11px var(--mn-in);
+  border: 0;
+  border-radius: 0;
+  background: var(--sys-surface);
+  color: inherit;
+  text-align: left;
+}
+.mn-screen .fd-quiet > h2 + .fd-line, .mn-screen .fd-quiet > .fd-line:first-child { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.mn-screen .fd-quiet > .fd-line:last-child { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.mn-screen .fd-quiet > .fd-line + .fd-line::before { content: ''; position: absolute; top: 0; left: var(--mn-in); right: 0; border-top: .5px solid var(--sys-separator); }
+/* Label left in the label colour, value right in secondary: Settings' reading order. */
+.mn-screen .fd-quiet .fd-line > span { font: var(--t-body); color: var(--sys-label); }
+.mn-screen .fd-quiet .fd-line > b { margin-left: auto; font: var(--t-body); color: var(--sys-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.mn-screen .fd-quiet .fd-line > b.up { color: var(--sys-green); }
+.mn-screen .fd-quiet .fd-line > b.fd-yes { color: var(--sys-green); }
+.mn-screen .fd-two, .mn-screen .fd-line .fd-two { gap: 1px; font: var(--t-body); color: var(--sys-label); }
+.mn-screen .fd-two small { font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-quiet .fd-line .fd-link { flex: none; min-height: 44px; margin: -11px 0; padding: 0; border: 0; background: none; font: var(--t-body); color: var(--tint); cursor: pointer; }
+/* A line of explanation where rows would be: one cell of secondary text. */
+.mn-screen .fd-quiet > .fd-hint { margin: 0; padding: 12px var(--mn-in); border-radius: var(--r-card); background: var(--sys-surface); font: var(--t-subhead); color: var(--sys-secondary); }
 
-/* ─── The foot: rates as one quiet line, notes ─── */
-.mn-foot { display: flex; flex-direction: column; gap: 10px; }
-.mn-foot .fd-rates { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--fd-rule); border-bottom: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-foot .fd-rates-head { min-height: 52px; }
-.mn-foot .fd-rates-head .fd-label:not(#_) { color: var(--fd-soft); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
-.mn-foot .fd-rates-head:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 8px; }
-.mn-foot .fd-rates-src { font-size: 12px; }
-.mn-foot .fd-rates-grid { margin: 12px 0 14px; }
-.mn-foot .fd-note { margin: 0; font-size: 12px; }
+/* Notes under a group: footnotes, inset to the text. */
+.mn-screen .fd-note { margin: 8px 0 0; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-empty { font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-screen .fd-hint { font: var(--t-footnote); color: var(--sys-secondary); }
 
-/* ─── First run: the sheet is a doorway ─── */
+/* ─── Money in ─── */
+.mn-in > .fd-empty { margin: 0 0 12px; padding: 0 var(--mn-in); }
+.mn-in .fd-quiet + .mn-sub, .mn-in .fd-empty + .mn-sub { margin-top: 20px; }
+.mn-in > .mn-sub { margin: 20px 0 6px; padding: 0 var(--mn-in); }
+.mn-in > .fd-quiet + .fd-quiet, .mn-in > .mn-sub + .fd-quiet { margin-top: 0; }
+.mn-in .fd-pair { margin-top: 16px; padding: 12px var(--mn-in); border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-in .fd-pair span { font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-in .fd-pair b { margin-top: 2px; font: var(--t-title-3); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.mn-in .fd-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 16px; }
+.mn-in .fd-act button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.mn-in .fd-act .fd-link { padding: 0; border: 0; background: none; font: var(--t-body); }
+.mn-in .rt-form { gap: 12px; margin-top: 16px; padding: var(--mn-in); border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-in .rt-form .fd-act { margin-top: 4px; }
+.mn-in .gmail-review-message { display: block; margin: 8px 0 0; padding: 0 var(--mn-in); font: var(--t-footnote); }
+
+/* ─── The foot: Rates to INR as one disclosure row ─── */
+.mn-foot { display: flex; flex-direction: column; gap: 0; }
+.mn-screen .fd-rates { margin: 0; padding: 0 var(--mn-in); border: 0; border-radius: var(--r-card); background: var(--sys-surface); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-screen .fd-rates-head { min-height: 44px; padding: 11px 0; }
+/* brand.css sets .fd-label at id strength; this is a row title, not a header. */
+.mn-screen .fd-rates-head .fd-label:not(#_) { font: var(--t-body); color: var(--sys-label); }
+.mn-screen .fd-rates-peek { gap: 6px; font: var(--t-body); color: var(--sys-secondary); }
+.mn-screen .fd-rates-peek svg { color: var(--sys-tertiary); transition: none; }
+.mn-screen .fd-rates-head:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 8px; }
+.mn-screen .fd-rates-src { position: relative; margin: 0; padding: 11px 0 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-rates-src::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-screen .fd-rates-grid { gap: 8px; margin: 8px 0 0; padding-bottom: 14px; }
+.mn-screen .fd-rates .fd-rates-src:last-child { padding-bottom: 12px; }
+.mn-screen .fd-rates-grid span { font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-rates-grid strong { margin-top: 2px; font: var(--t-body); color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.mn-foot > .fd-note { margin-top: 8px; }
+.mn-foot > .fd-note:first-child { margin: 0 0 8px; }
+
+/* ─── First run: one cell, one line, one action ─── */
 .mn-first .mn-sheet .fd-focus { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-first .mn-sheet .fd-focus h2 { font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; min-width: 0; }
-.mn-first .mn-sheet .fd-focus p { font-size: 15px; }
-.mn-first .mn-sheet .fd-option { margin-top: 20px; padding: 18px 0 0; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-first .fd-option strong { font-size: 15.5px; }
-.mn-first .fd-option p { font-size: 13.5px; }
-.mn-first .fd-option .fd-act button { min-height: 44px; padding: 0 20px; font-size: 14px; }
+.mn-first .mn-sheet .fd-focus h2 { margin: 0; font: var(--t-title-2); letter-spacing: -.01em; color: var(--sys-label); overflow-wrap: break-word; min-width: 0; }
+.mn-first .mn-sheet .fd-focus p { margin: 4px 0 0; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-first .mn-sheet .fd-option { position: relative; gap: 12px; margin-top: 16px; padding: 16px 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-first .mn-sheet .fd-option::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-first .fd-option .fd-tile { width: 30px; height: 30px; border-radius: 7px; background: var(--sys-fill); box-shadow: none; color: var(--sys-label); }
+.mn-first .fd-option strong { font: var(--t-headline); color: var(--sys-label); }
+.mn-first .fd-option p { margin-top: 2px; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-first .fd-option .fd-act { margin-top: 16px; }
+.mn-first .fd-option .fd-act button { min-height: 50px; padding: 0 24px; font: var(--t-headline); }
 
-/* ─── Manual entry: the form is the sheet ─── */
-.mn-entry { margin-top: 18px; }
+/* ─── A view opened from Money: the title, a line, a way back ─── */
+.mn-screen .fd-sub-head { margin-bottom: 0; }
+.mn-screen .fd-crumb { min-height: 44px; }
+.mn-screen .fd-crumb p { font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-screen .fd-crumb .fd-round { position: relative; width: 30px; height: 30px; background: var(--sys-fill); color: var(--sys-secondary); }
+.mn-screen .fd-crumb .fd-round::after { content: ''; position: absolute; inset: -7px; }
+.mn-screen .fd-crumb .fd-round:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.mn-screen .fd-sub-head h1 { margin: 2px 0 0; font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); }
+.mn-screen .fd-sub-head .fd-lead { margin: 6px 0 0; font: var(--t-subhead); color: var(--sys-secondary); }
+
+/* ─── Manual entry: the form is the cell ─── */
+.mn-entry { margin-top: 20px; }
 .mn-entry .fd-seg { margin-top: 0; }
-.mn-entry .fd-seg button { min-height: 42px; font-size: 14px; }
-.mn-entry .fd-form > .fd-label:not(#_), .mn-entry .fd-chips .fd-label:not(#_) { color: var(--fd-soft); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
-.mn-entry .fd-amount input { font-size: 44px; font-weight: 750; font-variant-numeric: tabular-nums; }
-.mn-entry .fd-chips button { min-height: 40px; padding: 0 15px; font-size: 13.5px; }
-.mn-entry .fd-field { color: var(--fd-soft); font-size: 13px; }
-.mn-entry .fd-field input, .mn-entry .fd-field textarea { font-size: 15px; }
-.mn-entry .fd-act button { min-height: 46px; padding: 0 22px; font-size: 14.5px; }
+.mn-entry .fd-form > .fd-label:not(#_) { margin: 20px 0 6px; padding: 0; font: var(--t-footnote); color: var(--sys-secondary); }
+/* A legend ignores its own top margin, so the fieldset carries the gap. */
+.mn-entry .fd-chips .fd-label:not(#_) { margin: 0 0 8px; padding: 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-entry .fd-amount { margin-top: 0; padding-bottom: 8px; border-bottom: .5px solid var(--sys-separator); }
+.mn-entry .fd-amount:focus-within { border-bottom-color: var(--tint); }
+.mn-entry .fd-amount select { min-height: 36px; padding: 0 8px; border: 0; border-radius: var(--r-field); background: var(--sys-fill); box-shadow: none; color: var(--sys-label); font: var(--t-subhead); font-weight: 600; }
+.mn-entry .fd-amount select:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.mn-entry .fd-amount input { min-height: 44px; font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.mn-entry .fd-amount input::placeholder { color: var(--sys-tertiary); }
+.mn-entry .fd-chips { margin: 20px 0 0; padding: 0; border: 0; min-width: 0; }
+.mn-entry .fd-chips > div { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+.mn-entry .fd-chips button { position: relative; min-height: 34px; padding: 0 14px; border: 0; box-shadow: none; font: var(--t-subhead); }
+.mn-entry .fd-chips button[aria-pressed="true"] { font-weight: 600; }
+/* 34px chips with the gap folded into their hit area: 44pt without overlap. */
+.mn-entry .fd-chips button::after { content: ''; position: absolute; inset: -5px -4px; }
+.mn-entry .fd-chips button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.mn-entry .fd-form > .fd-hint { margin: 10px 0 0; }
+.mn-entry .fd-form > .fd-field.wide { margin-top: 20px; }
+.mn-entry .fd-field { display: flex; flex-direction: column; gap: 6px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-entry .fd-grid { gap: 12px; margin-top: 16px; }
+.mn-entry .fd-field textarea { padding: 11px 12px; line-height: 22px; }
+.mn-entry .fd-count { margin: 6px 0 0; font: var(--t-caption); color: var(--sys-secondary); }
+.mn-entry .fd-act { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.mn-entry .fd-act button { display: inline-flex; align-items: center; gap: 6px; min-height: 50px; padding: 0 24px; font: var(--t-headline); }
+.mn-entry .fd-act button:not(.ghost) { flex: 1 1 auto; }
+.mn-entry .mn-foot > .fd-rates { order: 2; }
 
-/* ─── Investments: the value on the sheet, then the holdings as rows ─── */
-.mn-statement { margin: 14px 0 0; color: var(--fd-soft); font-size: 14.5px; line-height: 1.6; text-wrap: pretty; }
-.mn-invest .mn-pace .fd-delta { display: inline-flex; align-items: center; gap: 4px; }
-/* What the accounts say, when there is no figure yet: the sheet's headline. */
+/* ─── Investments: the value on the cell, then the accounts as rows ─── */
+.mn-statement { margin: 8px 0 0; font: var(--t-subhead); color: var(--sys-secondary); text-wrap: pretty; }
+/* What the accounts say, when there is no figure yet: the cell's headline. */
 .mn-invest .mn-sheet > .fd-focus { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-invest .mn-sheet > .fd-focus h2 { font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; min-width: 0; }
-.mn-invest .mn-sheet > .fd-focus p { font-size: 14.5px; line-height: 1.6; }
-.mn-invest .mn-sheet > .mn-lead + .fd-focus, .mn-invest .mn-sheet > .mn-pace + .fd-focus { margin-top: 16px; }
-.mn-invest .mn-sheet > .mn-lead + .fd-focus h2, .mn-invest .mn-sheet > .mn-pace + .fd-focus h2 { font-size: 17px; letter-spacing: -.015em; }
-/* The position: rows of the sheet. */
-.mn-sheet .fd-quiet { margin-top: 18px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-sheet .fd-quiet > h2 { margin: 0 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none; }
-.mn-sheet .fd-quiet .fd-line { padding: 12px 0; }
-.mn-sheet .fd-quiet .fd-line span { color: var(--fd-soft); font-size: 14px; }
-.mn-sheet .fd-quiet .fd-line b { font-size: 14.5px; font-weight: 700; text-align: right; }
+.mn-invest .mn-sheet > .fd-focus h2 { margin: 0; font: var(--t-title-2); letter-spacing: -.01em; color: var(--sys-label); overflow-wrap: break-word; min-width: 0; }
+.mn-invest .mn-sheet > .fd-focus p { margin: 6px 0 0; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-invest .mn-sheet > .fd-focus .fd-act { margin-top: 16px; }
+.mn-invest .mn-sheet > .mn-lead + .fd-focus, .mn-invest .mn-sheet > .mn-pace + .fd-focus { margin-top: 12px; }
+.mn-invest .mn-sheet > .mn-lead + .fd-focus h2, .mn-invest .mn-sheet > .mn-pace + .fd-focus h2 { font: var(--t-headline); }
+/* The position, inside the cell: rows under a header, no second cell. */
+.mn-sheet .fd-quiet { margin-top: 16px; }
+.mn-sheet .fd-quiet > h2 { padding: 0; }
+.mn-screen .mn-sheet .fd-quiet > .fd-line { padding: 11px 0; background: none; border-radius: 0; }
+.mn-sheet .fd-quiet > .fd-line + .fd-line::before { left: 0; right: calc(-1 * var(--mn-in)); }
+.mn-sheet .fd-quiet > h2 + .fd-line::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-sheet .fd-quiet > .fd-line:last-child { padding-bottom: 0; }
 
-/* Holdings: one group per account, rows under hairlines, no card. */
+/* Accounts: one cell of rows; a connected account is a cell of its own. */
 .mn-holdings .pf-group { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-holdings .fd-line { min-height: 60px; padding: 10px 0; border-bottom: 1px solid var(--fd-rule); }
-.mn-holdings .fd-line .fd-two { color: var(--fd-ink); font-size: 15px; font-weight: 650; }
-.mn-holdings .fd-line .fd-two small { color: var(--fd-faint); font-size: 12.5px; font-weight: 500; }
-/* Connecting is the next step here, so it gets a real target. */
-.mn-holdings .fd-line .fd-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 13.5px; font-weight: 700; }
-.mn-holdings .pf-group .groww-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-holdings .groww-card + .groww-card, .mn-holdings .fd-line + .groww-card, .mn-holdings .groww-card + .fd-line { margin-top: 26px; }
-.mn-holdings .groww-head { gap: 12px; padding: 8px 0 10px; border-bottom: 1px solid var(--fd-rule); }
-.mn-holdings .groww-icon { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--fd-chip); }
-.mn-holdings .groww-head h3 { margin: 0; color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
-.mn-holdings .groww-head small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
-.mn-holdings .groww-head small.warn { color: var(--fd-alert); }
-.mn-holdings .groww-refresh { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--fd-soft); }
-.mn-holdings .groww-refresh:hover { background: var(--fd-chip); color: var(--fd-ink); }
-.mn-holdings .groww-refresh:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
-.mn-holdings .groww-list { margin-top: 0; }
-.mn-holdings .groww-row { align-items: flex-start; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--fd-rule); }
-.mn-holdings .groww-row:last-child { border-bottom: 0; }
-.mn-holdings .groww-row strong { color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
-.mn-holdings .groww-row small { color: var(--fd-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.mn-holdings .groww-row .groww-price { color: var(--fd-soft); font-weight: 600; }
-.mn-holdings .groww-row .groww-price.missing { color: var(--fd-faint); font-weight: 500; }
-.mn-holdings .groww-row-value small { font-size: 13px; font-weight: 650; }
-.mn-holdings .groww-card .up { color: var(--fd-accent); }
-.mn-holdings .groww-card .down { color: var(--fd-alert); }
-.mn-holdings .groww-muted { margin: 10px 0 0; color: var(--fd-faint); font-size: 12px; line-height: 1.55; }
-.mn-holdings .groww-actions { gap: 22px; margin-top: 10px; }
-.mn-holdings .groww-actions .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13.5px; font-weight: 650; }
-.mn-holdings .groww-actions .fd-link:disabled { opacity: .5; cursor: not-allowed; }
-.mn-holdings .groww-actions .groww-disconnect { color: var(--fd-faint); transition: color .18s ease; }
-.mn-holdings .groww-actions .groww-disconnect:hover { color: var(--fd-alert); }
-.mn-holdings .groww-card .fd-act button { min-height: 44px; }
-
-/* The rest of the page: news, suggestions, the mix and your own entries, as sections on the ground. */
-.mn-side { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
-.mn-side .fd-quiet { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mn-side .fd-quiet > h2 { margin: 0 0 4px; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; text-transform: none; }
-.mn-side .fd-quiet > h2:not(#_) { font-size: 19px; }
-.mn-side .fd-line { padding: 13px 0; }
-.mn-side .fd-line span { color: var(--fd-ink); font-size: 14.5px; line-height: 1.5; }
-.mn-side .fd-line b { font-size: 14.5px; font-weight: 700; }
-.mn-side .fd-line .fd-link { min-height: 40px; font-size: 13.5px; font-weight: 650; }
-.mn-side .fd-hint { color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
-.mn-side > .fd-weather-quiet { margin: 0; font-size: 13.5px; }
-.mn-side .fd-news-market { padding: 4px 0 6px; }
-.mn-side .fd-news-summary { font-size: 14.5px; line-height: 1.6; }
-.mn-side .fd-news-sectors { gap: 0; margin: 10px 0 4px; }
-.mn-side .fd-news-sector { padding: 12px 0; border-top: 1px solid var(--fd-rule); }
-.mn-side .fd-news-sector-name { font-size: 14px; }
-.mn-side .fd-news-sector-why { font-size: 13px; color: var(--fd-soft); }
-.mn-side .fd-news-foot { margin: 10px 0 0; font-size: 12px; }
-.mn-mix .invest-health { margin-top: 6px; }
-.mn-mix .invest-reading { padding: 14px 0; border-bottom: 1px solid var(--fd-rule); }
-.mn-mix .invest-reading > span { color: var(--fd-ink); font-size: 14.5px; }
-.mn-mix .invest-reading > b { color: var(--fd-ink); font-size: 17px; font-weight: 750; }
-.mn-mix .invest-reading > small { color: var(--fd-soft); font-size: 13px; }
-.mn-mix .invest-allocation { margin-top: 10px; }
-.mn-mix .invest-strip { height: 12px; border-radius: var(--r-pill); }
-.mn-mix .invest-legend { gap: 0; margin-top: 12px; }
-.mn-mix .invest-legend li { gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--fd-rule); font-size: 14px; }
-.mn-mix .invest-legend strong { font-size: 14px; font-variant-numeric: tabular-nums; }
-.mn-mix .invest-legend small { color: var(--fd-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.mn-mix .invest-sublabel { margin: 20px 0 10px; color: var(--fd-faint); font-size: 13px; font-weight: 650; }
-.mn-mix .invest-bars { gap: 11px; }
-.mn-mix .invest-bar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 46px; gap: 12px; font-size: 13.5px; }
-.mn-mix .invest-bar > div { height: 6px; border-radius: var(--r-pill); background: var(--fd-chip); }
-.mn-mix .invest-bar i { border-radius: var(--r-pill); }
-.mn-mix .invest-bar strong { font-size: 13.5px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .mn-screen .mn-add, .mn-ledger .finance-transaction-delete, .mn-holdings .groww-actions .groww-disconnect { transition: none; }
-  .mn-screen .mn-add:active { transform: none; }
+.mn-holdings .pf-group > * { margin: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-holdings .pf-group > .fd-line { position: relative; min-height: 60px; padding: 8px var(--mn-in); border: 0; }
+.mn-holdings .pf-group > .fd-line:has(+ .fd-line) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.mn-holdings .pf-group > .fd-line + .fd-line { border-top-left-radius: 0; border-top-right-radius: 0; }
+.mn-holdings .pf-group > .fd-line + .fd-line::before { content: ''; position: absolute; top: 0; left: var(--mn-in); right: 0; border-top: .5px solid var(--sys-separator); }
+.mn-holdings .pf-group > * + .groww-card, .mn-holdings .pf-group > .groww-card + * { margin-top: 16px; }
+.mn-holdings .fd-line .fd-two { font: var(--t-body); color: var(--sys-label); }
+.mn-holdings .fd-line .fd-two small { font: var(--t-footnote); color: var(--sys-secondary); }
+/* Connect: the App Store's grey capsule with tint text, grown to 44pt for a thumb. */
+.mn-holdings .fd-line .fd-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--sys-fill);
+  color: var(--tint);
+  font: var(--t-subhead);
+  font-weight: 600;
+  cursor: pointer;
 }
+.mn-holdings .fd-line .fd-link::after { content: ''; position: absolute; inset: -7px -4px; }
+.mn-holdings .pf-group .groww-card { padding: 0 var(--mn-in); border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mn-holdings .groww-head { gap: 12px; min-height: 60px; padding: 8px 0; border: 0; }
+.mn-holdings .groww-icon { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--sys-fill); overflow: hidden; }
+.mn-holdings .groww-head h3 { margin: 0; font: var(--t-headline); letter-spacing: 0; color: var(--sys-label); }
+.mn-holdings .groww-head small { display: block; margin-top: 1px; font: var(--t-footnote); letter-spacing: 0; text-transform: none; color: var(--sys-secondary); }
+.mn-holdings .groww-head small.warn { color: var(--sys-amber); }
+.mn-holdings .groww-refresh { width: 44px; height: 44px; margin-right: -10px; border: 0; border-radius: 50%; background: transparent; color: var(--tint); }
+.mn-holdings .groww-refresh:hover { background: var(--sys-fill); }
+.mn-holdings .groww-refresh:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
+.mn-holdings .groww-list { margin-top: 0; }
+.mn-holdings .groww-row { position: relative; align-items: flex-start; gap: 12px; padding: 11px 0; border: 0; }
+.mn-holdings .groww-row::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-holdings .groww-row strong { font: var(--t-headline); letter-spacing: 0; color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.mn-holdings .groww-row-value strong { font: var(--t-body); }
+.mn-holdings .groww-row small { font: var(--t-footnote); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.mn-holdings .groww-row .groww-price, .mn-holdings .groww-row .groww-price.missing { font-weight: 400; color: var(--sys-secondary); }
+.mn-holdings .groww-row-value small { font-weight: 400; }
+.mn-holdings .groww-card .up { color: var(--sys-green); }
+.mn-holdings .groww-card .down { color: var(--sys-red); }
+.mn-holdings .groww-muted { position: relative; margin: 0; padding: 11px 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-holdings .groww-list + .groww-muted::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-holdings .groww-actions { position: relative; gap: 24px; margin-top: 0; }
+.mn-holdings .groww-actions::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-holdings .groww-actions .fd-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: var(--t-body); color: var(--tint); cursor: pointer; }
+.mn-holdings .groww-actions .fd-link:disabled { opacity: .4; cursor: not-allowed; }
+/* Disconnecting is destructive, so it is red, as Apple sets it. */
+.mn-holdings .groww-actions .groww-disconnect { color: var(--sys-red); }
+.mn-holdings .groww-card .fd-act { padding-bottom: 12px; }
+.mn-holdings .groww-card .fd-act button { min-height: 44px; }
+.mn-holdings .groww-card > .finance-notice { margin: 0 0 12px; }
+
+/* The rest of the page: news, suggestions, the mix, your own entries, research. */
+.mn-side { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+/* These sections sit beside Holdings and Money in, so their headings match them. */
+.mn-side > .fd-quiet > h2 { margin: 0 0 8px; padding: 0; font: var(--t-title-3); letter-spacing: -.01em; color: var(--sys-label); }
+.mn-side > .fd-weather-quiet { margin: 0; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-side > .fd-weather-quiet svg { color: var(--sys-secondary); }
+/* Suggestions: one row whose text runs long, its action at the end. */
+.mn-side .fd-quiet .fd-line > span { flex: 1 1 auto; min-width: 0; }
+
+/* News and your holdings: the reading as one cell, the source as its footnote. */
+.mn-side .fd-news .fd-news-market { padding: 12px var(--mn-in) 4px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-side .fd-news-summary { margin: 0; font: var(--t-body); color: var(--sys-label); }
+.mn-side .fd-news-sectors { gap: 0; margin: 8px 0 0; }
+.mn-side .fd-news-sector { position: relative; padding: 0; border: 0; }
+.mn-side .fd-news-sector::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-side .fd-news-item { display: flex; align-items: center; gap: 8px; }
+.mn-side .fd-news-row { flex: 1 1 auto; gap: 2px; padding: 11px 0; border: 0; }
+.mn-side .fd-news-sector-name { gap: 4px; font: var(--t-headline); }
+/* Direction is status, so it takes the system colours; the word is there too for screen readers. */
+.mn-side .fd-news-sector.is-up .fd-news-sector-name { color: var(--sys-green); }
+.mn-side .fd-news-sector.is-down .fd-news-sector-name { color: var(--sys-red); }
+.mn-side .fd-news-sector.is-mixed .fd-news-sector-name { color: var(--sys-label); }
+.mn-side .fd-news-sector-why { font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-side .fd-news-line { margin: 8px 0; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-side .fd-ask { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; border-radius: var(--r-pill); background: none; color: var(--tint); font: var(--t-body); cursor: pointer; }
+.mn-side .fd-ask.icon { justify-content: center; width: 44px; height: 44px; margin-right: -10px; }
+.mn-side .fd-ask:hover { background: none; color: var(--tint); }
+.mn-side .fd-ask.icon:hover { background: var(--sys-fill); }
+.mn-side .fd-ask:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.mn-side .fd-news-actions { position: relative; margin-top: 0; }
+.mn-side .fd-news-actions::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-side .fd-news-foot { margin: 8px 0 0; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); }
+
+/* Health of the mix: three readings as rows of a cell, then the allocation. */
+.mn-mix .mn-h { margin-bottom: 8px; }
+.mn-mix .invest-health { margin: 0; padding: 0 var(--mn-in); border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-mix .invest-reading { position: relative; grid-template-columns: 10px 1fr auto; column-gap: 12px; padding: 11px 0; border: 0; }
+.mn-mix .invest-reading + .invest-reading::before { content: ''; position: absolute; top: 0; left: 22px; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+/* The dot carries the reading; the word under it says it for anyone who can't use colour. */
+.mn-mix .invest-reading.good { --status-color: var(--sys-green); }
+.mn-mix .invest-reading.warning { --status-color: var(--sys-amber); }
+.mn-mix .invest-reading.critical { --status-color: var(--sys-red); }
+.mn-mix .invest-reading > i { width: 10px; height: 10px; transform: none; }
+.mn-mix .invest-reading > span { font: var(--t-body); color: var(--sys-label); }
+.mn-mix .invest-reading > b { font: var(--t-body); font-weight: 600; letter-spacing: 0; color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.mn-mix .invest-reading > small { margin-top: 2px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-mix > .mn-sub { margin: 20px 0 6px; padding: 0 var(--mn-in); }
+/* Allocation: one stacked bar, its segments held apart by a 2px gap so
+   neighbouring colours never run together, then its legend as rows. */
+.mn-mix .invest-allocation { margin: 0; padding: var(--mn-in) var(--mn-in) 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.mn-mix .invest-strip { gap: 2px; height: 12px; border-radius: 6px; }
+.mn-mix .invest-strip i { min-width: 4px; }
+.mn-mix .invest-legend { gap: 0; margin: 8px 0 0; }
+.mn-mix .invest-legend li { position: relative; grid-template-columns: 10px 1fr auto auto; gap: 12px; min-height: 44px; padding: 11px 0; border: 0; font: var(--t-body); color: var(--sys-label); }
+.mn-mix .invest-legend li + li::before { content: ''; position: absolute; top: 0; left: 22px; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-mix .invest-legend i { width: 10px; height: 10px; border-radius: 50%; }
+.mn-mix .invest-legend strong { font: var(--t-body); font-variant-numeric: tabular-nums; }
+.mn-mix .invest-legend small { min-width: 64px; font: var(--t-subhead); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.mn-mix .invest-sublabel { position: relative; margin: 0; padding: 16px 0 8px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-mix .invest-sublabel::before { content: ''; position: absolute; top: 0; left: 0; right: calc(-1 * var(--mn-in)); border-top: .5px solid var(--sys-separator); }
+.mn-mix .invest-bars { gap: 12px; padding-bottom: var(--mn-in); }
+.mn-mix .invest-bar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 48px; gap: 12px; font: var(--t-subhead); }
+.mn-mix .invest-bar span { font-weight: 400; color: var(--sys-label); }
+.mn-mix .invest-bar > div { height: 6px; border-radius: var(--r-pill); background: var(--sys-fill); }
+/* One series, so one colour: the first of the chart palette. */
+.mn-mix .invest-bar i { border-radius: var(--r-pill); background: var(--series-1); }
+.mn-mix .invest-bar strong { font: var(--t-subhead); font-weight: 400; color: var(--sys-secondary); }
+
+/* The Research desk's section heading matches the others on the page. */
+.mn-side > .fd-label:not(#_) { margin: 0 0 -24px; font: var(--t-title-3); letter-spacing: -.01em; color: var(--sys-label); }
+
+/* ─── Connect a broker: steps and fields as cells ─── */
+.mn-screen > .fd-label:not(#_) { margin: 24px 0 6px; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen > .fd-step { position: relative; gap: 12px; padding: 12px var(--mn-in); border: 0; background: var(--sys-surface); }
+.mn-screen > .fd-label + .fd-step { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.mn-screen > .fd-step:not(:has(+ .fd-step)) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.mn-screen > .fd-step + .fd-step::before { content: ''; position: absolute; top: 0; left: calc(var(--mn-in) + 36px); right: 0; border-top: .5px solid var(--sys-separator); }
+.mn-screen .fd-step > i { width: 24px; height: 24px; border: 0; background: var(--sys-fill); color: var(--sys-label); font: var(--t-footnote); font-weight: 600; font-style: normal; }
+.mn-screen .fd-step strong { font: var(--t-headline); color: var(--sys-label); }
+.mn-screen .fd-step p { margin: 2px 0 0; font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-screen .fd-step small { margin-top: 4px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-step a { color: var(--tint); font-weight: 400; text-decoration: none; }
+.mn-screen .fd-step a:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 4px; }
+.mn-screen .broker-connect { margin-top: 24px; }
+/* Fields on the page itself take the cell colour, so they read as fields. */
+.mn-screen .broker-connect .fd-field input, .mn-screen .broker-connect .fd-field textarea { background: var(--sys-surface); }
+.mn-screen .broker-connect .fd-field { display: flex; flex-direction: column; gap: 6px; padding: 0 0 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .broker-connect .fd-field + .fd-field { margin-top: 16px; }
+.mn-screen .broker-connect .fd-field textarea { padding: 11px 12px; }
+.mn-screen .broker-connect .fd-field textarea.mono { font-size: 15px; }
+.mn-screen .broker-connect .fd-act { margin-top: 20px; }
+.mn-screen .broker-connect .fd-act button { display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 24px; font: var(--t-headline); }
+.mn-screen .fd-shield { gap: 6px; margin: 12px 0 0; padding: 0 var(--mn-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .fd-shield svg { color: var(--sys-secondary); }
+.mn-screen > .fd-quiet { margin-top: 32px; }
+.mn-screen > .fd-quiet + .fd-note { margin-top: 8px; }
+.mn-screen .groww-connect { gap: 12px; margin-top: 24px; }
+.mn-screen .groww-connect-intro { font: var(--t-subhead); color: var(--sys-secondary); }
+.mn-screen .groww-connect .finance-button { min-height: 50px; padding: 0 24px; font: var(--t-headline); gap: 8px; text-decoration: none; }
+.mn-screen .groww-privacy { gap: 6px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen .groww-privacy svg { color: var(--sys-secondary); }
+
+/* ─── Suggestions: the answer, its steps as a group, what was sent ─── */
+.mn-screen > .fd-advice { margin-top: 16px; padding: var(--mn-in); }
+.mn-screen > .fd-advice h1 { margin: 0; font: var(--t-title-2); letter-spacing: -.01em; color: var(--sys-label); }
+.mn-screen > .fd-advice p { margin: 6px 0 0; font: var(--t-body); color: var(--sys-label); }
+.mn-screen > .fd-advice .fd-src { gap: 6px; margin-top: 12px; font: var(--t-footnote); color: var(--sys-secondary); }
+.mn-screen > .fd-consent { gap: 12px; margin-top: 20px; padding: 12px var(--mn-in); border-radius: var(--r-card); background: var(--sys-surface); font: var(--t-subhead); color: var(--sys-label); }
+.mn-screen > .fd-consent input { width: 22px; height: 22px; accent-color: var(--tint); }
+.mn-screen > .fd-act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 20px; }
+.mn-screen > .fd-act button { display: inline-flex; align-items: center; gap: 8px; }
+.mn-screen > .fd-act button:not(.fd-link) { min-height: 50px; padding: 0 24px; font: var(--t-headline); }
+.mn-screen > .fd-act .fd-link { min-height: 44px; padding: 0; border: 0; background: none; font: var(--t-body); }
+.mn-screen > .fd-msg { margin-top: 12px; font: var(--t-subhead); }
+
+/* Notices: a status line in the system colour, on a cell. */
+.mn-screen > .finance-notice { margin: 0 0 16px; padding: 4px 4px 4px var(--mn-in); border: 0; border-radius: var(--r-card); background: var(--sys-surface); font: var(--t-subhead); min-height: 44px; }
+.mn-screen > .finance-notice.success { color: var(--sys-green); }
+.mn-screen > .finance-notice.error { color: var(--sys-red); }
+.mn-screen > .finance-notice button { width: 44px; height: 44px; color: var(--sys-secondary); }
+.mn-screen > .finance-notice.spaced { margin-bottom: 0; }
+.mn-screen > .finance-notice.spaced + .mn { margin-top: 16px; }
+
+/* ─── Motion ─────────────────────────────────────────────────────────
+   Feedback, not ornament: the Rates chevron turns and its figures settle in;
+   a transaction you just added rises into its row; the month's bars grow the
+   first time its figures arrive (spending-summary.tsx marks that once per
+   month, so a tab switch never replays it). Springs from brand.css; with
+   Reduce Motion, short fades or nothing. */
+@media (prefers-reduced-motion: no-preference) {
+  .mn-screen .fd-rates-peek svg { transition: transform var(--spring-snappy-dur) var(--spring-snappy); }
+  .mn-screen .fd-rates-src, .mn-screen .fd-rates-grid { transition: opacity 200ms var(--ease-out), transform var(--spring-dur) var(--spring); }
+  @starting-style {
+    .mn-screen .fd-rates-src, .mn-screen .fd-rates-grid { opacity: 0; transform: translateY(-4px); }
+  }
+  .mn-ledger .finance-transaction.is-new { animation: mn-enter var(--spring-dur) var(--spring) both; }
+  .mn-sheet .fd-bars.is-new i { transform-origin: bottom; animation: mn-grow var(--spring-dur) var(--spring) both; }
+  .mn-sheet .fd-bars.is-new span:nth-child(3n + 2) i { animation-delay: 20ms; }
+  .mn-sheet .fd-bars.is-new span:nth-child(3n) i { animation-delay: 40ms; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-ledger .finance-transaction.is-new { animation: mn-fade 200ms ease both; }
+}
+@keyframes mn-enter { from { opacity: 0; transform: translateY(8px); } }
+@keyframes mn-grow { from { transform: scaleY(0); } }
+@keyframes mn-fade { from { opacity: 0; } }
 
 /* ─── Desktop: the figure and its context on the left; the ledger down the right ───
    The ledger spans every row and the last row is 1fr, so a long ledger never
@@ -289,33 +531,38 @@
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   .stage[data-desktop][data-tab="money"] .screen-body.mn-screen { columns: auto; }
   .stage[data-desktop][data-tab="money"] .screen-body.mn-screen:is(:not(:has(> .fd-sub-head)), .mn-entry-screen) { max-width: 1320px; }
+  .stage[data-desktop][data-tab="money"] .screen-body.mn-screen:has(> .fd-sub-head):not(.mn-entry-screen) { max-width: 720px; }
   .stage[data-desktop] .mn-screen .mn {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     grid-template-rows: auto auto 1fr;
-    gap: 34px 48px;
+    gap: 32px 40px;
     align-items: start;
     margin-top: 8px;
   }
   .stage[data-desktop] .mn-screen .mn > * { grid-column: 1; }
-  .stage[data-desktop] .mn > .mn-sheet { grid-row: 1; padding: 30px 32px 26px; border-radius: 32px; }
+  .stage[data-desktop] .mn > .mn-sheet { grid-row: 1; padding: 20px 24px; }
   .stage[data-desktop] .mn > .mn-in, .stage[data-desktop] .mn > .mn-side { grid-row: 2; }
   .stage[data-desktop] .mn > .mn-foot { grid-row: 3; }
-  .stage[data-desktop] .mn-screen .mn > .mn-ledger { grid-column: 2; grid-row: 1 / -1; padding-top: 4px; }
+  .stage[data-desktop] .mn-screen .mn > .mn-ledger { grid-column: 2; grid-row: 1 / -1; }
   .stage[data-desktop] .mn:not(:has(> .mn-sheet)) > .mn-ledger { grid-column: 1; }
-  .stage[data-desktop] .mn-figure-value { font-size: 60px; }
-  .stage[data-desktop] .mn-figure-cap { font-size: 15px; }
-  .stage[data-desktop] .mn-sheet .fd-bars { height: 92px; margin-top: 26px; }
+  .stage[data-desktop] .mn-figure-value { font: var(--t-large-title); letter-spacing: -.02em; }
+  .stage[data-desktop] .mn-sheet .fd-bars { height: 96px; margin-top: 24px; gap: 3px; }
+  .stage[data-desktop] .mn-sheet .fd-cat-bar { width: 32%; max-width: 220px; }
+  .stage[data-desktop] .mn-h { font: var(--t-title-2); letter-spacing: -.01em; }
+  .stage[data-desktop] .mn-side > .fd-quiet > h2, .stage[data-desktop] .mn-side > .fd-label:not(#_) { font: var(--t-title-2); letter-spacing: -.01em; }
   .stage[data-desktop] .mn-first .mn-sheet .fd-focus h2,
-  .stage[data-desktop] .mn-invest .mn-sheet > .fd-focus:first-child h2 { font-size: 34px; }
+  .stage[data-desktop] .mn-invest .mn-sheet > .fd-focus:first-child h2 { font: var(--t-title-1); letter-spacing: -.02em; }
+  /* Hover is a pointer's preview: rows that act light up a step. */
+  .stage[data-desktop] .mn-screen .fd-quiet > button.fd-line:hover { background: var(--sys-surface-2); }
 
   /* Manual entry: the form on the left, the reference on the right. */
   .stage[data-desktop] .mn-entry { grid-template-rows: auto; }
-  .stage[data-desktop] .mn-entry > .mn-foot { grid-column: 2; grid-row: 1; padding-top: 6px; }
+  .stage[data-desktop] .mn-entry > .mn-foot { grid-column: 2; grid-row: 1; }
   /* First run: the doorway on the left, the reference beside it. */
   .stage[data-desktop] .mn-first { grid-template-rows: auto; }
-  .stage[data-desktop] .mn-screen .mn-first > .mn-foot { grid-column: 2; grid-row: 1; padding-top: 6px; }
+  .stage[data-desktop] .mn-screen .mn-first > .mn-foot { grid-column: 2; grid-row: 1; }
 }
 
-/* The big figures carry their paise small, as a statement does. */
-.mn-figure-value .mn-paise { font-size: .5em; font-weight: 650; letter-spacing: -.01em; }
+/* The desk's own footnote sits inside its cell, so it keeps the cell's inset. */
+.mn-side .rd-desk > .fd-note { padding: 0; }

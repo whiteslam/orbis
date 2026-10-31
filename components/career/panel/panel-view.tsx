@@ -29,6 +29,52 @@ import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from '@/lib/career/view';
 
 type Drawer = { jobId: string; fallback: ApplicationDetail | null };
+
+const LEAVE_MS = 320;
+
+/**
+ * Closes a drawer the way it came: it slides back to the edge and the scrim
+ * fades (career-panel.css, .cp-leaving), then `done` unmounts it.
+ *
+ * Keyboard actions never animate, so the last kind of input is kept on
+ * <html data-cp-input="key|pointer"> (the card menu lives in a portal on
+ * <body>): career-panel.css skips the entrances after a key, and a close
+ * from the keyboard (Escape) is immediate.
+ */
+function useSlideOut() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const onKey = (event: KeyboardEvent) => {
+      // Only keys that act; a modifier alone (or Tab) is just looking around.
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape' || event.key === '/' || event.metaKey || event.ctrlKey) root.dataset.cpInput = 'key';
+    };
+    const onPointer = () => { root.dataset.cpInput = 'pointer'; };
+    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('pointerdown', onPointer, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointer, true);
+      delete root.dataset.cpInput;
+    };
+  }, []);
+  return useCallback((done: () => void) => {
+    const pane = document.querySelector<HTMLElement>('.cp-panel :is(.cp-drawer, .cp-side)');
+    if (!pane || document.documentElement.dataset.cpInput === 'key') {
+      done();
+      return;
+    }
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      done();
+    };
+    document.querySelectorAll<HTMLElement>('.cp-panel :is(.cp-drawer, .cp-side, .cp-scrim)').forEach((element) => element.classList.add('cp-leaving'));
+    pane.addEventListener('animationend', (event) => { if (event.target === pane) finish(); });
+    setTimeout(finish, LEAVE_MS);
+  }, []);
+}
+
 type Overlay = 'palette' | 'paste' | 'queue' | null;
 
 /** Before a resume and a spec, every page but Setup points there. */
@@ -182,7 +228,9 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
     onHome?.((current) => ({ ...current, state: { ...current.state, ...patch } }));
     onReload();
   };
-  const closeDrawer = useCallback(() => setDrawer(null), []);
+  const slideOut = useSlideOut();
+  const closeDrawer = useCallback(() => slideOut(() => setDrawer(null)), [slideOut]);
+  const closeQueue = useCallback(() => slideOut(() => setOverlay(null)), [slideOut]);
   const covered = drawer !== null || overlay !== null;
   useEffect(() => {
     if (covered || !opener.current) return;
@@ -203,7 +251,6 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
   return (
     <PanelProvider value={api}>
       <div className="cp-panel">
-        <div className="cp-wall" aria-hidden="true" />
         <a className="cp-skip" href="#cp-main">Skip to content</a>
         <div className="cp-frame" inert={covered}>
           <PanelHeader page={page} who={who} />
@@ -216,7 +263,7 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
         <StatusToast toast={rail.toast} onDismiss={() => rail.setToast(null)} />
         {overlay === 'palette' && <CommandPalette items={paletteIndex(home, knownJobs)} onPick={pick} onClose={closeOverlay} />}
         {overlay === 'paste' && <PasteDialog onClose={closeOverlay} onPasted={(jobId) => { setOverlay(null); onReload(); api.openJobId(jobId); }} />}
-        {overlay === 'queue' && home && <QueueDrawer home={home} threshold={sheet.threshold} onClose={closeOverlay} onOpen={(card) => api.openJob(card.job, card)} />}
+        {overlay === 'queue' && home && <QueueDrawer home={home} threshold={sheet.threshold} onClose={closeQueue} onOpen={(card) => api.openJob(card.job, card)} />}
         {drawer && (
           <>
             <div className="cp-scrim" aria-hidden="true" onClick={closeDrawer} />

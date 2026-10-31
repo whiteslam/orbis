@@ -135,9 +135,11 @@ function Observations({ observations, isPdf, showAll, onToggle }: Readonly<{ obs
   return (
     <section className="hl-calc">
       <FieldLabel>{isPdf ? 'What Orbis found in the document' : 'What Orbis calculated'}</FieldLabel>
-      {shown.map((observation) => isPdf
-        ? <p className="hl-calc-row text" key={observation.id}>{observation.value}</p>
-        : <div className="hl-calc-row" key={observation.id}><span>{observation.sheet} · {observation.column}</span><b>{observation.value}</b></div>)}
+      <div className="hl-cell">
+        {shown.map((observation) => isPdf
+          ? <p className="hl-calc-row text" key={observation.id}>{observation.value}</p>
+          : <div className="hl-calc-row" key={observation.id}><span>{observation.sheet} · {observation.column}</span><b>{observation.value}</b></div>)}
+      </div>
       {hidden > 0 && (
         <button className="fd-link hl-more" type="button" onClick={onToggle} aria-expanded={showAll}>
           {showAll ? 'Show fewer' : `${hidden} more`}
@@ -167,10 +169,12 @@ function RequestExtras({ hasStepData, savedContextCount, hasSavedPersonalProfile
     <section className="hl-opts">
       <FieldLabel>Add to the request</FieldLabel>
       <p className="hl-opts-note">Only what is ticked is sent with the file summary.</p>
-      {hasStepData && <label className="hl-opt"><input type="checkbox" checked={steps.checked} onChange={steps.onChange} disabled={disabled} /><span>My <b>Apple Health steps</b>: daily averages, trend and the last 14 days</span></label>}
-      {savedContextCount > 0 && <label className="hl-opt"><input type="checkbox" checked={notes.checked} onChange={notes.onChange} disabled={disabled} /><span>Up to <b>{noteCount} relevant saved {noteCount === 1 ? 'note' : 'notes'}</b> from Profile (up to 3,000 characters)</span></label>}
-      {hasSavedPersonalProfile && <label className="hl-opt"><input type="checkbox" checked={profile.checked} onChange={profile.onChange} disabled={disabled} /><span>My <b>personal profile</b> and “More about me” details</span></label>}
-      {personaRelevant && <label className="hl-opt"><input type="checkbox" checked={persona.checked} onChange={persona.onChange} disabled={disabled} /><span>My saved <b>fitness persona</b> (this file has fitness fields)</span></label>}
+      <div className="hl-cell">
+        {hasStepData && <label className="hl-opt"><input type="checkbox" checked={steps.checked} onChange={steps.onChange} disabled={disabled} /><span>My <b>Apple Health steps</b>: daily averages, trend and the last 14 days</span></label>}
+        {savedContextCount > 0 && <label className="hl-opt"><input type="checkbox" checked={notes.checked} onChange={notes.onChange} disabled={disabled} /><span>Up to <b>{noteCount} relevant saved {noteCount === 1 ? 'note' : 'notes'}</b> from Profile (up to 3,000 characters)</span></label>}
+        {hasSavedPersonalProfile && <label className="hl-opt"><input type="checkbox" checked={profile.checked} onChange={profile.onChange} disabled={disabled} /><span>My <b>personal profile</b> and “More about me” details</span></label>}
+        {personaRelevant && <label className="hl-opt"><input type="checkbox" checked={persona.checked} onChange={persona.onChange} disabled={disabled} /><span>My saved <b>fitness persona</b> (this file has fitness fields)</span></label>}
+      </div>
     </section>
   );
 }
@@ -394,14 +398,16 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
       <div className="hl-adv-side">
       <section className="hl-sec">
         <h2 className="hl-h">What was sent</h2>
-        <div className="fd-line"><span>{pdf ? 'PDF preview and text snippets, bounded' : 'Excel summary, bounded'}</span><b className="fd-yes">Included</b></div>
-        {sent && [
-          row('Step summary', sent.steps),
-          row('Saved notes', sent.notes),
-          row('Personal profile', sent.profile),
-          row('Fitness persona', sent.persona),
-        ]}
-        <div className="fd-line"><span>The file itself</span><b className="empty">Never sent</b></div>
+        <div className="hl-cell">
+          <div className="fd-line"><span>{pdf ? 'PDF preview and text snippets, bounded' : 'Excel summary, bounded'}</span><b className="fd-yes">Included</b></div>
+          {sent && [
+            row('Step summary', sent.steps),
+            row('Saved notes', sent.notes),
+            row('Personal profile', sent.profile),
+            row('Fitness persona', sent.persona),
+          ]}
+          <div className="fd-line"><span>The file itself</span><b className="empty">Never sent</b></div>
+        </div>
       </section>
       {!sent && <p className="fd-note tight">Which profile details went with this request isn’t stored with saved advice.</p>}
       </div>

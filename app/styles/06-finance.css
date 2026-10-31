@@ -7,8 +7,8 @@
 /* Two progress bars carried their own gradients — teal and purple-to-blue. */
 .field .progress, .field .plan-progress { background: var(--fd-ring-track); }
 .field .progress i, .field .plan-progress i { background: var(--fd-accent); }
-/* Income is the accent, not a second, brighter green. */
-.field .finance-transaction-side strong.income { color: var(--fd-accent); }
+/* Money in is good news: the system green, as status colours are. */
+.field .finance-transaction-side strong.income { color: var(--sys-green); }
 
 .field .apple-card-head strong { color: var(--fd-ink); }
 .field .apple-card-head span, .field .apple-card-empty, .field .apple-metric, .field .apple-metric-label, .field .apple-metric-range { color: var(--fd-faint); }
@@ -16,44 +16,15 @@
 .field .apple-row strong { color: var(--fd-ink); }
 .field .apple-row small, .field .apple-row p { color: var(--fd-faint); }
 
-/* Transactions: the same hairline row the quiet lists use. */
-.field .transaction-day h4 { margin: 18px 2px 6px; color: var(--fd-faint); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
-.field .finance-transaction { padding: 13px 0; border-bottom: 1px solid var(--fd-rule); }
-.field .finance-transaction strong { font-size: 13px; color: var(--fd-ink); }
-.field .finance-transaction small, .field .finance-transaction-note { color: var(--fd-faint); font-size: 11.5px; }
-.field .finance-transaction-delete { color: var(--fd-faint); font-size: 11px; }
-.field .finance-transaction-delete:hover { background: var(--fd-alert-wash); color: var(--fd-alert); }
-.field .apple-list { padding: 0 14px; }
-
-/* Adding a transaction by hand, and the rates strip. */
-.field .manual-entry-icon { border-radius: 50%; background: var(--fd-chip); color: var(--fd-accent); }
-.field .manual-entry-closed strong { font-size: 14px; color: var(--fd-ink); }
-.field .manual-entry-closed p { color: var(--fd-faint); font-size: 11.5px; }
-.field .manual-entry-head small { color: var(--fd-faint); font-size: 10px; }
-.field .manual-entry-head h3 { color: var(--fd-ink); font-size: 18px; }
-.field .manual-entry-close { border: 0; border-radius: 50%; background: var(--fd-chip); color: var(--fd-faint); }
-.field .manual-entry-toggle { padding: 0; border-radius: 0; background: none; border-bottom: 1px solid var(--fd-rule); }
-.field .manual-entry-toggle button { position: relative; height: 38px; border-radius: 0; color: var(--fd-faint); font-size: 12.5px; }
-.field .manual-entry-toggle button.active { background: none; color: var(--fd-ink); box-shadow: none; }
-.field .manual-entry-toggle button.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: var(--r-pill); background: var(--fd-ink); }
-.field .manual-entry-amount label,
-.field .manual-entry-group legend,
-.field .manual-entry-fields label,
-.field .manual-entry-note { color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
-.field .currency-head { color: var(--fd-accent); }
-.field .currency-head strong { color: var(--fd-ink); font-size: 14px; }
-.field .currency-head small, .field .currency-grid span, .field .currency-muted { color: var(--fd-faint); font-size: 11px; }
-.field .currency-grid div { background: var(--fd-chip); border-radius: var(--r-md); }
-.field .currency-grid strong { color: var(--fd-ink); font-size: 13px; }
-
-/* Alerts waiting on a decision. */
-.field .gmail-review-queue-title small { color: var(--fd-faint); font-size: 10px; }
-.field .gmail-review-queue-title h3 { color: var(--fd-ink); font-size: 18px; }
-.field .gmail-review-queue-title > span, .field .gmail-review-privacy { color: var(--fd-faint); font-size: 11.5px; }
-.field .gmail-review-card { padding: 14px 15px; }
-.field .gmail-review-head { color: var(--fd-accent); }
-.field .gmail-review-head strong { color: var(--fd-ink); font-size: 13px; }
-.field .gmail-review-head small, .field .gmail-review-reason { color: var(--fd-faint); font-size: 11.5px; }
+/* Transactions: rows in Apple's text styles. Money draws them as an inset
+   grouped list (page-money.css); these are the defaults under it. */
+.field .transaction-day h4 { margin: 20px 0 6px; padding: 0 16px; font: var(--t-footnote); color: var(--sys-secondary); letter-spacing: 0; text-transform: none; }
+.field .finance-transaction { padding: 11px 0; border-bottom: .5px solid var(--sys-separator); }
+.field .finance-transaction strong { font: var(--t-headline); color: var(--sys-label); }
+.field .finance-transaction small, .field .finance-transaction-note { font: var(--t-subhead); color: var(--sys-secondary); }
+.field .finance-transaction-delete { color: var(--sys-secondary); font: var(--t-footnote); }
+.field .finance-transaction-delete:hover { background: var(--sys-fill); color: var(--sys-red); }
+.field .apple-list { padding: 0 16px; }
 
 /* Sign out sits in the same hairline row Finance uses for its Gmail source. */
 .field .fd-source .icon-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--fd-chip); color: var(--fd-soft); box-shadow: none; }
@@ -91,12 +62,12 @@
 .finance-button.primary { background: var(--sys-blue); color: var(--on-fill); }
 .finance-button.secondary { background: var(--sys-surface); border-color: var(--line); color: var(--ink); }
 .finance-button:disabled { opacity: .6; cursor: not-allowed; }
-.finance-notice { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: var(--r-md); font-size: 11px; line-height: 1.45; }
-.finance-notice.success { background: var(--sys-tint-green); border: 1px solid var(--sys-separator); color: var(--sys-green); }
-.finance-notice.error { background: var(--sys-tint-red); border: 1px solid var(--sys-separator); color: var(--sys-red); }
+.finance-notice { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; padding: 11px 16px; border-radius: var(--r-field); font: var(--t-subhead); }
+.finance-notice.success { background: var(--sys-tint-green); border: 0; color: var(--sys-green); }
+.finance-notice.error { background: var(--sys-tint-red); border: 0; color: var(--sys-red); }
 /* Notices that were a <p> before becoming an <output> keep the paragraph gap below them. */
 .finance-notice.spaced { margin-bottom: 1em; }
-.finance-notice button { border: 0; background: transparent; color: inherit; font-size: 18px; cursor: pointer; }
+.finance-notice button { min-width: 44px; min-height: 44px; margin: -11px -12px -11px 0; border: 0; background: transparent; color: inherit; font-size: 20px; cursor: pointer; }
 .finance-candidate-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 8px; margin: 15px 2px 0; }
 .finance-candidate-summary strong { font-size: 20px; }
 .finance-candidate-summary span { font-size: 11px; }
@@ -124,20 +95,20 @@
 .gmail-review-merchant { grid-column: 1 / -1; }
 .gmail-review-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .gmail-review-actions .finance-button { gap: 5px; }
-.gmail-review-message { margin: 7px 0 0; color: var(--sys-red); font-size: 10px; line-height: 1.5; }
+.gmail-review-message { margin: 8px 0 0; font: var(--t-footnote); color: var(--sys-red); }
 .gmail-review-message.success { color: var(--sys-green); }
 .finance-transactions { margin-top: 2px; }
-.finance-transaction { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.finance-transaction { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 11px 0; border-bottom: .5px solid var(--sys-separator); }
 .finance-transaction:last-child { border-bottom: 0; }
 .finance-transaction > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.finance-transaction strong { font-size: 11px; }
-.finance-transaction small { color: var(--muted); font-size: 10px; }
+.finance-transaction strong { font: var(--t-headline); }
+.finance-transaction small { font: var(--t-subhead); color: var(--sys-secondary); }
 .finance-transaction-meta { display: inline-flex; align-items: center; gap: 4px; }
-.finance-transaction-note { margin: 2px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.finance-transaction-note { margin: 2px 0 0; font: var(--t-subhead); color: var(--sys-secondary); overflow-wrap: anywhere; }
 .finance-transaction-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
 .finance-transaction-side strong.income { color: var(--sys-green); }
-.finance-transaction-delete { display: inline-flex; align-items: center; gap: 3px; padding: 3px 5px; border: 0; border-radius: var(--r-xs); background: transparent; color: var(--muted); font-size: 9px; cursor: pointer; }
-.finance-transaction-delete:hover { background: var(--sys-tint-red); color: var(--sys-red); }
+.finance-transaction-delete { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--sys-secondary); font: var(--t-footnote); cursor: pointer; }
+.finance-transaction-delete:hover { background: var(--sys-fill); color: var(--sys-red); }
 .finance-transaction-delete:disabled { opacity: .5; cursor: not-allowed; }
 .manual-entry-closed { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; margin-top: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
 .manual-entry-closed > div:nth-child(2) { flex: 1; min-width: 0; }
@@ -281,7 +252,7 @@
 /* Floating glass capsule: detached from the edges so the page scrolls
    under it and the blur has something to refract. */
 .bottom-nav { position: absolute; left: 10px; right: 10px; bottom: calc(var(--nav-gap) + var(--safe-bottom)); height: var(--nav-h); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; border-radius: var(--r-pill); border: var(--glass-hairline); background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-chrome-blur); backdrop-filter: var(--glass-chrome-blur); box-shadow: var(--e2), var(--glass-edge); padding: 4px 6px; }
-.bottom-nav button { min-height: 44px; height: 100%; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--sys-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 0; min-width: 0; transition: background .18s ease, color .18s ease; }
-.bottom-nav button span { font-size: 8px; letter-spacing: -.02em; }
-.bottom-nav button.active { background: var(--sys-surface); color: var(--sys-label); font-weight: 800; box-shadow: var(--e1); }
+.bottom-nav button { min-height: 44px; height: 100%; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--sys-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 0; min-width: 0; }
+.bottom-nav button span { font-size: 10px; letter-spacing: 0; }
+.bottom-nav button.active { background: var(--sys-fill); color: var(--tint-label); font-weight: 600; box-shadow: none; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }

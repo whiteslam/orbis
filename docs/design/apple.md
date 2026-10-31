@@ -50,10 +50,10 @@ Contrast figures are for text on the cell colour.
 | `--sys-fill` | control track, grey button | `rgba(120,120,128,.12)` | `rgba(118,118,128,.24)` |
 | `--tint` | the Orbis tint | `#087A65` (5.3:1) | `#42CCA8` (8.5:1) |
 | `--on-tint` | text on a tint fill | `#FFFFFF` (5.3:1) | `#00231B` (8.4:1) |
-| `--sys-red` | destructive, errors | `#D70015` (5.4:1) | `#FF453A` (5.0:1) |
+| `--sys-red` | destructive, errors | `#D70015` (5.4:1) | `#FF6961` (6.0:1) |
 | `--sys-green` | success, on switches | `#1E7D36` | `#30D158` |
 | `--sys-amber` | warnings | `#C93400` (5.3:1) | `#FF9F0A` (8.3:1) |
-| `--sys-blue` | links outside the tint, info | `#0040DD` (7.6:1) | `#0A84FF` (4.7:1) |
+| `--sys-blue` | links outside the tint, info | `#0040DD` (7.6:1) | `#409CFF` (6.0:1) |
 
 Light-mode system colours use Apple's accessible variants so text in them
 passes 4.5:1. Switch tracks use Apple green (`#34C759` / `#30D158`), as on

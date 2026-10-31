@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { Bell, Search } from 'lucide-react';
-import { OrbisMark } from '@/components/brand/orbis-mark';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -25,13 +24,13 @@ function HeadsupsButton({ onAction }: Readonly<{ onAction: (action: HeadsupActio
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, box, close);
   return (
-    <div className="cp-pop-wrap" ref={box}>
-      <button type="button" className="cp-head-btn" aria-expanded={open} aria-controls="dk-headsups" onClick={() => setOpen((value) => !value)} title="Heads-ups">
+    <div className="dk-pop-wrap" ref={box}>
+      <button type="button" className="icon-btn" aria-expanded={open} aria-controls="dk-headsups" onClick={() => setOpen((value) => !value)} title="Heads-ups">
         <Bell size={18} aria-hidden="true" />
         <span className="sr-only">Heads-ups</span>
       </button>
       {open && (
-        <div className="cp-pop dk-pop" id="dk-headsups" role="dialog" aria-label="Heads-ups">
+        <div className="dk-pop" id="dk-headsups" role="dialog" aria-label="Heads-ups">
           <Headsups onAction={(action) => { setOpen(false); onAction(action); }} empty="Nothing needs you right now. Orbis tells you here when something does." />
         </div>
       )}
@@ -40,9 +39,10 @@ function HeadsupsButton({ onAction }: Readonly<{ onAction: (action: HeadsupActio
 }
 
 /**
- * The desktop's top bar: hello and the date on the left, search (Ctrl/⌘+K) in
- * the middle, then heads-ups, the appearance switch and the avatar that opens
- * Settings. Hidden by app/styles/desktop.css below the breakpoint, where each
+ * The desktop's toolbar: hello and the date on the leading side; search
+ * (Ctrl/⌘+K), heads-ups, the appearance switch and the avatar that opens
+ * Settings on the trailing side, as in a macOS window. The Orbis mark lives at
+ * the top of the sidebar. Hidden by app/styles/desktop.css below the breakpoint, where each
  * screen's own header does this job.
  */
 export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
@@ -57,7 +57,6 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
     <header className="dk-header">
       {/* The hour and the date are India's on both sides, but either can turn between them. */}
       <div className="dk-hello">
-        <OrbisMark size={34} />
         <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(istParts(now).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
       </div>
       <button type="button" className="dk-search" onClick={onSearch} aria-keyshortcuts="Control+K Meta+K">

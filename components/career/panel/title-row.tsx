@@ -106,7 +106,7 @@ function SubNav({ page, home }: Readonly<{ page: PanelPage; home: CareerHome | n
   };
   return (
     <nav className="cp-subnav" aria-label={`${group.label} sections`}>
-      <ul>
+      <ul className="cp-subnav-list" data-glide="">
         {group.pages.map((id) => (
           <li key={id}>
             <a href={hrefFor(id)} aria-current={page === id ? 'page' : undefined}>

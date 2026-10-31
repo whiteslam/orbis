@@ -12,13 +12,13 @@
    (lib/shell/desktop.ts, .env.example). Off, a wide window gets the phone
    mock-up exactly as before.
 
-   The look is the Career panel's (career-panel.css): a floating pill rail on
-   the left, a header across the top, glass cards on the house wallpaper. The
-   panel's .cp-rail, .cp-tip, .cp-head-btn, .cp-pop and .cp-palette classes are
-   reused as they are; the --cp-* tokens they read are set on .stage here. Each
-   tab keeps its own markup: columns come from grid placement by class
-   (Today, Social) or from two balanced columns (Money, Health, Journal), never
-   from wrappers, so the phone's rise-in order (motion.css) is untouched.
+   The look is a macOS window (docs/design/apple.md): a sidebar floating at
+   the leading edge, a toolbar across the top, the grouped background behind
+   solid cells. The sidebar folds to icons when the window is narrow or Ask
+   Orbis is docked, as Mail folds its own. Each tab keeps its own markup:
+   columns come from grid placement by class (Today, Social) or from two
+   balanced columns (Money, Health, Journal), never from wrappers, so the
+   phone's rise-in order (motion.css) is untouched.
    Prefix: .dk- */
 
 /* The rail and the header are always in the page; only the desktop shows them. */
@@ -33,6 +33,9 @@
     --cp-card-edge: var(--panel-card-edge);
     --cp-shadow: var(--panel-shadow);
     --cp-rail-w: 60px;
+    /* The sidebar: its width, and its inset from the window's edges. */
+    --dk-side-w: 216px;
+    --dk-side-inset: 10px;
     --dk-gap: 20px;
     --dk-gap-wide: clamp(20px, 1.6vw, 32px);
     --dk-ask-w: 420px;
@@ -56,7 +59,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0 auto;
-    padding: 0 clamp(32px, 3vw, 56px) 72px calc(var(--dk-rail-w, var(--cp-rail-w)) + 56px);
+    padding: 0 clamp(32px, 3vw, 56px) 72px calc(var(--dk-side-inset) + var(--dk-side-w) + clamp(32px, 3vw, 48px));
     border-radius: 0;
     overflow: visible;
     background: none;
@@ -78,49 +81,135 @@
   .stage[data-desktop] .fd-top, .stage[data-desktop]:not([data-tab="social"]) .fd-head-row, .stage[data-desktop] .fd-head-row > .avatar { display: none; }
   .stage[data-desktop] .fd-head-row .orbis-mark { display: none; }
   .stage[data-desktop] .fd-head { margin-bottom: 20px; }
-  .stage[data-desktop] .fd-head h1 { margin-top: 4px; font-size: clamp(34px, 3vw, 44px); font-weight: 600; letter-spacing: -.04em; line-height: 1.02; }
+  .stage[data-desktop] .fd-head h1 { margin-top: 4px; font: var(--t-large-title); letter-spacing: -.02em; }
 
-  /* ─── Rail ─── */
-  .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 960px + 24px)); z-index: 30; }
-  .stage[data-desktop] .dk-rail .cp-rail-btn { width: 46px; height: 46px; }
-  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
-  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
-  .stage[data-desktop] .dk-rail .dk-rail-ask { color: var(--fd-accent); }
+  /* ─── Sidebar ───
+     A macOS sidebar floating in the glass layer: the mark and the app's name
+     at the top, a row per tab (icon in the tint, name in the label colour),
+     Ask Orbis and Settings below a hairline. The selected row is the tab
+     bar's selection: a grey fill, tint name. Rows react to the pointer at
+     once, as macOS's do; nothing about switching tabs animates. */
+  .stage[data-desktop] .dk-rail {
+    position: fixed;
+    top: var(--dk-side-inset);
+    bottom: var(--dk-side-inset);
+    left: max(var(--dk-side-inset), calc(50vw - 960px + var(--dk-side-inset)));
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: var(--dk-side-w);
+    padding: 14px 10px 10px;
+    border: var(--glass-hairline);
+    border-radius: 18px;
+    background: var(--glass-chrome-bg);
+    -webkit-backdrop-filter: var(--glass-chrome-blur);
+    backdrop-filter: var(--glass-chrome-blur);
+    box-shadow: var(--glass-edge), var(--e2);
+  }
+  .stage[data-desktop] .dk-rail-brand { display: flex; align-items: center; gap: 8px; min-height: 28px; margin: 0 0 12px; padding: 0 10px; color: var(--sys-label); font: var(--t-headline); }
+  .stage[data-desktop] .dk-rail ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  /* Ask and Settings at the foot, under an inset hairline. */
+  .stage[data-desktop] .dk-rail .dk-rail-foot { position: relative; margin-top: auto; padding-top: 9px; }
+  .stage[data-desktop] .dk-rail-foot::before { content: ""; position: absolute; top: 0; left: 10px; right: 10px; border-top: .5px solid var(--sys-separator); }
+  .stage[data-desktop] .dk-rail-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--sys-label);
+    font: var(--t-subhead);
+    text-align: left;
+    text-decoration: none;
+    cursor: default;
+  }
+  .stage[data-desktop] .dk-rail-btn svg { flex: none; color: var(--tint); }
+  .stage[data-desktop] .dk-rail-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stage[data-desktop] .dk-rail-btn:hover { background: color-mix(in srgb, var(--sys-fill) 40%, transparent); }
+  .stage[data-desktop] .dk-rail-btn[aria-current="page"] { background: var(--sys-fill); color: var(--tint-label); font-weight: 600; }
+  .stage[data-desktop] .dk-rail-btn:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
 
-  /* ─── Header ─── */
-  .stage[data-desktop] .dk-header { position: relative; z-index: 25; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 420px) minmax(0, 1fr); align-items: center; gap: 16px; min-height: 88px; }
-  .stage[data-desktop] .dk-hello { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  /* ─── Toolbar: the hello and the date leading; search and the tools trailing ─── */
+  .stage[data-desktop] .dk-header { position: relative; z-index: 25; display: flex; align-items: center; gap: 12px; min-height: 76px; }
+  .stage[data-desktop] .dk-hello { flex: 1; min-width: 0; }
   .stage[data-desktop] .dk-hello p { display: grid; min-width: 0; margin: 0; }
-  .stage[data-desktop] .dk-hello b { overflow: hidden; color: var(--fd-ink); font-size: 18px; font-weight: 600; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-  .stage[data-desktop] .dk-hello small { color: var(--fd-soft); font-size: 12.5px; }
-  .stage[data-desktop] .dk-search { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 8px 0 18px; border: var(--cp-card-edge); border-radius: 999px; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--cp-shadow); color: var(--fd-soft); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
-  .stage[data-desktop] .dk-search:hover { color: var(--fd-ink); background: var(--gl-fill-strong); }
+  .stage[data-desktop] .dk-hello b { overflow: hidden; color: var(--sys-label); font: var(--t-headline); text-overflow: ellipsis; white-space: nowrap; }
+  .stage[data-desktop] .dk-hello small { color: var(--sys-secondary); font: var(--t-footnote); }
+  /* A macOS search field: a filled capsule. It opens the palette, so it reads as a field, not a button. */
+  .stage[data-desktop] .dk-search { display: flex; align-items: center; gap: 8px; width: clamp(200px, 21vw, 300px); height: 36px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-secondary-strong); font: var(--t-subhead); text-align: left; cursor: text; transition: color .15s ease; }
+  .stage[data-desktop] .dk-search:hover { color: var(--sys-label); }
   .stage[data-desktop] .dk-search span { flex: 1; }
-  .stage[data-desktop] .dk-search kbd { padding: 4px 9px; border-radius: 999px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; }
-  .stage[data-desktop] .dk-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-  .stage[data-desktop] .dk-tools .icon-btn, .stage[data-desktop] .dk-tools .avatar { width: 42px; height: 42px; border: var(--cp-card-edge); border-radius: 50%; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: none; color: var(--fd-ink); cursor: pointer; }
-  .stage[data-desktop] .dk-tools .avatar { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); font-size: 15px; font-weight: 600; }
-  .stage[data-desktop] .dk-pop { width: 420px; }
-  .stage[data-desktop] .dk-pop .hu-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .stage[data-desktop] :is(.dk-search, .dk-tools .icon-btn, .dk-tools .avatar):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+  .stage[data-desktop] .dk-search kbd { padding: 0; background: none; color: var(--sys-secondary-strong); font: var(--t-footnote); }
+  .stage[data-desktop] .dk-tools { display: flex; align-items: center; gap: 8px; }
+  .stage[data-desktop] .dk-tools :is(.icon-btn, .avatar) { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--sys-fill); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--sys-label); cursor: default; transition: background-color .15s ease; }
+  .stage[data-desktop] .dk-tools .avatar { font: var(--t-subhead); font-weight: 600; }
+  .stage[data-desktop] .dk-tools :is(.icon-btn, .avatar):hover { background: color-mix(in srgb, var(--sys-fill), var(--sys-label) 7%); }
+  .stage[data-desktop] .dk-tools .icon-btn[aria-expanded="true"] { background: color-mix(in srgb, var(--sys-fill), var(--sys-label) 16%); }
+  .stage[data-desktop] :is(.dk-search, .dk-tools .icon-btn, .dk-tools .avatar):focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 
-  /* ─── Ask Orbis: docked on the right; the page moves over to stay in view ─── */
+  /* Heads-ups: a popover from the bell, scaling from it (motion at the foot of this file). */
+  .stage[data-desktop] .dk-pop-wrap { position: relative; }
+  .stage[data-desktop] .dk-pop { position: absolute; top: calc(100% + 8px); right: -4px; z-index: 40; width: 400px; max-height: min(520px, 70vh); overflow-y: auto; padding: 16px; border: var(--glass-hairline); border-radius: 14px; background: var(--sys-surface); box-shadow: var(--e3); color: var(--sys-label); transform-origin: calc(100% - 22px) -8px; }
+  .stage[data-desktop] .dk-pop .hu-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+  /* ─── Command palette (Ctrl/⌘+K): Spotlight. It opens and closes at once,
+     being keyboard-driven. The Career panel's own page keeps
+     career-panel.css's look; these are the app's. ─── */
+  .stage[data-desktop] .cp-veil:has(> .cp-palette) { background: var(--veil); -webkit-backdrop-filter: none; backdrop-filter: none; animation: none; }
+  .stage[data-desktop] .cp-palette { border: var(--glass-hairline); border-radius: 18px; background: var(--sys-surface); box-shadow: var(--e3); color: var(--sys-label); }
+  .stage[data-desktop] .cp-palette-field { gap: 12px; padding: 0 18px; border-bottom: .5px solid var(--sys-separator); color: var(--sys-secondary); }
+  .stage[data-desktop] .cp-palette-field input { height: 56px; color: var(--sys-label); font: var(--t-title-3); font-weight: 400; }
+  .stage[data-desktop] .cp-palette-field input::placeholder { color: var(--sys-tertiary); }
+  .stage[data-desktop] .cp-palette kbd { padding: 0; border-radius: 0; background: none; box-shadow: none; color: var(--sys-secondary); font: var(--t-footnote); }
+  .stage[data-desktop] .cp-palette-list { padding: 6px; }
+  .stage[data-desktop] .cp-palette-list li { gap: 12px; min-height: 44px; padding: 6px 10px; border-radius: 10px; cursor: default; }
+  /* The chosen result is the selection: a tint fill, as macOS highlights it. */
+  .stage[data-desktop] .cp-palette-list li.on { background: var(--tint); box-shadow: none; color: var(--on-tint); }
+  .stage[data-desktop] .cp-palette-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--sys-fill); color: var(--sys-secondary); }
+  .stage[data-desktop] .cp-palette-text b { font: var(--t-subhead); }
+  .stage[data-desktop] :is(.cp-palette-text small, .cp-palette-kind) { color: var(--sys-secondary); font: var(--t-caption); }
+  .stage[data-desktop] .cp-palette-list li.on :is(.cp-palette-text small, .cp-palette-kind) { color: var(--on-tint); }
+  .stage[data-desktop] .cp-palette-list li.on .cp-palette-icon { background: color-mix(in srgb, var(--on-tint) 20%, transparent); color: var(--on-tint); }
+  .stage[data-desktop] .cp-palette-none { padding: 18px; color: var(--sys-secondary); font: var(--t-subhead); }
+  .stage[data-desktop] .cp-palette-foot { gap: 6px; padding: 10px 18px; border-top: .5px solid var(--sys-separator); color: var(--sys-secondary); font: var(--t-caption); }
+  .stage[data-desktop] .cp-palette-foot kbd { color: var(--sys-label); font: var(--t-caption); font-weight: 600; }
+
+  /* ─── Ask Orbis: docked on the right like an inspector; the page moves over to stay in view ─── */
   .stage[data-desktop] .talk-sheet {
     position: fixed;
-    inset: 16px 16px 16px auto;
+    inset: var(--dk-side-inset) var(--dk-side-inset) var(--dk-side-inset) auto;
     z-index: 40;
     width: var(--dk-ask-w);
     max-height: none;
-    padding-top: 8px;
-    border: var(--cp-card-edge);
-    border-radius: 24px;
+    padding: 0;
+    border: var(--glass-hairline);
+    border-radius: 18px;
+    background: var(--sys-surface);
     box-shadow: var(--e3);
   }
-  .stage[data-desktop]:has(.talk-sheet) .phone-screen { padding-right: calc(var(--dk-ask-w) + 48px); }
-  .stage[data-desktop]:has(.talk-sheet) .dk-rail { left: 24px; }
+  /* Docked, it is not pulled down to close, so it has no grabber. */
+  .stage[data-desktop] .talk-head { min-height: 52px; padding-top: 6px; }
+  .stage[data-desktop] .talk-head::before { display: none; }
+  .stage[data-desktop]:has(.talk-sheet) .phone-screen { padding-right: calc(var(--dk-ask-w) + var(--dk-side-inset) + clamp(24px, 2.5vw, 40px)); }
 
-  /* ─── Settings: a large dialog, the sections down the left, the chosen one on the right ─── */
-  .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: var(--veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  /* ─── The sidebar folded to icons while Ask is docked (and in a narrow
+     window, below); each name becomes a tooltip beside its icon. ─── */
+  .stage[data-desktop]:has(.talk-sheet) { --dk-side-w: 60px; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail { align-items: center; padding: 12px 7px 8px; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-brand { justify-content: center; padding: 0; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-brand span { display: none; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-btn { justify-content: center; width: 44px; min-height: 44px; padding: 0; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-label { position: absolute; top: 50%; left: calc(100% + 12px); z-index: 2; translate: 0 -50%; padding: 4px 8px; border-radius: 6px; background: var(--sys-surface); box-shadow: var(--e2), 0 0 0 .5px var(--sys-separator); color: var(--sys-label); font: var(--t-caption); opacity: 0; pointer-events: none; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-btn:is(:hover, :focus-visible) .dk-rail-label { opacity: 1; }
+
+  /* ─── Settings: a large dialog over a plain dimming, the sections down the left, the chosen one on the right ─── */
+  .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: var(--veil); }
   .stage[data-desktop] .settings-sheet {
     position: fixed;
     inset: 0;
@@ -134,22 +223,22 @@
     height: min(860px, calc(100dvh - 64px));
     margin: auto;
     padding: 28px 36px 40px;
-    border: var(--cp-card-edge);
-    border-radius: 24px;
-    background: var(--cp-surface);
+    border: var(--glass-hairline);
+    border-radius: var(--r-card);
+    background: var(--sys-bg);
     box-shadow: var(--e3);
   }
   .stage[data-desktop] .settings-head { grid-column: 1 / -1; margin-bottom: 18px; }
-  .stage[data-desktop] .settings-head h1 { font-size: 34px; font-weight: 600; letter-spacing: -.035em; }
+  .stage[data-desktop] .settings-head h1 { font: var(--t-large-title); letter-spacing: -.02em; }
   /* Focused by script on open so a screen reader starts here; it is not a control, so no focus ring. */
   .stage[data-desktop] .settings-head h1:focus { outline: none; }
-  .stage[data-desktop] .settings-head button { margin-right: -8px; border-radius: 50%; cursor: pointer; }
-  .stage[data-desktop] .settings-head button:hover { background: var(--fd-chip); color: var(--fd-ink); }
+  .stage[data-desktop] .settings-head button { margin-right: -8px; border-radius: 50%; cursor: default; }
+  .stage[data-desktop] .settings-head button:hover { background: var(--sys-fill); color: var(--sys-label); }
   .stage[data-desktop] .settings-jump { position: sticky; top: 0; grid-column: 1; grid-row: 2; display: grid; gap: 2px; margin: 0; }
-  .stage[data-desktop] .settings-jump button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: none; color: var(--fd-soft); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
-  .stage[data-desktop] .settings-jump button:hover { background: var(--fd-chip); color: var(--fd-ink); }
-  .stage[data-desktop] .settings-jump button[aria-current="true"] { background: var(--fd-chip); color: var(--fd-ink); font-weight: 600; box-shadow: inset 3px 0 0 var(--fd-accent); }
-  .stage[data-desktop] .settings-jump button:focus-visible, .stage[data-desktop] .settings-head button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+  .stage[data-desktop] .settings-jump button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: none; color: var(--sys-label); font: var(--t-subhead); text-align: left; cursor: default; }
+  .stage[data-desktop] .settings-jump button:hover { background: color-mix(in srgb, var(--sys-fill) 40%, transparent); }
+  .stage[data-desktop] .settings-jump button[aria-current="true"] { background: var(--sys-fill); color: var(--tint); font-weight: 600; }
+  .stage[data-desktop] .settings-jump button:focus-visible, .stage[data-desktop] .settings-head button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
   /* The dialog holds still; only the section's card scrolls, so the title and the list stay in view. */
   .stage[data-desktop] .settings-sheet { overflow: hidden; }
   .stage[data-desktop] .settings-sheet .pf-group { grid-column: 2; grid-row: 2; justify-self: start; width: min(100%, 680px); min-width: 0; max-height: 100%; margin: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -178,14 +267,14 @@
   .stage[data-desktop][data-tab="today"] .screen-body > :is(.fd-news, .setup-list:not(.fd-mail-connect), .fd-note) { grid-column: 1 / -1; }
 
   /* The brief: the page's headline, set large on the ground. */
-  .stage[data-desktop][data-tab="today"] .fd-note-greet { font-size: clamp(30px, 2.4vw, 40px); font-weight: 600; letter-spacing: -.035em; }
+  .stage[data-desktop][data-tab="today"] .fd-note-greet { font-size: clamp(30px, 2.4vw, 40px); font-weight: 700; letter-spacing: -.02em; }
   .stage[data-desktop][data-tab="today"] .fd-note-brief .fd-note-line { max-width: 62ch; font-size: clamp(18px, 1.3vw, 21px); line-height: 1.55; }
 
   /* The weather beside it: a big number and a line, no box. */
   .stage[data-desktop][data-tab="today"] .screen-body > .fd-weather { align-self: center; gap: 18px; padding-left: 28px; border-left: 1px solid var(--fd-rule); }
-  .stage[data-desktop][data-tab="today"] .fd-weather b { font-size: 52px; font-weight: 500; letter-spacing: -.05em; }
+  .stage[data-desktop][data-tab="today"] .fd-weather b { font-size: 52px; font-weight: 500; letter-spacing: -.02em; }
   .stage[data-desktop][data-tab="today"] .fd-weather p { font-size: 15px; }
-  .stage[data-desktop][data-tab="today"] .fd-weather .fd-weather-meta { font-size: 12.5px; }
+  .stage[data-desktop][data-tab="today"] .fd-weather .fd-weather-meta { font-size: 13px; }
   .stage[data-desktop][data-tab="today"] .screen-body > .fd-weather-quiet { align-self: center; font-size: 13px; }
 
   /* The two numbers: the lifted cards. */
@@ -194,7 +283,7 @@
   .stage[data-desktop][data-tab="today"] .today-widget-cap { font-size: 13px; }
   .stage[data-desktop][data-tab="today"] .today-widget-value { font-size: 40px; }
   .stage[data-desktop][data-tab="today"] .today-widget-value.small { font-size: 30px; }
-  .stage[data-desktop][data-tab="today"] .today-widget-sub { font-size: 12.5px; }
+  .stage[data-desktop][data-tab="today"] .today-widget-sub { font-size: 13px; }
   /* A week of bars, each a slim column at the card's right; full-width bars at this size read as blocks. */
   .stage[data-desktop][data-tab="today"] .today-widget-bars { justify-content: flex-end; gap: 6px; height: 56px; }
   .stage[data-desktop][data-tab="today"] .today-widget-bars i { flex: 0 0 16px; border-radius: 5px; }
@@ -227,10 +316,10 @@
   }
   .stage[data-desktop][data-tab="today"] .fd-news:not(:has(> .fd-news-market)) { grid-template-columns: minmax(0, 1.7fr) repeat(2, minmax(0, 1fr)); }
   .stage[data-desktop][data-tab="today"] .fd-news > h2 { grid-column: 1 / -1; margin: 0 0 -6px; }
-  .stage[data-desktop][data-tab="today"] .fd-news > .fd-news-foot { grid-column: 1 / -1; margin: -4px 0 0; font-size: 11.5px; }
+  .stage[data-desktop][data-tab="today"] .fd-news > .fd-news-foot { grid-column: 1 / -1; margin: -4px 0 0; font-size: 12px; }
 
   .stage[data-desktop][data-tab="today"] .fd-news-market { grid-column: -2; grid-row: 2 / span 2; align-self: stretch; padding: 20px 22px; border: 0; border-radius: 22px; background: color-mix(in srgb, var(--fd-ink) 4.5%, transparent); }
-  .stage[data-desktop][data-tab="today"] .fd-news-market-head { margin-bottom: 8px; font-size: 11px; font-weight: 700; color: var(--fd-faint); }
+  .stage[data-desktop][data-tab="today"] .fd-news-market-head { margin-bottom: 8px; color: var(--sys-secondary); font: var(--t-footnote); }
   .stage[data-desktop][data-tab="today"] .fd-news-summary { font-size: 15px; line-height: 1.5; font-weight: 500; }
   .stage[data-desktop][data-tab="today"] .fd-news-sectors { gap: 0; margin: 14px 0 12px; }
   .stage[data-desktop][data-tab="today"] .fd-news-sector { gap: 2px; padding: 10px 0; border-top: 1px solid var(--fd-rule); }
@@ -242,14 +331,14 @@
   .stage[data-desktop][data-tab="today"] .fd-news-photo { position: relative; display: block; flex: none; aspect-ratio: 16 / 10; margin-bottom: 6px; overflow: hidden; border-radius: 18px; background: color-mix(in srgb, var(--fd-ink) 6%, transparent); }
   .stage[data-desktop][data-tab="today"] .fd-news-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
   .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-photo img { transform: scale(1.03); }
-  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(140deg, color-mix(in srgb, var(--brand-teal) 20%, transparent), color-mix(in srgb, var(--fd-ink) 5%, transparent) 70%); color: var(--fd-soft); }
-  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank span { max-width: 80%; overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--sys-fill); color: var(--fd-soft); }
+  .stage[data-desktop][data-tab="today"] .fd-news-photo.is-blank span { max-width: 80%; overflow: hidden; font: var(--t-footnote); text-overflow: ellipsis; white-space: nowrap; }
   .stage[data-desktop][data-tab="today"] .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.35; letter-spacing: -.01em; }
   .stage[data-desktop][data-tab="today"] .fd-news-row:hover .fd-news-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   .stage[data-desktop][data-tab="today"] .fd-news-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; }
   .stage[data-desktop][data-tab="today"] .fd-news-meta { padding-top: 2px; font-size: 12px; }
   .stage[data-desktop][data-tab="today"] .fd-news-item > .fd-ask.icon { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border: 0; background: color-mix(in srgb, var(--sys-bg) 72%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fd-ink); }
-  .stage[data-desktop][data-tab="today"] .fd-news-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 4px; border-radius: 18px; }
+  .stage[data-desktop][data-tab="today"] .fd-news-row:focus-visible { outline: 2px solid var(--tint); outline-offset: 4px; border-radius: 18px; }
   /* The lead: the first story, two tiles tall, its picture filling the room. */
   .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item { grid-column: 1; grid-row: 2 / span 2; }
   .stage[data-desktop][data-tab="today"] .fd-news > :is(h2, .fd-news-market) + .fd-news-item .fd-news-photo { flex: 1 1 auto; min-height: 260px; aspect-ratio: auto; border-radius: 22px; }
@@ -318,4 +407,24 @@
 /* While the Settings dialog is up, the page behind it holds still. */
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   html:has(.stage[data-desktop] .settings-sheet) { overflow: hidden; }
+}
+
+/* A narrow desktop window folds the sidebar to icons, as Mail does, so the page keeps its room. */
+@media (min-width: 1100px) and (max-width: 1279px) and (pointer: fine), (min-width: 1100px) and (max-width: 1279px) and (min-height: 541px) {
+  .stage[data-desktop] { --dk-side-w: 60px; }
+  .stage[data-desktop] .dk-rail { align-items: center; padding: 12px 7px 8px; }
+  .stage[data-desktop] .dk-rail-brand { justify-content: center; padding: 0; }
+  .stage[data-desktop] .dk-rail-brand span { display: none; }
+  .stage[data-desktop] .dk-rail-btn { justify-content: center; width: 44px; min-height: 44px; padding: 0; }
+  .stage[data-desktop] .dk-rail-label { position: absolute; top: 50%; left: calc(100% + 12px); z-index: 2; translate: 0 -50%; padding: 4px 8px; border-radius: 6px; background: var(--sys-surface); box-shadow: var(--e2), 0 0 0 .5px var(--sys-separator); color: var(--sys-label); font: var(--t-caption); opacity: 0; pointer-events: none; }
+  .stage[data-desktop] .dk-rail-btn:is(:hover, :focus-visible) .dk-rail-label { opacity: 1; }
+}
+
+/* Motion: the heads-up popover scales from the bell; a folded sidebar's
+   tooltip fades in after a beat, as macOS's do, and at once for the keyboard. */
+@media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
+  .stage[data-desktop] .dk-pop { animation: dk-pop .18s var(--ease-out) backwards; }
+  @keyframes dk-pop { from { opacity: 0; transform: scale(.96); } }
+  .stage[data-desktop] .dk-rail-label { transition: opacity .15s ease; }
+  .stage[data-desktop] .dk-rail-btn:hover .dk-rail-label { transition-delay: .4s; }
 }

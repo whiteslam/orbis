@@ -1,0 +1,25 @@
+/* ─── The app shell on the phone: the tab bar and the Ask button ─────
+   docs/design/apple.md › Components. Loaded right after brand-app.css, which
+   sets the shared glass capsule; this settles the shell's own details. The
+   desktop hides both (desktop.css), so nothing here reaches the sidebar.
+
+   iOS 26's floating tab bar: a glass capsule above the content, icons over
+   one-word labels in the label colour, the selected tab in the tint on a grey
+   fill. The Ask button is its own glass circle at the trailing end, the
+   height of the bar, where iOS puts the search tab. */
+
+.bottom-nav { gap: 2px; padding: 4px; }
+.bottom-nav button { gap: 2px; padding: 4px 0 3px; cursor: pointer; }
+.bottom-nav button svg { flex: none; stroke-width: 1.9; }
+.bottom-nav button span { line-height: 12px; }
+/* The label keeps its weight when selected, so the tabs never shift. */
+.bottom-nav button.active span { font-weight: 600; }
+
+/* The Ask button: as tall as the bar and level with it. */
+.talk-fab { width: var(--nav-h); height: var(--nav-h); cursor: pointer; }
+.talk-fab:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* Increased Contrast: the floating chrome gets a visible edge. */
+@media (prefers-contrast: more) {
+  .bottom-nav, .talk-fab { border: 1px solid var(--sys-hairline); }
+}

@@ -153,13 +153,27 @@ function useJobs(view: JobView, search: string, initial: CareerJob[]) {
   const { busy, notice, run } = useRun();
   const [reloads, setReloads] = useState(0);
   const first = useRef(true);
+  // Jobs a reload (a paste, a search) brought in that weren't on screen before;
+  // only they animate in. Switching views or searching never marks any.
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set());
+  const reloading = useRef(false);
+  const shown = useRef(jobs);
+  useEffect(() => {
+    shown.current = jobs;
+  }, [jobs]);
 
   useEffect(() => {
     // The For you list opens on the home's top matches; the full list replaces them when it lands.
     const delay = first.current ? 0 : SEARCH_DELAY_MS;
     first.current = false;
     const timer = setTimeout(() => {
+      const marking = reloading.current;
+      reloading.current = false;
       void run('list', () => listJobsAction({ view, search: search.trim() || undefined }), (page) => {
+        if (marking) {
+          const before = new Set(shown.current.map((job) => job.id));
+          setFresh(new Set(page.jobs.filter((job) => !before.has(job.id)).map((job) => job.id)));
+        }
         setJobs(page.jobs);
         setTotal(page.total);
       });
@@ -167,7 +181,11 @@ function useJobs(view: JobView, search: string, initial: CareerJob[]) {
     return () => clearTimeout(timer);
   }, [view, search, run, reloads]);
 
-  return { jobs, setJobs, total, loading: busy === 'list', notice, reload: () => setReloads((count) => count + 1) };
+  const reload = () => {
+    reloading.current = true;
+    setReloads((count) => count + 1);
+  };
+  return { jobs, setJobs, total, fresh, loading: busy === 'list', notice, reload };
 }
 
 /**
@@ -187,7 +205,7 @@ export function ForYouView({ initial, threshold, onOpen, onOpenJobId, languages 
   const [view, setView] = useState<JobView>('for_you');
   const [search, setSearch] = useState('');
   const [pasting, setPasting] = useState(false);
-  const { jobs, setJobs, total, loading, notice: listNotice, reload } = useJobs(view, search, initial);
+  const { jobs, setJobs, total, fresh, loading, notice: listNotice, reload } = useJobs(view, search, initial);
   const searchRun = useRun();
 
   const changed = (next: CareerJob) => setJobs((current) => {
@@ -233,7 +251,7 @@ export function ForYouView({ initial, threshold, onOpen, onOpenJobId, languages 
       {jobs.length === 0 && !loading ? <EmptyJobs view={view} searching={Boolean(search.trim())} /> : (
         <div className="cr-jobs">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} threshold={threshold} languages={languages} onOpen={onOpen} actions={<JobActions job={job} onOpen={onOpen} onChanged={changed} />} />
+            <JobCard key={job.id} job={job} threshold={threshold} languages={languages} isNew={fresh.has(job.id)} onOpen={onOpen} actions={<JobActions job={job} onOpen={onOpen} onChanged={changed} />} />
           ))}
         </div>
       )}

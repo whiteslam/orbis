@@ -24,6 +24,8 @@ export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
   const [message, setMessage] = useState<string | null>(pinStatus === 'locked' ? 'Too many wrong PINs. Unlock with your password, then set a new PIN.' : null);
   const [hasPasskey, setHasPasskey] = useState(false);
   const [isPending, startTransition] = useTransition();
+  // Counts wrong PINs, so the dots can shake each time (07-auth.css restarts it on a and b).
+  const [shakes, setShakes] = useState(0);
   const canUsePin = pinStatus === 'active' && !pinLocked;
   const passwordInput = useRef<HTMLInputElement>(null);
 
@@ -54,6 +56,7 @@ export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
       if (result.success) return router.refresh();
       setPin('');
       setMessage(result.message);
+      setShakes((count) => count + 1);
       if (result.pinLocked) {
         setPinLocked(true);
         setMethod('password');
@@ -110,7 +113,7 @@ export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
       </div>
 
       {method === 'pin' ? (
-        <div className="lock-pin">
+        <div className="lock-pin" data-shake={shakes ? (shakes % 2 ? 'a' : 'b') : undefined}>
           <label htmlFor="lock-pin">Enter your PIN</label>
           <PinInput id="lock-pin" value={pin} onChange={setPin} onComplete={submitPin} disabled={isPending} focusOnMount describedBy={message ? 'lock-feedback' : undefined} keypad extraKey={passkeyKey} />
           {isPending && <output className="lock-pin-status">Checking…</output>}
@@ -119,7 +122,7 @@ export function LockScreen({ pinStatus }: Readonly<{ pinStatus: PinStatus }>) {
         <form className="auth-form lock-password" onSubmit={unlockWithPassword}>
           <label htmlFor="lock-password">Password</label>
           <input id="lock-password" name="password" type="password" autoComplete="current-password" required ref={passwordInput} aria-describedby={message ? 'lock-feedback' : undefined} />
-          <button className="auth-submit" type="submit" disabled={isPending}>{isPending ? 'Unlocking…' : 'Unlock'}</button>
+          <button className="auth-submit" type="submit" disabled={isPending} aria-busy={isPending}><span className="auth-submit-label">{isPending ? 'Unlocking…' : 'Unlock'}</span><span className="auth-spinner" aria-hidden="true" /></button>
           {hasPasskey && <button className="auth-passkey" type="button" onClick={unlockWithPasskey} disabled={isPending}><UserKey size={17} strokeWidth={1.8} aria-hidden="true" /> Use a passkey</button>}
         </form>
       )}

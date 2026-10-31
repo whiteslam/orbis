@@ -35,6 +35,14 @@ export function SocialCalendar({ period, posts, today, selected, loading = false
   // A week tall on the phone until the month is asked for: the week of the
   // chosen day, or of today, or the month's first week when neither falls in it.
   const [expanded, setExpanded] = useState(false);
+  // Which way the month moved, so the new one slides in from that side.
+  // Read from the previous render, as React's docs do it, not from an effect.
+  const [shown, setShown] = useState(period);
+  const [direction, setDirection] = useState<'next' | 'prev' | null>(null);
+  if (shown !== period) {
+    setShown(period);
+    setDirection(period > shown ? 'next' : 'prev');
+  }
   const anchor = chosen ?? (today.startsWith(period.slice(0, 8)) ? today : null);
   const anchorWeek = (anchor && weeks.find((week) => week.some((day) => day.date === anchor))) || weeks[0];
 
@@ -48,42 +56,44 @@ export function SocialCalendar({ period, posts, today, selected, loading = false
           </span>
           <button type="button" className="fd-link so-cal-toggle" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show week' : 'Show month'}</button>
         </div>
-        <div className="so-cal-head" aria-hidden="true">{WEEKDAYS.map((day, index) => <span key={index}><b>{day}</b><span>{WEEKDAY_REST[index]}</span></span>)}</div>
-        {weeks.map((week) => (
-          <div className={`so-cal-week${week === anchorWeek ? ' anchor' : ''}`} key={week[0].date}>
-            {week.map(({ date, inMonth }) => {
-              const onDay = byDay.get(date) ?? [];
-              const described = onDay.map((post) => `${post.title}, ${formatLabel(post.format)}, ${SOCIAL_STATUS_LABEL[post.status]}`).join('; ');
-              const planned = onDay.length ? `: ${described}` : ', nothing planned';
-              if (!inMonth) return <span key={date} className="so-day out" aria-hidden="true"><b>{Number(date.slice(8))}</b></span>;
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  className={`so-day${date === today ? ' today' : ''}${date < today ? ' past' : ''}`}
-                  aria-pressed={chosen === date}
-                  aria-label={`${dayLabel(date)}${planned}`}
-                  onClick={() => onSelect(date)}
-                >
-                  <b>{Number(date.slice(8))}</b>
-                  {onDay.length > 0 && (
-                    <span className="so-dots" aria-hidden="true">
-                      {onDay.slice(0, DOTS_PER_DAY).map((post) => <i key={post.id} className={`so-dot so-fmt-${post.format} ${post.status}`} />)}
-                      {onDay.length > DOTS_PER_DAY && <span className="so-more">+{onDay.length - DOTS_PER_DAY}</span>}
-                    </span>
-                  )}
-                  {/* Desktop: the titles themselves, written into the day. */}
-                  {onDay.length > 0 && (
-                    <span className="so-day-posts" aria-hidden="true">
-                      {onDay.slice(0, TITLES_PER_DAY).map((post) => <span key={post.id} className={`so-chip so-fmt-${post.format} ${post.status}`}>{post.title}</span>)}
-                      {onDay.length > TITLES_PER_DAY && <span className="so-more">{onDay.length - TITLES_PER_DAY} more</span>}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+        <div className="so-cal-days" key={period} data-dir={direction ?? undefined}>
+          <div className="so-cal-head" aria-hidden="true">{WEEKDAYS.map((day, index) => <span key={index}><b>{day}</b><span>{WEEKDAY_REST[index]}</span></span>)}</div>
+          {weeks.map((week) => (
+            <div className={`so-cal-week${week === anchorWeek ? ' anchor' : ''}`} key={week[0].date}>
+              {week.map(({ date, inMonth }) => {
+                const onDay = byDay.get(date) ?? [];
+                const described = onDay.map((post) => `${post.title}, ${formatLabel(post.format)}, ${SOCIAL_STATUS_LABEL[post.status]}`).join('; ');
+                const planned = onDay.length ? `: ${described}` : ', nothing planned';
+                if (!inMonth) return <span key={date} className="so-day out" aria-hidden="true"><b>{Number(date.slice(8))}</b></span>;
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    className={`so-day${date === today ? ' today' : ''}${date < today ? ' past' : ''}`}
+                    aria-pressed={chosen === date}
+                    aria-label={`${dayLabel(date)}${planned}`}
+                    onClick={() => onSelect(date)}
+                  >
+                    <b>{Number(date.slice(8))}</b>
+                    {onDay.length > 0 && (
+                      <span className="so-dots" aria-hidden="true">
+                        {onDay.slice(0, DOTS_PER_DAY).map((post) => <i key={post.id} className={`so-dot so-fmt-${post.format} ${post.status}`} />)}
+                        {onDay.length > DOTS_PER_DAY && <span className="so-more">+{onDay.length - DOTS_PER_DAY}</span>}
+                      </span>
+                    )}
+                    {/* Desktop: the titles themselves, written into the day. */}
+                    {onDay.length > 0 && (
+                      <span className="so-day-posts" aria-hidden="true">
+                        {onDay.slice(0, TITLES_PER_DAY).map((post) => <span key={post.id} className={`so-chip so-fmt-${post.format} ${post.status}`}>{post.title}</span>)}
+                        {onDay.length > TITLES_PER_DAY && <span className="so-more">{onDay.length - TITLES_PER_DAY} more</span>}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* The chosen day. Posts without a day are in the list below, marked "No date". */}

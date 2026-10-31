@@ -1,42 +1,36 @@
-/* ─── Talk to Orbis ─────────────────────────────────────────────────
-   A mic above the bottom nav on every screen, opening a panel that
-   holds the spoken conversation. */
-.talk-fab { position: absolute; right: 18px; bottom: 84px; z-index: 20; width: 48px; height: 48px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); box-shadow: var(--e2); }
-.talk-fab:active { background: var(--sys-blue-press); }
-/* Sits 10px above the tab bar (--nav-clear), and never grows up under the notch. */
-.talk-sheet { position: absolute; left: 10px; right: 10px; bottom: var(--nav-clear); z-index: 20; max-height: min(70%, calc(100% - var(--nav-clear) - var(--safe-top) - 12px)); display: flex; flex-direction: column; border-radius: 24px; border: var(--glass-hairline); background: var(--sys-surface); color: var(--sys-label); box-shadow: var(--e2); overflow: hidden; }
-.talk-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.talk-head button { width: 44px; height: 44px; margin: -10px -10px -10px 0; border: 0; border-radius: 50%; background: transparent; color: var(--sys-secondary); display: grid; place-items: center; }
-.talk-log { flex: 1; overflow-y: auto; padding: 0 16px 8px; display: flex; flex-direction: column; gap: 12px; }
-.talk-hint, .talk-status { color: var(--sys-secondary); font-size: 13px; }
-.talk-turn { display: flex; flex-direction: column; gap: 6px; }
-.talk-q { align-self: flex-end; max-width: 85%; margin: 0; padding: 8px 12px; border-radius: 16px 16px 4px 16px; background: var(--sys-tint-blue); font-size: 14px; }
-.talk-a { max-width: 90%; margin: 0; font-size: 15px; line-height: 1.45; }
-.talk-error { margin: 0; color: var(--sys-red); font-size: 13px; }
-.talk-foot { display: flex; align-items: center; gap: 12px; padding: 10px 16px 14px; border-top: 1px solid var(--sys-separator); }
-.talk-mic { width: 56px; height: 56px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); transition: transform .15s ease, background .15s ease; }
-.talk-mic.listening { background: var(--sys-red); animation: fd-pulse 1.2s ease-in-out infinite; }
-.talk-mic:disabled { opacity: .7; cursor: not-allowed; }
-@media (prefers-reduced-motion: reduce) { .talk-mic.listening { animation: none; } }
+/* ─── Ask Orbis: the frame ──────────────────────────────────────────
+   The button beside the tab bar and the panel it opens, laid out here; the
+   look (and the panel's place on the phone) is in ask.css, which loads after
+   glass.css and brand-app.css and so settles both. */
+.talk-fab { position: absolute; right: 16px; bottom: calc(var(--nav-gap) + var(--safe-bottom)); z-index: 20; display: grid; place-items: center; border: 0; border-radius: 50%; padding: 0; }
 .keyboard-open .talk-fab { display: none; }
-.talk-sources { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 16px 8px; }
-.talk-type { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.talk-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--sys-separator); border-radius: var(--r-pill); background: var(--sys-surface-2); color: var(--sys-label); font-size: 15px; }
-.talk-type button { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-blue); color: var(--on-fill); }
-.talk-type button:disabled { opacity: .5; cursor: not-allowed; }
+.talk-sheet { position: absolute; z-index: 30; display: flex; flex-direction: column; overflow: hidden; color: var(--sys-label); }
+.talk-head { display: flex; align-items: center; justify-content: space-between; }
+.talk-head button { display: grid; place-items: center; }
+.talk-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.talk-turn { display: flex; flex-direction: column; }
+.talk-q, .talk-a, .talk-error { margin: 0; }
+.talk-foot { display: flex; align-items: center; }
+.talk-mic { flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; }
+.talk-mic:disabled { opacity: .5; cursor: not-allowed; }
+.talk-sources { display: flex; flex-wrap: wrap; margin: 0; padding: 0; }
+.talk-type { flex: 1; display: flex; align-items: center; min-width: 0; }
+.talk-type input { flex: 1; min-width: 0; }
+.talk-type button { flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; }
+.talk-type button:disabled { cursor: not-allowed; }
 
 /* The item an "Ask Orbis" button attached: a headline, the market read, or a holding. */
-.talk-about { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; margin: 0 16px 8px; padding: 8px 4px 8px 12px; border-radius: 14px; background: var(--sys-tint-blue); }
-.talk-about-kind { grid-column: 1; font-size: 11px; font-weight: 650; color: var(--sys-secondary); }
-.talk-about-title { grid-column: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--sys-label); }
-.talk-about button { grid-column: 2; grid-row: 1 / span 2; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--sys-secondary); display: grid; place-items: center; }
+.talk-about { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px; }
+.talk-about-kind, .talk-about-title { grid-column: 1; min-width: 0; }
+.talk-about-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talk-about button { grid-column: 2; grid-row: 1 / span 2; display: grid; place-items: center; }
 
-/* "Ask Orbis" on News and Investments cards. */
-.fd-ask { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 1px solid var(--fd-rule); border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
-.fd-ask:hover { color: var(--fd-ink); border-color: var(--fd-soft); }
-.fd-ask:focus-visible { outline: 2px solid var(--fd-ink); outline-offset: 2px; }
+/* "Ask Orbis" on News and Investments cards: a grey capsule with tint text, Apple's secondary button. */
+.fd-ask { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--tint); font: var(--t-footnote); font-weight: 600; cursor: pointer; transition: background-color .15s ease; }
+.fd-ask:hover { background: color-mix(in srgb, var(--sys-fill), var(--sys-label) 7%); }
+.fd-ask:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .fd-ask.icon { padding: 0; width: 32px; justify-content: center; flex: none; }
-.fd-news-item { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--fd-rule); }
+.fd-news-item { display: flex; align-items: center; gap: 10px; border-bottom: .5px solid var(--sys-separator); }
 .fd-news-item .fd-news-row { flex: 1; border-bottom: 0; }
 .fd-news-actions { margin: 8px 0 4px; }
 .fd-news-sector .fd-news-item { border-bottom: 0; }

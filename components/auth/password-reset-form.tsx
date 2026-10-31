@@ -45,8 +45,9 @@ export function PasswordResetForm({ mode, needsCurrentPassword = false }: Readon
       {state.error && <p id="recovery-feedback" className="auth-feedback error" role="alert">{state.error}</p>}
       {state.message && <output id="recovery-feedback" className="auth-feedback success">{state.message}</output>}
 
-      <button className="auth-submit" type="submit" disabled={isPending}>
-        {submitLabel}
+      <button className="auth-submit" type="submit" disabled={isPending} aria-busy={isPending}>
+        <span className="auth-submit-label">{submitLabel}</span>
+        <span className="auth-spinner" aria-hidden="true" />
       </button>
     </form>
   );

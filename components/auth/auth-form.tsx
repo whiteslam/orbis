@@ -117,8 +117,10 @@ export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initi
         {state.error && <p id="auth-feedback" className="auth-feedback error" role="alert">{state.error}</p>}
         {state.message && <output id="auth-feedback" className="auth-feedback success">{state.message}</output>}
 
-        <button className="auth-submit" type="submit" disabled={isPending}>
-          {submitLabel}
+        {/* While it works, the label gives way to a spinner (07-auth.css); the words stay its name. */}
+        <button className="auth-submit" type="submit" disabled={isPending} aria-busy={isPending}>
+          <span className="auth-submit-label">{submitLabel}</span>
+          <span className="auth-spinner" aria-hidden="true" />
         </button>
       </form>
 

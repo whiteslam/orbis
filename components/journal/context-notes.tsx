@@ -53,6 +53,8 @@ export function ContextNotes({ ready, notes }: Readonly<{ ready: boolean; notes:
   const [draft, setDraft] = useState('');
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
+  // Notes already here when the page opened stay still; one saved since enters (journal.css).
+  const [seen] = useState(() => new Set(notes.map((note) => note.id)));
 
   function show(result: { success: boolean; message: string }) {
     setMessage(result.message);
@@ -79,7 +81,7 @@ export function ContextNotes({ ready, notes }: Readonly<{ ready: boolean; notes:
     </form>
     {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
     {notes.length ? <div className="pf-notes">
-      {shown.map((item) => <article className="pf-card" key={item.id}>
+      {shown.map((item) => <article className="pf-card" key={item.id} data-new={!seen.has(item.id) || undefined}>
         {editing === item.id ? (
           <form onSubmit={(event) => {
             event.preventDefault();

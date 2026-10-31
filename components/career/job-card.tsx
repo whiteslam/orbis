@@ -38,7 +38,7 @@ export function RequirementToken({ line }: Readonly<{ line: MatchLine }>) {
  *
  * Presentational: actions arrive through the `actions` slot.
  */
-export function JobCard({ job, threshold = null, onOpen, actions, now, languages = [] }: Readonly<{
+export function JobCard({ job, threshold = null, onOpen, actions, now, languages = [], isNew = false }: Readonly<{
   job: CareerJob;
   /** The owner's bar, marked on the ring. */
   threshold?: number | null;
@@ -49,6 +49,8 @@ export function JobCard({ job, threshold = null, onOpen, actions, now, languages
   now?: Date;
   /** The owner's languages, for the fit review's language check. */
   languages?: readonly string[];
+  /** Just arrived (a paste or a search found it): it rises into the list. */
+  isNew?: boolean;
 }>) {
   const { met, missing } = topLines(job);
   const salary = salaryText(job.salary ?? job.requirements?.salary ?? null);
@@ -57,7 +59,7 @@ export function JobCard({ job, threshold = null, onOpen, actions, now, languages
   const below = threshold !== null && job.score !== null && job.score < threshold;
 
   return (
-    <article className={`cr-job${below ? ' below' : ''}`} aria-labelledby={`job-${job.id}`}>
+    <article className={`cr-job${below ? ' below' : ''}${isNew ? ' is-new' : ''}`} aria-labelledby={`job-${job.id}`}>
       <div className="cr-job-top">
         <ScoreRing score={job.score} threshold={threshold} lowConfidence={job.thin || job.match?.confidence === 'low'} />
         <div className="cr-job-head">

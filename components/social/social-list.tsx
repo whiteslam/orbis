@@ -30,9 +30,9 @@ function PostMeta({ post, withDate }: Readonly<{ post: SocialPost; withDate: boo
   );
 }
 
-export function PostRow({ post, onOpen, withDate = false }: Readonly<{ post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean }>) {
+export function PostRow({ post, onOpen, withDate = false, isNew = false }: Readonly<{ post: SocialPost; onOpen: (post: SocialPost) => void; withDate?: boolean; isNew?: boolean }>) {
   return (
-    <button type="button" className="so-row" onClick={() => onOpen(post)}>
+    <button type="button" className={`so-row${isNew ? ' is-new' : ''}`} onClick={() => onOpen(post)}>
       <PostThumb post={post} />
       <span className="so-row-text">
         <strong>{post.title}</strong>
@@ -81,8 +81,12 @@ function groupPosts(posts: SocialPost[], sort: SocialSort): Group[] {
   return [...groups.values()];
 }
 
-/** Rows in the chosen order, grouped under plain labels. Undated posts sort last by date. The order is picked in the section's header. */
-export function SocialList({ posts, onOpen, sort = 'date' }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort }>) {
+/**
+ * Rows in the chosen order, grouped under plain labels. Undated posts sort last by date. The order is picked in the section's header.
+ * Each group is an inset grouped list: its label above the cell, what the stage means as the footnote below it.
+ * `fresh` names posts made since the screen opened, so only they animate in.
+ */
+export function SocialList({ posts, onOpen, sort = 'date', fresh }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort; fresh?: ReadonlySet<string> }>) {
   const byDate = (left: SocialPost, right: SocialPost) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999');
   const sorted = [...posts].sort((left, right) => {
     if (sort === 'status') return STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || byDate(left, right);
@@ -93,19 +97,22 @@ export function SocialList({ posts, onOpen, sort = 'date' }: Readonly<{ posts: S
     <div className="so-rows" data-sort={sort}>
       {groupPosts(sorted, sort).map((group) => (
         <div className="so-rows-group" key={group.key}>
-          <h3 className="so-group-label">{group.label} <span>{group.posts.length}</span>{group.hint && <small>{group.hint}</small>}</h3>
-          {group.posts.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}
+          <h3 className="so-group-label">{group.label} <span>{group.posts.length}</span></h3>
+          <div className="so-cell">
+            {group.posts.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate isNew={fresh?.has(post.id)} />)}
+          </div>
+          {group.hint && <p className="so-group-foot">{group.hint}</p>}
         </div>
       ))}
     </div>
   );
 }
 
-export function SocialGrid({ posts, onOpen }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void }>) {
+export function SocialGrid({ posts, onOpen, fresh }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void; fresh?: ReadonlySet<string> }>) {
   return (
     <div className="so-grid">
       {posts.map((post) => (
-        <button type="button" className="so-card" key={post.id} onClick={() => onOpen(post)}>
+        <button type="button" className={`so-card${fresh?.has(post.id) ? ' is-new' : ''}`} key={post.id} onClick={() => onOpen(post)}>
           <PostThumb post={post} />
           <span className="so-card-text">
             <strong>{post.title}</strong>

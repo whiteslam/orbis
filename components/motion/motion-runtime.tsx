@@ -26,9 +26,9 @@ import { animateSpring, project, rubberband, springEasing, SPRINGS } from '@/lib
  */
 
 /** Groups whose selected item gets a gliding background, and how each marks the selected one. */
-const GROUPS = '.fd-tabs.glass-seg, .fd-seg, .so-mini, .bottom-nav, .dk-rail, [data-glide]';
-const SELECTED = '[aria-selected="true"], [aria-checked="true"], [aria-current="page"], .active';
-const WATCHED = ['aria-selected', 'aria-checked', 'aria-current', 'class'];
+const GROUPS = '.fd-tabs.glass-seg, .fd-seg, .so-mini, .apple-segmented, .bottom-nav, .dk-rail, [data-glide]';
+const SELECTED = '[aria-selected="true"], [aria-checked="true"], [aria-pressed="true"], [aria-current="page"], .active';
+const WATCHED = ['aria-selected', 'aria-checked', 'aria-pressed', 'aria-current', 'class'];
 
 /** Sheets that rise from the foot, the bar that drags each one, and its Close button. */
 const SHEETS = [
@@ -100,9 +100,9 @@ function itemsOf(group: HTMLElement) {
   return [...group.querySelectorAll<HTMLElement>(ITEMS)].filter((item) => item.parentElement?.closest(GROUPS) === group);
 }
 
-/** What makes two renders of a group the same control: its label, else its classes. */
+/** What makes two renders of a group the same control: its label, a data-glide name, its id, else its classes. */
 function keyOf(group: HTMLElement) {
-  return group.getAttribute('aria-label') ?? group.className;
+  return group.getAttribute('aria-label') || group.dataset.glide || group.id || group.className;
 }
 
 /**

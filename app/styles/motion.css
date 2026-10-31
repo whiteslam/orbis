@@ -30,11 +30,15 @@
      already has. Quick down, spring back up. */
   button, .fd-button, [role="button"] { transition: scale var(--spring-snappy-dur) var(--spring-snappy); }
   button:not(:disabled):active, .fd-button:active, [role="button"]:active { scale: .97; transition-duration: .1s; transition-timing-function: var(--ease-out); }
-  /* Whole rows and cards give less: 3% of a full-width row is a lurch. */
-  .fd-line:active, .hl-row:active, .so-row:active, .hl-today:active, .setup-row:active, .today-widget:active, .so-day:active, .so-action:active { scale: .985; }
+  /* Cards give less: 3% of a full-width card is a lurch. List rows don't
+     shrink at all; like a table row on iOS they highlight (below). */
+  .today-widget:active, .so-action:active, .hl-today:active { scale: .985; }
+  .fd-line:active, .hl-row:active, .so-row:active, .setup-row:active, .so-day:active { scale: none; }
   /* The tab bar's buttons and the Ask button are small and squeeze more, like iOS. */
   .bottom-nav button:active, .talk-fab:active { scale: .9; }
 
+  /* ─── Row highlight ─────────────────────────────────────────────── */
+  .fd-line, .hl-row, .so-row, .setup-row { transition: background-color .25s ease; }
   /* ─── Selection gliding (motion-runtime.tsx) ─────────────────────────
      While a copy of the selected background slides over, the newly selected
      item hides its own; the copy hands over to it when it lands. */
@@ -62,6 +66,10 @@
   .so-new-menu { transform-origin: top right; animation: mo-pop var(--spring-snappy-dur) var(--spring-snappy) backwards; }
   @keyframes mo-pop { from { opacity: 0; transform: scale(.96); } }
 }
+
+/* A pressed list row highlights at once and fades back, as on iOS. Not
+   motion, so it holds under Reduce Motion too. */
+:is(button, a):is(.fd-line, .hl-row, .so-row, .setup-row):active { background-color: var(--sys-fill); transition-duration: 0s; }
 
 /* Desktop: Settings is a centred dialog and Ask is docked at the side, so
    the dialog grows in place and the panel slides in from its edge. */

@@ -41,7 +41,7 @@ function emptyListText(summary: FinanceSummary) {
  * The ledger: the latest transactions grouped by day, all of them on request.
  * On the phone it follows the month; on desktop it runs down the right.
  */
-function Ledger({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all: boolean; onAll: (all: boolean) => void }>) {
+function Ledger({ summary, all, onAll, known }: Readonly<{ summary: FinanceSummary; all: boolean; onAll: (all: boolean) => void; known: ReadonlySet<string> | null }>) {
   const count = summary.transactions.length;
   return (
     <section className="mn-ledger" aria-labelledby="mn-ledger-title">
@@ -54,7 +54,7 @@ function Ledger({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all
         )}
       </div>
       {count ? (
-        <TransactionList transactions={all ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} />
+        <TransactionList transactions={all ? summary.transactions : summary.transactions.slice(0, TRANSACTIONS_SHOWN)} known={known} />
       ) : (
         <p className="fd-empty mn-empty">{emptyListText(summary)}</p>
       )}
@@ -72,6 +72,8 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
   // next time the app opens: the phone is often in view of someone else.
   const [incomeShown, setIncomeShown] = useState(false);
   const [allTransactions, setAllTransactions] = useState(false);
+  // What the ledger held when the form opened, so the row you add can enter as new.
+  const [known, setKnown] = useState<ReadonlySet<string> | null>(null);
   const top = useScrollTop(view);
 
   // Atlas opens on the month's figure. The pace beside it is a rate, not a
@@ -83,6 +85,11 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
   const monthName = monthLabel(month);
   const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
   const firstRun = isFirstRun(summary, ready);
+
+  function openAdd() {
+    setKnown(new Set(summary.transactions.map((transaction) => transaction.id)));
+    setView('add');
+  }
 
   // addManualTransactionAction has already revalidated '/', so the new row is on its way.
   function saved(message: string) {
@@ -116,7 +123,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
             <div>
               <strong>Add manually</strong>
               <p>Cash spends, UPI payments, cards, anything. It takes a few seconds.</p>
-              <div className="fd-act"><button type="button" onClick={() => setView('add')}>Add one now</button></div>
+              <div className="fd-act"><button type="button" onClick={openAdd}>Add one now</button></div>
             </div>
           </div>
         </section>
@@ -154,7 +161,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
                   <span className="mn-figure-value"><LedgerAmount amount={month.spent} currency={month.currency} /></span>
                 </p>
               ) : <p className="mn-figure"><span className="mn-figure-cap">This month</span></p>}
-              <button className="mn-add" type="button" onClick={() => setView('add')} aria-label="Add manually"><Plus size={16} strokeWidth={2.4} aria-hidden="true" />Add</button>
+              <button className="mn-add" type="button" onClick={openAdd} aria-label="Add manually"><Plus size={16} strokeWidth={2.4} aria-hidden="true" />Add</button>
             </div>
             {monthReady && month && month.spent > 0 && (
               <p className="mn-pace" suppressHydrationWarning>
@@ -166,7 +173,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
           </section>
         )}
 
-        <Ledger summary={summary} all={allTransactions} onAll={setAllTransactions} />
+        <Ledger summary={summary} all={allTransactions} onAll={setAllTransactions} known={known} />
 
         {ready && (
           <section className="mn-in" aria-label="Money in">

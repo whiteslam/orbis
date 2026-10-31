@@ -190,19 +190,23 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
       <section className="hl-sec hl-plans-saved">
         <h2 className="hl-h">Saved</h2>
         {plans.length === 0 && <p className="hl-empty">No plans yet. Build one above: it takes a few questions and about a minute.</p>}
-        {plans.map((plan) => {
-          const { week, total, done } = planWeek(plan);
-          return (
-            <div className="hl-plan-row" key={plan.id}>
-              <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
-                <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
-                <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
-                <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
-              </button>
-              <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
-            </div>
-          );
-        })}
+        {plans.length > 0 && (
+          <div className="hl-cell">
+            {plans.map((plan) => {
+              const { week, total, done } = planWeek(plan);
+              return (
+                <div className="hl-plan-row" key={plan.id}>
+                  <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
+                    <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+                    <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
+                    <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
+                  </button>
+                  <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
       </div>
       <p className="fd-note">Plans are general guidance, not medical advice.</p>

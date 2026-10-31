@@ -29,6 +29,8 @@ export function VoiceNotes({ date, notes }: Readonly<{ date: string; notes: Voic
   const [isPending, startTransition] = useTransition();
   const audio = useRef<HTMLAudioElement | null>(null);
   const urls = useRef(new Map<string, string>());
+  // Notes already here when the page opened stay still; one recorded since enters (journal.css).
+  const [seen] = useState(() => new Set(notes.map((note) => note.id)));
 
   // Tick the timer while recording, and stop on its own at the limit.
   useEffect(() => {
@@ -152,7 +154,7 @@ export function VoiceNotes({ date, notes }: Readonly<{ date: string; notes: Voic
       {notes.length > 0 && (
         <ul className="vn-list" aria-label="Voice notes">
           {notes.map((note, index) => (
-            <li key={note.id}>
+            <li key={note.id} data-new={!seen.has(note.id) || undefined}>
               <button type="button" className="vn-play" onClick={() => toggle(note)} aria-label={`${playing === note.id ? 'Pause' : 'Play'} voice note ${index + 1}`}>
                 {playing === note.id ? <Pause size={13} aria-hidden="true" /> : <Play size={13} aria-hidden="true" />}
               </button>

@@ -127,7 +127,8 @@ export function PanelHeader({ page, who }: Readonly<{ page: PanelPage; who: stri
         <span>Career</span>
       </a>
       <nav className="cp-nav" aria-label="Career pages">
-        <ul>
+        {/* data-glide: the selection slides between pages (components/motion/motion-runtime.tsx). */}
+        <ul className="cp-nav-list" data-glide="">
           {PANEL_NAV.map(({ id, label }) => (
             <li key={id}>
               <a href={hrefFor(id)} aria-current={here === id ? 'page' : undefined}>{label}</a>

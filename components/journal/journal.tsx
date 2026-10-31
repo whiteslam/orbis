@@ -93,9 +93,10 @@ function StreakStrip({ journal, todayKey }: Readonly<{ journal: JournalSummary; 
         <b>{journal.streak}</b> {journal.streak === 1 ? 'day in a row' : 'days in a row'}
         {count > 0 && <span className="jr-count">{countLabel}</span>}
       </p>
-      <ol className="jr-week" role="img" aria-label={`Last seven days: ${summary}.`}>
-        {days.map((day) => <li key={day} className={weekDayClass(day, written, todayKey)}><i /><span>{initial(day)}</span></li>)}
-      </ol>
+      {/* One image with one label: a list inside role="img" breaks list semantics, so the days are plain spans. */}
+      <div className="jr-week" role="img" aria-label={`Last seven days: ${summary}.`}>
+        {days.map((day) => <span key={day} className={weekDayClass(day, written, todayKey)}><i /><span>{initial(day)}</span></span>)}
+      </div>
     </div>
   );
 }
@@ -227,6 +228,8 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
   const [showDeleted, setShowDeleted] = useState(false);
   const [opened, setOpened] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Days already written when the page opened stay still; one saved since enters (journal.css).
+  const [seen] = useState(() => new Set(journal.entries.map((entry) => entry.date)));
 
   if (journal.state === 'setup') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal isn’t set up yet. Apply the profile/journal migration in Supabase, then refresh.</p>{notes}</>;
   if (journal.state === 'unavailable') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal could not be loaded. Refresh the app and try again.</p>{notes}</>;
@@ -258,7 +261,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
           <StreakStrip journal={journal} todayKey={todayKey} />
         </header>
         {todayEntry && editingDate !== todayKey ? (
-          <div className="pf-entry-view jr-today">
+          <div className="pf-entry-view jr-today" data-new={!seen.has(todayKey) || undefined}>
             <p className="jr-feeling" data-mood={todayEntry.mood}><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
             {todayEntry.body && <p className="fd-prose jr-prose">{todayEntry.body}</p>}
             {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{hashtags(todayEntry.tags)}</p>}
@@ -287,7 +290,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
                       const long = entry.body.length > FOLD_AT;
                       const open = opened === entry.date;
                       return (
-                        <li key={entry.date} className="pf-entry jr-entry" data-mood={entry.mood}>
+                        <li key={entry.date} className="pf-entry jr-entry" data-mood={entry.mood} data-new={!seen.has(entry.date) || undefined}>
                           {editingDate === entry.date ? (
                             <Editor entry={entry} date={entry.date} onDone={() => setEditingDate(null)} />
                           ) : (

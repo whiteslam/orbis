@@ -1,12 +1,22 @@
-/* ─── Field: boundaries ───────────────────────────────────────────────
+/* ─── Boundaries: loading and error ───────────────────────────────────
    The loading and error screens stand on their own, outside the app shell,
-   so they take the whole viewport rather than the shell's height. */
-.screen-body.fd-boundary { height: auto; min-height: 100vh; min-height: 100dvh; }
-.fd-skeleton { display: grid; gap: 14px; margin-top: 22px; }
-.fd-skeleton span { display: block; height: 14px; width: 72%; border-radius: var(--r-pill); background: var(--fd-rule); animation: fd-pulse 1.4s ease-in-out infinite; }
-.fd-skeleton span.wide { height: 30px; width: 58%; }
+   so they take the whole viewport rather than the shell's height. They read
+   as an Apple screen: the grouped background, a large title, a quiet line.
+   This sheet loads before the app's (root layout), hence the .screen-body
+   lead on rules that settle over 04-views.css. */
+.screen-body.fd-boundary { height: auto; min-height: 100vh; min-height: 100dvh; background: var(--sys-bg); color: var(--sys-label); }
+.screen-body.fd-boundary .fd-sub-head h1 { font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); }
+.screen-body.fd-boundary .fd-crumb p { color: var(--sys-secondary); font: var(--t-subhead); }
+.screen-body.fd-boundary .fd-lead { margin-top: 8px; color: var(--sys-secondary); font: var(--t-body); }
+.screen-body.fd-boundary .fd-act { margin-top: 24px; gap: 12px; }
+.screen-body.fd-boundary > .fd-empty { margin: 0; color: var(--sys-secondary); font: var(--t-subhead); }
+
+/* Loading: a title bar and a grouped cell of rows, the shape the screen will take. */
+.fd-skeleton { display: grid; gap: 12px; margin-top: 20px; }
+.fd-skeleton span { display: block; height: 16px; width: 72%; border-radius: 6px; background: var(--sys-fill); }
+.fd-skeleton span.wide { height: 34px; width: 58%; margin-bottom: 12px; border-radius: 8px; }
 .fd-skeleton span.short { width: 40%; }
-@keyframes fd-pulse { 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) {
-  .fd-skeleton span { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fd-skeleton span { animation: fd-pulse 1.4s ease-in-out infinite; }
 }
+@keyframes fd-pulse { 50% { opacity: .5; } }

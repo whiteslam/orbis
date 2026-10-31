@@ -65,11 +65,11 @@ function SettingsCard({ settings, onSaved }: Readonly<{ settings: ResearchSettin
       <div className="rd-settings">
         <label>
           Research desk on
-          <input type="checkbox" checked={draft.enabled} onChange={(event) => { const enabled = event.currentTarget.checked; setDraft({ ...draft, enabled }); void save({ enabled }); }} disabled={saving} />
+          <input type="checkbox" role="switch" checked={draft.enabled} onChange={(event) => { const enabled = event.currentTarget.checked; setDraft({ ...draft, enabled }); void save({ enabled }); }} disabled={saving} />
         </label>
         <label>
           Weekly desk run (Saturday, top holdings)
-          <input type="checkbox" checked={draft.weeklyEnabled} onChange={(event) => { const weeklyEnabled = event.currentTarget.checked; setDraft({ ...draft, weeklyEnabled }); void save({ weeklyEnabled }); }} disabled={saving} />
+          <input type="checkbox" role="switch" checked={draft.weeklyEnabled} onChange={(event) => { const weeklyEnabled = event.currentTarget.checked; setDraft({ ...draft, weeklyEnabled }); void save({ weeklyEnabled }); }} disabled={saving} />
         </label>
         {number('weeklyTopN', 'Holdings in the weekly run')}
         {number('monthlyRunCap', 'Runs a month, at most')}

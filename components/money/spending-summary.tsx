@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { categoryStyle } from '@/components/money/category-style';
 import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
@@ -8,6 +8,10 @@ import type { FinanceSummary } from '@/lib/finance/types';
 type Month = NonNullable<FinanceSummary['month']>;
 
 const SHOWN_CATEGORIES = 5;
+
+// Months whose bars have already grown in this session: they grow the first
+// time their figures arrive, never again on a tab switch.
+const grownMonths = new Set<string>();
 
 /**
  * The month, in the Atlas language.
@@ -32,6 +36,9 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
   // A heads-up about one category brings its row into view.
   const focusRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { focusRef.current?.scrollIntoView({ block: 'center' }); }, []);
+  const monthKey = `${month.year}-${month.month}`;
+  const [grow] = useState(() => !grownMonths.has(monthKey));
+  useEffect(() => { grownMonths.add(monthKey); }, [monthKey]);
   const monthName = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' });
   const shortMonth = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
   const net = month.received - month.spent;
@@ -55,7 +62,7 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
 
   return (
     <>
-      <div className="fd-bars" role="img" aria-label={`Spending each day in ${monthName}. Busiest day ${money(peak, month.currency)}, averaging ${money(dailyAverage, month.currency)} a day.`}>
+      <div className={grow ? 'fd-bars is-new' : 'fd-bars'} role="img" aria-label={`Spending each day in ${monthName}. Busiest day ${money(peak, month.currency)}, averaging ${money(dailyAverage, month.currency)} a day.`}>
         {month.daily.map((day) => (
           <span key={day.day} className={dayClass(day.day, today)}>
             <i style={{ height: day.amount ? `${Math.max((day.amount / peak) * 100, 4)}%` : 0 }} />

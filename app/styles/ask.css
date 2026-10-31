@@ -1,50 +1,169 @@
-/* ─── Ask Orbis: the conversation ───────────────────────────────────
-   After glass.css, which sets the sheet's sky and the question box.
-   This file owns what goes in the log: the thinking row, the answer's
-   sources, Orbis's own reading, follow-ups, starters and Retry, and how
-   the source chips show on and off. */
+/* ─── Ask Orbis: the panel ───────────────────────────────────────────
+   components/assistant/talk-to-orbis.tsx; the frame is in 10-assistant.css.
+   Loads after glass.css and brand-app.css, so everything about the panel's
+   look is settled here (desktop.css then docks it on the right).
 
-.talk-head-tools { display: inline-flex; align-items: center; gap: 8px; }
-.talk-head-tools button:disabled { opacity: .5; cursor: not-allowed; }
+   Calm, like Apple's own assistant surfaces: a solid panel (it holds text to
+   read, so no glass behind it), the question as a sent message in the tint,
+   the answer as plain text on the panel, and everything around the answer
+   (sources, Orbis's reading, Copy, follow-ups) quieter than the answer. */
 
-/* Source chips: Apple's filter capsules. "On" is filled with the tint and
-   ticked, "off" is plain grey, so the two read apart at a glance. glass.css
-   styles them at this specificity, so these repeat the selector. */
-.talk-sheet .talk-sources button { gap: 6px; min-height: 34px; padding: 0 14px 0 11px; opacity: 1; border: 0; background: var(--sys-fill); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--sys-label); font-size: 15px; font-weight: 400; cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+/* ─── The panel ───
+   On the phone a floating card that grows out of the Ask button: it fills
+   the room between the notch and the tab bar, and the tab bar stays below
+   it. With the keyboard up the bar hides, so the panel sits on the keyboard. */
+.talk-sheet {
+  inset: calc(var(--safe-top) + 8px) 8px var(--nav-clear);
+  max-height: none;
+  padding: 0;
+  border: var(--glass-hairline);
+  border-radius: 32px;
+  background: var(--sys-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--e3);
+  color: var(--sys-label);
+}
+.keyboard-open .talk-sheet { bottom: 8px; }
+/* The phone mock-up a mid-size window shows: clear the speaker at its top. */
+@media (min-width: 721px) and (pointer: fine), (min-width: 721px) and (min-height: 541px) {
+  .talk-sheet { top: 44px; padding-top: 0; }
+}
+@media (prefers-contrast: more) {
+  .talk-sheet { border: 1px solid var(--sys-hairline); }
+}
+
+/* ─── Header: the mark and the name; New chat and Close as small grey circles ───
+   Each button is 44px to touch, drawn as a 30px circle (a transparent border
+   clips the fill), as iOS draws a sheet's close button. */
+.talk-head { position: relative; min-height: 56px; padding: 10px 8px 0 18px; }
+.talk-head strong { display: inline-flex; align-items: center; gap: 8px; font: var(--t-headline); letter-spacing: 0; }
+.talk-head-tools { display: inline-flex; align-items: center; gap: 0; }
+.talk-head button {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 7px solid transparent;
+  border-radius: 50%;
+  background: var(--sys-fill);
+  background-clip: padding-box;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--sys-secondary);
+  cursor: pointer;
+}
+.talk-head button svg { width: 15px; height: 15px; stroke-width: 2.5; }
+.talk-head button:hover { color: var(--sys-label); }
+.talk-head button:focus-visible { outline: 2px solid var(--tint); outline-offset: -5px; }
+.talk-head-tools button:disabled { opacity: .4; cursor: not-allowed; }
+/* The grabber: the panel can be pulled down to close (the motion runtime), so it shows the handle iOS sheets do. */
+.talk-head::before { content: ""; position: absolute; top: 6px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--sys-separator); }
+
+/* ─── The conversation ─── */
+.talk-log { gap: 20px; padding: 8px 18px 16px; overscroll-behavior: contain; }
+.talk-intro { margin: auto 0; padding: 0 0 4px; }
+.talk-intro h2 { margin: 0; color: var(--sys-label); font: var(--t-title-2); letter-spacing: -.01em; text-wrap: balance; }
+.talk-intro .talk-hint { max-width: 36ch; margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-subhead); }
+
+/* First questions: an inset grouped list, one tappable row each. */
+.talk-starters { display: flex; flex-direction: column; align-items: stretch; gap: 0; margin-top: 20px; overflow: hidden; border-radius: 12px; background: var(--sys-surface-2); }
+.talk-starters button { position: relative; display: flex; align-items: center; min-height: 44px; padding: 11px 16px; border: 0; border-radius: 0; background: none; color: var(--tint); font: var(--t-callout); text-align: left; cursor: pointer; }
+.talk-starters button + button::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sys-separator); }
+.talk-starters button:hover { background: var(--sys-fill); }
+.talk-starters button:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; border-radius: 12px; }
+.talk-starters button:disabled { opacity: .5; cursor: not-allowed; }
+
+.talk-turn { gap: 10px; }
+/* The question: a sent message in the tint. The answer: text on the panel. */
+.talk-q { align-self: flex-end; max-width: 82%; padding: 8px 14px; border: 0; border-radius: 20px 20px 6px 20px; background: var(--tint); color: var(--on-tint); font: var(--t-callout); overflow-wrap: anywhere; }
+.talk-a { align-self: stretch; max-width: 100%; padding: 0; border: 0; border-radius: 0; background: none; color: var(--sys-label); font: var(--t-body); line-height: 24px; overflow-wrap: break-word; }
+
+/* While the answer is on its way: the mark at work and what Orbis is reading. */
+.talk-thinking { display: flex; align-items: center; gap: 10px; color: var(--sys-secondary); font: var(--t-subhead); }
+
+/* Under each answer: what it was read from, what Orbis concluded beyond that, Copy, and what to ask next. */
+.talk-extra { display: flex; flex-direction: column; gap: 14px; max-width: 100%; }
+.talk-extra-label { margin: 0 0 6px; color: var(--sys-secondary); font: var(--t-footnote); }
+.talk-cites ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.talk-cites li { padding: 3px 10px; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-label); font: var(--t-footnote); }
+.talk-inferred { padding: 10px 14px 12px; border: 0; border-radius: 12px; background: var(--sys-surface-2); }
+.talk-inferred p:not(.talk-extra-label) { margin: 0; color: var(--sys-label); font: var(--t-subhead); }
+.talk-inferred p + p { margin-top: 4px; }
+
+/* Copy and Retry: plain tint buttons, Apple's way of offering an action on generated text. */
+.talk-tools { display: flex; gap: 4px; margin-left: -10px; }
+.talk-tools button, .talk-fail button { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 10px; border: 0; border-radius: var(--r-pill); background: none; color: var(--tint); font: var(--t-subhead); cursor: pointer; }
+.talk-tools button:hover, .talk-fail button:hover { background: var(--sys-fill); }
+.talk-fail { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.talk-fail button { margin-left: -10px; }
+.talk-error { color: var(--sys-red); font: var(--t-subhead); }
+
+/* Follow-ups: grey capsules with tint text under the newest answer. */
+.talk-follow { display: flex; flex-wrap: wrap; gap: 8px; }
+.talk-follow button { min-height: 36px; padding: 7px 14px; border: 0; border-radius: 18px; background: var(--sys-fill); color: var(--tint); font: var(--t-subhead); text-align: left; cursor: pointer; }
+.talk-follow button:hover { background: color-mix(in srgb, var(--sys-fill), var(--sys-label) 6%); }
+.talk-follow button:disabled { opacity: .5; cursor: not-allowed; }
+:is(.talk-follow, .talk-tools, .talk-fail) button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* ─── What Orbis may read: filter capsules, under a hairline ───
+   On is the tint, ticked; off is grey with the source's icon. These repeat
+   .talk-sheet to outrank glass.css and brand-app.css's chip rules. */
+.talk-sources-wrap { padding: 12px 18px 8px; border-top: .5px solid var(--sys-separator); }
+.talk-sources-label { margin: 0 0 8px; color: var(--sys-secondary); font: var(--t-footnote); }
+.talk-sheet .talk-sources { gap: 8px 6px; padding: 0; }
+.talk-sheet .talk-sources button { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px 0 10px; opacity: 1; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--sys-label); font: var(--t-subhead); cursor: pointer; }
 .talk-sheet .talk-sources button svg { color: var(--sys-secondary); }
 .talk-sheet .talk-sources button[aria-pressed="true"] { background: var(--tint); color: var(--on-tint); font-weight: 600; }
 .talk-sheet .talk-sources button[aria-pressed="true"] svg { color: var(--on-tint); }
 .talk-sheet .talk-sources button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .talk-sheet .talk-sources button:disabled { opacity: .5; cursor: not-allowed; }
-.talk-reads { margin: 8px 2px 0; color: var(--sys-secondary); font-size: 13px; line-height: 18px; }
+.talk-reads { margin: 8px 0 0; color: var(--sys-secondary); font: var(--t-footnote); }
 
-/* Starters on the empty panel and follow-ups under the newest answer. */
-.talk-starters, .talk-follow { display: flex; flex-wrap: wrap; gap: 8px; }
-.talk-starters { margin-top: 18px; flex-direction: column; align-items: flex-start; }
-.talk-starters button, .talk-follow button { min-height: 36px; padding: 7px 14px; border: 0; border-radius: 18px; background: var(--sys-surface); color: var(--tint); font: inherit; font-size: 15px; font-weight: 400; line-height: 1.35; text-align: left; cursor: pointer; }
-.talk-starters button:hover, .talk-follow button:hover { background: var(--sys-surface-2); }
-.talk-starters button:disabled, .talk-follow button:disabled { opacity: .5; cursor: not-allowed; }
-.talk-starters button:focus-visible, .talk-follow button:focus-visible, .talk-tools button:focus-visible, .talk-fail button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+/* The item a card's "Ask Orbis" attached: a small grouped cell above the composer. */
+.talk-about { margin: 0 18px 8px; padding: 6px 0 6px 14px; border-radius: 12px; background: var(--sys-surface-2); }
+.talk-about-kind { color: var(--sys-secondary); font: var(--t-caption); }
+.talk-about-title { color: var(--sys-label); font: var(--t-subhead); }
+.talk-about button { width: 44px; height: 44px; padding: 0; border: 7px solid transparent; border-radius: 50%; background: var(--sys-fill); background-clip: padding-box; color: var(--sys-secondary); cursor: pointer; }
+.talk-about button svg { width: 13px; height: 13px; stroke-width: 2.5; }
+.talk-about button:focus-visible { outline: 2px solid var(--tint); outline-offset: -5px; }
 
-/* The question shows at once; this row stands in for the answer until it comes. */
-.talk-thinking { display: flex; align-items: center; gap: 10px; color: var(--sys-secondary); font-size: 15px; }
+/* ─── Composer: the mic, and a filled field with the send button inside it, as in Messages ─── */
+.talk-foot { gap: 10px; padding: 6px 12px 12px; border-top: 0; }
+.talk-mic { width: 44px; height: 44px; background: var(--tint); box-shadow: none; color: var(--on-tint); cursor: pointer; }
+.talk-mic svg { width: 20px; height: 20px; }
+/* Listening: the mic turns red and becomes the stop button. */
+.talk-mic.listening { background: var(--sys-red); color: var(--on-fill); }
+.talk-mic:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.talk-type { position: relative; gap: 0; }
+.talk-type input { height: 44px; padding: 0 46px 0 16px; border: 0; border-radius: 22px; background: var(--sys-surface-2); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--sys-label); font-size: 17px; }
+.talk-type input::placeholder { color: var(--sys-tertiary); }
+.talk-type input:focus { outline: none; }
+.talk-type input:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
+.talk-type input:disabled { opacity: .6; }
+.talk-type button { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; background: var(--tint); color: var(--on-tint); cursor: pointer; }
+.talk-type button svg { width: 16px; height: 16px; }
+/* Nothing to send yet: the button rests, small and grey, until there is. */
+.talk-type button:disabled { opacity: 1; background: var(--sys-fill); color: var(--sys-tertiary); transform: scale(.82); }
+.talk-type button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 
-/* Under each answer: what it was read from, what Orbis concluded beyond that. */
-.talk-extra { display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
-.talk-extra-label { margin: 0 0 4px; color: var(--sys-secondary); font-size: 13px; font-weight: 400; }
-.talk-cites ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.talk-cites li { padding: 4px 10px; border-radius: 8px; background: var(--sys-fill); color: var(--sys-label); font-size: 13px; }
-.talk-inferred { padding: 2px 0 2px 10px; border-left: 2px solid var(--tint); }
-.talk-inferred p:not(.talk-extra-label) { margin: 0; color: var(--sys-secondary); font-size: 15px; line-height: 20px; }
-.talk-inferred p + p { margin-top: 4px; }
+/* Touch: the small capsules and the send button keep a 44px target around what is drawn. */
+@media (pointer: coarse) {
+  .talk-sheet .talk-sources button::after, .talk-tools button::after, .talk-fail button::after { content: ""; position: absolute; inset: -6px -3px; }
+  .talk-type button::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+}
 
-.talk-tools { display: flex; gap: 6px; }
-.talk-tools button, .talk-fail button { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 11px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--tint); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
-.talk-tools button:hover, .talk-fail button:hover { background: var(--sys-surface-3); }
-
-.talk-fail { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
-
+/* ─── Motion (docs/design/apple.md › Motion). The panel's own entrance is
+   motion.css's; inside it, new things settle in with opacity and 8px. ─── */
 @media (prefers-reduced-motion: no-preference) {
-  .talk-thinking, .talk-extra, .talk-turn:last-child .talk-q { animation: mo-rise .24s var(--ease-out) backwards; }
-  .talk-extra { animation-delay: .05s; }
+  @keyframes talk-in { from { opacity: 0; transform: translate3d(0, 8px, 0); } }
+  .talk-turn:last-child .talk-q, .talk-thinking, .talk-fail { animation: talk-in var(--spring-dur, .35s) var(--spring, var(--ease-out)) backwards; }
+  /* What comes with an answer arrives once the answer has finished writing itself, the follow-ups a beat later. */
+  .talk-extra { animation: talk-in var(--spring-dur, .35s) var(--spring, var(--ease-out)) backwards; }
+  .talk-follow { animation: talk-in var(--spring-dur, .35s) var(--spring, var(--ease-out)) .12s backwards; }
+  /* The send button grows in as soon as there is something to send. */
+  .talk-type button { transition: transform var(--spring-snappy-dur, .3s) var(--spring-snappy, var(--ease-out)), background-color .15s ease, color .15s ease; }
+  /* Listening: the mic breathes, as the system's does while it listens. */
+  .talk-mic.listening { animation: talk-listen 1.4s ease-in-out infinite; }
+  @keyframes talk-listen { 50% { transform: scale(1.06); } }
 }

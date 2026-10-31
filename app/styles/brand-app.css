@@ -148,7 +148,7 @@ input[type="checkbox"][role="switch"] {
   margin: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--sys-fill);
+  background: var(--sys-switch-off);
   cursor: pointer;
   transition: background-color .2s ease;
 }
@@ -184,9 +184,35 @@ input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowe
   background: var(--sys-surface-2);
   color: var(--sys-label);
   font-size: 17px;
+  font-weight: 400;
 }
 .fd-field input::placeholder, .fd-field textarea::placeholder, .auth-form input::placeholder { color: var(--sys-tertiary); }
 .fd-field input:focus, .fd-field select:focus, .fd-field textarea:focus { outline: 2px solid var(--tint); outline-offset: 0; }
+
+/* ─── Views opened from a tab (04-views.css's shared parts) ─────────────
+   Apple's text styles in place of the old 11.5-13.5px sizes, for every
+   area at once; a page sheet can still refine its own. */
+.fd-crumb p { color: var(--sys-secondary); font: var(--t-subhead); }
+.fd-sub-head h1 { font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); }
+.fd-lead { color: var(--sys-secondary); font: var(--t-subhead); }
+/* 36px circles inside a 44px hit area: the ring of extra space is invisible. */
+.fd-round { position: relative; width: 36px; height: 36px; }
+.fd-round::after { content: ''; position: absolute; inset: -4px; }
+.fd-hint { color: var(--sys-secondary); font: var(--t-footnote); }
+.fd-note { color: var(--sys-secondary); font: var(--t-footnote); }
+.fd-msg { padding: 12px 14px; border-radius: 12px; background: var(--sys-fill); color: var(--sys-label); font: var(--t-subhead); }
+.fd-msg.ok { background: var(--sys-tint-green); color: var(--sys-green); }
+.fd-msg.bad { background: var(--sys-tint-red); color: var(--sys-red); }
+.fd-step { border-bottom: .5px solid var(--sys-separator); }
+.fd-step > i { border: 0; background: var(--tint); color: var(--on-tint); font: 600 12px/22px var(--font-text); }
+.fd-step strong { font: var(--t-headline); }
+.fd-step p { color: var(--sys-secondary); font: var(--t-subhead); }
+.fd-step small { color: var(--sys-secondary); font: var(--t-footnote); }
+.fd-step a { color: var(--tint); font-weight: 400; }
+.fd-amount { border-bottom: .5px solid var(--sys-separator); }
+.fd-amount:focus-within { border-bottom-color: var(--tint); }
+.fd-amount input { font: var(--t-large-title); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fd-amount select { border: 0; box-shadow: none; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-label); font: var(--t-subhead); }
 
 /* ─── Badges ────────────────────────────────────────────────────────── */
 .pf-pill.alert { background: var(--sys-tint-red); color: var(--sys-red); }
@@ -212,7 +238,7 @@ input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowe
 }
 .bottom-nav button { color: var(--sys-label); font-weight: 500; }
 .bottom-nav button span { font-size: clamp(9px, 3.6cqi, 10px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
-.bottom-nav button.active { background: var(--sys-fill); color: var(--tint); box-shadow: none; font-weight: 600; }
+.bottom-nav button.active { background: var(--sys-fill); color: var(--tint-label); box-shadow: none; font-weight: 600; }
 .bottom-nav button.active svg { stroke: currentColor; }
 .bottom-nav button:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
 

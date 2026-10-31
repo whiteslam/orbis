@@ -38,11 +38,11 @@ function TargetChart({ metric, unit, points }: Readonly<HealthPlan['targets'][nu
       </div>
       <ResponsiveContainer width="100%" height={112}>
         <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid vertical={false} stroke={'var(--fd-rule)'} />
-          <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} tickFormatter={(week: number) => (week === 0 ? 'Now' : `W${week}`)} />
-          <YAxis tickLine={false} axisLine={false} width={34} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString('en-IN', { notation: 'compact', maximumFractionDigits: 1 })} />
-          <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--fd-rule)', background: 'var(--fd-surface)', color: 'var(--fd-ink)', fontSize: 11 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString('en-IN')} ${unit}`, metric]} />
-          <Line type="monotone" dataKey="value" stroke="var(--series-1)" strokeWidth={2} dot={{ r: 3, fill: 'var(--series-1)', stroke: 'var(--fd-surface)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+          <CartesianGrid vertical={false} stroke={'var(--sys-separator)'} />
+          <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--sys-secondary)' }} tickFormatter={(week: number) => (week === 0 ? 'Now' : `W${week}`)} />
+          <YAxis tickLine={false} axisLine={false} width={34} tick={{ fontSize: 11, fill: 'var(--sys-secondary)' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString('en-IN', { notation: 'compact', maximumFractionDigits: 1 })} />
+          <Tooltip contentStyle={{ borderRadius: 10, border: 0, background: 'var(--sys-surface)', boxShadow: 'var(--e2)', color: 'var(--sys-label)', fontSize: 13 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString('en-IN')} ${unit}`, metric]} />
+          <Line type="monotone" dataKey="value" stroke="var(--series-1)" strokeWidth={2} dot={{ r: 3, fill: 'var(--series-1)', stroke: 'var(--sys-surface)', strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -53,7 +53,8 @@ function Section({ icon, title, children }: Readonly<{ icon: ReactNode; title: s
   return (
     <section className="hl-plan-section">
       <h2 className="hl-section-label">{icon}{title}</h2>
-      {children}
+      {/* The heading sits on the page; what it heads sits in one cell, as in Health's own detail pages. */}
+      <div className="hl-cell hl-cell-pad">{children}</div>
     </section>
   );
 }

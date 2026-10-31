@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Flame, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { deleteHealthStepsAction, importAppleHealthStepsAction } from '@/app/health/steps-actions';
@@ -24,6 +24,13 @@ const COLORS = { steps: 'var(--series-3)', average: 'var(--series-1)', streak: '
 const TRACK = 'var(--fd-ring-track)';
 const AXIS = { line: 'var(--fd-rule)', text: 'var(--fd-faint)' };
 const RANGES = [['W', 7], ['M', 30], ['3M', 90]] as const;
+// The chart's tooltip floats over the chart, so it is the one surface here with a shadow.
+const TOOLTIP = { border: 0, borderRadius: 10, background: 'var(--sys-surface)', boxShadow: 'var(--e2)', color: 'var(--sys-label)', fontSize: 13 };
+
+// The rings, week bars and chart draw themselves once, the first time Health
+// opens with data in a session (as Fitness does); coming back to the tab
+// shows them already drawn, because tab switches don't animate.
+let drawnThisSession = false;
 
 type Progress = { stage: string; fraction: number };
 
@@ -126,7 +133,7 @@ function StepWeek({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummar
   );
 }
 
-function StepsChart({ summary, latest, span, onSpan }: Readonly<{ summary: StepsSummary; latest: Latest; span: number; onSpan: (span: number) => void }>) {
+function StepsChart({ summary, latest, span, onSpan, draw }: Readonly<{ summary: StepsSummary; latest: Latest; span: number; onSpan: (span: number) => void; draw: boolean }>) {
   const chart = series(summary, span);
   const recorded = chart.filter((day) => day.recorded);
   const rangeAverage = recorded.length ? recorded.reduce((sum, day) => sum + day.steps, 0) / recorded.length : 0;
@@ -143,11 +150,11 @@ function StepsChart({ summary, latest, span, onSpan }: Readonly<{ summary: Steps
       <ResponsiveContainer width="100%" height={170}>
         <BarChart data={chart} margin={{ top: 8, right: 0, bottom: 0, left: 0 }} barCategoryGap={span > 30 ? 1 : '22%'}>
           <CartesianGrid vertical={false} stroke={AXIS.line} strokeDasharray="2 3" />
-          <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: AXIS.line }} tick={{ fontSize: 10, fill: AXIS.text }} interval={tickInterval(span)} tickFormatter={(date: string) => dayLabel(date, span === 7 ? { weekday: 'narrow' } : { day: 'numeric', month: span > 30 ? 'short' : undefined })} />
-          <YAxis orientation="right" tickLine={false} axisLine={false} width={36} tick={{ fontSize: 10, fill: AXIS.text }} tickFormatter={(value: number) => (value >= 1000 ? `${Math.round(value / 1000)}k` : String(value))} />
-          <Tooltip cursor={{ fill: 'var(--fd-wash)' }} formatter={(value) => [`${number(Number(value))} steps`, '']} separator="" labelFormatter={(date) => dayLabel(String(date), { weekday: 'short', day: 'numeric', month: 'short' })} />
+          <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: AXIS.line }} tick={{ fontSize: 11, fill: AXIS.text }} interval={tickInterval(span)} tickFormatter={(date: string) => dayLabel(date, span === 7 ? { weekday: 'narrow' } : { day: 'numeric', month: span > 30 ? 'short' : undefined })} />
+          <YAxis orientation="right" tickLine={false} axisLine={false} width={36} tick={{ fontSize: 11, fill: AXIS.text }} tickFormatter={(value: number) => (value >= 1000 ? `${Math.round(value / 1000)}k` : String(value))} />
+          <Tooltip cursor={{ fill: 'var(--sys-fill)' }} contentStyle={TOOLTIP} formatter={(value) => [`${number(Number(value))} steps`, '']} separator="" labelFormatter={(date) => dayLabel(String(date), { weekday: 'short', day: 'numeric', month: 'short' })} />
           <ReferenceLine y={rangeAverage} stroke={COLORS.activity} strokeDasharray="3 3" strokeOpacity={0.7} />
-          <Bar dataKey="steps" fill={COLORS.activity} radius={[3, 3, 0, 0]} maxBarSize={28} animationBegin={200} animationDuration={800} animationEasing="ease-out" />
+          <Bar dataKey="steps" fill={COLORS.activity} radius={[3, 3, 0, 0]} maxBarSize={28} isAnimationActive={draw} animationBegin={0} animationDuration={600} animationEasing="ease-out" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -232,6 +239,15 @@ export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: S
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const busy = Boolean(progress) || isSaving;
+  // Read once on mount: true only for the first Health with data this session.
+  const [draw] = useState(() => !drawnThisSession && Boolean(summary.latest));
+  // Recharts ignores Reduce Motion, so the chart is told directly. Not rendered, so no hydration concern.
+  const [still] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // A range picked on the chart is a state change, so from then on the bars move to the new range.
+  const [chartMotion, setChartMotion] = useState(draw && !still);
+  useEffect(() => {
+    if (summary.latest) drawnThisSession = true;
+  }, [summary.latest]);
 
   async function importFile(file: File) {
     setMessage(null);
@@ -266,7 +282,7 @@ export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: S
 
   return (
     <>
-      <section className="hl-dash steps-card" aria-labelledby="steps-title">
+      <section className="hl-dash steps-card" aria-labelledby="steps-title" data-draw={draw || undefined}>
         <h2 className="hl-dash-kicker" id="steps-title">
           <Flame size={14} fill="currentColor" aria-hidden="true" />
           <span>Steps{latest ? ` · ${longDay(latest.date)}` : ''}</span>
@@ -308,7 +324,7 @@ export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: S
 
       {ready && latest && (
         <section className="hl-trend" aria-labelledby="trend-title">
-          <StepsChart summary={summary} latest={latest} span={span} onSpan={setSpan} />
+          <StepsChart summary={summary} latest={latest} span={span} onSpan={(days) => { setChartMotion(!still); setSpan(days); }} draw={chartMotion} />
           {summary.average30 !== null && summary.previous30 !== null && <TrendBars average30={summary.average30} previous30={summary.previous30} />}
         </section>
       )}

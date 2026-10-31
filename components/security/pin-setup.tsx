@@ -19,12 +19,15 @@ export function PinSetup({ reset }: Readonly<{ reset: boolean }>) {
   const [second, setSecond] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Counts refusals, so the dots can shake each time (07-auth.css restarts it on a and b).
+  const [shakes, setShakes] = useState(0);
 
   function chosen(value: string) {
     const problem = pinProblem(value);
     if (problem) {
       setMessage(problem);
       setFirst('');
+      setShakes((count) => count + 1);
       return;
     }
     setMessage(null);
@@ -34,6 +37,7 @@ export function PinSetup({ reset }: Readonly<{ reset: boolean }>) {
   function confirmed(value: string) {
     if (value !== first) {
       setMessage('The two PINs do not match. Start again.');
+      setShakes((count) => count + 1);
       setFirst('');
       setSecond('');
       setStep('choose');
@@ -61,7 +65,7 @@ export function PinSetup({ reset }: Readonly<{ reset: boolean }>) {
         </p>
       </div>
 
-      <div className="lock-pin">
+      <div className="lock-pin" data-shake={shakes ? (shakes % 2 ? 'a' : 'b') : undefined}>
         {step === 'choose' ? (
           <>
             <label htmlFor="pin-new">Choose a PIN</label>

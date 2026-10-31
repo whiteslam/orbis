@@ -47,6 +47,8 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [selected, setSelected] = useState<string | null>(() => indiaToday());
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  // Posts made since the screen opened: only these rise into the list.
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set());
   const [isLoading, startLoading] = useTransition();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
   const today = indiaToday();
@@ -80,6 +82,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
 
   /** A post was created or changed: show it here, or drop it if it now belongs to another month. */
   function upsert(post: SocialPost) {
+    if (!month.posts.some((item) => item.id === post.id)) setFresh((current) => new Set(current).add(post.id));
     setMonth((current) => {
       const others = current.posts.filter((item) => item.id !== post.id);
       return { ...current, posts: post.period === period ? [...others, post] : others };
@@ -238,7 +241,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
                 ))}
               </ol>
 
-              {view === 'list' ? <SocialList posts={posts} onOpen={openPost} sort={sort} /> : <SocialGrid posts={posts} onOpen={openPost} />}
+              {view === 'list' ? <SocialList posts={posts} onOpen={openPost} sort={sort} fresh={fresh} /> : <SocialGrid posts={posts} onOpen={openPost} fresh={fresh} />}
             </section>
           )}
         </>

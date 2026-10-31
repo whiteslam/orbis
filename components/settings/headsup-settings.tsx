@@ -30,13 +30,16 @@ export function HeadsupSettings() {
 
   return (
     <div className="pf-headsups">
+      {/* The switches share one cell; what they do is its footnote, under it. */}
+      <div className="st-cell st-switches">
+        {SETTINGS_KINDS.map((kind) => (
+          <label className="fd-line" key={kind}>
+            <span>{KIND_LABELS[kind]}</span>
+            <input type="checkbox" role="switch" aria-label={KIND_LABELS[kind]} checked={!(disabled ?? []).includes(kind)} disabled={disabled === null || isPending} onChange={(event) => toggle(kind, event.target.checked)} />
+          </label>
+        ))}
+      </div>
       <p className="fd-note tight">Orbis checks these once a day and puts anything worth knowing on Today. The checks run inside Orbis; with AI on, only the numbers behind a heads-up are sent to be worded.</p>
-      {SETTINGS_KINDS.map((kind) => (
-        <label className="fd-line" key={kind}>
-          <span>{KIND_LABELS[kind]}</span>
-          <input type="checkbox" role="switch" aria-label={KIND_LABELS[kind]} checked={!(disabled ?? []).includes(kind)} disabled={disabled === null || isPending} onChange={(event) => toggle(kind, event.target.checked)} />
-        </label>
-      ))}
       <div className="fd-act">
         <button type="button" disabled={isPending} onClick={() => startTransition(async () => {
           const result = await safeAction(clearHeadsupsAction)();

@@ -121,6 +121,9 @@
 
   --tint: #42cca8;
   --tint-press: #36b393;
+  /* The tint and secondary grey for text on a grey fill (a selected tab, the search field). */
+  --tint-label: var(--tint);
+  --sys-secondary-strong: #a1a1a8; /* 5.2:1 on the dark fill */
   --on-tint: #00231b;
   --tint-wash: rgba(66,204,168,.16);
   --sys-fill: rgba(118,118,128,.24);
@@ -138,13 +141,16 @@
   --sys-separator: rgba(84,84,88,.65);
   --sys-hairline: #38383a;
 
-  --sys-blue: #0a84ff;
-  --sys-blue-press: #409cff;
+  /* Apple's higher-contrast dark blue and red: the stock #0A84FF and #FF453A
+     fall under 4.5:1 on the raised cell (#2C2C2E); these hold 4.9:1 there. */
+  --sys-blue: #409cff;
+  --sys-blue-press: #64b0ff;
   --sys-green: #30d158;
-  --sys-red: #ff453a;
+  --sys-red: #ff6961;
   --sys-pink: #ff375f;
   --sys-amber: #ff9f0a;
   --sys-switch: #30d158;
+  --sys-switch-off: rgba(120,120,128,.32);
   --sys-tint-blue: rgba(10,132,255,.18);
   --sys-tint-green: rgba(48,209,88,.16);
   --sys-tint-red: rgba(255,69,58,.16);
@@ -193,7 +199,7 @@
   --fd-wash: var(--tint-wash);
   --fd-ring-track: rgba(118,118,128,.24);
   --fd-alert: var(--sys-red);
-  --fd-alert-ink: #ffffff;
+  --fd-alert-ink: #2a0503; /* dark ink on the red fill: 7:1, where white is 2.8:1 */
   --fd-alert-wash: var(--sys-tint-red);
   --fd-veil: rgba(0,0,0,.72);
 
@@ -228,6 +234,9 @@
 
   --tint: #087a65; /* 5.3:1 on white */
   --tint-press: #066452;
+  /* Darker for text on a grey fill: 6.2:1 there, where the tint is 4.6:1. */
+  --tint-label: #066452;
+  --sys-secondary-strong: #5b5b60; /* 5.7:1 on the light fill */
   --on-tint: #ffffff;
   --tint-wash: rgba(8,122,101,.1);
   --sys-fill: rgba(120,120,128,.12);
@@ -250,6 +259,7 @@
   --sys-pink: #d30f45;
   --sys-amber: #c93400;
   --sys-switch: #34c759;
+  --sys-switch-off: #e9e9ea; /* iOS's off track: the plain fill is too faint on white */
   --sys-tint-blue: rgba(0,122,255,.1);
   --sys-tint-green: rgba(52,199,89,.12);
   --sys-tint-red: rgba(255,59,48,.1);

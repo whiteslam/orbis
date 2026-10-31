@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { ArrowLeft, ClipboardPaste, Ellipsis, FileDown, ListChecks, Moon, Radar, Search, Sun, type LucideIcon } from 'lucide-react';
 import { BusyIcon } from '@/components/career/bits';
 import { useDismiss } from '@/components/career/panel/panel-bits';
@@ -91,6 +91,33 @@ function AppNav() {
   );
 }
 
+const TIP_DELAY_MS = 500;
+
+/**
+ * Mac tooltips: the first waits a moment (career-panel.css delays it), and
+ * once one has shown, the rest show at once while the pointer stays on the
+ * rail. `data-warm` marks that state; leaving the rail cools it.
+ */
+function useWarmTips() {
+  const [warm, setWarm] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+  return {
+    'data-warm': warm ? '' : undefined,
+    onPointerOver: (event: PointerEvent<HTMLElement>) => {
+      if (warm || timer.current || !(event.target instanceof Element) || !event.target.closest('.cp-rail-btn')) return;
+      timer.current = setTimeout(() => setWarm(true), TIP_DELAY_MS);
+    },
+    onPointerLeave: () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      setWarm(false);
+    },
+  };
+}
+
 /**
  * The floating rail on the left (a bar along the bottom on narrow screens).
  * Without the desktop layout it holds Career's actions as icons, each named by
@@ -100,8 +127,9 @@ function AppNav() {
 export function PanelRail(props: ActionProps) {
   const { theme, toggle } = useTheme();
   const toLight = theme === 'dark';
+  const warm = useWarmTips();
   return (
-    <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-nav' : 'cp-rail'} aria-label="Quick actions">
+    <aside className={DESKTOP_LAYOUT ? 'cp-rail cp-rail-nav' : 'cp-rail'} aria-label="Quick actions" {...warm}>
       {DESKTOP_LAYOUT && <AppNav />}
       <ul className="cp-rail-tools">
         {careerActions(props).filter((action) => action.id !== 'export').map(({ id, label, hint, Icon, onClick, busy, badge }) => (

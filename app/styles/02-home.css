@@ -15,14 +15,15 @@
      one palette — a blue accent, a cold grey rule or a second green stops
      being possible on this ground rather than being overridden case by case.
      The chrome outside .screen-body (the tab bar, sheets) keeps the system
-     palette, which is why this sits on the screen and not on :root. */
+     palette, which is why this sits on the screen and not on :root.
+     Green and the good-status colour are not remapped: status uses Apple's
+     system colours, never the tint (docs/design/apple.md › Colour). */
   --ink: var(--fd-ink);
   --muted: var(--fd-faint);
   --line: var(--fd-rule);
   --card: var(--fd-card);
   --accent: var(--fd-accent);
   --accent-soft: var(--fd-wash);
-  --status-good: var(--fd-accent);
   --status-critical: var(--fd-alert);
   --sys-label: var(--fd-ink);
   --sys-secondary: var(--fd-soft);
@@ -34,21 +35,19 @@
   --sys-surface-3: var(--fd-chip);
   --sys-blue: var(--fd-accent);
   --sys-blue-press: var(--fd-accent);
-  --sys-green: var(--fd-accent);
   --sys-red: var(--fd-alert);
   --sys-tint-blue: var(--fd-wash);
-  --sys-tint-green: var(--fd-wash);
   --sys-tint-red: var(--fd-alert-wash);
   --sys-wash: var(--fd-card);
   --sys-wash-border: var(--fd-rule);
 }
 .fd-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
-.fd-date { margin: 0; color: var(--fd-faint); font-size: 12px; }
+.fd-date { margin: 0; color: var(--sys-secondary); font: var(--t-subhead); }
 /* The Orbis logo beside the date, at the top of every tab. */
 .fd-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .fd-top-actions { display: flex; align-items: center; gap: 6px; }
-.field .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--fd-chip); box-shadow: none; color: var(--fd-soft); }
-.field .avatar { width: 32px; height: 32px; background: var(--fd-btn); color: var(--fd-btn-ink); }
+.field .icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--sys-fill); box-shadow: none; color: var(--sys-label); }
+.field .avatar { width: 36px; height: 36px; background: var(--sys-fill); color: var(--sys-label); }
 
 /* The statement sits on the ground: no fill, no border, no shadow. */
 .fd-focus { padding: 0; background: none; }

@@ -52,7 +52,8 @@ function dayHeading(key: string) {
   return new Date(`${key}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-export function TransactionList({ transactions }: Readonly<{ transactions: FinanceTransactionSummary[] }>) {
+/** `known`: the ids already on screen before an add; any other row enters as new. */
+export function TransactionList({ transactions, known = null }: Readonly<{ transactions: FinanceTransactionSummary[]; known?: ReadonlySet<string> | null }>) {
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -91,7 +92,7 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
                 const details = [transaction.merchant ? transaction.category : null, paymentMethodLabel(transaction.paymentMethod)].filter(Boolean).join(', ');
                 const income = transaction.direction === 'income';
                 return (
-                  <div className="finance-transaction" key={transaction.id}>
+                  <div className={known && !known.has(transaction.id) ? 'finance-transaction is-new' : 'finance-transaction'} key={transaction.id}>
                     <span className="category-tile" style={{ background: style.color }} aria-hidden="true"><Icon size={15} strokeWidth={2.2} /></span>
                     <div className="finance-transaction-copy">
                       <strong>{transaction.merchant || transaction.category || 'Transaction'}</strong>

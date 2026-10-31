@@ -292,7 +292,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 const Icon = TAB_ICONS[id];
                 return (
                   <button key={id} onClick={() => goTab(id)} className={tab === id ? 'active' : ''} aria-label={label}>
-                    <Icon size={20} /><span>{label}</span>
+                    <Icon size={22} aria-hidden="true" /><span>{label}</span>
                   </button>
                 );
               })}

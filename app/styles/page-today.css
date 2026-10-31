@@ -1,83 +1,115 @@
-/* ─── Today: the morning paper ─────────────────────────────────────────
+/* ─── Today ─────────────────────────────────────────────────────────────
    components/today/today-screen.tsx. Loaded after desktop.css, so the
    desktop rules at the foot of this sheet settle Today's layout.
 
-   The page reads like the front of a paper. The brief is the lede, set large,
-   with the one thing due now (the routine check) right under it. The day at a
-   glance follows as one ruled strip: the weather, steps and spend as figures
-   on the ground, no card each. What needs you (heads-ups, Career, mail) shares
-   the page's one surface, each item a row under a hairline. The news is the
-   magazine below it, every story with its picture and its title. The
-   reminders about Orbis itself sit at the foot.
+   Laid out the way Apple's Health Summary is: the greeting is the large
+   title with the brief under it, then solid cells on the grouped
+   background. The day at a glance is three cells (weather, steps, spend);
+   what needs you (heads-ups, Career, mail) is a run of inset grouped
+   sections, each with a 13px header above its cell; the news is Apple
+   News's list, the lead story as a picture card. The reminders about Orbis
+   itself sit at the foot as one Settings-style row and a footnote.
 
-   Its accent is the morning's: --brand-gold marks today's bar and the time a
-   routine is due; everything else is ink, soft and faint. Prefix: .td- */
+   Cells are --sys-surface with no border, shadow or blur (docs/design/
+   apple.md). The tint marks actions, links and today's bar; status uses
+   the system colours. glass.css and desktop.css still carry the old
+   frosted sizes for these parts; everything here is scoped under .td so it
+   outranks them. Prefix: .td- */
 
-.screen-body.td { --td-gap: 30px; }
+.screen-body.td { --td-gap: 32px; --td-in: 16px; }
 
-/* ─── The lede: the brief, and what is due now ─── */
-.td-lead { margin-top: 2px; }
+/* ─── The header: the date above the large title ─── */
+.td .fd-top { margin-bottom: 6px; }
+.td .fd-date { font: var(--t-subhead); color: var(--sys-secondary); }
+.td .fd-top-actions { gap: 8px; }
+.td .fd-top :is(.icon-btn, .avatar) { position: relative; width: 36px; height: 36px; background: var(--sys-fill); color: var(--sys-label); }
+/* 36px circles, as in a navigation bar; the hit area is still 44px. */
+.td .fd-top :is(.icon-btn, .avatar)::after { content: ""; position: absolute; inset: -4px; }
+.td .fd-top :is(.icon-btn, .avatar):focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* ─── The lede: the greeting is the screen's large title ─── */
+.td-lead { margin-top: 0; }
 .td .fd-note-brief { margin: 0; padding: 0; }
-.td .fd-note-greet { font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; overflow-wrap: break-word; min-width: 0; }
-.td .fd-note-time { font-size: 13px; font-weight: 600; letter-spacing: 0; }
-.td .fd-note-line { margin-top: 12px; color: var(--fd-ink); font-size: 16px; line-height: 1.6; opacity: .86; }
-.td .fd-note-from { margin-top: 14px; font-size: 12px; }
+.td .fd-note-greet { gap: 2px 10px; font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); overflow-wrap: break-word; min-width: 0; }
+.td .fd-note-time { font: var(--t-subhead); letter-spacing: 0; color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
+.td .fd-note-line, .td .fd-note-line:first-of-type { margin: 8px 0 0; font: var(--t-body); color: var(--sys-label); opacity: 1; text-wrap: pretty; }
+.td .fd-note-from { gap: 4px 14px; margin: 10px 0 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.td .fd-note-from svg { opacity: 1; }
 
-/* The routine check: on the ground under a hairline, its three answers big enough to hit without looking. */
+/* The routine check: a cell under the brief; one tinted answer, two grey ones. */
 .td .rt-check {
   margin: 20px 0 0;
-  padding: 16px 0 0;
+  padding: 14px var(--td-in) 16px;
   border: 0;
-  border-top: 1px solid var(--fd-rule);
-  border-radius: 0;
-  background: none;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.td .rt-check-head { font-size: 15px; font-weight: 700; }
-.td .rt-check:not(.settled) .rt-check-head b { color: var(--brand-gold); font-size: 13px; font-weight: 650; }
+.td .rt-check-head { gap: 2px 8px; font: var(--t-headline); color: var(--sys-label); }
+.td .rt-check-head b, .td .rt-check:not(.settled) .rt-check-head b { font: var(--t-subhead); color: var(--sys-secondary); font-variant-numeric: tabular-nums; }
 .td .rt-actions { gap: 8px; margin-top: 12px; }
-.td .rt-actions button { min-height: 44px; padding: 0 16px; font-size: 14px; }
-.td .rt-other input { min-height: 44px; font-size: 15px; }
+.td .rt-actions button { min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--sys-fill); box-shadow: none; color: var(--tint); font: var(--t-subhead); font-weight: 600; }
+.td .rt-actions button:first-child { background: var(--tint); color: var(--on-tint); }
+.td .rt-actions button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.td .rt-other { gap: 8px; margin-top: 12px; }
+.td .rt-other input { min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--r-field); background: var(--sys-surface-2); color: var(--sys-label); font: var(--t-body); }
+.td .rt-other input::placeholder { color: var(--sys-tertiary); }
+.td .rt-other input:focus { outline: 2px solid var(--tint); outline-offset: 0; }
 .td .rt-other .fd-button { min-height: 44px; }
-.td .rt-check .fd-link { min-height: 36px; font-size: 13px; }
+.td .rt-check .fd-link { min-height: 44px; font: var(--t-subhead); color: var(--tint); }
+.td .rt-check > .fd-note { margin: 8px 0 0; font: var(--t-footnote); color: var(--sys-red); }
+.td .rt-check.settled { padding-block: 0; min-height: 52px; }
+.td .rt-check.settled .rt-check-head { align-items: center; font: var(--t-body); color: var(--sys-label); }
+.td .rt-check.settled .rt-check-head b { font: var(--t-body); color: var(--sys-secondary); }
+.td .rt-check-tick { width: 20px; height: 20px; background: var(--tint); color: var(--on-tint); }
 
-/* ─── The day at a glance: weather across the top, steps and spend below ─── */
+/* ─── The day at a glance: three cells ─── */
 .td-glance {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: var(--td-gap);
-  border-top: 1px solid var(--fd-rule);
-  border-bottom: 1px solid var(--fd-rule);
+  gap: 12px;
+  margin-top: 24px;
+  border: 0;
 }
 .td-glance > * { min-width: 0; }
 .td-glance > :first-child { grid-column: 1 / -1; }
 .td-glance .today-widgets { display: contents; }
 
-/* Weather: a big number and two short lines, no box. */
+/* Weather: the temperature as the figure, what it is and where beside it. */
 .td-glance .fd-weather {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   margin: 0;
-  padding: 16px 0;
+  padding: 14px var(--td-in);
   border: 0;
-  border-bottom: 1px solid var(--fd-rule);
-  border-radius: 0;
-  background: none;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.td-glance .fd-weather b { min-width: 0; font-size: 34px; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
-.td-glance .fd-weather p { font-size: 14.5px; font-weight: 600; }
-.td-glance .fd-weather .fd-weather-meta { gap: 2px 12px; margin-top: 4px; font-size: 12.5px; font-weight: 500; }
-.td-glance .fd-weather-quiet { margin: 0; padding: 16px 0; border-bottom: 1px solid var(--fd-rule); font-size: 13px; line-height: 1.45; }
-.td-glance .fd-weather-button { min-height: 44px; color: var(--fd-soft); }
-.td-glance .fd-weather-button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 8px; }
+.td-glance .fd-weather b { min-width: 0; font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); font-variant-numeric: tabular-nums; }
+.td-glance .fd-weather p { font: var(--t-subhead); font-weight: 600; color: var(--sys-label); }
+.td-glance .fd-weather .fd-weather-meta { gap: 0 12px; margin-top: 2px; font: var(--t-footnote); color: var(--sys-secondary); }
+/* Loading, error and "set your city": the same cell, one line in it. */
+.td-glance .fd-weather-quiet {
+  min-height: 52px;
+  margin: 0;
+  padding: 14px var(--td-in);
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
+  font: var(--t-subhead);
+  color: var(--sys-secondary);
+}
+.td-glance .fd-weather-quiet svg { color: var(--sys-secondary); }
+.td-glance .fd-weather-button, .td-glance .fd-weather-button svg { color: var(--tint); }
+.td-glance .fd-weather-button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 
-/* Steps and spend: a figure each, side by side, split by a hairline. */
+/* Steps and spend: a cell each, side by side, the figure under its name. */
 .td-glance .today-widget {
   aspect-ratio: auto;
   display: grid;
@@ -85,192 +117,238 @@
   grid-template-areas: "cap art" "foot art";
   align-content: start;
   align-items: start;
-  gap: 6px 10px;
+  gap: 4px 8px;
   min-height: 0;
-  padding: 16px 14px 18px 0;
+  padding: 14px var(--td-in) 16px;
   border: 0;
-  border-radius: 0;
-  background: none;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   color: inherit;
   text-align: left;
 }
-.td-glance .today-widget:last-child { padding: 16px 0 18px 14px; border-left: 1px solid var(--fd-rule); }
-.td-glance .today-widget:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: -2px; border-radius: 12px; }
-.td-glance .today-widget-cap { grid-area: cap; color: var(--fd-faint); font-size: 13px; font-weight: 600; }
-.td-glance .today-widget .activity-rings { grid-area: art; align-self: center; }
-.td-glance .today-widget-foot { grid-area: foot; gap: 3px; }
-.td-glance .today-widget-value, .td-glance .today-widget-value.small { font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; overflow-wrap: break-word; }
-.td-glance .today-widget-value small { display: block; margin-top: 2px; font-size: 12.5px; }
-.td-glance .today-widget-sub { color: var(--fd-soft); font-size: 12.5px; white-space: normal; }
-.td-glance .today-widget-empty { grid-area: foot; margin: 4px 0 0; color: var(--fd-accent); font-size: 14px; }
-/* The spend's week of bars sits under its figure on the phone, beside it on desktop. */
-.td-glance .today-widget-bars { grid-column: 1 / -1; grid-row: 3; height: 26px; margin-top: 8px; gap: 3px; }
-.td-glance .today-widget-bars i.now { background: var(--brand-gold); }
+.td-glance .today-widget:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.td-glance .today-widget-cap { grid-area: cap; font: var(--t-subhead); font-weight: 600; color: var(--sys-label); }
+.td-glance .today-widget .activity-rings { grid-area: art; align-self: start; }
+.td-glance .today-widget-foot { grid-area: foot; gap: 2px; margin-top: 4px; }
+.td-glance .today-widget-value, .td-glance .today-widget-value.small { font: var(--t-title-2); letter-spacing: -.01em; color: var(--sys-label); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.td-glance .today-widget-value small { display: block; margin-top: 2px; font: var(--t-footnote); color: var(--sys-secondary); }
+.td-glance .today-widget-sub { font: var(--t-footnote); color: var(--sys-secondary); white-space: normal; }
+.td-glance .today-widget-empty { grid-area: foot; margin: 6px 0 0; font: var(--t-subhead); color: var(--tint); }
+/* The spend's week of bars: grey days, today in the tint. */
+.td-glance .today-widget-bars { grid-column: 1 / -1; grid-row: 3; height: 28px; margin-top: 10px; gap: 4px; }
+.td-glance .today-widget-bars i { border-radius: 2px; background: var(--sys-surface-3); }
+.td-glance .today-widget-bars i.none { opacity: 1; background: var(--sys-surface-2); }
+.td-glance .today-widget-bars i.now { background: var(--tint); }
 
-/* ─── What needs you: the page's one surface ─── */
+/* ─── What needs you: inset grouped sections ───
+   Each part keeps its own markup; the section goes transparent, its heading
+   becomes the 13px header above, and its rows become the cell. */
 .td-desk {
   display: flex;
   flex-direction: column;
+  gap: 28px;
   margin-top: var(--td-gap);
-  padding: 6px 18px;
-  border: var(--gl-edge);
-  border-radius: 28px;
-  background: var(--gl-fill);
-  -webkit-backdrop-filter: var(--gl-blur);
-  backdrop-filter: var(--gl-blur);
-  box-shadow: var(--gl-shadow);
-}
-/* Nothing to show: no surface, one plain line instead of a hole. */
-/* Only mail's loading or error line: a plain line on the ground, not a surface round one sentence. */
-.td .td-desk:has(> .fd-weather-quiet:only-child) { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.td-desk:empty { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.td-desk:empty::before { content: "Nothing needs you right now. Heads-ups and new mail show up here."; color: var(--fd-faint); font-size: 13.5px; line-height: 1.5; }
-
-/* Each part is a group on the surface, not a card of its own. */
-.td-desk > :is(.hu-card, .fd-quiet, .setup-list, .fd-weather-quiet, .fd-msg, .finance-notice) {
-  margin: 0;
-  padding: 16px 0;
+  padding: 0;
   border: 0;
-  border-top: 1px solid var(--fd-rule);
   border-radius: 0;
   background: none;
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.td-desk > :first-child { border-top: 0; }
-.td-desk > .finance-notice { padding: 12px 14px; border-radius: 14px; border-top: 0; margin: 12px 0 0; }
-.td-desk > .fd-weather-quiet { font-size: 13px; }
+.td-desk:empty::before { content: "Nothing needs you right now. Heads-ups and new mail show up here."; padding: 0 var(--td-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.td .td-desk > :is(.hu-card, .fd-quiet) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* brand.css sets .fd-label at id strength (:not(#_)); the header has to match it. */
+.td .td-desk .hu-card > h2:not(#_), .td .td-desk .fd-quiet > h2 { margin: 0 0 7px; padding: 0 var(--td-in); font: var(--t-footnote); letter-spacing: 0; text-transform: none; color: var(--sys-secondary); }
+/* Mail's loading or error line: a footnote on the ground. */
+.td-desk > .fd-weather-quiet { margin: 0; padding: 0 var(--td-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.td-desk > .fd-weather-quiet svg { color: var(--sys-secondary); }
+/* The ?gmail= result: a status line in the system colour, with its close button. */
+.td .td-desk > .finance-notice { margin: 0; padding: 4px 4px 4px var(--td-in); border: 0; border-radius: var(--r-card); background: var(--sys-surface); font: var(--t-subhead); }
+.td .td-desk > .finance-notice.success { color: var(--sys-green); }
+.td .td-desk > .finance-notice.error { color: var(--sys-red); }
+.td .td-desk > .finance-notice button { width: 44px; height: 44px; color: var(--sys-secondary); }
 
-/* Group headings: a plain heading in the body face, not a small label. */
-/* brand.css sets .fd-label at id strength (:not(#_)); the heading has to match it. */
-.td .td-desk .hu-card > h2:not(#_), .td .td-desk .fd-quiet > h2 { margin: 2px 0 4px; color: var(--fd-ink); font-size: 17px; font-weight: 750; letter-spacing: -.02em; }
+/* Rows of a cell: the first and last round the cell's corners; separators
+   are hairlines inset to the text. */
+.td-desk .hu-item, .td-desk .fd-mail-row, .td-desk .fd-quiet .fd-line { position: relative; border: 0; background: var(--sys-surface); }
+.td-desk :is(.hu-item, .fd-mail-row):first-of-type { border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.td-desk :is(.hu-item, .fd-mail-row):last-of-type { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.td-desk :is(.hu-item + .hu-item, .fd-mail-row + .fd-mail-row, .fd-line + .fd-line)::before { content: ""; position: absolute; inset: 0 0 auto var(--td-in); border-top: .5px solid var(--sys-separator); }
 
-/* Heads-ups: one row each, one primary step, the rest as text links. */
-.td-desk .hu-item { padding: 14px 0; border-bottom: 1px solid var(--fd-rule); }
-.td-desk .hu-item:last-of-type { border-bottom: 0; padding-bottom: 4px; }
-.td-desk .hu-item strong { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
-.td-desk .hu-item p { margin: 5px 0 4px; font-size: 14px; }
-.td-desk .hu-item small { color: var(--fd-faint); font-size: 12px; }
-.td-desk .hu-actions { gap: 4px 16px; margin-top: 12px; }
-.td-desk .hu-actions .fd-button { min-height: 40px; padding: 0 18px; }
-.td-desk :is(.hu-quiet, .hu-more) { min-height: 40px; font-size: 13px; }
-.td-desk .hu-more { color: var(--fd-accent); }
-.td-desk :is(.hu-quiet, .hu-more):hover { color: var(--fd-ink); }
-.td-desk :is(.hu-quiet, .hu-more):focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 6px; }
+/* Heads-ups: the title, a line, where it came from, then the step to take. */
+.td-desk .hu-item { padding: 12px var(--td-in) 6px; }
+.td-desk .hu-item strong { font: var(--t-headline); color: var(--sys-label); }
+/* Urgent is a status, so the dot is the system orange, not the tint. */
+.td-desk .hu-item.urgent strong::before { width: 8px; height: 8px; margin-right: 8px; background: var(--sys-amber); vertical-align: 2px; }
+.td-desk .hu-item p { margin: 2px 0 0; font: var(--t-subhead); color: var(--sys-secondary); }
+.td-desk .hu-item small { display: block; margin-top: 4px; font: var(--t-footnote); color: var(--sys-secondary); }
+.td-desk .hu-actions { gap: 0 20px; margin-top: 10px; }
+.td-desk .hu-actions .fd-button { min-height: 44px; padding: 0 18px; font: var(--t-subhead); font-weight: 600; }
+.td-desk .hu-quiet { min-height: 44px; padding: 0; font: var(--t-subhead); color: var(--tint); }
+/* "See all" and the stop-checking offer sit under the cell, like a footer. */
+.td-desk .hu-more { min-height: 44px; margin-top: 2px; padding: 0 var(--td-in); font: var(--t-subhead); color: var(--tint); }
+.td-desk .hu-offer { gap: 0 20px; margin-top: 8px; padding: 0 var(--td-in); }
+.td-desk .hu-offer span { font: var(--t-footnote); color: var(--sys-secondary); }
+.td-desk :is(.hu-quiet, .hu-more):focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 6px; }
 
-/* Career: one line. */
-.td-desk .fd-quiet .fd-line { min-height: 44px; padding: 10px 0; border-bottom: 0; }
-.td-desk .fd-quiet .fd-line span { font-size: 14px; }
-.td-desk .fd-quiet .fd-line b { font-size: 14px; }
+/* Career: one Settings row, the label left, the value right, a chevron. */
+.td-desk .fd-quiet .fd-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 11px var(--td-in); border-radius: var(--r-card); color: inherit; font: inherit; text-align: left; }
+.td-desk .fd-quiet .fd-line span { font: var(--t-body); color: var(--sys-label); }
+.td-desk .fd-quiet .fd-line b { margin-left: auto; font: var(--t-body); color: var(--sys-secondary); text-align: right; }
+.td-desk .fd-quiet button.fd-line { cursor: pointer; }
+.td-desk .fd-quiet button.fd-line::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 2px 0 -2px; border-top: 2px solid var(--sys-tertiary); border-right: 2px solid var(--sys-tertiary); transform: rotate(45deg); }
+.td-desk .fd-quiet button.fd-line:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 
-/* Mail: who, when, the subject, a line of it; "Got it" to the right. */
-.td-desk .fd-mail-row { gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--fd-rule); }
-.td-desk .fd-mail-row:last-of-type { border-bottom: 0; }
-.td-desk .fd-mail-open { gap: 3px; }
-.td-desk .fd-mail-open:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 8px; }
-.td-desk .fd-mail-top b { font-size: 13.5px; }
-.td-desk .fd-mail-top time { font-size: 12px; }
-.td-desk .fd-mail-subject { color: var(--fd-ink); font-size: 14px; }
-.td-desk .fd-mail-snippet { font-size: 12.5px; }
-.td-desk .fd-mail-row.unread .fd-mail-top b::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--fd-accent); vertical-align: 1px; }
-.td-desk .fd-mail-ack { min-height: 36px; padding: 0 12px; font-size: 12.5px; }
-.td-desk .fd-mail-more { min-height: 36px; margin: 2px 0 0; font-size: 13px; }
-/* Connect Gmail: one row to tap. */
-.td-desk .fd-mail-connect .setup-row { min-height: 48px; }
-.td-desk .setup-row-label { font-size: 14px; }
-.td-desk .setup-row-label small { font-size: 12px; }
-.td-desk .setup-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 10px; }
+/* Mail: as Mail lists it. Sender and time, the subject, two lines of it. */
+.td-desk .fd-mail-row { gap: 12px; align-items: center; padding: 10px var(--td-in); }
+.td-desk .fd-mail-open { gap: 1px; }
+.td-desk .fd-mail-open:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 8px; }
+.td-desk .fd-mail-top b, .td-desk .fd-mail-row.unread .fd-mail-top b { font: var(--t-headline); color: var(--sys-label); }
+.td-desk .fd-mail-top time { font: var(--t-subhead); color: var(--sys-secondary); }
+.td-desk .fd-mail-subject, .td-desk .fd-mail-row.unread .fd-mail-subject { font: var(--t-subhead); color: var(--sys-label); }
+.td-desk .fd-mail-snippet { -webkit-line-clamp: 2; line-clamp: 2; font: var(--t-subhead); color: var(--sys-secondary); }
+/* Unread is Mail's dot in the tint, in the margin before the sender. */
+.td-desk .fd-mail-row.unread .fd-mail-top b::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--tint); vertical-align: 2px; }
+.td-desk .fd-mail-ack { position: relative; min-height: 30px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--tint); font: var(--t-subhead); font-weight: 600; }
+.td-desk .fd-mail-ack::after { content: ""; position: absolute; inset: -7px -4px; }
+.td-desk .fd-mail-ack:hover { border: 0; color: var(--tint); }
+.td-desk .fd-mail-ack:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.td-desk .fd-mail .fd-msg { margin: 0 0 8px; padding: 0 var(--td-in); font: var(--t-footnote); color: var(--sys-red); }
+.td-desk .fd-mail-more { min-height: 44px; margin: 2px 0 0; padding: 0 var(--td-in); font: var(--t-subhead); color: var(--tint); }
 
-/* ─── The paper: News ─── */
-.td-paper { margin-top: calc(var(--td-gap) + 6px); }
-.td-paper > .fd-weather-quiet { margin: 0; font-size: 13px; }
+/* ─── Settings-style rows: Connect Gmail, and the setup reminder ─── */
+.td .setup-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 12px 0 var(--td-in);
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--sys-surface);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.td .setup-row { gap: 12px; min-height: 60px; padding: 8px 0; color: var(--sys-tertiary); }
+.td .setup-row .fd-tile { width: 30px; height: 30px; border-radius: 8px; }
+.td .setup-row-label { font: var(--t-body); color: var(--sys-label); white-space: normal; }
+.td .setup-row-label small { margin-top: 1px; font: var(--t-subhead); color: var(--sys-secondary); white-space: normal; }
+.td .setup-row:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 10px; }
+.td .fd-mail-connect .setup-row svg:last-child { color: var(--sys-tertiary); }
+.td .setup-list .fd-round { position: relative; width: 30px; height: 30px; background: var(--sys-fill); color: var(--sys-secondary); }
+.td .setup-list .fd-round::after { content: ""; position: absolute; inset: -7px; }
+.td .setup-list .fd-round:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* ─── News: Apple News's list ─── */
+.td-paper { margin-top: var(--td-gap); }
+.td-paper > .fd-weather-quiet { margin: 0; padding: 0 var(--td-in); font: var(--t-footnote); color: var(--sys-secondary); }
+.td-paper > .fd-weather-quiet svg { color: var(--sys-secondary); }
 .td .td-news { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.td-news-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding-bottom: 10px; border-bottom: 1px solid var(--fd-rule); }
-.td .td-news .td-news-head h2 { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
-.td-news-head p { margin: 0; color: var(--fd-faint); font-size: 12.5px; }
+.td-news-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; padding: 0 0 10px; border: 0; }
+.td .td-news .td-news-head h2 { margin: 0; font: var(--t-title-2); letter-spacing: -.01em; text-transform: none; color: var(--sys-label); }
+.td-news-head p { margin: 0; font: var(--t-footnote); color: var(--sys-secondary); }
 
-/* Every story has its picture: a thumbnail beside the title on the phone. */
-.td-news .fd-news-item { align-items: flex-start; gap: 6px; border-bottom: 1px solid var(--fd-rule); }
+/* The lead story is a card of its own; the rest share one cell. */
+.td-news .fd-news-item { position: relative; display: flex; align-items: flex-start; gap: 4px; padding: 0 4px 0 var(--td-in); border: 0; background: var(--sys-surface); }
+.td-news .fd-news-item.is-lead + .fd-news-item { margin-top: 12px; border-top-left-radius: var(--r-card); border-top-right-radius: var(--r-card); }
+.td-news .fd-news-item:not(:has(~ .fd-news-item)) { border-bottom-left-radius: var(--r-card); border-bottom-right-radius: var(--r-card); }
+.td-news .fd-news-item:not(.is-lead) + .fd-news-item::before { content: ""; position: absolute; inset: 0 0 auto var(--td-in); border-top: .5px solid var(--sys-separator); }
+
+/* The picture is placed, not laid out, so a story's height is its text's or
+   the picture's, whichever is taller, and the text never spreads to fill it. */
 .td-news .fd-news-row {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  grid-template-areas: "photo title" "photo line" "photo meta";
-  align-content: start;
-  gap: 3px 12px;
-  padding: 14px 0;
-}
-.td-news .fd-news-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 12px; }
-.td-news .fd-news-photo { grid-area: photo; position: relative; display: block; width: 88px; height: 72px; overflow: hidden; border-radius: 12px; background: var(--fd-chip); }
-.td-news .fd-news-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.td-news .fd-news-photo.is-blank { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--fd-faint); background: linear-gradient(140deg, color-mix(in srgb, var(--brand-gold) 22%, transparent), var(--fd-chip) 70%); }
-.td-news .fd-news-photo.is-blank span { max-width: 90%; overflow: hidden; font-size: 10px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.td-news .fd-news-title { grid-area: title; font-size: 15px; font-weight: 700; line-height: 1.3; overflow-wrap: break-word; }
-.td-news .fd-news-line { grid-area: line; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; }
-.td-news .fd-news-meta { grid-area: meta; margin-top: 2px; font-size: 12px; }
-.td-news .fd-news-item > .fd-ask.icon { width: 36px; height: 36px; margin-top: 12px; border: 0; color: var(--fd-faint); }
-.td-news .fd-news-item > .fd-ask.icon:hover { background: var(--fd-chip); color: var(--fd-ink); }
-
-/* The lead story: its picture across the column, its title set large. */
-.td-news .fd-news-item.is-lead { position: relative; display: block; }
-.td-news .is-lead .fd-news-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "photo" "title" "line" "meta"; gap: 6px; padding: 16px 0 18px; }
-.td-news .is-lead .fd-news-photo { width: 100%; height: auto; aspect-ratio: 16 / 10; margin-bottom: 6px; border-radius: 18px; }
-.td-news .is-lead .fd-news-photo.is-blank span { font-size: 12px; }
-.td-news .is-lead .fd-news-title { font-size: 21px; font-weight: 750; line-height: 1.22; letter-spacing: -.02em; }
-.td-news .is-lead .fd-news-line { -webkit-line-clamp: 3; line-clamp: 3; font-size: 14.5px; line-height: 1.5; }
-.td-news .is-lead > .fd-ask.icon { position: absolute; top: 26px; right: 10px; margin: 0; background: color-mix(in srgb, var(--sys-bg) 72%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fd-ink); }
-
-/* The market read: a column of the paper, on the ground. */
-.td-news .fd-news-market { margin-top: 22px; padding: 0; border: 0; background: none; }
-.td-news .fd-news-market-head { margin: 0 0 6px; color: var(--fd-ink); font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
-.td-news .fd-news-summary { font-size: 14.5px; line-height: 1.55; }
-.td-news .fd-news-sectors { gap: 0; margin: 12px 0 8px; }
-.td-news .fd-news-sector { gap: 2px; padding: 10px 0; border-top: 1px solid var(--fd-rule); }
-.td-news .fd-news-sector-name { font-size: 13.5px; }
-.td-news .fd-news-sector-why { font-size: 12.5px; }
-.td-news .fd-news-actions .fd-ask { min-height: 38px; padding: 0 14px; font-size: 13px; }
-.td-news .fd-news-foot { margin: 16px 0 0; font-size: 11.5px; }
-
-/* ─── The foot: setup, and the promise ─── */
-.td-foot { margin-top: var(--td-gap); }
-.td-foot > .setup-list {
-  margin: 0;
-  padding: 10px 0;
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 12px 0 12px 84px;
   border: 0;
-  border-top: 1px solid var(--fd-rule);
-  border-bottom: 1px solid var(--fd-rule);
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
-.td-foot .setup-row { min-height: 48px; }
-.td-foot .setup-row-label { font-size: 14px; }
-.td-foot .setup-row-label small { font-size: 12px; }
-.td-foot .setup-row:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 10px; }
-.td-foot .setup-list .fd-round { width: 36px; height: 36px; }
-.td-foot > .fd-note { margin: 16px 0 0; font-size: 12px; }
+.td-news .fd-news-row:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 12px; }
+.td-news .fd-news-photo { position: absolute; top: 12px; left: 0; display: block; width: 72px; height: 72px; overflow: hidden; border-radius: 10px; background: var(--sys-surface-2); }
+.td-news .fd-news-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.td-news .fd-news-photo.is-blank { display: grid; place-items: center; align-content: center; gap: 4px; background: var(--sys-surface-2); color: var(--sys-secondary); }
+.td-news .fd-news-photo.is-blank span { max-width: 90%; overflow: hidden; font: var(--t-caption); text-overflow: ellipsis; white-space: nowrap; }
+.td-news .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 3lh; font: var(--t-headline); color: var(--sys-label); overflow-wrap: break-word; }
+.td-news .fd-news-line { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 2lh; font: var(--t-subhead); color: var(--sys-secondary); }
+.td-news .fd-news-meta { margin-top: 2px; font: var(--t-footnote); color: var(--sys-secondary); }
+/* Ask Orbis about a story: a grey glyph with a 44px target. */
+.td-news .fd-news-item > .fd-ask.icon { flex: none; width: 44px; height: 44px; margin-top: 8px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--sys-secondary); }
+.td-news .fd-news-item > .fd-ask.icon:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
 
-@media (hover: hover) {
-  .td-glance .today-widget:hover .today-widget-value { color: var(--fd-accent); }
-  .td-news .fd-news-row:hover .fd-news-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+/* The lead: the picture across the card, the title set large under it. */
+.td-news .fd-news-item.is-lead { display: block; padding: 0; overflow: hidden; border-radius: var(--r-card); }
+.td-news .is-lead .fd-news-row { gap: 4px; min-height: 0; padding: 0 0 16px; }
+.td-news .is-lead .fd-news-row:focus-visible { outline-offset: -3px; border-radius: var(--r-card); }
+.td-news .is-lead .fd-news-photo { position: relative; top: auto; left: auto; width: 100%; height: auto; aspect-ratio: 16 / 10; margin-bottom: 8px; border-radius: 0; }
+.td-news .is-lead .fd-news-photo.is-blank span { font: var(--t-footnote); }
+.td-news .is-lead :is(.fd-news-title, .fd-news-line, .fd-news-meta) { margin-inline: var(--td-in); }
+.td-news .is-lead .fd-news-title { font: var(--t-title-2); letter-spacing: -.01em; }
+.td-news .is-lead .fd-news-line { -webkit-line-clamp: 3; line-clamp: 3; max-height: 3lh; }
+/* On the picture the button floats, so it takes the chrome material. */
+.td-news .is-lead > .fd-ask.icon { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; margin: 0; background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); color: var(--sys-label); }
+.td-news .is-lead > .fd-ask.icon::after { content: ""; position: absolute; inset: -4px; }
+
+/* The market read: a cell after the stories. */
+.td-news .fd-news-market { margin-top: 12px; padding: 14px var(--td-in) 8px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.td-news .fd-news-market-head { margin: 0 0 4px; font: var(--t-headline); color: var(--sys-label); }
+.td-news .fd-news-summary { font: var(--t-subhead); color: var(--sys-label); }
+.td-news .fd-news-sectors { gap: 0; margin: 10px 0 4px; }
+.td-news .fd-news-sector { gap: 2px; padding: 10px 0; border-top: .5px solid var(--sys-separator); }
+.td-news .fd-news-sector-name { gap: 4px; font: var(--t-subhead); font-weight: 600; text-transform: none; }
+.td-news .fd-news-sector.is-up .fd-news-sector-name { color: var(--sys-green); }
+.td-news .fd-news-sector.is-down .fd-news-sector-name { color: var(--sys-red); }
+.td-news .fd-news-sector.is-mixed .fd-news-sector-name { color: var(--sys-secondary); }
+.td-news .fd-news-sector-why { font: var(--t-footnote); color: var(--sys-secondary); }
+.td-news .fd-news-actions { margin: 4px 0 8px; }
+.td-news .fd-news-actions .fd-ask { min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--tint); font: var(--t-subhead); font-weight: 600; }
+.td-news .fd-news-actions .fd-ask:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.td-news .fd-news-foot { margin: 8px var(--td-in) 0; font: var(--t-footnote); color: var(--sys-secondary); }
+
+/* ─── The foot: the setup reminder, and the promise as its footnote ─── */
+.td-foot { margin-top: var(--td-gap); }
+.td-foot > .fd-note { margin: 8px var(--td-in) 0; font: var(--t-footnote); color: var(--sys-secondary); }
+.td-foot > .fd-note:first-child { margin-top: 0; }
+
+/* ─── Motion ───
+   Only what appears because of a tap moves: stories past the first three
+   after "See all", mail after "Show all", and the "Something else" field. What
+   loads with the screen does not, since Today opens many times a day. */
+@media (prefers-reduced-motion: no-preference) {
+  .td-desk .hu-item:nth-of-type(n+4),
+  .td-desk .fd-mail-row:nth-of-type(n+4),
+  .td .rt-other { animation: td-enter var(--spring-dur, .4s) var(--spring, var(--ease-out)) both; }
+}
+@keyframes td-enter {
+  from { opacity: 0; transform: translateY(8px); }
 }
 
-/* ─── Desktop: the front page ───
-   Two columns. The lede and the day at a glance on the left; what needs you
-   down the right on its one surface, spanning both and a last 1fr row so a
-   long list never opens a gap on the left. The paper runs the full width
-   under them: the lead story, four pictured stories, and the market read as
-   the last column on a hairline. The page uses the window, as asked. */
+/* ─── Desktop: two columns, then the paper ───
+   The lede, the day at a glance and the setup reminder on the left; what
+   needs you down the right, spanning them and a last 1fr row so a long list
+   never opens a gap on the left. The news runs the full width under both. */
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   .stage[data-desktop][data-tab="today"] .screen-body.td {
     --td-gap: 0px;
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
     grid-template-rows: auto auto auto 1fr auto;
     grid-template-areas:
       "pass pass"
@@ -279,92 +357,97 @@
       "foot desk"
       "paper paper";
     grid-auto-flow: row;
-    gap: 34px clamp(40px, 4vw, 72px);
+    gap: 24px clamp(32px, 3vw, 56px);
     max-width: 1680px;
   }
   .stage[data-desktop][data-tab="today"] .td > * { grid-column: auto; }
   .stage[data-desktop][data-tab="today"] .td > .passkey-prompt { grid-area: pass; }
-  .stage[data-desktop][data-tab="today"] .td > .td-lead { grid-area: lead; padding-top: 10px; }
+  .stage[data-desktop][data-tab="today"] .td > .td-lead { grid-area: lead; padding-top: 4px; }
   .stage[data-desktop][data-tab="today"] .td > .td-glance { grid-area: glance; }
-  .stage[data-desktop][data-tab="today"] .td > .td-desk { grid-area: desk; align-self: start; padding: 10px 28px; border-radius: 32px; }
-  .stage[data-desktop][data-tab="today"] .td > /* Only mail's loading or error line: a plain line on the ground, not a surface round one sentence. */
-.td .td-desk:has(> .fd-weather-quiet:only-child) { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.td-desk:empty { padding: 10px 0; }
-  .stage[data-desktop][data-tab="today"] .td > .td-paper { grid-area: paper; margin-top: 18px; }
+  .stage[data-desktop][data-tab="today"] .td > .td-desk { grid-area: desk; align-self: start; gap: 28px; }
+  .stage[data-desktop][data-tab="today"] .td > .td-paper { grid-area: paper; margin-top: 24px; }
   .stage[data-desktop][data-tab="today"] .td > .td-foot { grid-area: foot; }
 
-  /* The lede. */
-  .stage[data-desktop][data-tab="today"] .td .fd-note-greet { font-size: clamp(34px, 2.6vw, 44px); font-weight: 750; letter-spacing: -.035em; }
-  .stage[data-desktop][data-tab="today"] .td .fd-note-brief .fd-note-line { max-width: 60ch; margin-top: 16px; font-size: clamp(18px, 1.3vw, 21px); line-height: 1.55; }
-  .stage[data-desktop][data-tab="today"] .td .rt-check { margin-top: 26px; padding-top: 20px; }
+  /* The lede: the large title, and the brief a size up from body. */
+  .stage[data-desktop][data-tab="today"] .td .fd-note-greet { font: var(--t-large-title); letter-spacing: -.02em; }
+  .stage[data-desktop][data-tab="today"] .td .fd-note-brief .fd-note-line { max-width: 60ch; margin-top: 10px; font: var(--t-title-3); font-weight: 400; }
+  .stage[data-desktop][data-tab="today"] .td .rt-check { margin-top: 24px; }
 
-  /* The glance: three figures in a row, split by hairlines. */
-  .stage[data-desktop][data-tab="today"] .td-glance { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); }
+  /* The glance: three cells in a row. */
+  .stage[data-desktop][data-tab="today"] .td-glance { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 0; }
   .stage[data-desktop][data-tab="today"] .td-glance > :first-child { grid-column: auto; }
-  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather { align-self: stretch; align-items: center; padding: 22px 22px 22px 0; border: 0; }
-  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather b { font-size: 48px; font-weight: 650; }
-  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather p { font-size: 15px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather .fd-weather-meta { font-size: 12.5px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather-quiet { align-self: center; padding: 22px 22px 22px 0; border: 0; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget { min-height: 0; padding: 22px 22px; border-left: 1px solid var(--fd-rule); border-radius: 0; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget:last-child { padding: 22px 0 22px 22px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget, .stage[data-desktop][data-tab="today"] .td-glance .today-widget:hover { border-top: 0; border-right: 0; border-bottom: 0; background: none; box-shadow: none; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-cap { font-size: 13px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-value, .stage[data-desktop][data-tab="today"] .td-glance .today-widget-value.small { font-size: 32px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-sub { font-size: 12.5px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-bars { grid-area: art; align-self: end; justify-content: flex-end; width: 64px; height: 44px; margin: 0; gap: 4px; }
-  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-bars i { flex: 0 0 6px; border-radius: 3px; }
+  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather { align-self: stretch; align-items: center; padding: 16px 20px; border: 0; }
+  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather b { font: var(--t-large-title); letter-spacing: -.02em; }
+  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather p { font: var(--t-subhead); font-weight: 600; }
+  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather .fd-weather-meta { font: var(--t-footnote); }
+  .stage[data-desktop][data-tab="today"] .td-glance .fd-weather-quiet { align-self: stretch; padding: 16px 20px; border: 0; font: var(--t-subhead); }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget,
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget:hover { min-height: 0; padding: 16px 20px 18px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); box-shadow: none; }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget:last-child { padding: 16px 20px 18px; }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-cap { font: var(--t-subhead); font-weight: 600; }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-value, .stage[data-desktop][data-tab="today"] .td-glance .today-widget-value.small { font: var(--t-title-1); letter-spacing: -.02em; }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-sub { font: var(--t-footnote); }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-bars { justify-content: stretch; height: 32px; gap: 4px; }
+  .stage[data-desktop][data-tab="today"] .td-glance .today-widget-bars i { flex: 1; border-radius: 2px; }
 
-  /* What needs you. desktop.css still gives the heads-ups a card of their own; not here. */
-  .stage[data-desktop][data-tab="today"] .td-desk > .hu-card { border: 0; border-top: 1px solid var(--fd-rule); background: none; box-shadow: none; }
-  .stage[data-desktop][data-tab="today"] .td-desk > .hu-card:first-child { border-top: 0; }
-  .stage[data-desktop][data-tab="today"] .td-desk > :is(.hu-card, .fd-quiet, .setup-list, .fd-weather-quiet) { padding: 20px 0; }
-  .stage[data-desktop][data-tab="today"] .td-desk .hu-card > h2:not(#_), .stage[data-desktop][data-tab="today"] .td-desk .fd-quiet > h2 { margin: 0 0 4px; font-size: 19px; }
+  /* What needs you. desktop.css gives the heads-ups a card of their own; here the rows are the cell. */
+  .stage[data-desktop][data-tab="today"] .td-desk > .hu-card { padding: 0; border: 0; background: none; box-shadow: none; }
   .stage[data-desktop][data-tab="today"] .td-desk .fd-mail-row:last-of-type { border-bottom: 0; }
+  .stage[data-desktop][data-tab="today"] .td-desk .hu-actions .fd-button { min-height: 34px; padding: 0 16px; }
+  .stage[data-desktop][data-tab="today"] .td-desk .hu-actions .fd-button::after { content: ""; position: absolute; inset: -5px 0; }
+  .stage[data-desktop][data-tab="today"] .td-desk .hu-actions .fd-button { position: relative; }
+  .stage[data-desktop][data-tab="today"] .td-desk .hu-quiet { min-height: 34px; }
+  .stage[data-desktop][data-tab="today"] .td-desk .hu-item { padding-bottom: 12px; }
 
   /* The paper: a lead story, four pictured stories, the market read beside them. */
   .stage[data-desktop][data-tab="today"] .td-news {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) minmax(240px, .9fr);
     grid-auto-flow: row dense;
-    gap: 30px clamp(24px, 2vw, 36px);
+    gap: 28px clamp(20px, 2vw, 32px);
     align-items: start;
     padding: 0;
     border: 0;
   }
   .stage[data-desktop][data-tab="today"] .td-news:not(:has(> .fd-news-market)) { grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); }
-  .stage[data-desktop][data-tab="today"] .td-news > .td-news-head { grid-column: 1 / -1; grid-row: 1; padding-bottom: 14px; }
-  .stage[data-desktop][data-tab="today"] .td .td-news .td-news-head h2 { margin: 0; font-size: 24px; }
-  .stage[data-desktop][data-tab="today"] .td-news-head p { font-size: 13px; }
-  .stage[data-desktop][data-tab="today"] .td-news > .fd-news-foot { grid-column: 1 / -1; margin: -6px 0 0; }
+  .stage[data-desktop][data-tab="today"] .td-news > .td-news-head { grid-column: 1 / -1; grid-row: 1; padding: 0; }
+  .stage[data-desktop][data-tab="today"] .td .td-news .td-news-head h2 { font: var(--t-title-2); }
+  .stage[data-desktop][data-tab="today"] .td-news-head p { font: var(--t-footnote); }
+  .stage[data-desktop][data-tab="today"] .td-news > .fd-news-foot { grid-column: 1 / -1; margin: -8px 0 0; }
 
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item { position: relative; display: block; align-self: stretch; border: 0; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row { display: flex; flex-direction: column; height: 100%; gap: 6px; padding: 0; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo { flex: none; width: auto; height: auto; aspect-ratio: 16 / 10; margin-bottom: 8px; border-radius: 18px; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo.is-blank span { font-size: 11.5px; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; font-weight: 700; line-height: 1.32; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-line { font-size: 13.5px; line-height: 1.5; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-meta { font-size: 12px; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item > .fd-ask.icon { position: absolute; top: 10px; right: 10px; margin: 0; background: color-mix(in srgb, var(--sys-bg) 72%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fd-ink); }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row:focus-visible { outline-offset: 4px; border-radius: 18px; }
+  /* Stories sit on the ground here, as in News on the Mac: no cell. */
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item,
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item.is-lead + .fd-news-item { position: relative; display: block; align-self: stretch; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item::before { content: none; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 4px; padding: 0; border: 0; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo { position: relative; top: auto; left: auto; flex: none; width: auto; height: auto; aspect-ratio: 16 / 10; margin-bottom: 8px; border-radius: 12px; background: var(--sys-surface-2); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo.is-blank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: var(--sys-surface-2); color: var(--sys-secondary); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo.is-blank span { font: var(--t-footnote); }
+  /* No zoom on hover: News on the Mac keeps its pictures still. */
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo img,
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row:hover .fd-news-photo img { transform: none; transition: none; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-title,
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row:hover .fd-news-title { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font: var(--t-headline); letter-spacing: 0; text-decoration: none; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-line { margin: 0; font: var(--t-subhead); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-meta { margin: 2px 0 0; padding: 0; font: var(--t-footnote); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item > .fd-ask.icon { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; margin: 0; border: 0; background: var(--glass-chrome-bg); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); color: var(--sys-label); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-row:focus-visible { outline: 2px solid var(--tint); outline-offset: 4px; border-radius: 12px; }
 
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item.is-lead { grid-column: 1; grid-row: 2 / span 2; }
-  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-photo { flex: 1 1 auto; min-height: 280px; aspect-ratio: auto; border-radius: 22px; }
-  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-title { font-size: clamp(24px, 1.8vw, 30px); font-weight: 750; line-height: 1.18; letter-spacing: -.025em; }
-  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-line { font-size: 15.5px; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-item.is-lead { grid-column: 1; grid-row: 2 / span 2; overflow: visible; }
+  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-photo { flex: 1 1 auto; min-height: 280px; aspect-ratio: auto; border-radius: 16px; }
+  .stage[data-desktop][data-tab="today"] .td-news .is-lead :is(.fd-news-title, .fd-news-line, .fd-news-meta) { margin-inline: 0; }
+  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-title,
+  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-row:hover .fd-news-title { font: var(--t-title-1); letter-spacing: -.02em; }
+  .stage[data-desktop][data-tab="today"] .td-news .is-lead .fd-news-line { font: var(--t-body); }
 
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-market { grid-column: -2; grid-row: 2 / span 2; align-self: stretch; margin: 0; padding: 0 0 0 clamp(24px, 2vw, 36px); border: 0; border-left: 1px solid var(--fd-rule); border-radius: 0; background: none; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-market-head { margin-bottom: 8px; color: var(--fd-ink); font-size: 17px; font-weight: 750; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-summary { font-size: 15px; line-height: 1.55; font-weight: 500; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sector-name { font-size: 13.5px; text-transform: none; }
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sector-why { font-size: 12.5px; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-market { grid-column: -2; grid-row: 2 / span 2; align-self: start; margin: 0; padding: 16px 20px 8px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-market-head { margin-bottom: 4px; font: var(--t-headline); color: var(--sys-label); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-summary { font: var(--t-subhead); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sectors { gap: 0; margin: 10px 0 4px; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sector { padding: 10px 0; border-top: .5px solid var(--sys-separator); }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sector-name { font: var(--t-subhead); font-weight: 600; text-transform: none; }
+  .stage[data-desktop][data-tab="today"] .td-news .fd-news-sector-why { font: var(--t-footnote); }
 
-  /* The foot: under the glance, in the room the surface leaves beside it. */
-  .stage[data-desktop][data-tab="today"] .td-foot { display: flex; flex-direction: column; gap: 14px; }
-  .stage[data-desktop][data-tab="today"] .td-foot > .fd-note { margin: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stage[data-desktop][data-tab="today"] .td-news .fd-news-photo img { transition: none; }
+  /* The foot: under the glance, in the room the right column leaves. */
+  .stage[data-desktop][data-tab="today"] .td-foot { display: flex; flex-direction: column; }
 }

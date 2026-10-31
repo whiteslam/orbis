@@ -1,130 +1,224 @@
 /* ─── Journal: a diary page ───────────────────────────────────────────
-   components/journal/journal.tsx. Writing leads: the date, the week strip and
-   one open page to write on. Past days follow as a timeline grouped by week,
-   marked by a mood dot rather than a card each; saved notes and the quiet
-   footer close it. On the phone it is one column; on desktop the page stays on
-   the left while the timeline scrolls on the right. No boxes inside boxes:
-   only the writing page and the saved notes sit on a surface. */
-:root {
-  --jr-mood-1: var(--brand-red);
-  --jr-mood-2: var(--brand-gold);
-  --jr-mood-3: var(--fd-faint);
-  --jr-mood-4: var(--brand-teal);
-  --jr-mood-5: var(--brand-green);
-}
+   components/journal/*. Loaded after brand-app.css and atlas-profile.css,
+   so it settles what those give the Journal (atlas-profile.css belongs to
+   Settings; anything Journal needs differently is overridden here, under .jr).
 
-.jr { display: flex; flex-direction: column; gap: 34px; margin-top: 18px; }
+   Apple's way, by docs/design/apple.md: today's page is one solid cell (the
+   date, the week, how you feel, the writing, tags and save, voice notes).
+   Past days follow as inset grouped lists, one cell per week or month under
+   a 13px header, each day a row with its mood as a dot. Saved notes are a
+   section of their own; the quiet footer closes the page. */
+.jr {
+  /* The validated chart series, not the --sys-* names: inside a Field screen
+     02-home.css maps --sys-green and --sys-blue to the tint, which would make
+     a good day and a great day the same dot. */
+  --jr-mood-1: var(--series-4);
+  --jr-mood-2: var(--series-2);
+  --jr-mood-3: var(--series-7);
+  --jr-mood-4: var(--series-1);
+  --jr-mood-5: var(--series-6);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 8px;
+}
 .jr [data-mood="1"] { --jr-mood: var(--jr-mood-1); }
 .jr [data-mood="2"] { --jr-mood: var(--jr-mood-2); }
 .jr [data-mood="3"] { --jr-mood: var(--jr-mood-3); }
 .jr [data-mood="4"] { --jr-mood: var(--jr-mood-4); }
 .jr [data-mood="5"] { --jr-mood: var(--jr-mood-5); }
 
-/* ─── The page you write on ─── */
-.jr-write {
-  padding: 20px 18px 18px;
-  border: var(--gl-edge);
-  border-radius: 28px;
-  background: var(--gl-fill);
-  -webkit-backdrop-filter: var(--gl-blur);
-  backdrop-filter: var(--gl-blur);
-  box-shadow: var(--gl-shadow);
-}
-.jr-write-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 20px; }
-.jr-date { margin: 0; color: var(--fd-ink); font-size: 26px; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; overflow-wrap: break-word; min-width: 0; }
-.jr-date span { display: block; margin-bottom: 4px; color: var(--fd-faint); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+/* Section titles on the page, above their cells. */
+.jr-h { margin: 0; color: var(--sys-label); font: var(--t-title-3); letter-spacing: -.01em; }
+.jr .fd-note { margin: 8px 16px 0; color: var(--sys-secondary); font: var(--t-footnote); }
+.jr .fd-msg { padding: 12px 16px; border-radius: 14px; font: var(--t-subhead); }
+.jr .fd-link { min-height: 44px; display: inline-flex; align-items: center; color: var(--tint); font: var(--t-subhead); }
 
-/* The streak: one line and seven dots. */
-.jr-streak { margin: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.jr-streak-line { margin: 0; display: flex; align-items: center; gap: 5px; color: var(--fd-soft); font-size: 13px; }
-.jr-streak-line svg { color: var(--brand-gold); }
-.jr-streak-line b { color: var(--fd-ink); font-size: 15px; font-weight: 750; font-variant-numeric: tabular-nums; }
-.jr-count { margin-left: 6px; padding-left: 9px; border-left: 1px solid var(--fd-rule); color: var(--fd-faint); }
-.jr-week { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.jr-week li { display: grid; justify-items: center; gap: 4px; width: 20px; }
-.jr-week i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fd-ink) 22%, transparent); }
-.jr-week li.on i { background: var(--fd-accent); box-shadow: none; }
-.jr-week li.open i { box-shadow: inset 0 0 0 2px var(--fd-accent); }
-.jr-week span { color: var(--fd-faint); font-size: 10.5px; font-weight: 600; }
+/* ─── Today's page: one cell ─── */
+.jr-write { padding: 16px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.jr-write-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.jr-date { margin: 0; color: var(--sys-label); font: var(--t-title-1); letter-spacing: -.02em; overflow-wrap: break-word; min-width: 0; }
+.jr-date span { display: block; color: var(--sys-secondary); font: var(--t-subhead); font-weight: 600; letter-spacing: 0; }
 
-/* The editor: the mood row, then the page itself, then tags and save. */
-.jr .pf-editor { margin-top: 22px; }
-.jr .jr-prompt { margin: 0; color: var(--fd-soft); font-size: 14px; font-weight: 600; letter-spacing: 0; }
-.jr .pf-moods { gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+/* The streak: one line and seven dots, filled for the days written. */
+.jr .jr-streak { margin: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.jr-streak-line { margin: 0; display: flex; align-items: center; gap: 4px; color: var(--sys-secondary); font: var(--t-footnote); }
+.jr-streak-line svg { color: var(--sys-amber); }
+.jr-streak-line b { color: var(--sys-label); font: var(--t-headline); font-variant-numeric: tabular-nums; }
+.jr-count { margin-left: 6px; padding-left: 8px; border-left: .5px solid var(--sys-separator); color: var(--sys-secondary); }
+.jr-week { display: flex; gap: 6px; margin: 0; padding: 0; }
+.jr-week > span { display: grid; justify-items: center; gap: 4px; width: 20px; }
+.jr-week i { width: 10px; height: 10px; box-sizing: border-box; border: 1.5px solid var(--sys-tertiary); border-radius: 50%; }
+.jr-week > .on i { border: 0; background: var(--sys-green); }
+.jr-week > .open i { border: 2px solid var(--sys-green); }
+.jr-week > span > span { color: var(--sys-secondary); font: var(--t-caption); }
+
+/* The editor: how you feel, the page itself, then tags and save. */
+.jr .pf-editor { margin-top: 20px; }
+.jr .jr-prompt { margin: 0; color: var(--sys-label); font: var(--t-headline); letter-spacing: 0; }
+/* Moods: five equal tiles, the emoji over its word; the chosen one in the tint. */
+.jr .pf-moods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 .jr .pf-moods button {
-  flex: 1 0 auto;
-  flex-direction: row;
+  min-width: 0;
+  min-height: 60px;
+  flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 12px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 14px;
+  background: var(--sys-fill);
+  box-shadow: none;
+  color: var(--sys-label);
+  font: var(--t-caption);
+  transition: background-color .15s ease, color .15s ease;
 }
-.jr .pf-moods button span { font-size: 17px; }
+.jr .pf-moods button span { font-size: 22px; line-height: 28px; }
+.jr .pf-moods button[aria-checked="true"] { background: var(--tint); color: var(--on-tint); font-weight: 600; }
+.jr .pf-moods button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .jr .jr-paper {
-  min-height: 190px;
+  min-height: 180px;
   margin-top: 16px;
-  padding: 4px 2px;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
-  color: var(--fd-ink);
-  font-size: 16.5px;
-  line-height: 1.75;
+  color: var(--sys-label);
+  font: var(--t-body);
+  line-height: 26px;
   resize: vertical;
 }
+.jr .jr-paper::placeholder { color: var(--sys-tertiary); }
 .jr .jr-paper:focus { border: 0; box-shadow: none; outline: none; }
-.jr .jr-paper:focus-visible { outline: 2px solid color-mix(in srgb, var(--fd-accent) 55%, transparent); outline-offset: 6px; }
-.jr .pf-tags { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fd-rule); }
-.jr .pf-tags button { min-height: 30px; font-size: 12.5px; }
-.jr .jr-save { align-items: center; margin-top: 16px; }
-.jr .jr-save .pf-count { margin-left: 0; margin-right: auto; }
+.jr .jr-paper:focus-visible { outline: 2px solid var(--tint); outline-offset: 4px; border-radius: 4px; }
+/* Tags: Apple's 32px grey capsules; ::after stretches the reach to 44px. */
+.jr .pf-tags { margin: 12px 0 0; padding: 12px 0 0; border: 0; border-top: .5px solid var(--sys-separator); }
+.jr .pf-tags > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.jr .pf-tags button { position: relative; min-height: 32px; padding: 0 12px; font: var(--t-subhead); transition: background-color .15s ease, color .15s ease; }
+.jr .pf-tags button::after { content: ""; position: absolute; inset: -6px -2px; }
+.jr .pf-tags button[aria-pressed="true"] { font-weight: 600; }
+.jr .pf-tags button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.jr .jr-save { align-items: center; gap: 8px; margin-top: 16px; }
+.jr .jr-save .pf-count { margin-left: 0; margin-right: auto; color: var(--sys-secondary); font: var(--t-caption); font-variant-numeric: tabular-nums; }
+.jr .jr-save button { min-height: 44px; padding: 0 20px; font: var(--t-headline); gap: 6px; }
 
 /* Today, written: the entry reads as the page. */
 .jr-today { margin-top: 20px; }
-.jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--jr-mood) 16%, transparent); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
-.jr-feeling span { font-size: 17px; }
-.jr .jr-prose { margin-top: 16px; color: var(--fd-ink); font-size: 16.5px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
-.jr .jr-today .pf-entry-tags { margin-top: 14px; }
-.jr .jr-today .fd-act { margin-top: 18px; }
+.jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px 0 8px; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-label); font: var(--t-subhead); font-weight: 600; }
+.jr-feeling span { font-size: 20px; line-height: 1; }
+.jr .jr-prose { margin-top: 14px; color: var(--sys-label); font: var(--t-body); line-height: 26px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jr .jr-today .pf-entry-tags { margin-top: 12px; color: var(--sys-secondary); font: var(--t-subhead); }
+.jr .jr-today .fd-act { align-items: center; gap: 16px; margin-top: 16px; }
+.jr .jr-today .fd-act button.ghost { min-height: 44px; padding: 0 18px; font: var(--t-subhead); font-weight: 600; }
 
-/* ─── The timeline ─── */
-.jr-side { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
-.jr-h { margin: 0; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
-.jr-past .pf-entries { margin-top: 6px; }
-.jr-group h3 { margin: 18px 0 4px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; }
-.jr-timeline { position: relative; margin: 0; padding: 0; list-style: none; }
-/* The thread the dots hang on. */
-.jr-timeline::before { content: ""; position: absolute; top: 14px; bottom: 14px; left: 5px; width: 2px; border-radius: 1px; background: var(--fd-rule); }
-.jr .jr-entry { position: relative; padding: 12px 0 14px 26px; border-bottom: 0; }
-.jr-entry-head { gap: 10px; }
-.jr-dot { position: absolute; top: 17px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--jr-mood, var(--fd-accent)); box-shadow: 0 0 0 3px var(--fd-bg, var(--sys-bg)); }
-.jr .jr-entry-head strong { font-size: 14.5px; }
-.jr .jr-entry-head small { margin-top: 1px; font-size: 12.5px; color: var(--fd-soft); }
-.jr .jr-entry-head .pf-entry-mood { font-size: 13px; }
-.jr .jr-entry .pf-delete { width: 34px; height: 34px; background: transparent; color: var(--fd-faint); transition: color .18s ease, background-color .18s ease; }
-.jr .jr-entry .pf-delete:hover { background: var(--fd-chip); color: var(--fd-alert); }
-.jr .jr-entry-body { margin-top: 8px; color: var(--fd-soft); font-size: 14.5px; line-height: 1.7; }
-.jr .jr-entry-body.folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
-.jr-entry-tags { margin: 8px 0 0; color: var(--fd-accent); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
-.jr .jr-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
-.jr .jr-links .pf-edit { display: inline; margin-top: 0; }
-.jr .jr-entry .pf-editor { margin-top: 0; }
-.jr-empty { margin-top: 12px; }
+/* Voice notes: rows on a grey cell inside the page, the record button a grey capsule. */
+.jr .vn-box { margin-top: 16px; padding-top: 16px; border-top: .5px solid var(--sys-separator); }
+.jr .vn-list { gap: 0; margin: 0 0 12px; border-radius: 14px; background: var(--sys-surface-2); overflow: clip; }
+.jr .vn-list li { position: relative; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 8px 6px 8px 10px; border-radius: 0; background: none; box-shadow: none; color: var(--sys-label); font: var(--t-subhead); }
+.jr .vn-list li + li::before { content: ""; position: absolute; top: 0; right: 0; left: 52px; border-top: .5px solid var(--sys-separator); }
+.jr .vn-play { position: relative; width: 32px; height: 32px; background: var(--tint); color: var(--on-tint); }
+.jr .vn-play::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+.jr .vn-play:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.jr .vn-record { gap: 6px; min-height: 44px; padding: 0 18px; border: 0; background: var(--sys-fill); box-shadow: none; color: var(--tint); font: var(--t-subhead); font-weight: 600; font-variant-numeric: tabular-nums; transition: background-color .15s ease, color .15s ease; }
+/* Recording: the system red on its own tint, so the stop button reads as live. */
+.jr .vn-record.on { background: var(--sys-tint-red); color: var(--sys-red); }
+.jr .vn-record:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.jr .vn-status { color: var(--sys-secondary); font: var(--t-subhead); }
 
-/* ─── Saved notes and the footer ─── */
-.jr-notes { padding: 18px; border: var(--gl-edge); border-radius: 24px; background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--gl-shadow); }
-.jr-sub { margin: 6px 0 0; color: var(--fd-faint); font-size: 13px; line-height: 1.5; }
-.jr-foot { display: flex; flex-direction: column; gap: 10px; }
-.jr-foot .pf-more { margin-top: 0; }
-.jr-foot .fd-note { margin: 0; font-size: 12px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .jr .jr-entry .pf-delete { transition: none; }
+/* Delete buttons in rows: a quiet glyph with no fill, red only when pointed at; 44px reach. */
+.jr .pf-delete { position: relative; width: 36px; height: 36px; background: transparent; color: var(--sys-secondary); transition: background-color .15s ease, color .15s ease; }
+.jr .pf-delete::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
+.jr .pf-delete:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .jr .pf-delete:hover { background: var(--sys-fill); color: var(--sys-red); }
 }
 
-/* ─── Desktop: the page and saved notes on the left; the timeline down the right ───
+/* History panels: a grey cell inside whatever opened them. */
+.jr .hs-panel { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--sys-surface-2); box-shadow: none; }
+.jr .hs-title { color: var(--sys-label); font: var(--t-subhead); font-weight: 600; }
+.jr :is(.hs-loading, .hs-empty) { color: var(--sys-secondary); font: var(--t-footnote); }
+.jr .hs-list li { border-top: .5px solid var(--sys-separator); }
+.jr .hs-list li:first-child { border-top: 0; }
+.jr .hs-row { color: var(--sys-label); font: var(--t-subhead); }
+.jr .hs-row time { color: var(--sys-secondary); font: var(--t-caption); }
+.jr .hs-actions { gap: 16px; font: var(--t-subhead); }
+.jr .hs-actions .fd-link { min-height: 32px; }
+.jr .hs-before { background: var(--sys-surface); color: var(--sys-secondary); font: var(--t-subhead); }
+
+/* ─── Past entries: inset grouped, one cell per week or month ─── */
+.jr-side { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+.jr-past .pf-entries { display: flex; flex-direction: column; margin-top: 0; }
+.jr-group h3 { margin: 16px 16px 6px; color: var(--sys-secondary); font: var(--t-footnote); }
+.jr-past > .jr-h + .pf-entries > .jr-group:first-child h3 { margin-top: 8px; }
+.jr-timeline { margin: 0; padding: 0; list-style: none; border-radius: var(--r-card); background: var(--sys-surface); overflow: clip; }
+/* Each day a row; the separator starts at the text, past the mood dot. */
+.jr .jr-entry { position: relative; padding: 12px 8px 4px 36px; border: 0; }
+.jr .jr-entry + .jr-entry::before { content: ""; position: absolute; top: 0; right: 0; left: 36px; border-top: .5px solid var(--sys-separator); }
+.jr .jr-entry:has(> .pf-editor) { padding: 16px; }
+.jr-entry-head { gap: 8px; }
+.jr-dot { position: absolute; top: 19px; left: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--jr-mood, var(--sys-tertiary)); }
+.jr .jr-entry-head strong { color: var(--sys-label); font: var(--t-headline); }
+.jr .jr-entry-head small { margin-top: 2px; color: var(--sys-secondary); font: var(--t-subhead); }
+.jr .jr-entry-head .pf-entry-mood { font-size: 15px; }
+.jr .jr-entry-body { margin: 6px 8px 0 0; color: var(--sys-label); font: var(--t-subhead); white-space: pre-wrap; overflow-wrap: anywhere; }
+.jr .jr-entry-body.folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+.jr-entry-tags { margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-footnote); overflow-wrap: anywhere; }
+.jr .jr-entry .vn-box { margin-top: 10px; padding-top: 0; border-top: 0; }
+.jr .jr-links { display: flex; flex-wrap: wrap; gap: 0 20px; margin-top: 0; }
+.jr .jr-links .pf-edit { margin-top: 0; }
+.jr .jr-entry .pf-editor { margin-top: 0; }
+.jr .pf-entries > .pf-more { align-self: flex-start; margin: 4px 0 0 16px; }
+.jr-empty { margin: 8px 0 0; padding: 14px 16px; border-radius: var(--r-card); background: var(--sys-surface); color: var(--sys-secondary); font: var(--t-subhead); }
+
+/* ─── Saved notes: a heading, its footnote, then cells ─── */
+.jr-notes { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.jr-sub { margin: 4px 0 0; color: var(--sys-secondary); font: var(--t-footnote); }
+/* The add form is a cell: its field filled grey, the save a tinted capsule. */
+.jr-notes > .fd-form { margin-top: 12px; padding: 16px; border-radius: var(--r-card); background: var(--sys-surface); }
+.jr-notes .fd-field { gap: 6px; color: var(--sys-secondary); font: var(--t-footnote); }
+.jr-notes .fd-field textarea { padding: 11px 12px; font: var(--t-body); }
+.jr-notes .fd-act.pf-act { margin-top: 12px; }
+.jr-notes .fd-act.pf-act button { min-height: 44px; padding: 0 20px; font: var(--t-headline); }
+/* Saved notes: one cell, each note a row under an inset hairline. */
+.jr-notes .pf-notes { gap: 0; margin-top: 20px; border-radius: var(--r-card); background: var(--sys-surface); overflow: clip; }
+.jr-notes .pf-card { position: relative; padding: 12px 16px 6px; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.jr-notes .pf-card + .pf-card::before { content: ""; position: absolute; top: 0; right: 0; left: 16px; border-top: .5px solid var(--sys-separator); }
+.jr-notes .pf-card > p { color: var(--sys-label); font: var(--t-body); }
+.jr-notes .pf-card > div { margin-top: 2px; }
+.jr-notes .pf-card small { color: var(--sys-secondary); font: var(--t-footnote); }
+/* A note's actions are plain tint words, as in a Mail toolbar; Delete in red. */
+.jr-notes .pf-card .hs-links { gap: 0 16px; }
+.jr-notes .pf-pill { min-height: 44px; padding: 0; border-radius: 0; background: none; box-shadow: none; color: var(--tint); font: var(--t-subhead); }
+.jr-notes .pf-pill.alert { background: none; color: var(--sys-red); }
+.jr-notes .pf-pill.primary { min-height: 36px; padding: 0 16px; border-radius: var(--r-pill); background: var(--tint); color: var(--on-tint); font-weight: 600; }
+.jr-notes .pf-pill:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 6px; }
+.jr-notes .pf-card form > div { gap: 16px; align-items: center; }
+.jr-notes .hs-note-edit { padding: 11px 12px; border: 0; border-radius: var(--r-field); background: var(--sys-surface-2); color: var(--sys-label); font: var(--t-body); }
+.jr-notes .hs-note-edit:focus { border: 0; box-shadow: none; outline: 2px solid var(--tint); outline-offset: 0; }
+.jr-notes .pf-notes > .pf-more { margin: 0 0 0 16px; }
+.jr-notes > .pf-empty { margin: 20px 0 0; padding: 14px 16px; border-radius: var(--r-card); background: var(--sys-surface); color: var(--sys-secondary); font: var(--t-subhead); }
+.jr-notes > .pf-more { display: flex; margin: 4px 0 0 16px; }
+
+/* The footer: deleted entries, then the privacy line. */
+.jr-foot { display: flex; flex-direction: column; gap: 4px; }
+.jr-foot .pf-more { margin: 0 0 0 16px; }
+.jr-foot .fd-note { margin-top: 0; }
+
+/* ─── Motion ───
+   Nothing moves when the tab opens. What appears because you did something
+   (today's entry once saved, a voice note just recorded, a note just saved,
+   a history panel opened) settles in on the spring; the mood and tag choices
+   change colour, which a second tap reverses from wherever it is. */
+@media (prefers-reduced-motion: no-preference) {
+  .jr :is(.jr-today[data-new], .jr-entry[data-new], .vn-list li[data-new], .pf-card[data-new], .hs-panel) { animation: jr-enter var(--spring-dur) var(--spring) both; }
+  @keyframes jr-enter { from { opacity: 0; transform: translate3d(0, 8px, 0); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jr :is(.pf-moods button, .pf-tags button, .vn-record, .pf-delete) { transition: none; }
+  .jr :is(.jr-today[data-new], .jr-entry[data-new], .vn-list li[data-new], .pf-card[data-new], .hs-panel) { animation: jr-fade .2s ease both; }
+  @keyframes jr-fade { from { opacity: 0; } }
+}
+
+/* ─── Desktop: the page and saved notes on the left; past entries down the right ───
    .jr-side dissolves into the grid so its parts can sit on either side. The
    timeline spans every row, and the last row is 1fr, so a long timeline never
    opens gaps between the page and the notes. */
@@ -134,21 +228,20 @@
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     grid-template-rows: auto auto 1fr;
-    gap: 28px 44px;
+    gap: 32px 40px;
     align-items: start;
     margin-top: 8px;
   }
   .stage[data-desktop] .jr-side { display: contents; }
-  .stage[data-desktop] .jr-write { grid-column: 1; grid-row: 1; padding: 30px 32px 26px; border-radius: 32px; }
+  .stage[data-desktop] .jr-write { grid-column: 1; grid-row: 1; padding: 20px 24px 24px; }
   .stage[data-desktop] .jr-notes { grid-column: 1; grid-row: 2; }
   .stage[data-desktop] .jr-foot { grid-column: 1; grid-row: 3; }
-  .stage[data-desktop] .jr-past { grid-column: 2; grid-row: 1 / -1; padding-top: 6px; }
-  .stage[data-desktop] .jr-date { font-size: 34px; }
-  .stage[data-desktop] .jr .jr-paper { min-height: 300px; font-size: 17px; }
-  .stage[data-desktop] .jr .jr-prose { font-size: 17px; }
-  .stage[data-desktop] .jr .pf-moods button { flex: 1 1 0; }
+  .stage[data-desktop] .jr-past { grid-column: 2; grid-row: 1 / -1; }
+  /* Wide screens: titles a step up, as Apple does on iPad and Mac. */
+  .stage[data-desktop] .jr-h { font: var(--t-title-2); letter-spacing: -.01em; }
+  .stage[data-desktop] .jr-date { font: var(--t-large-title); letter-spacing: -.02em; }
+  .stage[data-desktop] .jr .jr-paper { min-height: 280px; }
+  /* Pointer sizes: Mac buttons are smaller than touch targets. */
+  .stage[data-desktop] .jr :is(.vn-record, .jr-save button, .jr-today .fd-act button.ghost) { min-height: 36px; }
+  .stage[data-desktop] .jr-notes .fd-act.pf-act button { min-height: 36px; }
 }
-
-/* Saved notes sit on one surface: each note is a row under a hairline, not a card of its own. */
-.jr-notes .pf-notes { gap: 0; }
-.jr-notes .pf-card { padding: 14px 0; border: 0; border-top: 1px solid var(--fd-rule); border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }

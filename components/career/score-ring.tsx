@@ -1,4 +1,14 @@
+'use client';
+
+import { useEffect, useState, type CSSProperties } from 'react';
 import { scoreBand } from '@/components/career/format';
+
+/**
+ * Rings draw their arc once, the first time the app shows scores; after that
+ * (switching back to Jobs, reopening a sheet) they appear already drawn, since
+ * motion people see many times a day stays still.
+ */
+let ringsDrawn = false;
 
 const SIZES = { sm: 40, md: 52, lg: 76 } as const;
 const STROKE = { sm: 3.5, md: 4, lg: 5 } as const;
@@ -32,6 +42,10 @@ export function ScoreRing({ score, size = 'md', threshold = null, lowConfidence 
   showWord?: boolean;
 }>) {
   const { band, word } = scoreBand(score);
+  const [draw] = useState(() => !ringsDrawn && score !== null);
+  useEffect(() => {
+    if (score !== null) ringsDrawn = true;
+  }, [score]);
   const box = SIZES[size];
   const stroke = STROKE[size];
   const radius = (box - stroke) / 2 - 1;
@@ -48,7 +62,7 @@ export function ScoreRing({ score, size = 'md', threshold = null, lowConfidence 
   const outer = radius + stroke * 0.9;
 
   return (
-    <span className={`cr-ring cr-ring-${size} cr-band-${band}`} role="img" aria-label={label}>
+    <span className={`cr-ring cr-ring-${size} cr-band-${band}${draw && !lowConfidence ? ' draw' : ''}`} role="img" aria-label={label}>
       <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} aria-hidden="true">
         <circle className="cr-ring-track" cx={centre} cy={centre} r={radius} strokeWidth={stroke} />
         {score !== null && value > 0 && (
@@ -59,6 +73,7 @@ export function ScoreRing({ score, size = 'md', threshold = null, lowConfidence 
             r={radius}
             strokeWidth={stroke}
             strokeDasharray={arcPattern((value / 100) * circumference, circumference, lowConfidence)}
+            style={{ '--cr-arc': `${(value / 100) * circumference}px` } as CSSProperties}
             transform={`rotate(-90 ${centre} ${centre})`}
           />
         )}

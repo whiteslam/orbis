@@ -16,6 +16,8 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Files already here when the view opened stay still; one added since enters (page-health.css).
+  const [seen] = useState(() => new Set(documents.map((document) => document.id)));
 
   // The file goes straight to Storage; the server then reads it from there and indexes it.
   function upload(file: File) {
@@ -108,7 +110,7 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
           <h2 className="hl-h">Saved</h2>
           <ul className="hl-docs">
             {documents.map((document) => (
-              <li key={document.id}>
+              <li key={document.id} data-new={!seen.has(document.id) || undefined}>
                 <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
                 <div>
                   <strong>{document.fileName}</strong>

@@ -1,101 +1,162 @@
-/* ─── Atlas sign-in, lock and PIN screens ───────────────────────────
-   One column straight on the Field ground: no card, no glass. The
-   column is phone-width and centred on larger screens; .auth-foot
-   sinks to the bottom of it. */
-.auth-stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px; background: var(--fd-field); color: var(--fd-ink); }
+/* ─── Sign-in, lock and PIN screens, the Apple way ───────────────────
+   One column on the grouped background: no card, no glass, no glow. Fields
+   are solid cells, the one action a 50px tint capsule, every text an Apple
+   text style. The column is phone-width and centred on larger screens;
+   .auth-foot sinks to the bottom of it. Each rule leads with .auth-stage so it
+   settles over page-public.css, which loads earlier at that weight. */
+.auth-stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px; background: var(--sys-bg); color: var(--sys-label); }
 .auth-card { width: min(100%, 400px); min-height: min(100%, 760px); flex: 1 0 auto; max-height: 820px; margin: auto; padding: 38px 0 12px; display: flex; flex-direction: column; }
-.auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 40px; }
-.auth-brand strong { font-size: 20px; font-weight: 700; letter-spacing: -.04em; }
-.auth-heading { margin-bottom: 26px; }
-.auth-heading .eyebrow { margin: 0; color: var(--fd-accent); font-size: 10px; font-weight: 700; }
-.auth-heading h1 { margin: 10px 0 0; font-size: 31px; font-weight: 700; letter-spacing: -.035em; line-height: 1.14; }
-.auth-heading > p:last-child { margin: 9px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
-.auth-mode { display: flex; gap: 6px; padding: 4px; margin: 0 0 26px; border-radius: var(--r-pill); background: var(--fd-rule); }
-.auth-mode button { flex: 1; min-height: 38px; padding: 7px 8px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.auth-mode button.active { background: var(--fd-btn); color: var(--fd-btn-ink); font-weight: 650; }
-.auth-form { display: flex; flex-direction: column; gap: 7px; }
-.auth-form label { margin-top: 9px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; }
-.auth-form label:first-child { margin-top: 0; }
-.auth-form input { box-sizing: border-box; width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--fd-rule); border-radius: 13px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; outline: none; }
-.auth-form input:focus { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
-.auth-submit { min-height: 48px; margin-top: 15px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
-.auth-submit:enabled:hover { opacity: .88; }
-.auth-submit:disabled { cursor: not-allowed; opacity: .65; }
-.auth-link { color: var(--fd-accent); font-size: 12.5px; font-weight: 650; text-decoration: none; }
-.auth-link:hover { text-decoration: underline; }
-.auth-forgot { display: block; align-self: center; margin-top: 20px; text-align: center; }
-.auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--fd-faint); font-size: 11.5px; }
-.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--fd-rule); }
-.auth-passkey { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; cursor: pointer; }
-.auth-passkey:hover:not(:disabled) { color: var(--fd-accent); }
-.auth-passkey:disabled { cursor: not-allowed; opacity: .65; }
-.auth-foot { margin-top: auto; padding-top: 28px; }
-.auth-note { margin: 0; color: var(--fd-faint); font-size: 11px; line-height: 1.6; text-align: center; }
-.auth-legal { display: flex; justify-content: center; gap: 16px; margin: 14px 0 0; padding: 0; list-style: none; }
-.auth-legal a { color: var(--fd-faint); font-size: 11px; font-weight: 600; text-decoration: none; }
-.auth-legal a:hover { color: var(--fd-soft); text-decoration: underline; }
-.auth-signout { padding: 0; border: 0; background: none; color: var(--fd-alert); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
-.auth-signout:hover { text-decoration: underline; }
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; }
+.auth-stage .auth-brand strong { font: var(--t-title-3); font-weight: 700; letter-spacing: -.01em; }
 
+.auth-stage .auth-heading { margin-bottom: 24px; }
+.auth-stage .auth-heading .eyebrow { margin: 0; color: var(--sys-secondary); font: var(--t-subhead); }
+.auth-stage .auth-heading h1 { margin: 0; font: var(--t-large-title); letter-spacing: -.02em; overflow-wrap: break-word; min-width: 0; }
+.auth-stage .auth-heading > p:last-child { margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-body); }
+
+/* Sign in / Create account: Apple's segmented control. */
+.auth-stage .auth-mode { display: flex; gap: 0; margin: 0 0 24px; padding: 2px; border: 0; border-radius: 9px; background: var(--sys-fill); box-shadow: none; }
+.auth-stage .auth-mode button { flex: 1; min-height: 32px; padding: 0 8px; border: 0; border-radius: 7px; background: none; box-shadow: none; color: var(--sys-label); font: var(--t-footnote); font-weight: 500; cursor: pointer; }
+.auth-stage .auth-mode button.active { background: var(--seg-thumb); color: var(--sys-label); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04); }
+
+/* Fields: footnote labels over solid cells (the page is grey, so the field is the cell colour). */
+.auth-form { display: flex; flex-direction: column; gap: 6px; }
+.auth-stage .auth-form label { margin: 12px 0 0 16px; color: var(--sys-secondary); font: var(--t-footnote); }
+.auth-stage .auth-form label:first-child { margin-top: 0; }
+.auth-stage .auth-form input { box-sizing: border-box; width: 100%; min-height: 50px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--sys-surface); color: var(--sys-label); font: var(--t-body); outline: none; }
+.auth-stage .auth-form input::placeholder { color: var(--sys-tertiary); }
+.auth-stage .auth-form input:focus { outline: 0; }
+.auth-stage .auth-form input:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
+.auth-stage .auth-form input[aria-invalid="true"] { box-shadow: inset 0 0 0 1.5px var(--sys-red); }
+
+/* The one action: a 50px tint capsule. While it works, its words give way to a spinner in place. */
+.auth-stage .auth-submit { position: relative; display: grid; place-items: center; min-height: 50px; margin-top: 20px; padding: 0 20px; border: 0; border-radius: var(--r-pill); background: var(--tint); color: var(--on-tint); font: var(--t-headline); cursor: pointer; }
+.auth-stage .auth-submit:enabled:hover { background: var(--tint-press, var(--tint)); }
+.auth-stage .auth-submit:disabled { cursor: not-allowed; opacity: .4; }
+.auth-stage .auth-submit[aria-busy="true"] { opacity: 1; }
+.auth-submit > * { grid-area: 1 / 1; }
+.auth-spinner { width: 20px; height: 20px; border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%; opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-submit-label, .auth-spinner { transition: opacity .2s ease, transform var(--spring-snappy-dur, .3s) var(--spring-snappy, ease-out); }
+  .auth-submit[aria-busy="true"] .auth-submit-label { opacity: 0; transform: scale(.9); }
+  .auth-submit[aria-busy="true"] .auth-spinner { opacity: 1; animation: auth-spin .8s linear infinite; }
+}
+@keyframes auth-spin { to { transform: rotate(1turn); } }
+
+.auth-stage .auth-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; color: var(--tint); font: var(--t-body); text-decoration: none; }
+.auth-stage .auth-link:hover { text-decoration: none; opacity: .8; }
+.auth-stage :is(.auth-forgot, .auth-back) { display: flex; align-self: center; margin-top: 12px; text-align: center; }
+.auth-stage .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--sys-secondary); font: var(--t-footnote); }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-top: .5px solid var(--sys-separator); }
+/* Passkey: the grey capsule beside the tint one. */
+.auth-stage .auth-passkey { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: var(--r-pill); background: var(--sys-fill); box-shadow: none; color: var(--tint); font: var(--t-headline); cursor: pointer; }
+.auth-stage .auth-passkey:hover:not(:disabled) { background: var(--sys-surface-3); color: var(--tint); }
+.auth-stage .auth-passkey:disabled { cursor: not-allowed; opacity: .4; }
+.auth-stage .auth-foot { margin-top: auto; padding-top: 32px; }
+.auth-stage .auth-note { margin: 0; color: var(--sys-secondary); font: var(--t-footnote); text-align: center; text-wrap: pretty; }
+.auth-legal { display: flex; justify-content: center; gap: 20px; margin: 12px 0 0; padding: 0; list-style: none; }
+.auth-stage .auth-legal a { display: inline-flex; align-items: center; min-height: 44px; color: var(--sys-secondary); font: var(--t-footnote); text-decoration: none; }
+.auth-stage .auth-legal a:hover { color: var(--sys-label); }
+.auth-signout { padding: 0; border: 0; background: none; color: var(--sys-red); font: inherit; cursor: pointer; }
+.auth-stage .auth-signout { min-height: 44px; font: var(--t-subhead); }
+.auth-stage :is(.auth-submit, .auth-passkey, .auth-mode button, .auth-link, .auth-signout, .lock-alt, .auth-legal a, .pin-key):focus-visible { outline: 2px solid var(--tint); outline-offset: 3px; }
+
+/* Errors and confirmations: a cell, the system colour carrying the meaning. */
+.auth-stage .auth-feedback { margin: 12px 0 0; padding: 12px 16px; border-radius: 12px; background: var(--sys-surface); font: var(--t-subhead); }
+.auth-feedback.error { color: var(--sys-red); }
+.auth-feedback.success { color: var(--sys-green); }
+.auth-stage .auth-card > .auth-feedback:first-child { margin: 0 0 20px; }
+
+/* Wide screens: the ring keeps its half of the page, still and plain, no glow behind it. */
+@media (min-width: 1100px) {
+  .auth-stage.auth-split .auth-side { border-right: 0; }
+  .auth-stage.auth-split .auth-orbit::before { content: none; }
+  .auth-stage.auth-split .auth-ring { animation: none; }
+  .auth-stage.auth-split .auth-line { font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); }
+}
+
+/* ─── Lock and PIN: the iPhone passcode screen ─── */
 .lock-heading { display: flex; flex-direction: column; align-items: center; }
-.lock-heading h1 { margin: 20px 0 0; font-size: 27px; font-weight: 700; letter-spacing: -.03em; line-height: 1.16; }
-.lock-heading p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
-.lock-heading strong { color: var(--fd-ink); font-weight: 650; }
-.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; background: var(--fd-wash); color: var(--fd-accent); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.auth-stage .lock-heading h1 { margin: 20px 0 0; font: var(--t-title-1); letter-spacing: -.02em; overflow-wrap: break-word; min-width: 0; }
+.auth-stage .lock-heading p { margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-subhead); overflow-wrap: anywhere; }
+.lock-heading strong { color: var(--sys-label); font-weight: 600; }
+.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: var(--sys-surface); color: var(--sys-label); }
 .lock-device { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 0; }
-.lock-alt { display: block; margin: 0 auto; padding: 0; border: 0; background: none; color: var(--fd-accent); font-size: 13px; font-weight: 650; cursor: pointer; }
-.lock-alt:hover { text-decoration: underline; }
-.lock-password { margin-top: 32px; }
+.auth-stage .lock-alt { display: flex; align-items: center; justify-content: center; min-height: 44px; margin: 0 auto; padding: 0 8px; border: 0; background: none; color: var(--tint); font: var(--t-body); cursor: pointer; }
+.auth-stage .lock-alt:hover { opacity: .8; }
+.auth-stage .lock-password { margin-top: 28px; }
 .lock-password .auth-passkey { margin-top: 8px; }
-.lock-pin { display: flex; flex-direction: column; align-items: center; margin-top: 38px; }
-.lock-pin label { color: var(--fd-faint); font-size: 10px; font-weight: 700; }
-.lock-pin-status { margin: 12px 0 0; color: var(--fd-soft); font-size: 12px; }
+.auth-stage .lock-pin { display: flex; flex-direction: column; align-items: center; margin-top: 32px; }
+.auth-stage .lock-pin label { color: var(--sys-label); font: var(--t-body); }
+.auth-stage .lock-pin-status { margin: 12px 0 0; color: var(--sys-secondary); font: var(--t-footnote); }
 
 /* The PIN: a real numeric field under six dots, so typing and autofill still work. */
-.pin-field { position: relative; width: 236px; height: 52px; margin-top: 12px; }
+.pin-field { position: relative; width: 236px; height: 50px; margin-top: 12px; }
 .pin-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; font-size: 16px; cursor: text; }
-.pin-dots { height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border: 1px solid var(--fd-rule); border-radius: var(--r-lg); background: var(--fd-card); pointer-events: none; }
-.pin-field:focus-within .pin-dots { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
-.pin-dots span { width: 13px; height: 13px; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1.5px var(--fd-hairline); transition: background .12s, box-shadow .12s; }
-.pin-dots span.filled { background: var(--fd-ink); box-shadow: none; }
-/* With the keypad: bare dots, no box. */
+.pin-dots { height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border: 0; border-radius: var(--r-field); background: var(--sys-surface-2); pointer-events: none; }
+.pin-field:focus-within .pin-dots { box-shadow: 0 0 0 2px var(--tint); }
+.pin-dots span { width: 12px; height: 12px; border-radius: 50%; background: none; box-shadow: inset 0 0 0 1.5px var(--sys-label); }
+.pin-dots span.filled { background: var(--sys-label); box-shadow: none; }
+/* With the keypad: bare dots, as on the iPhone. */
 .pin-field.keypad { width: auto; height: 28px; }
-.pin-field.keypad .pin-dots { gap: 11px; padding: 0 6px; border: 0; background: none; }
+.pin-field.keypad .pin-dots { gap: 22px; padding: 0 6px; background: none; }
 .pin-field.keypad:focus-within .pin-dots { box-shadow: none; }
-.pin-field.keypad:has(.pin-native:focus-visible) .pin-dots { box-shadow: 0 0 0 1.5px var(--fd-hairline); border-radius: var(--r-pill); }
-.pin-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 260px; margin: 30px auto 0; }
-.pin-key { aspect-ratio: 1; min-height: 62px; justify-self: center; width: 100%; max-width: 76px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-family: var(--rounded); font-size: 25px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background .12s, transform .08s; }
-.pin-key:active:not(:disabled) { background: var(--fd-wash); transform: scale(.96); }
-.pin-key:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
-.pin-key:disabled { cursor: not-allowed; }
-.pin-key:disabled:not(.plain) { opacity: .55; cursor: not-allowed; }
-.pin-key.plain { background: none; box-shadow: none; color: var(--fd-soft); }
-.pin-key.plain:disabled { opacity: .35; cursor: not-allowed; }
-.pin-key.accent { color: var(--fd-accent); }
+/* The field is focused on arrival and is the only thing to type into, so its ring stays faint. */
+.pin-field.keypad:has(.pin-native:focus-visible) .pin-dots { box-shadow: 0 0 0 1.5px var(--sys-separator); border-radius: var(--r-pill); }
+.auth-stage .pin-field.keypad { height: 28px; margin-top: 20px; }
+.auth-stage .pin-field.keypad .pin-dots { gap: 22px; }
+.auth-stage .pin-dots span { width: 13px; height: 13px; }
+.auth-stage .pin-dots span.filled { background: var(--sys-label); }
+/* Keys: iOS's grey discs, a big light digit, a brighter disc while pressed. */
+.auth-stage .pin-pad { display: grid; grid-template-columns: repeat(3, 78px); justify-content: center; gap: 16px 26px; width: 100%; max-width: none; margin: 40px auto 0; }
+.auth-stage .pin-key { width: 78px; height: 78px; min-height: 0; max-width: none; aspect-ratio: auto; justify-self: center; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--sys-fill); box-shadow: none; color: var(--sys-label); font: 400 34px/1 var(--font-display); font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background-color .3s ease; }
+.auth-stage .pin-key:active:not(:disabled) { background: var(--sys-surface-3); transition: none; }
+.auth-stage .pin-key:disabled { cursor: not-allowed; }
+.auth-stage .pin-key:disabled:not(.plain) { opacity: .4; }
+.auth-stage .pin-key.plain { background: none; color: var(--sys-label); }
+.auth-stage .pin-key.plain:active:not(:disabled) { background: none; opacity: .5; }
+.auth-stage .pin-key.plain:disabled { opacity: .3; }
+.auth-stage .pin-key.accent { color: var(--tint); }
+@media (max-height: 700px) {
+  .auth-stage .pin-pad { grid-template-columns: repeat(3, 68px); gap: 12px 24px; margin-top: 28px; }
+  .auth-stage .pin-key { width: 68px; height: 68px; font-size: 30px; }
+}
+
+/* A dot fills with a small spring; a wrong PIN shakes the row, as the iPhone does
+   (lock-screen.tsx and pin-setup.tsx flip data-shake between a and b to restart it). */
+@media (prefers-reduced-motion: no-preference) {
+  .pin-dots span.filled { animation: pin-pop var(--spring-snappy-dur, .3s) var(--spring-snappy, cubic-bezier(.23, 1, .32, 1)); }
+  .lock-pin[data-shake="a"] .pin-dots { animation: pin-shake-a .5s cubic-bezier(.36, .07, .19, .97); }
+  .lock-pin[data-shake="b"] .pin-dots { animation: pin-shake-b .5s cubic-bezier(.36, .07, .19, .97); }
+}
+@keyframes pin-pop { from { transform: scale(.5); } }
+@keyframes pin-shake-a { 15% { transform: translateX(-14px); } 30% { transform: translateX(12px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
+@keyframes pin-shake-b { 15% { transform: translateX(-14px); } 30% { transform: translateX(12px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
 
 .auth-card.centered { align-items: center; padding-top: 26px; text-align: center; }
 .auth-card.centered > * { width: 100%; }
 .auth-card.centered .auth-form, .auth-card.centered .auth-feedback { text-align: left; }
-.lock-signout { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 12px; }
+.auth-stage .lock-signout { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding-top: 0; border-top: 0; color: var(--sys-secondary); font: var(--t-subhead); }
 .auth-foot > .lock-signout:first-child { margin-top: 0; }
 /* Keyboard open: pin the column to the top of the visible area so the field sits right above the keyboard. */
 .keyboard-open .auth-stage { padding-top: max(12px, var(--safe-top)); }
 .keyboard-open .auth-card { margin-top: 0; padding-top: 8px; min-height: 0; }
 .keyboard-open .auth-card .auth-brand { margin-bottom: 16px; }
 .keyboard-open .auth-foot { display: none; }
-.lock-cover { gap: 14px; align-items: center; justify-content: center; color: var(--fd-soft); font-size: 13px; }
+.auth-stage.lock-cover { gap: 16px; align-items: center; justify-content: center; color: var(--sys-secondary); font: var(--t-subhead); }
 .lock-cover p { margin: 0; }
-.passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
-.passkey-prompt strong { font-size: 13px; }
-.passkey-prompt p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.passkey-prompt .passkey-error { color: var(--status-critical); }
-.passkey-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
-.passkey-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* "Secure your Orbis" on Today: a cell with Face ID's green glyph. */
+.passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 16px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.passkey-prompt strong { display: block; color: var(--sys-label); font: var(--t-headline); }
+.passkey-prompt p { margin: 2px 0 0; color: var(--sys-secondary); font: var(--t-subhead); }
+.passkey-prompt .passkey-error { color: var(--sys-red); }
+.passkey-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; background: var(--sys-green); color: var(--on-fill); }
+.passkey-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.passkey-prompt .passkey-actions .finance-button.primary { min-height: 44px; padding: 0 20px; font: var(--t-headline); }
+.passkey-prompt .passkey-actions .finance-button.passkey-later { min-height: 44px; padding: 0 4px; border: 0; background: none; box-shadow: none; color: var(--tint); font: var(--t-body); }
+.passkey-prompt .passkey-actions .finance-button.passkey-later:hover { color: var(--tint); opacity: .8; }
 .passkey-prompt.added { align-items: center; }
-.auth-back { display: block; margin-top: 20px; text-align: center; }
-.auth-feedback { margin: 10px 0 0; padding: 11px 14px; border-radius: 13px; font-size: 12.5px; line-height: 1.5; }
-.auth-feedback.error { background: var(--fd-alert-wash); color: var(--fd-alert); }
-.auth-feedback.success { background: var(--fd-wash); color: var(--fd-accent); }
 /* Phones in portrait, and touch devices in landscape (short screens), run Orbis full-screen. */
 @media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
   /* Only the screen inside the app scrolls. Left scrollable, the page itself

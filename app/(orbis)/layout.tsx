@@ -24,6 +24,8 @@ import '../styles/career-panel.css';
 import '../styles/research.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
+// The app shell: the tab bar and the Ask button (app/styles/shell.css).
+import '../styles/shell.css';
 import '../styles/orbis-ai.css';
 import '../styles/ask.css';
 import '../styles/journal.css';

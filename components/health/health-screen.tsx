@@ -84,7 +84,7 @@ function DocumentTiles({ documents, onOpen }: Readonly<{ documents: LibraryState
   return (
     <section className="hl-sec">
       <h2 className="hl-h">Documents</h2>
-      <div className="hl-docrows">
+      <div className="hl-docrows hl-cell">
         {documents.slice(0, HEALTH_DOCS_ON_MAIN).map((document) => (
           <button className="hl-docrow" type="button" key={document.id} onClick={onOpen}>
             <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
@@ -117,15 +117,17 @@ function CoachingSection({ fitnessPersona, coaching, onToggle }: Readonly<{ fitn
   return (
     <section className="hl-sec">
       <h2 className="hl-h">Coaching style</h2>
-      <button className="fd-line" type="button" aria-expanded={coaching} onClick={onToggle}>
-        <span className="fd-two hl-clip">{fitnessPersona.persona ? fitnessPersona.persona.trim().split('\n')[0].replace(/^#+\s*/, '') : 'Not set'}<small>Optional: how Orbis coaches you when you ask for advice</small></span>
-        <b className="fd-yes">{coachingAction(coaching, fitnessPersona.persona)}</b>
-      </button>
-      {coaching && (
-        <div className="hl-coach">
-          <FitnessPersonaEditor key={fitnessPersona.persona ? 'persona-saved' : 'persona-empty'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
-        </div>
-      )}
+      <div className="hl-cell">
+        <button className="fd-line" type="button" aria-expanded={coaching} onClick={onToggle}>
+          <span className="fd-two hl-clip">{fitnessPersona.persona ? fitnessPersona.persona.trim().split('\n')[0].replace(/^#+\s*/, '') : 'Not set'}<small>Optional: how Orbis coaches you when you ask for advice</small></span>
+          <b className="fd-yes">{coachingAction(coaching, fitnessPersona.persona)}</b>
+        </button>
+        {coaching && (
+          <div className="hl-coach">
+            <FitnessPersonaEditor key={fitnessPersona.persona ? 'persona-saved' : 'persona-empty'} state={fitnessPersona.state} persona={fitnessPersona.persona} />
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -187,30 +189,35 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
           <div className="hl-side">
             <section className="hl-sec hl-plans">
               <h2 className="hl-h">{today ? 'Today’s workout' : 'Plans'}</h2>
-              {today && <TodayWorkout today={today} onOpen={() => setView({ name: 'plans', planId: today.plan.id })} />}
+              {/* Inset grouped: each group of rows sits in one cell under its heading. */}
+              {today && <div className="hl-cell"><TodayWorkout today={today} onOpen={() => setView({ name: 'plans', planId: today.plan.id })} /></div>}
               {today && plans.length > 0 && <h3 className="hl-group">Your plans</h3>}
-              {plans.map((plan) => {
-                const { week, total, done } = planWeek(plan);
-                return (
-                  <button className="hl-row" type="button" key={plan.id} onClick={() => setView({ name: 'plans', planId: plan.id })}>
-                    <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
-                    <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
-                  </button>
-                );
-              })}
-              <button className={`fd-line hl-next${plans.length ? '' : ' first'}`} type="button" onClick={() => setView({ name: 'plans', planId: null })}>
-                <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
-                <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
-              </button>
+              <div className="hl-cell">
+                {plans.map((plan) => {
+                  const { week, total, done } = planWeek(plan);
+                  return (
+                    <button className="hl-row" type="button" key={plan.id} onClick={() => setView({ name: 'plans', planId: plan.id })}>
+                      <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
+                      <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
+                    </button>
+                  );
+                })}
+                <button className={`fd-line hl-next${plans.length ? '' : ' first'}`} type="button" onClick={() => setView({ name: 'plans', planId: null })}>
+                  <span>{plans.length ? 'All plans, or build a new one' : 'A workout, nutrition and sleep plan'}</span>
+                  <b className="fd-yes">{plans.length ? 'Open' : 'Build'}</b>
+                </button>
+              </div>
             </section>
 
             {advice && (
               <section className="hl-sec">
                 <h2 className="hl-h">Advice</h2>
-                <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
-                  <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
-                  <b className="fd-yes">Read</b>
-                </button>
+                <div className="hl-cell">
+                  <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
+                    <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
+                    <b className="fd-yes">Read</b>
+                  </button>
+                </div>
               </section>
             )}
 
