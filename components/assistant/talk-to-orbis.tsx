@@ -1,20 +1,100 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { BookOpen, Clock, Flame, LoaderCircle, Mic, Pin, Send, Square, WalletCards, X, type LucideIcon } from 'lucide-react';
+import { BookOpen, Check, Clock, Copy, Flame, LoaderCircle, Mic, Pin, RotateCcw, Send, SquarePen, Square, WalletCards, X, type LucideIcon } from 'lucide-react';
 import { askOrbisAction } from '@/app/ask/actions';
 import { talkAvailableAction, talkToOrbisAction, type TalkResult } from '@/app/ask/talk-actions';
 import { OrbisAiMark } from '@/components/brand/orbis-ai-mark';
 import { safeAction } from '@/lib/client/safe-action';
-import { ASK_SOURCES, type AskSource } from '@/lib/ask/select';
+import { ASK_SOURCES, type AskSource, type Citation } from '@/lib/ask/select';
 import { ASK_EVENT, ASK_OPEN_EVENT, type AskAbout, type AskRequest } from '@/lib/ask/about';
 import { RECORDER_PREFERENCES } from '@/lib/voice/types';
 import { TALK_MAX_SECONDS, type TalkTurn } from '@/lib/voice/talk';
 
 const SOURCE_ICONS: Record<AskSource, LucideIcon> = { journal: BookOpen, notes: Pin, spending: WalletCards, routines: Clock, steps: Flame };
 
+/** How each source reads in a sentence: "Orbis will read your journal and spending." */
+const SOURCE_WORDS: Record<AskSource, string> = { journal: 'journal', notes: 'saved notes', spending: 'spending', routines: 'routines', steps: 'steps' };
+
+/** First questions for the empty panel, each shown only while its source is on. */
+const STARTERS: Array<{ source: AskSource; question: string }> = [
+  { source: 'spending', question: 'How much did I spend this week?' },
+  { source: 'journal', question: 'What have I written about most this month?' },
+  { source: 'routines', question: 'Which routines have I been skipping?' },
+  { source: 'steps', question: 'How do my steps this week compare to last?' },
+  { source: 'notes', question: 'What did I save to read later?' },
+];
+
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking';
-type Turn = TalkTurn & { language?: string; id: number };
+type Turn = TalkTurn & { language?: string; id: number; citations?: Citation[]; inferred?: string[]; followUps?: string[] };
+
+/** "a", "a and b", "a, b and c". */
+function listWords(words: string[]) {
+  return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+}
+
+function reducedMotion() {
+  return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * While the answer is on its way: the animated mark and a line naming what
+ * Orbis is reading. The server reads every ticked source in one go, so the
+ * line walks through them in turn and then rests on writing the answer.
+ */
+function Thinking({ sources, about }: Readonly<{ sources: AskSource[]; about: AskAbout | null }>) {
+  const steps = [
+    ...(about ? [`Reading ${ABOUT_READING[about.kind]}`] : []),
+    ...sources.map((source) => `Reading your ${SOURCE_WORDS[source]}`),
+    'Writing the answer',
+  ];
+  const [step, setStep] = useState(0);
+  const last = steps.length - 1;
+  useEffect(() => {
+    if (step >= last) return;
+    const timer = window.setTimeout(() => setStep((current) => current + 1), 900);
+    return () => window.clearTimeout(timer);
+  }, [step, last]);
+  return (
+    <div className="talk-thinking">
+      <OrbisAiMark size={22} phase="thinking" />
+      <span aria-hidden="true">{steps[Math.min(step, last)]}…</span>
+      <span className="sr-only">Orbis is thinking</span>
+    </div>
+  );
+}
+
+/**
+ * The answer, a few words at a time; all at once under Reduce Motion. Screen
+ * readers get the whole answer at once rather than every partial version.
+ */
+function Reveal({ text, lang, onGrow, onDone }: Readonly<{ text: string; lang?: string; onGrow: () => void; onDone: () => void }>) {
+  const words = text.split(/(\s+)/);
+  const [shown, setShown] = useState(() => (reducedMotion() ? words.length : 0));
+  // Long answers take the same few seconds as short ones, not a word per beat.
+  const stride = Math.max(2, Math.ceil(words.length / 120));
+  const grow = useRef(onGrow);
+  const done = useRef(onDone);
+  useEffect(() => {
+    grow.current = onGrow;
+    done.current = onDone;
+  });
+  useEffect(() => {
+    if (shown >= words.length) {
+      done.current();
+      return;
+    }
+    const timer = window.setTimeout(() => setShown((count) => count + stride), 30);
+    grow.current();
+    return () => window.clearTimeout(timer);
+  }, [shown, words.length, stride]);
+  return (
+    <p className="talk-a" lang={lang}>
+      <span aria-hidden="true">{words.slice(0, shown).join('')}</span>
+      <span className="sr-only">{text}</span>
+    </p>
+  );
+}
 
 /** Quieter than this (RMS, 0–1) counts as silence. */
 const SILENCE_LEVEL = 0.02;
@@ -32,6 +112,7 @@ function wavUrl(base64: string) {
 }
 
 const ABOUT_KIND: Record<AskAbout['kind'], string> = { holding: 'About your holding', market: 'About the market read', news: 'About this story' };
+const ABOUT_READING: Record<AskAbout['kind'], string> = { holding: 'your holding', market: 'the market read', news: 'the story' };
 
 /** The mic button's face: a spinner while Orbis thinks, stop while it listens. */
 function MicIcon({ phase }: Readonly<{ phase: Phase }>) {
@@ -76,6 +157,24 @@ export function TalkToOrbis() {
   const sourcesRef = useRef(sources);
   /** Gives each turn a stable key; turns are only ever appended. */
   const nextTurnId = useRef(0);
+  /** The typed question on its way, shown in the log before the answer comes back. */
+  const [pending, setPending] = useState<string | null>(null);
+  /** The typed question that last failed, for Retry. */
+  const [failed, setFailed] = useState<string | null>(null);
+  /** The turn whose answer is still being revealed; its citations and follow-ups wait for it. */
+  const [revealing, setRevealing] = useState<number | null>(null);
+  const [copied, setCopied] = useState<number | null>(null);
+  const log = useRef<HTMLDivElement | null>(null);
+
+  /** Keeps the newest line in view, unless the reader has scrolled up to look back. */
+  function follow(force = false) {
+    const element = log.current;
+    if (!element) return;
+    if (force || element.scrollHeight - element.scrollTop - element.clientHeight < 96) element.scrollTop = element.scrollHeight;
+  }
+  useEffect(() => {
+    follow(true);
+  }, [turns.length, pending, phase, message]);
 
   useEffect(() => {
     let live = true;
@@ -185,27 +284,63 @@ export function TalkToOrbis() {
       setPhase('idle');
       return;
     }
-    turnsRef.current = [...turnsRef.current, { question: result.transcript ?? '', answer: result.answer, language: result.language, id: nextTurnId.current++ }];
-    setTurns(turnsRef.current);
+    addTurn({ question: result.transcript ?? '', answer: result.answer, language: result.language, citations: result.citations, inferred: result.inferred, followUps: result.followUps });
     say(result);
   }
 
-  async function ask(event: FormEvent) {
-    event.preventDefault();
-    const question = draft.trim();
-    if (question.length < 5 || phase === 'thinking') return;
+  function addTurn(turn: Omit<Turn, 'id'>) {
+    const id = nextTurnId.current++;
+    turnsRef.current = [...turnsRef.current, { ...turn, id }];
+    setTurns(turnsRef.current);
+    setRevealing(id);
+  }
+
+  /** Asks a typed question: the form, a starter, a follow-up or Retry. */
+  async function askQuestion(text: string) {
+    const question = text.replace(/\s+/g, ' ').trim();
+    if (question.length < 5 || phase === 'thinking' || phase === 'listening') return;
     silence();
     setMessage(null);
+    setFailed(null);
+    setDraft('');
+    setPending(question);
     setPhase('thinking');
     const result = await safeAction(askOrbisAction)({ question, sources: sourcesRef.current, earlier: turnsRef.current.map(({ question: q, answer }) => ({ question: q, answer })), about });
+    setPending(null);
     setPhase('idle');
     if (!result.success || !result.answer) {
+      // The question goes back in the box, so it can be edited or retried.
+      setDraft(question);
+      setFailed(question);
       setMessage(result.message || 'Orbis couldn’t answer that. Try again.');
       return;
     }
+    addTurn({ question, answer: result.answer, citations: result.citations, inferred: result.inferred, followUps: result.followUps });
+  }
+
+  function ask(event: FormEvent) {
+    event.preventDefault();
+    void askQuestion(draft);
+  }
+
+  function newChat() {
+    stopRecording.current?.();
+    silence();
+    turnsRef.current = [];
+    setTurns([]);
+    setMessage(null);
+    setFailed(null);
+    setRevealing(null);
     setDraft('');
-    turnsRef.current = [...turnsRef.current, { question, answer: result.answer, id: nextTurnId.current++ }];
-    setTurns(turnsRef.current);
+    setPhase('idle');
+    typing.current?.focus({ preventScroll: true });
+  }
+
+  function copy(turn: Turn) {
+    void navigator.clipboard?.writeText(turn.answer).then(() => {
+      setCopied(turn.id);
+      window.setTimeout(() => setCopied((current) => (current === turn.id ? null : current)), 1600);
+    }, () => setMessage('Couldn’t copy. Select the answer and copy it instead.'));
   }
 
   function toggle(source: AskSource) {
@@ -288,6 +423,12 @@ export function TalkToOrbis() {
     setPhase('listening');
   }
 
+  const starters = STARTERS.filter((starter) => sources.includes(starter.source)).slice(0, 3);
+  const ticked = ASK_SOURCES.filter((source) => sources.includes(source.id)).map((source) => SOURCE_WORDS[source.id]);
+  let reads = 'Orbis won’t read any of your records. Turn one on to ask about it.';
+  if (ticked.length) reads = `Orbis will read your ${listWords(ticked)}, and nothing else.`;
+  if (about) reads = ticked.length ? `Orbis will read ${ABOUT_READING[about.kind]} and your ${listWords(ticked)}.` : `Orbis will read ${ABOUT_READING[about.kind]} only.`;
+
   function onMic() {
     // Tapping while listening means "that's my question": send what was said.
     if (phase === 'listening') return finishRecording.current?.();
@@ -305,22 +446,80 @@ export function TalkToOrbis() {
         <section className="talk-sheet" aria-label="Ask Orbis">
           <header className="talk-head">
             <strong><OrbisAiMark size={24} phase={phase} />Ask Orbis</strong>
-            <button type="button" onClick={close} aria-label="Close"><X size={18} /></button>
+            <span className="talk-head-tools">
+              {turns.length > 0 && (
+                <button type="button" onClick={newChat} aria-label="New chat" title="New chat" disabled={phase === 'thinking'}><SquarePen size={17} /></button>
+              )}
+              <button type="button" onClick={close} aria-label="Close"><X size={18} /></button>
+            </span>
           </header>
-          <div className="talk-log" aria-live="polite">
-            {!turns.length && (
+          <div className="talk-log" ref={log} aria-live="polite">
+            {!turns.length && !pending && phase !== 'thinking' && (
               <div className="talk-intro">
                 <h2>What do you want to know?</h2>
                 <p className="talk-hint">{`Ask about your spending, journal, saved notes, routines or steps, by typing${voice ? ' or speaking in any Indian language' : ''}. Recordings aren’t kept.`}</p>
+                {!about && starters.length > 0 && (
+                  <div className="talk-starters">
+                    {starters.map((starter) => (
+                      <button key={starter.question} type="button" onClick={() => void askQuestion(starter.question)} disabled={phase === 'listening'}>{starter.question}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-            {turns.map((turn) => (
-              <div key={turn.id} className="talk-turn">
-                <p className="talk-q">{turn.question}</p>
-                <p className="talk-a" lang={turn.language}>{turn.answer}</p>
+            {turns.map((turn, index) => {
+              const settled = revealing !== turn.id;
+              const latest = index === turns.length - 1;
+              return (
+                <div key={turn.id} className="talk-turn">
+                  {turn.question && <p className="talk-q">{turn.question}</p>}
+                  {settled ? (
+                    <p className="talk-a" lang={turn.language}>{turn.answer}</p>
+                  ) : (
+                    <Reveal text={turn.answer} lang={turn.language} onGrow={() => follow()} onDone={() => setRevealing(null)} />
+                  )}
+                  {settled && (
+                    <div className="talk-extra">
+                      {!!turn.citations?.length && (
+                        <div className="talk-cites">
+                          <p className="talk-extra-label">From your records</p>
+                          <ul>{turn.citations.map((citation) => <li key={citation.id}>{citation.label}</li>)}</ul>
+                        </div>
+                      )}
+                      {!!turn.inferred?.length && (
+                        <div className="talk-inferred">
+                          <p className="talk-extra-label">Orbis’s reading</p>
+                          {turn.inferred.map((line) => <p key={line}>{line}</p>)}
+                        </div>
+                      )}
+                      <div className="talk-tools">
+                        <button type="button" onClick={() => copy(turn)}>
+                          {copied === turn.id ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+                          {copied === turn.id ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      {latest && !!turn.followUps?.length && (
+                        <div className="talk-follow" aria-label="Ask next">
+                          {turn.followUps.map((question) => (
+                            <button key={question} type="button" onClick={() => void askQuestion(question)} disabled={phase === 'thinking' || phase === 'listening'}>{question}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {pending && <div className="talk-turn"><p className="talk-q">{pending}</p></div>}
+            {phase === 'thinking' && <Thinking sources={sources} about={about} />}
+            {message && (
+              <div className="talk-fail">
+                <p className="talk-error" role="alert">{message}</p>
+                {failed && phase === 'idle' && (
+                  <button type="button" onClick={() => void askQuestion(failed)}><RotateCcw size={14} aria-hidden="true" />Retry</button>
+                )}
               </div>
-            ))}
-            {message && <p className="talk-error" role="alert">{message}</p>}
+            )}
           </div>
           {/* What Orbis may read sits with the question, as capsules that show
               their own on/off state, rather than as a row of tabs under the title. */}
@@ -329,13 +528,15 @@ export function TalkToOrbis() {
             <fieldset className="fd-chips talk-sources" aria-label="What Orbis may look at">
               {ASK_SOURCES.map((source) => {
                 const Icon = SOURCE_ICONS[source.id];
+                const on = sources.includes(source.id);
                 return (
-                  <button key={source.id} type="button" aria-pressed={sources.includes(source.id)} onClick={() => toggle(source.id)} disabled={phase === 'thinking'}>
-                    <Icon size={14} strokeWidth={2} aria-hidden="true" />{source.label}
+                  <button key={source.id} type="button" aria-pressed={on} onClick={() => toggle(source.id)} disabled={phase === 'thinking'}>
+                    {on ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : <Icon size={14} strokeWidth={2} aria-hidden="true" />}{source.label}
                   </button>
                 );
               })}
             </fieldset>
+            <p className="talk-reads">{reads}</p>
           </div>
           {about && (
             <div className="talk-about">
