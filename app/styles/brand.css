@@ -1,20 +1,22 @@
 /* ─── Orbis brand: the one place the palette is decided ───────────────
    Loaded after the base sheets. The older iOS / Field / Glass blocks still
-   define the structure of the tokens; this file sets their values. Dark is the
-   default; light applies only when <html data-theme="light">. Component
+   define the structure of the tokens; this file sets their values, which are
+   Apple's semantic colours (docs/design/apple.md). Dark applies unless
+   <html data-theme="light">; the pre-paint script in app/layout.tsx sets that
+   from the device's appearance when nobody has chosen one. Component
    overrides for the signed-in app live in brand-app.css. */
 :root {
-  --brand-bg: #0e0e10;
-  --brand-s1: #141416;
-  --brand-s2: #1a1a1e;
-  --brand-border: #242428;
+  --brand-bg: #000000;
+  --brand-s1: #1c1c1e;
+  --brand-s2: #2c2c2e;
+  --brand-border: #38383a;
   --brand-teal: #42cca8;
   --brand-blue: #5bb4e8;
   --brand-green: #3dc87a;
   --brand-red: #f26b6b;
   --brand-gold: #f0b429;
   --brand-gradient: linear-gradient(135deg, #5bb4e8, #42cca8);
-  --brand-on-accent: #0e0e10; /* ink on teal/blue/gradient */
+  --brand-on-accent: #00231b; /* ink on the teal tint: 8.4:1 */
   --brand-violet: #b49bf2;
   --brand-frame: #0a0a0c; /* the desktop phone mock-up's bezel */
   /* Near-white and near-black, tinted toward the teal anchor rather than pure. */
@@ -63,167 +65,251 @@
   /* An alpha mask: only the opacity of the stop counts, not its colour. */
   --mark-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
 
-  /* DM Sans, here as well as in glass.css: the public pages never load glass.css. */
-  --font-text: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --rounded: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The system font: SF Pro on Apple devices, Segoe UI Variable on Windows.
+     Here as well as in glass.css: the public pages never load glass.css. */
+  --font-text: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
+  --rounded: ui-rounded, "SF Pro Rounded", var(--font-display);
 
-  /* Type: DM Sans 300–600. Display 28–32 / 600, heading 18–20 / 600, body
-     14–15 / 400, label 11–12 / 500 uppercase with 0.5px tracking. */
-  --t-display: 600 clamp(28px, 6vw, 32px)/1.1 var(--font-text);
-  --t-heading: 600 19px/1.25 var(--font-text);
-  --t-body: 400 14.5px/1.5 var(--font-text);
+  /* Apple's iOS text styles (docs/design/apple.md › Type). */
+  --t-large-title: 700 34px/41px var(--font-display);
+  --t-title-1: 700 28px/34px var(--font-display);
+  --t-title-2: 700 22px/28px var(--font-display);
+  --t-title-3: 600 20px/25px var(--font-display);
+  --t-headline: 600 17px/22px var(--font-text);
+  --t-body: 400 17px/22px var(--font-text);
+  --t-callout: 400 16px/21px var(--font-text);
+  --t-subhead: 400 15px/20px var(--font-text);
+  --t-footnote: 400 13px/18px var(--font-text);
+  --t-caption: 400 12px/16px var(--font-text);
+  /* The older names, onto the nearest Apple style. */
+  --t-display: var(--t-large-title);
+  --t-heading: var(--t-title-3);
 
-  /* Shape: cards and fields are 16px. Small pills stay on --r-pill (999px),
-     which is indistinguishable from 20px at pill heights. */
+  /* Shape: grouped sections and cards are 22px, fields 10px, buttons capsules. */
+  --r-card: 22px;
+  --r-field: 10px;
   --r-lg: 16px;
-  --r-xl: 16px;
+  --r-xl: 22px;
+
+  /* Motion (docs/design/apple.md › Motion). Outside the reduced-motion query
+     so transitions can name them; motion.css decides what moves. */
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
 }
 
+/* Dark: Apple's grouped dark. Black page, #1C1C1E cells, white labels. */
 :root:not([data-theme="light"]) {
   color-scheme: dark;
 
-  --sys-bg: var(--brand-bg);
-  --sys-surface: var(--brand-s1);
-  --sys-surface-2: var(--brand-s2);
-  --sys-surface-3: #222226;
+  /* No gradients on controls: the old gradient and teal names are the tint. */
+  --brand-gradient: var(--tint);
+  --brand-teal: var(--tint);
+  --brand-on-accent: var(--on-tint);
+  --shadow-tab-active: none;
 
-  --sys-label: #f2f3f5;
-  --sys-secondary: #a0a4ab;
-  --sys-tertiary: #7d818a; /* large text and icons only */
-  --sys-separator: var(--brand-border);
-  --sys-hairline: #34343a;
+  --tint: #42cca8;
+  --tint-press: #36b393;
+  --on-tint: #00231b;
+  --tint-wash: rgba(66,204,168,.16);
+  --sys-fill: rgba(118,118,128,.24);
+  --sys-fill-2: rgba(118,118,128,.18);
+  --seg-thumb: #636366;
 
-  --sys-blue: var(--brand-blue);
-  --sys-blue-press: #7cc4ee;
-  --sys-green: var(--brand-green);
-  --sys-red: var(--brand-red);
-  --sys-pink: #f26b9a;
-  --sys-amber: var(--brand-gold);
-  --sys-tint-blue: #112431;
-  --sys-tint-green: #11281d;
-  --sys-tint-red: #301616;
-  --sys-tint-amber: #302508;
+  --sys-bg: #000000;
+  --sys-surface: #1c1c1e;
+  --sys-surface-2: #2c2c2e;
+  --sys-surface-3: #3a3a3c;
 
-  --sys-wash: linear-gradient(135deg, #12202b, #0f1b1b);
-  --sys-wash-border: var(--brand-border);
-  --sys-page: var(--brand-bg);
-  --sys-stage: radial-gradient(circle at top, #1a1a1e 0, #121214 42%, #0e0e10 100%);
+  --sys-label: #ffffff;
+  --sys-secondary: #98989f; /* 5.9:1 on #1C1C1E */
+  --sys-tertiary: #8d8d93; /* icons and large text only */
+  --sys-separator: rgba(84,84,88,.65);
+  --sys-hairline: #38383a;
 
-  --e1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.05);
-  --e2: 0 8px 24px rgba(0,0,0,.5);
-  --e3: 0 28px 80px rgba(0,0,0,.6);
+  --sys-blue: #0a84ff;
+  --sys-blue-press: #409cff;
+  --sys-green: #30d158;
+  --sys-red: #ff453a;
+  --sys-pink: #ff375f;
+  --sys-amber: #ff9f0a;
+  --sys-switch: #30d158;
+  --sys-tint-blue: rgba(10,132,255,.18);
+  --sys-tint-green: rgba(48,209,88,.16);
+  --sys-tint-red: rgba(255,69,58,.16);
+  --sys-tint-amber: rgba(255,159,10,.16);
 
-  --glass-chrome-bg: rgba(20,20,22,.78);
-  --glass-sheet-bg: rgba(20,20,22,.86);
-  --glass-edge: inset 0 1px 0 rgba(255,255,255,.06);
-  --glass-hairline: 1px solid var(--brand-border);
+  --sys-wash: var(--sys-surface);
+  --sys-wash-border: transparent;
+  --sys-page: var(--sys-bg);
+  --sys-stage: var(--sys-bg);
 
-  --gl-ground: var(--brand-bg);
-  --gl-fill: rgba(26,26,30,.72);
-  --gl-fill-strong: rgba(36,36,40,.94);
-  --gl-edge: 1px solid var(--brand-border);
-  --gl-shadow: 0 8px 28px rgba(0,0,0,.4);
-  --gl-blob-1: #123027;
-  --gl-blob-2: #14283a;
-  --gl-blob-3: #1b1b2e;
-  --gl-dot: rgba(255,255,255,.04);
+  --e1: none;
+  --e2: 0 8px 28px rgba(0,0,0,.5);
+  --e3: 0 24px 70px rgba(0,0,0,.6);
 
-  --fd-field: var(--brand-bg);
-  --fd-surface: var(--brand-s1);
-  --fd-ink: #f2f3f5;
-  --fd-soft: #a9adb4;
-  --fd-faint: #8a8e96;
-  --fd-rule: rgba(255,255,255,.08);
-  --fd-hairline: rgba(255,255,255,.2);
-  --fd-accent: var(--brand-teal);
-  --fd-lift: 0 18px 40px rgba(0,0,0,.55);
+  --glass-chrome-bg: rgba(30,30,32,.72);
+  --glass-sheet-bg: rgba(28,28,30,.86);
+  --glass-edge: inset 0 .5px 0 rgba(255,255,255,.12);
+  --glass-hairline: .5px solid rgba(255,255,255,.1);
+
+  --gl-ground: var(--sys-bg);
+  --gl-fill: rgba(30,30,32,.72);
+  --gl-fill-strong: rgba(44,44,46,.92);
+  --gl-edge: .5px solid rgba(255,255,255,.1);
+  --gl-shadow: inset 0 .5px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.45);
+  --gl-blob-1: transparent;
+  --gl-blob-2: transparent;
+  --gl-blob-3: transparent;
+  --gl-dot: transparent;
+
+  --fd-field: var(--sys-bg);
+  --fd-surface: var(--sys-surface);
+  --fd-ink: var(--sys-label);
+  --fd-soft: var(--sys-secondary);
+  --fd-faint: var(--sys-secondary);
+  --fd-rule: var(--sys-separator);
+  --fd-hairline: rgba(84,84,88,.9);
+  --fd-accent: var(--tint);
+  --fd-lift: none;
   --fd-lift-slide: 0 12px 26px -12px rgba(0,0,0,.85);
   --fd-deck-far: rgba(255,255,255,.07);
   --fd-deck-near: rgba(255,255,255,.14);
-  --fd-btn: var(--brand-teal);
-  --fd-btn-ink: var(--brand-on-accent);
-  --fd-chip: rgba(255,255,255,.06);
-  --fd-card: var(--brand-s1);
-  --fd-wash: rgba(66,204,168,.13);
-  --fd-ring-track: rgba(255,255,255,.08);
-  --fd-alert: var(--brand-red);
-  --fd-alert-ink: var(--brand-on-accent); /* ink on a solid alert fill: 6.7:1 */
-  --fd-alert-wash: rgba(242,107,107,.14);
-  --fd-veil: rgba(14,14,16,.9);
+  --fd-btn: var(--tint);
+  --fd-btn-ink: var(--on-tint);
+  --fd-chip: var(--sys-fill);
+  --fd-card: var(--sys-surface);
+  --fd-wash: var(--tint-wash);
+  --fd-ring-track: rgba(118,118,128,.24);
+  --fd-alert: var(--sys-red);
+  --fd-alert-ink: #ffffff;
+  --fd-alert-wash: var(--sys-tint-red);
+  --fd-veil: rgba(0,0,0,.72);
 
-  --series-1: #5bb4e8;
-  --series-2: #f0b429;
+  /* Apple's dark system colours, in a fixed order for charts. */
+  --series-1: #0a84ff;
+  --series-2: #ff9f0a;
   --series-3: #42cca8;
-  --series-4: #f26b6b;
-  --series-5: #b49bf2;
-  --series-6: #3dc87a;
-  --series-7: #8e95a3;
+  --series-4: #ff453a;
+  --series-5: #bf5af2;
+  --series-6: #30d158;
+  --series-7: #8e8e93;
 
-  /* The wide panels (career, desktop): glass cards on the wallpaper, and the
-     scrim and veil behind drawers and dialogs. */
-  --panel-surface: var(--brand-s1);
-  --panel-card: var(--gl-fill);
-  --panel-card-edge: var(--gl-edge);
+  --panel-surface: var(--sys-surface);
+  --panel-card: var(--sys-surface);
+  --panel-card-edge: 0 solid transparent;
   --panel-grid: rgba(255,255,255,.06);
-  --panel-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.7);
-  --scrim: rgba(6,6,8,.5);
-  --veil: rgba(6,6,8,.55);
+  --panel-shadow: none;
+  --scrim: rgba(0,0,0,.48);
+  --veil: rgba(0,0,0,.48);
 }
 
+/* Light: Apple's grouped light. #F2F2F7 page, white cells, black labels;
+   system colours are Apple's accessible variants so text in them passes 4.5:1. */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --sys-bg: #f4f6f8;
+  /* No gradients on controls: the old gradient and teal names are the tint. */
+  --brand-gradient: var(--tint);
+  --brand-teal: var(--tint);
+  --brand-on-accent: var(--on-tint);
+  --shadow-tab-active: none;
+
+  --tint: #087a65; /* 5.3:1 on white */
+  --tint-press: #066452;
+  --on-tint: #ffffff;
+  --tint-wash: rgba(8,122,101,.1);
+  --sys-fill: rgba(120,120,128,.12);
+  --sys-fill-2: rgba(120,120,128,.08);
+  --seg-thumb: #ffffff;
+
+  --sys-bg: #f2f2f7;
   --sys-surface: #ffffff;
-  --sys-surface-2: #eef1f4;
-  --sys-surface-3: #e3e7ec;
-  --sys-label: #14161a;
-  --sys-secondary: #565c66;
-  --sys-tertiary: #757b85;
-  --sys-separator: #dfe3e8;
-  --sys-hairline: #c9ced6;
-  --sys-blue: #16699b;
-  --sys-blue-press: #115a85;
-  --sys-green: #166d3e;
-  --sys-red: #c02f2f;
-  --sys-amber: #8a5a00;
-  --sys-tint-blue: #e6f3fb;
-  --sys-tint-green: #e6f6ee;
-  --sys-tint-red: #fdecec;
-  --sys-tint-amber: #fff3d9;
-  --sys-wash: linear-gradient(135deg, #e8f4fb, #e8f7f2);
-  --sys-wash-border: #d5e6ee;
-  --sys-page: #f4f6f8;
+  --sys-surface-2: #f2f2f7;
+  --sys-surface-3: #e5e5ea;
+  --sys-label: #000000;
+  --sys-secondary: #6c6c70; /* 5.2:1 on white, 4.7:1 on #F2F2F7 */
+  --sys-tertiary: #8e8e93;
+  --sys-separator: rgba(60,60,67,.29);
+  --sys-hairline: #c6c6c8;
+  --sys-blue: #0040dd;
+  --sys-blue-press: #0035b8;
+  --sys-green: #1e7d36;
+  --sys-red: #d70015;
+  --sys-pink: #d30f45;
+  --sys-amber: #c93400;
+  --sys-switch: #34c759;
+  --sys-tint-blue: rgba(0,122,255,.1);
+  --sys-tint-green: rgba(52,199,89,.12);
+  --sys-tint-red: rgba(255,59,48,.1);
+  --sys-tint-amber: rgba(255,149,0,.12);
+  --sys-wash: var(--sys-surface);
+  --sys-wash-border: transparent;
+  --sys-page: var(--sys-bg);
+  --sys-stage: var(--sys-bg);
 
-  --gl-ground: #eef1f3;
-  --fd-field: var(--gl-ground);
-  --fd-ink: #14161a;
-  --fd-soft: #4c525c;
-  --fd-faint: #575d67;
-  --fd-accent: #0d6e5b;
-  --fd-alert: #b03030;
+  --e1: none;
+  --e2: 0 8px 28px rgba(0,0,0,.08);
+  --e3: 0 24px 70px rgba(0,0,0,.14);
+
+  --glass-chrome-bg: rgba(255,255,255,.72);
+  --glass-sheet-bg: rgba(255,255,255,.86);
+  --glass-edge: inset 0 .5px 0 rgba(255,255,255,.9);
+  --glass-hairline: .5px solid rgba(0,0,0,.08);
+
+  --gl-ground: var(--sys-bg);
+  --gl-fill: rgba(255,255,255,.72);
+  --gl-fill-strong: rgba(255,255,255,.92);
+  --gl-edge: .5px solid rgba(0,0,0,.06);
+  --gl-shadow: inset 0 .5px 0 rgba(255,255,255,.9), 0 8px 28px rgba(0,0,0,.1);
+  --gl-blob-1: transparent;
+  --gl-blob-2: transparent;
+  --gl-blob-3: transparent;
+  --gl-dot: transparent;
+
+  --fd-field: var(--sys-bg);
+  --fd-surface: var(--sys-surface);
+  --fd-ink: var(--sys-label);
+  --fd-soft: var(--sys-secondary);
+  --fd-faint: var(--sys-secondary);
+  --fd-rule: var(--sys-separator);
+  --fd-hairline: rgba(60,60,67,.36);
+  --fd-accent: var(--tint);
+  --fd-lift: none;
+  --fd-btn: var(--tint);
+  --fd-btn-ink: var(--on-tint);
+  --fd-chip: var(--sys-fill);
+  --fd-card: var(--sys-surface);
+  --fd-wash: var(--tint-wash);
+  --fd-ring-track: rgba(120,120,128,.16);
+  --fd-alert: var(--sys-red);
   --fd-alert-ink: #ffffff;
-  --fd-btn: #14161a;
-  --fd-btn-ink: #ffffff;
-  --fd-veil: rgba(238,241,243,.9);
+  --fd-alert-wash: var(--sys-tint-red);
+  --fd-veil: rgba(242,242,247,.8);
 
-  --series-1: #16699b;
-  --series-2: #b57f00;
-  --series-3: #0d6e5b;
-  --series-4: #cf3f3f;
-  --series-5: #7a5bd1;
-  --series-6: #166d3e;
-  --series-7: #5b616b;
+  --series-1: #007aff;
+  --series-2: #ff9500;
+  --series-3: #087a65;
+  --series-4: #ff3b30;
+  --series-5: #af52de;
+  --series-6: #34c759;
+  --series-7: #8e8e93;
 
-  --panel-surface: #ffffff;
-  --panel-card: rgba(255,255,255,.72);
-  --panel-card-edge: 1px solid rgba(255,255,255,.9);
-  --panel-grid: rgba(20,22,26,.07);
-  --panel-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 14px 34px -20px rgba(30,40,50,.22);
-  --panel-blob-1: #cfe7de;
-  --panel-blob-2: #d7e7f3;
-  --scrim: rgba(30,36,44,.22);
-  --veil: rgba(30,36,44,.26);
+  --panel-surface: var(--sys-surface);
+  --panel-card: var(--sys-surface);
+  --panel-card-edge: 0 solid transparent;
+  --panel-grid: rgba(60,60,67,.08);
+  --panel-shadow: none;
+  --panel-blob-1: transparent;
+  --panel-blob-2: transparent;
+  --scrim: rgba(0,0,0,.2);
+  --veil: rgba(0,0,0,.2);
+}
+
+/* Increased Contrast: cells get an edge and secondary text gets darker. */
+@media (prefers-contrast: more) {
+  :root:root { --sys-secondary: var(--sys-label); --gl-edge: 1px solid var(--sys-hairline); --panel-card-edge: 1px solid var(--sys-hairline); }
 }
 
 /* Reduce Transparency: the older sheets drop the blur with a plain :root rule,
@@ -238,12 +324,12 @@
 }
 
 /* ─── Type ─────────────────────────────────────────────────────────────
-   DM Sans 300–600. Display 28–32 / 600, heading 18–20 / 600, body 14–15 / 400,
-   label 11–12 / 500 uppercase with 0.5px tracking. The tokens (--t-*) sit in
-   the first :root block above. */
-body { font-weight: 400; }
+   The system font and Apple's text styles; the tokens (--t-*) are in the
+   first :root block above. Section labels are 13px sentence case, as in
+   Apple's grouped lists, never uppercase eyebrows. */
+body { font-weight: 400; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 /* One label style everywhere; :not(#_) lifts it above every class-scoped label rule without !important. */
-:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 11px; font-weight: 500; }
+:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--sys-secondary); }
 
 /* ─── Logo ─────────────────────────────────────────────────────────────
    A conic-gradient ring and a hole div at 45% — never an SVG stroke. The ring

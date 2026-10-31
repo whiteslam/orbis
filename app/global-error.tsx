@@ -21,8 +21,9 @@ export default function GlobalError({ error, retry }: Readonly<{ error: Error & 
     try {
       const stored = localStorage.getItem('orbis-theme');
       if (stored === 'dark' || stored === 'light') document.documentElement.dataset.theme = stored;
+      else document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     } catch {
-      // A blocked or empty localStorage just means the system setting stands.
+      // Blocked storage leaves the default (dark) in place.
     }
   }, []);
 

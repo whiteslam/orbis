@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { DM_Sans } from 'next/font/google';
 // Only the stylesheets the public pages use. The app's own live in
 // app/(orbis)/layout.tsx, because a stylesheet is a description: the app's
 // sheets carry selectors like .groww-card, .gmail-review-merchant and
@@ -15,8 +14,6 @@ import './styles/page-public.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';
-
-const dmSans = DM_Sans({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-dm-sans', display: 'swap' });
 
 const DESCRIPTION = 'One calm daily brief for your money, health and routines — read-only connections, private by default, and AI that never trains on your personal data.';
 
@@ -55,14 +52,17 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Set by proxy.ts; the Content-Security-Policy only runs inline scripts carrying it.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <html lang="en" className={dmSans.variable} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Applies the stored appearance before first paint so the page never
-            flashes the wrong theme. Inline and synchronous by necessity. */}
+        {/* Applies the appearance before first paint so the page never flashes
+            the wrong theme: the one chosen with the theme button if there is
+            one, otherwise the device's, followed live as the device changes
+            (Apple asks apps to follow the system appearance). Inline and
+            synchronous by necessity. */}
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('orbis-theme');if(t==='dark'||t==='light'){document.documentElement.dataset.theme=t}}catch(e){}`,
+            __html: `try{var d=document.documentElement,q=matchMedia('(prefers-color-scheme: light)'),s=function(){var t=localStorage.getItem('orbis-theme');d.dataset.theme=t==='dark'||t==='light'?t:q.matches?'light':'dark'};s();q.addEventListener('change',s)}catch(e){}`,
           }}
         />
       </head>

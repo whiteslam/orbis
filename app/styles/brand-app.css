@@ -1,18 +1,15 @@
-/* ─── Orbis brand: signed-in app components ───────────────────────────
-   Loaded last in app/(orbis)/layout.tsx so these win over the app's older
-   sheets at equal specificity. Tokens and the palette are in brand.css. */
+/* ─── Orbis, the Apple way: signed-in app components ──────────────────
+   Loaded last in app/(orbis)/layout.tsx (before desktop.css) so these win
+   over the app's older sheets at equal specificity. The rules behind every
+   value are in docs/design/apple.md; tokens and the palette are in brand.css.
 
-.fd-head h1, .page-head h1 { font-weight: 600; letter-spacing: -.02em; }
-.fd-hero-value, .today-widget-value { font-weight: 600; }
+   In short: a plain grouped background, solid cells with no border or
+   shadow, glass only on what floats (tab bar, Ask button, sheets), one tint
+   for the primary action and selection, capsule buttons, Apple's text styles. */
 
-/* ─── Cards and fields: surface, 1px border, 16px radius ────────────── */
-.stack-card, .chart-card, .empty-state, .sync-card, .app-card, .currency-card, .integrations, .groww-card,
-.apple-card, .invest-ai, .journal-today, .journal-item, .manual-entry, .workbook-advisor, .passkey-prompt,
-.auth-form input {
-  border: 1px solid var(--sys-separator);
-  border-radius: 16px;
-}
-.stack-card, .chart-card, .app-card, .apple-card, .auth-form input { background: var(--sys-surface); }
+/* ─── The page ──────────────────────────────────────────────────────── */
+.phone-screen, .screen-body, .screen-body.field { background: var(--sys-bg); }
+body { background: var(--sys-bg); color: var(--sys-label); }
 
 /* The desktop phone frame: near-black body, 40px radius, 1.5px border. */
 @media (min-width: 721px) {
@@ -21,40 +18,235 @@
   .phone-screen { border-radius: 32px; }
 }
 
-/* ─── Bottom nav: 60px, 20px icons, 10px labels, gradient on the active tab ── */
-/* Six tabs beside the Ask circle leave each about 42px at 360px wide, so the
-   labels shrink with the bar (down to 8px) and never wrap; icons keep 20px. */
-.bottom-nav { container-type: inline-size; padding-inline: 4px; }
-.bottom-nav button span { font-size: clamp(8px, 3.6cqi, 10px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
-.bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: var(--shadow-tab-active); font-weight: 600; }
-.bottom-nav button.active svg { stroke: var(--brand-on-accent); }
-.talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }
+/* ─── Large titles ──────────────────────────────────────────────────── */
+.fd-head h1, .page-head h1 { font: var(--t-large-title); letter-spacing: -.02em; color: var(--sys-label); }
+.fd-focus h1, .fd-focus h2 { font-weight: 700; letter-spacing: -.02em; }
+.fd-hero-value, .today-widget-value { font-family: var(--font-display); font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 
-/* ─── Buttons, pills and chat bubbles ───────────────────────────────── */
+/* ─── Cells: every grouped section and card ─────────────────────────────
+   Solid cell colour on the grouped background, 22px corners, no border, no
+   shadow, no blur: content never sits on glass. */
+.stack-card, .chart-card, .empty-state, .sync-card, .app-card, .currency-card, .integrations,
+.apple-card, .invest-ai, .journal-today, .journal-item, .manual-entry, .workbook-advisor, .passkey-prompt,
+.fd-focus, .fd-quiet, .apple-list, .pf-group, .hl-ask, .setup-list,
+.health-source, .fd-option, .fd-rates, .rt-check, .today-widget, .mn-card, .so-action,
+.field .apple-card, .field .apple-list {
+  background: var(--sys-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: var(--r-card);
+}
+/* Increased Contrast: cells get an edge so they hold apart from the page. */
+@media (prefers-contrast: more) {
+  .stack-card, .chart-card, .apple-card, .fd-focus, .fd-quiet, .apple-list, .pf-group, .today-widget, .mn-card, .so-action, .fd-rates, .fd-option, .health-source { border: 1px solid var(--sys-hairline); }
+}
+
+/* Rows inside a cell: hairline separators, 44px tall at least. */
+.fd-line { min-height: 44px; border-bottom: .5px solid var(--sys-separator); }
+.fd-line span { color: var(--sys-secondary); font-size: 15px; }
+.fd-line b { font-size: 15px; font-weight: 600; color: var(--sys-label); }
+.fd-line b.empty { color: var(--sys-secondary); font-weight: 400; }
+
+/* Section headers: 13px, secondary, sentence case (brand.css sets the size). */
+.fd-label { color: var(--sys-secondary); }
+
+/* ─── Buttons ───────────────────────────────────────────────────────────
+   Capsules. The primary action is filled with the tint; secondary ones are
+   grey with tint text; plain ones are just tint text. */
+.fd-act button, .fd-button, .finance-button, .pf-pill.primary, .auth-submit {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: var(--t-headline);
+  font-size: 16px;
+  justify-content: center;
+}
 .fd-button:not(.ghost), .fd-act button:not(.ghost, .fd-link), .finance-button:not(.secondary), .pf-pill.primary, .auth-submit {
-  background: var(--brand-gradient);
-  color: var(--brand-on-accent);
+  background: var(--tint);
+  color: var(--on-tint);
+}
+.fd-act button.ghost, .fd-button.ghost, .finance-button.secondary {
+  background: var(--sys-fill);
+  box-shadow: none;
+  color: var(--tint);
+}
+.fd-act button:disabled, .fd-button:disabled, .finance-button:disabled, .auth-submit:disabled { opacity: .4; }
+.fd-link, .fd-act .fd-link { color: var(--tint); font-size: 15px; font-weight: 400; }
+.fd-act .fd-link { min-height: 44px; }
+.fd-link.alert, .fd-act .fd-link.alert { color: var(--sys-red); }
+.fd-act button:focus-visible, .fd-button:focus-visible, .fd-link:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* Round icon buttons and the header's buttons: grey circles. */
+.fd-round { background: var(--sys-fill); color: var(--tint); }
+.icon-btn, .avatar, .field .avatar {
+  width: 36px; height: 36px;
+  border: 0; border-radius: 50%;
+  background: var(--sys-fill);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: none;
+  color: var(--sys-label);
   font-weight: 600;
 }
-.fd-chips button[aria-pressed="true"], .talk-sources button[aria-pressed="true"] {
-  background: var(--brand-teal);
-  border-color: var(--brand-teal);
-  color: var(--brand-on-accent);
+.fd-tile { border-radius: 9px; background: var(--tint-wash); box-shadow: none; color: var(--tint); }
+
+/* ─── Selection: chips, segmented controls, switches ────────────────── */
+/* Chips: grey capsules; the chosen ones take the tint. */
+.fd-chips button, .settings-jump button, .talk-sources button {
+  min-height: 32px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--sys-fill);
+  box-shadow: none;
+  color: var(--sys-label);
+  font-size: 15px;
+  font-weight: 400;
 }
-.pf-pill.alert { background: var(--pill-alert-bg); color: var(--fd-alert); }
+.fd-chips button[aria-pressed="true"], .talk-sources button[aria-pressed="true"] {
+  background: var(--tint);
+  color: var(--on-tint);
+  font-weight: 600;
+}
 
-.pill { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
-.pill.teal { background: var(--pill-teal-bg); color: var(--brand-teal); }
-.pill.blue { background: var(--pill-blue-bg); color: var(--brand-blue); }
-.pill.red  { background: var(--pill-red-bg); color: var(--brand-red); }
-.pill.gold { background: var(--pill-gold-bg); color: var(--brand-gold); }
+/* Segmented controls: Apple's grey track with a raised thumb. Every variant
+   in the app (the Money tabs, form choices, Social's little switches). */
+.fd-tabs.glass-seg, .fd-seg, .so-mini {
+  gap: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--sys-fill);
+  box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.fd-tabs.glass-seg button, .fd-seg button, .so-mini button {
+  min-height: 30px;
+  border-radius: 7px;
+  background: none;
+  box-shadow: none;
+  color: var(--sys-label);
+  font-size: 13px;
+  font-weight: 500;
+}
+.fd-tabs.glass-seg button[aria-selected="true"], .fd-seg button[aria-checked="true"], .so-mini button[aria-checked="true"] {
+  background: var(--seg-thumb);
+  color: var(--sys-label);
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04);
+}
 
-/* Ask Orbis: the user speaks in the gradient, Orbis answers on a dark card. */
-.talk-q { background: var(--brand-gradient); border: 0; color: var(--brand-on-accent); border-radius: 16px 16px 4px 16px; font-weight: 500; }
-.talk-a { align-self: flex-start; padding: 10px 14px; background: var(--sys-surface-2); border: 1px solid var(--sys-separator); border-radius: 16px 16px 16px 4px; font-size: 15px; line-height: 1.5; }
+/* Switches: the iOS switch, 51 by 31, green when on. */
+input[type="checkbox"][role="switch"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sys-fill);
+  cursor: pointer;
+  transition: background-color .2s ease;
+}
+input[type="checkbox"][role="switch"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06);
+  transition: transform .25s var(--ease-out);
+}
+input[type="checkbox"][role="switch"]:checked { background: var(--sys-switch); }
+input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20px); }
+input[type="checkbox"][role="switch"]:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"][role="switch"], input[type="checkbox"][role="switch"]::before { transition: none; }
+}
 
-/* Controls that carried white ink on the old blue: ink them for the brand accent instead. */
-.talk-mic, .talk-type button { background: var(--brand-gradient); color: var(--brand-on-accent); }
+/* ─── Text fields: filled, no border, 17px so iOS never zooms ───────── */
+.fd-field { color: var(--sys-secondary); font-size: 13px; font-weight: 400; }
+.fd-field input, .fd-field select, .fd-field textarea, .auth-form input {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--r-field);
+  background: var(--sys-surface-2);
+  color: var(--sys-label);
+  font-size: 17px;
+}
+.fd-field input::placeholder, .fd-field textarea::placeholder, .auth-form input::placeholder { color: var(--sys-tertiary); }
+.fd-field input:focus, .fd-field select:focus, .fd-field textarea:focus { outline: 2px solid var(--tint); outline-offset: 0; }
+
+/* ─── Badges ────────────────────────────────────────────────────────── */
+.pf-pill.alert { background: var(--sys-tint-red); color: var(--sys-red); }
+.pill { display: inline-flex; align-items: center; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+.pill.teal { background: var(--tint-wash); color: var(--tint); }
+.pill.blue { background: var(--sys-tint-blue); color: var(--sys-blue); }
+.pill.red  { background: var(--sys-tint-red); color: var(--sys-red); }
+.pill.gold { background: var(--sys-tint-amber); color: var(--sys-amber); }
+
+/* ─── Tab bar: the iOS 26 floating glass capsule ──────────────────────
+   Glass, because it floats over content. The selected tab is the tint on a
+   grey fill; no gradient, no glow. Six tabs beside the Ask circle leave each
+   about 42px at 360px wide, so labels shrink with the bar (down to 9px) and
+   never wrap; icons keep 22px. */
+.bottom-nav {
+  container-type: inline-size;
+  padding-inline: 4px;
+  background: var(--glass-chrome-bg);
+  -webkit-backdrop-filter: var(--glass-chrome-blur);
+  backdrop-filter: var(--glass-chrome-blur);
+  border: var(--glass-hairline);
+  box-shadow: var(--glass-edge), var(--e2);
+}
+.bottom-nav button { color: var(--sys-label); font-weight: 500; }
+.bottom-nav button span { font-size: clamp(9px, 3.6cqi, 10px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.bottom-nav button.active { background: var(--sys-fill); color: var(--tint); box-shadow: none; font-weight: 600; }
+.bottom-nav button.active svg { stroke: currentColor; }
+.bottom-nav button:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
+
+/* The Ask button: its own glass circle beside the tab bar. */
+.talk-fab {
+  background: var(--glass-chrome-bg);
+  -webkit-backdrop-filter: var(--glass-chrome-blur);
+  backdrop-filter: var(--glass-chrome-blur);
+  border: var(--glass-hairline);
+  box-shadow: var(--glass-edge), var(--e2);
+  color: var(--sys-label);
+}
+
+/* Reduce Transparency: the floating chrome turns solid. */
+@media (prefers-reduced-transparency: reduce) {
+  .bottom-nav, .talk-fab { background: var(--sys-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ─── Sheets ────────────────────────────────────────────────────────── */
+.settings-sheet { background: var(--sys-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* ─── Ask Orbis ─────────────────────────────────────────────────────────
+   Questions in the tint, like a sent message; answers as plain text on the
+   page, because they are content to read, not a reply bubble. */
+.talk-q { background: var(--tint); border: 0; color: var(--on-tint); border-radius: 18px 18px 4px 18px; font-size: 16px; font-weight: 400; }
+.talk-a { align-self: flex-start; max-width: 100%; padding: 0; background: none; border: 0; border-radius: 0; font: var(--t-body); line-height: 1.45; color: var(--sys-label); }
+.talk-mic, .talk-type button { background: var(--tint); color: var(--on-tint); }
+.talk-sheet { background: var(--sys-bg); color: var(--sys-label); }
+.talk-head strong { font: var(--t-headline); }
+.talk-head button { background: var(--sys-fill); border: 0; color: var(--sys-label); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.talk-intro h2 { font: var(--t-title-1); letter-spacing: -.02em; color: var(--sys-label); }
+.talk-intro .talk-hint { color: var(--sys-secondary); font-size: 15px; line-height: 20px; max-width: 34ch; }
+.talk-sources-label { font-size: 13px; font-weight: 400; color: var(--sys-secondary); }
+.talk-type input { height: 44px; border: 0; border-radius: 22px; background: var(--sys-surface); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--sys-label); font-size: 17px; }
+.talk-type input::placeholder { color: var(--sys-tertiary); }
+.talk-type button { width: 44px; height: 44px; }
+.talk-error { color: var(--sys-red); font-size: 15px; }
 .vn-record.on { color: var(--fd-alert-ink); }
 
 /* The journal entry form sits straight on the page: no card behind it. */
