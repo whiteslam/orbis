@@ -9,28 +9,28 @@
    (sources, Orbis's reading, Copy, follow-ups) quieter than the answer. */
 
 /* ─── The panel ───
-   On the phone a floating card that grows out of the Ask button: it fills
-   the room between the notch and the tab bar, and the tab bar stays below
-   it. With the keyboard up the bar hides, so the panel sits on the keyboard. */
+   On the phone it takes the whole screen, on Orbis's dusk sky (--talk-sky in
+   glass.css: the app's wallpaper with a low glow at the foot). The owner
+   preferred this to a floating card over the tab. It grows out of the Ask
+   button (motion.css) and can be dragged down by its header to close. */
 .talk-sheet {
-  inset: calc(var(--safe-top) + 8px) 8px var(--nav-clear);
+  inset: 0;
   max-height: none;
-  padding: 0;
-  border: var(--glass-hairline);
-  border-radius: 32px;
-  background: var(--sys-surface);
+  padding: calc(var(--safe-top) + 6px) 0 var(--safe-bottom);
+  border: 0;
+  border-radius: 0;
+  background: var(--talk-sky);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  box-shadow: var(--e3);
+  box-shadow: none;
   color: var(--sys-label);
 }
-.keyboard-open .talk-sheet { bottom: 8px; }
 /* The phone mock-up a mid-size window shows: clear the speaker at its top. */
 @media (min-width: 721px) and (pointer: fine), (min-width: 721px) and (min-height: 541px) {
-  .talk-sheet { top: 44px; padding-top: 0; }
+  .talk-sheet { padding-top: 40px; }
 }
-@media (prefers-contrast: more) {
-  .talk-sheet { border: 1px solid var(--sys-hairline); }
+@media (prefers-reduced-transparency: reduce) {
+  .talk-sheet { background: var(--sys-bg); }
 }
 
 /* ─── Header: the mark and the name; New chat and Close as small grey circles ───

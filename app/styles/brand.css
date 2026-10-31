@@ -6,7 +6,7 @@
    from the device's appearance when nobody has chosen one. Component
    overrides for the signed-in app live in brand-app.css. */
 :root {
-  --brand-bg: #000000;
+  --brand-bg: #0e0e10;
   --brand-s1: #1c1c1e;
   --brand-s2: #2c2c2e;
   --brand-border: #38383a;
@@ -130,7 +130,9 @@
   --sys-fill-2: rgba(118,118,128,.18);
   --seg-thumb: #636366;
 
-  --sys-bg: #000000;
+  /* Orbis's own dark ground (#0E0E10), kept by the owner's choice in place
+     of Apple's pure black; the wallpaper's glows sit on it. */
+  --sys-bg: #0e0e10;
   --sys-surface: #1c1c1e;
   --sys-surface-2: #2c2c2e;
   --sys-surface-3: #3a3a3c;
@@ -175,10 +177,10 @@
   --gl-fill-strong: rgba(44,44,46,.92);
   --gl-edge: .5px solid rgba(255,255,255,.1);
   --gl-shadow: inset 0 .5px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.45);
-  --gl-blob-1: transparent;
-  --gl-blob-2: transparent;
-  --gl-blob-3: transparent;
-  --gl-dot: transparent;
+  --gl-blob-1: #123027;
+  --gl-blob-2: #14283a;
+  --gl-blob-3: #1b1b2e;
+  --gl-dot: rgba(255,255,255,.04);
 
   --fd-field: var(--sys-bg);
   --fd-surface: var(--sys-surface);
@@ -278,15 +280,15 @@
   --glass-edge: inset 0 .5px 0 rgba(255,255,255,.9);
   --glass-hairline: .5px solid rgba(0,0,0,.08);
 
-  --gl-ground: var(--sys-bg);
+  --gl-ground: #eef1f3;
   --gl-fill: rgba(255,255,255,.72);
   --gl-fill-strong: rgba(255,255,255,.92);
   --gl-edge: .5px solid rgba(0,0,0,.06);
   --gl-shadow: inset 0 .5px 0 rgba(255,255,255,.9), 0 8px 28px rgba(0,0,0,.1);
-  --gl-blob-1: transparent;
-  --gl-blob-2: transparent;
-  --gl-blob-3: transparent;
-  --gl-dot: transparent;
+  --gl-blob-1: #b7c9bc;
+  --gl-blob-2: #e4d3ba;
+  --gl-blob-3: #c7d1e0;
+  --gl-dot: rgba(17,19,21,.07);
 
   --fd-field: var(--sys-bg);
   --fd-surface: var(--sys-surface);

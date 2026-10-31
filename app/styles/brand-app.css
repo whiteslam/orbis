@@ -7,8 +7,12 @@
    shadow, glass only on what floats (tab bar, Ask button, sheets), one tint
    for the primary action and selection, capsule buttons, Apple's text styles. */
 
-/* ─── The page ──────────────────────────────────────────────────────── */
-.phone-screen, .screen-body, .screen-body.field { background: var(--sys-bg); }
+/* ─── The page ──────────────────────────────────────────────────────────
+   The one exception to Apple's plain grouped background: the owner chose
+   to keep Orbis's own wallpaper (components/shell/wallpaper.tsx: soft glows
+   and a dot texture on the dark ground), so screens stay see-through to it. */
+.phone-screen { background: var(--gl-ground); }
+.screen-body, .screen-body.field { background: transparent; }
 body { background: var(--sys-bg); color: var(--sys-label); }
 
 /* The desktop phone frame: near-black body, 40px radius, 1.5px border. */
@@ -266,7 +270,6 @@ input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowe
 .talk-q { background: var(--tint); border: 0; color: var(--on-tint); border-radius: 18px 18px 4px 18px; font-size: 16px; font-weight: 400; }
 .talk-a { align-self: flex-start; max-width: 100%; padding: 0; background: none; border: 0; border-radius: 0; font: var(--t-body); line-height: 1.45; color: var(--sys-label); }
 .talk-mic, .talk-type button { background: var(--tint); color: var(--on-tint); }
-.talk-sheet { background: var(--sys-bg); color: var(--sys-label); }
 .talk-head strong { font: var(--t-headline); }
 .talk-head button { background: var(--sys-fill); border: 0; color: var(--sys-label); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .talk-intro h2 { font: var(--t-title-1); letter-spacing: -.02em; color: var(--sys-label); }

@@ -25,11 +25,17 @@
   min-height: 100vh;
   min-height: 100dvh;
   isolation: isolate;
-  background: var(--sys-bg);
+  background: var(--gl-ground);
   color: var(--sys-label);
   font-family: var(--font-text);
 }
-/* The wallpaper is gone; the element stays for the research desk's markup. */
+/* The app's own wallpaper (components/shell/wallpaper.tsx), fixed behind the
+   page as on /active's desktop layout; the owner kept it over a plain ground. */
+.cp-panel > .glass-wall { position: fixed; z-index: -1; }
+.cp-panel > .glass-wall .glass-blob.one { width: 620px; height: 620px; left: -160px; top: -200px; }
+.cp-panel > .glass-wall .glass-blob.two { width: 560px; height: 560px; right: -160px; top: 120px; }
+.cp-panel > .glass-wall .glass-blob.three { width: 640px; height: 640px; left: 30%; bottom: -320px; }
+/* The research desk's own old wallpaper element stays hidden. */
 .cp-wall { display: none; }
 
 .cp-skip { position: absolute; top: 10px; left: 12px; z-index: 60; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); background: var(--tint); color: var(--on-tint); font: var(--t-headline); text-decoration: none; transform: translateY(-160%); }
@@ -88,16 +94,62 @@
 .cp-rail-btn:hover .cp-tip { opacity: 1; transition-delay: .5s; }
 .cp-rail[data-warm] .cp-rail-btn:hover .cp-tip, .cp-rail-btn:focus-visible .cp-tip { opacity: 1; transition: none; }
 
+/* The sidebar's name and row labels show only when the rail is the app's
+   navigation on a wide window (below). */
+.cp-rail-brand, .cp-rail-label { display: none; }
+
+/* ─── Desktop layout on: the sidebar. The same object as /active's
+   (.dk-rail in desktop.css): a glass panel down the window's leading edge,
+   the Orbis name, then each tab as an icon and its name; the selected one is
+   the tint on a grey fill. A narrower window folds it to an icon column with
+   tooltips, as /active's does. ─── */
+@media (min-width: 900px) {
+  .cp-panel:has(.cp-rail-nav) { --cp-rail-w: 60px; }
+  .cp-rail.cp-rail-nav {
+    top: 10px;
+    bottom: 10px;
+    left: max(10px, calc(50vw - 960px + 10px));
+    align-items: center;
+    gap: 4px;
+    width: var(--cp-rail-w);
+    padding: 12px 7px 8px;
+    border: var(--glass-hairline);
+    border-radius: 18px;
+    background: var(--glass-chrome-bg);
+    -webkit-backdrop-filter: var(--glass-chrome-blur);
+    backdrop-filter: var(--glass-chrome-blur);
+    transform: none;
+  }
+  .cp-rail-nav .cp-rail-apps { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+  .cp-rail-nav .cp-rail-brand { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 28px; margin: 0 0 12px; color: var(--sys-label); font: var(--t-headline); }
+  .cp-rail-nav .cp-rail-brand span { display: none; }
+  .cp-rail-nav .cp-rail-apps ul { gap: 2px; }
+  .cp-rail-nav .cp-rail-btn { border-radius: 10px; color: var(--sys-label); }
+  .cp-rail-nav .cp-rail-btn svg { color: var(--tint); }
+  .cp-rail-nav .cp-rail-btn:hover { background: color-mix(in srgb, var(--sys-fill) 40%, transparent); color: var(--sys-label); }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"] { background: var(--sys-fill); color: var(--tint-label); }
+  .cp-panel:has(.cp-rail-nav) .cp-frame { padding-left: calc(10px + var(--cp-rail-w) + clamp(32px, 3vw, 48px)); }
+}
+@media (min-width: 1280px) {
+  .cp-panel:has(.cp-rail-nav) { --cp-rail-w: 216px; }
+  .cp-rail.cp-rail-nav { align-items: stretch; padding: 14px 10px 10px; }
+  .cp-rail-nav .cp-rail-apps { align-items: stretch; }
+  .cp-rail-nav .cp-rail-brand { justify-content: flex-start; padding: 0 10px; }
+  .cp-rail-nav .cp-rail-brand span { display: inline; }
+  .cp-rail-nav .cp-rail-apps ul { align-items: stretch; }
+  .cp-rail-nav .cp-rail-btn { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; height: auto; min-height: 36px; padding: 0 10px; font: var(--t-subhead); text-align: left; }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"] { font-weight: 600; }
+  .cp-rail-nav .cp-rail-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cp-rail-nav .cp-tip { display: none; }
+}
+
 /* ─── Desktop layout on: the rail is navigation only (the same as /active's
    rail), and Career's actions sit on the page as labelled buttons
    (.cp-actions). Below 900px the bottom bar is unchanged. ─── */
 .cp-actions, .cp-head-theme { display: none; }
 @media (min-width: 900px) {
   /* The same frame as /active's desktop layout: the window, up to 1920px. */
-  .cp-panel:has(.cp-rail-nav) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); padding-left: calc(var(--cp-rail-w) + 56px); }
-  .cp-rail.cp-rail-nav { left: max(24px, calc(50vw - 960px + 24px)); }
-  /* The sidebar's selection: the tint glyph on a grey fill, as on the tab bar. */
-  .cp-rail-nav .cp-rail-btn[aria-current="page"] { background: var(--sys-fill); color: var(--tint); }
+  .cp-panel:has(.cp-rail-nav) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); }
   .cp-rail:has(.cp-rail-apps) .cp-rail-tools { display: none; }
   .cp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .cp-actions-count { display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: var(--r-pill); background: var(--sys-red); color: var(--on-fill); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }

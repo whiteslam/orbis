@@ -25,9 +25,11 @@ If it looks like it came from a different company, it is not done.
 3. **Familiar parts.** Tab bar, large title, inset grouped list, segmented
    control, switch, capsule button, sheet. A restyled control keeps Apple's
    size, placement and behaviour.
-4. **Grouping, not decoration.** No gradients on controls, no glow, no
-   wallpaper. Hierarchy comes from the grouped background, type weight and
-   spacing.
+4. **Grouping, not decoration.** No gradients or glow on controls.
+   Hierarchy comes from the grouped background, type weight and spacing.
+   The one exception, by the owner's choice: Orbis's own wallpaper (soft
+   glows and a dot texture on the #0E0E10 ground) stays behind every screen,
+   and Ask Orbis on a phone takes the whole screen on its dusk sky.
 5. **Motion is feedback, not ornament.** If people see it many times a day, it
    doesn't animate.
 

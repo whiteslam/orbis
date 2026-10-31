@@ -51,17 +51,19 @@ test('iPhone: Settings covers the screen, clears the notch, and ends above the n
   await context.close();
 });
 
-test('iPhone: the Ask panel and its input sit above the nav and below the notch', async ({ browser, userA }) => {
+test('iPhone: the Ask panel covers the screen, clears the notch, and keeps its input above the home indicator', async ({ browser, userA }) => {
   const { context, page } = await openPhone(browser, userA, IPHONE);
   await page.getByRole('button', { name: 'Ask Orbis', exact: true }).click();
   const panel = page.getByRole('region', { name: 'Ask Orbis' });
   await expect(panel).toBeVisible();
-  const top = await navTop(page);
+  // It grows out of the Ask button (app/styles/motion.css); measure once it has landed.
+  await settle(page);
   const sheet = await box(page, '.talk-sheet');
+  expect(sheet.top).toBe(0);
+  expect(sheet.bottom).toBe(IPHONE.height);
+  expect((await box(page, '.talk-head')).top).toBeGreaterThanOrEqual(SAFE_TOP);
   const input = await panel.getByLabel('Type a question').evaluate((element) => element.getBoundingClientRect().toJSON() as DOMRect);
-  expect(sheet.bottom).toBeLessThanOrEqual(top);
-  expect(sheet.top).toBeGreaterThanOrEqual(SAFE_TOP);
-  expect(input.bottom).toBeLessThanOrEqual(top);
+  expect(input.bottom).toBeLessThanOrEqual(IPHONE.height - SAFE_BOTTOM);
   await context.close();
 });
 

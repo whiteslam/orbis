@@ -64,6 +64,11 @@
     overflow: visible;
     background: none;
   }
+  /* The wallpaper stays put while the window scrolls. */
+  .stage[data-desktop] .glass-wall { position: fixed; }
+  .stage[data-desktop] .glass-blob.one { width: 620px; height: 620px; left: -160px; top: -200px; }
+  .stage[data-desktop] .glass-blob.two { width: 560px; height: 560px; right: -160px; top: 120px; }
+  .stage[data-desktop] .glass-blob.three { width: 640px; height: 640px; left: 30%; bottom: -320px; }
 
   /* Each screen flows in the window, which scrolls; the frame sets the edges. */
   .stage[data-desktop] .screen-body, .stage[data-desktop] .screen-body.field {

@@ -11,7 +11,8 @@ const readRoot = async (page: import('@playwright/test').Page, name: string) => 
 test('the appearance follows the device until one is chosen', async ({ browser }) => {
   for (const [scheme, theme, bg, surface, body] of [
     ['light', 'light', '#f2f2f7', '#ffffff', 'rgb(242, 242, 247)'],
-    ['dark', 'dark', '#000000', '#1c1c1e', 'rgb(0, 0, 0)'],
+    // Orbis's own dark ground (#0E0E10), kept in place of Apple's pure black.
+    ['dark', 'dark', '#0e0e10', '#1c1c1e', 'rgb(14, 14, 16)'],
   ] as const) {
     const context = await browser.newContext({ colorScheme: scheme });
     const page = await context.newPage();

@@ -1,12 +1,13 @@
 import { expect, openApp, openTab, test, TABS } from '../support/fixtures';
 
-// docs/design/apple.md: a plain grouped background behind every tab, glass
-// only on the floating chrome, and the system font rather than a web font.
-test('Apple look: plain background on every tab, glass chrome, system font', async ({ page }) => {
+// Orbis's wallpaper (soft glows and a dot texture) stays behind every tab,
+// glass stays on the floating chrome, and the text is the system font
+// (docs/design/apple.md).
+test('the wallpaper behind every tab, glass chrome, system font', async ({ page }) => {
   await openApp(page);
   for (const tab of TABS) {
     await openTab(page, tab);
-    await expect(page.locator('.glass-wall, .glass-blob')).toHaveCount(0);
+    await expect(page.locator('.glass-wall')).toHaveCount(1);
   }
   const chrome = await page.evaluate(() => {
     const nav = getComputedStyle(document.querySelector('.bottom-nav')!);
@@ -14,5 +15,4 @@ test('Apple look: plain background on every tab, glass chrome, system font', asy
   });
   expect(chrome.blur).toContain('blur');
   expect(chrome.font).toMatch(/^-apple-system, BlinkMacSystemFont, system-ui/);
-  expect(chrome.font.toLowerCase()).not.toContain('dm sans');
 });

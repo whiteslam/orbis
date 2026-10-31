@@ -8,6 +8,7 @@ import { DesktopHeader } from '@/components/shell/desktop-header';
 import { DesktopRail } from '@/components/shell/desktop-rail';
 import { TabLoading } from '@/components/shell/loading';
 import { TAB_ICONS } from '@/components/shell/tab-icons';
+import { Wallpaper } from '@/components/shell/wallpaper';
 import { SettingsProvider } from '@/components/shell/settings-context';
 import { TodayScreen } from '@/components/today/today-screen';
 import { aiAllowed } from '@/lib/ai/consent';
@@ -267,6 +268,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
       <div className="phone">
         <div className="phone-speaker" />
         <div className="phone-screen">
+          <Wallpaper />
           <SettingsProvider value={settingsAccess}>
             {/* Desktop only: hidden by app/styles/desktop.css below the breakpoint, and everywhere unless data-desktop is set. */}
             <DesktopRail tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />

@@ -24,6 +24,7 @@ import { PanelActions, PanelRail } from '@/components/career/panel/panel-rail';
 import { PipelinePage } from '@/components/career/panel/pipeline-page';
 import { TitleRow } from '@/components/career/panel/title-row';
 import { SERVER_MOVES, type MoveServices } from '@/components/career/panel/use-moves';
+import { Wallpaper } from '@/components/shell/wallpaper';
 import type { CareerJob } from '@/lib/career/types';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from '@/lib/career/view';
@@ -251,6 +252,7 @@ export function CareerPanelView({ home, who, problem = null, loading = false, on
   return (
     <PanelProvider value={api}>
       <div className="cp-panel">
+        <Wallpaper />
         <a className="cp-skip" href="#cp-main">Skip to content</a>
         <div className="cp-frame" inert={covered}>
           <PanelHeader page={page} who={who} />
