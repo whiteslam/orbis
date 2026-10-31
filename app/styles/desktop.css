@@ -33,6 +33,9 @@
     --cp-card-edge: var(--panel-card-edge);
     --cp-shadow: var(--panel-shadow);
     --cp-rail-w: 60px;
+    /* The sidebar's width and its inset from the window's edges. */
+    --dk-side-w: 216px;
+    --dk-side-inset: 10px;
     --dk-gap: 20px;
     --dk-gap-wide: clamp(20px, 1.6vw, 32px);
     --dk-ask-w: 420px;
@@ -56,7 +59,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0 auto;
-    padding: 0 clamp(32px, 3vw, 56px) 72px calc(var(--dk-rail-w, var(--cp-rail-w)) + 56px);
+    padding: 0 clamp(32px, 3vw, 56px) 72px calc(var(--dk-side-inset) + var(--dk-side-w) + clamp(32px, 3vw, 48px));
     border-radius: 0;
     overflow: visible;
     background: none;
@@ -85,12 +88,57 @@
   .stage[data-desktop] .fd-head { margin-bottom: 20px; }
   .stage[data-desktop] .fd-head h1 { margin-top: 4px; font-size: clamp(34px, 3vw, 44px); font-weight: 600; letter-spacing: -.04em; line-height: 1.02; }
 
-  /* ─── Rail ─── */
-  .stage[data-desktop] .dk-rail { display: flex; left: max(24px, calc(50vw - 960px + 24px)); z-index: 30; }
-  .stage[data-desktop] .dk-rail .cp-rail-btn { width: 46px; height: 46px; }
-  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
-  .stage[data-desktop] .dk-rail .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
-  .stage[data-desktop] .dk-rail .dk-rail-ask { color: var(--fd-accent); }
+  /* ─── Sidebar ───
+     A macOS sidebar floating in the glass layer: the mark and the app's name
+     at the top, a row per tab (icon in the tint, name in the label colour),
+     Ask Orbis and Settings below a hairline. The selected row is the tab
+     bar's selection: a grey fill, tint name. Rows react to the pointer at
+     once, as macOS's do; nothing about switching tabs animates. */
+  .stage[data-desktop] .dk-rail {
+    position: fixed;
+    top: var(--dk-side-inset);
+    bottom: var(--dk-side-inset);
+    left: max(var(--dk-side-inset), calc(50vw - 960px + var(--dk-side-inset)));
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: var(--dk-side-w);
+    padding: 14px 10px 10px;
+    border: var(--glass-hairline);
+    border-radius: 18px;
+    background: var(--glass-chrome-bg);
+    -webkit-backdrop-filter: var(--glass-chrome-blur);
+    backdrop-filter: var(--glass-chrome-blur);
+    box-shadow: var(--glass-edge), var(--e2);
+  }
+  .stage[data-desktop] .dk-rail-brand { display: flex; align-items: center; gap: 8px; min-height: 28px; margin: 0 0 12px; padding: 0 10px; color: var(--sys-label); font: var(--t-headline); }
+  .stage[data-desktop] .dk-rail ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  /* Ask and Settings at the foot, under an inset hairline. */
+  .stage[data-desktop] .dk-rail .dk-rail-foot { position: relative; margin-top: auto; padding-top: 9px; }
+  .stage[data-desktop] .dk-rail-foot::before { content: ""; position: absolute; top: 0; left: 10px; right: 10px; border-top: .5px solid var(--sys-separator); }
+  .stage[data-desktop] .dk-rail-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--sys-label);
+    font: var(--t-subhead);
+    text-align: left;
+    text-decoration: none;
+    cursor: default;
+  }
+  .stage[data-desktop] .dk-rail-btn svg { flex: none; color: var(--tint); }
+  .stage[data-desktop] .dk-rail-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stage[data-desktop] .dk-rail-btn:hover { background: color-mix(in srgb, var(--sys-fill) 40%, transparent); }
+  .stage[data-desktop] .dk-rail-btn[aria-current="page"] { background: var(--sys-fill); color: var(--tint-label); font-weight: 600; }
+  .stage[data-desktop] .dk-rail-btn:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
 
   /* ─── Header ─── */
   .stage[data-desktop] .dk-header { position: relative; z-index: 25; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 420px) minmax(0, 1fr); align-items: center; gap: 16px; min-height: 88px; }
@@ -122,7 +170,15 @@
     box-shadow: var(--e3);
   }
   .stage[data-desktop]:has(.talk-sheet) .phone-screen { padding-right: calc(var(--dk-ask-w) + 48px); }
-  .stage[data-desktop]:has(.talk-sheet) .dk-rail { left: 24px; }
+  /* ─── The sidebar folded to icons while Ask is docked (and in a narrow
+     window, below); each name becomes a tooltip beside its icon. ─── */
+  .stage[data-desktop]:has(.talk-sheet) { --dk-side-w: 60px; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail { align-items: center; padding: 12px 7px 8px; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-brand { justify-content: center; padding: 0; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-brand span { display: none; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-btn { justify-content: center; width: 44px; min-height: 44px; padding: 0; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-label { position: absolute; top: 50%; left: calc(100% + 12px); z-index: 2; translate: 0 -50%; padding: 4px 8px; border-radius: 6px; background: var(--sys-surface); box-shadow: var(--e2), 0 0 0 .5px var(--sys-separator); color: var(--sys-label); font: var(--t-caption); opacity: 0; pointer-events: none; }
+  .stage[data-desktop]:has(.talk-sheet) .dk-rail-btn:is(:hover, :focus-visible) .dk-rail-label { opacity: 1; }
 
   /* ─── Settings: a large dialog, the sections down the left, the chosen one on the right ─── */
   .stage[data-desktop] .settings-veil { display: block; position: fixed; inset: 0; z-index: 50; background: var(--veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
@@ -323,4 +379,21 @@
 /* While the Settings dialog is up, the page behind it holds still. */
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
   html:has(.stage[data-desktop] .settings-sheet) { overflow: hidden; }
+}
+
+/* A narrow desktop window folds the sidebar to icons, as Mail does, so the page keeps its room. */
+@media (min-width: 1100px) and (max-width: 1279px) and (pointer: fine), (min-width: 1100px) and (max-width: 1279px) and (min-height: 541px) {
+  .stage[data-desktop] { --dk-side-w: 60px; }
+  .stage[data-desktop] .dk-rail { align-items: center; padding: 12px 7px 8px; }
+  .stage[data-desktop] .dk-rail-brand { justify-content: center; padding: 0; }
+  .stage[data-desktop] .dk-rail-brand span { display: none; }
+  .stage[data-desktop] .dk-rail-btn { justify-content: center; width: 44px; min-height: 44px; padding: 0; }
+  .stage[data-desktop] .dk-rail-label { position: absolute; top: 50%; left: calc(100% + 12px); z-index: 2; translate: 0 -50%; padding: 4px 8px; border-radius: 6px; background: var(--sys-surface); box-shadow: var(--e2), 0 0 0 .5px var(--sys-separator); color: var(--sys-label); font: var(--t-caption); opacity: 0; pointer-events: none; }
+  .stage[data-desktop] .dk-rail-btn:is(:hover, :focus-visible) .dk-rail-label { opacity: 1; }
+}
+
+/* A folded sidebar's tooltip fades in after a beat, as macOS's do, and at once for the keyboard. */
+@media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
+  .stage[data-desktop] .dk-rail-label { transition: opacity .15s ease; }
+  .stage[data-desktop] .dk-rail-btn:hover .dk-rail-label { transition-delay: .4s; }
 }

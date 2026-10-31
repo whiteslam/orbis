@@ -99,6 +99,9 @@ export async function openInvestments(page: Page) {
 export async function openSettings(page: Page) {
   await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
   await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+  // The sheet rises from the foot of the screen (app/styles/motion.css), so
+  // anything measured before it lands would be off by up to a screen.
+  await settle(page);
 }
 
 /**

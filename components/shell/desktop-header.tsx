@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { Bell, Search } from 'lucide-react';
-import { OrbisMark } from '@/components/brand/orbis-mark';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -57,7 +56,6 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
     <header className="dk-header">
       {/* The hour and the date are India's on both sides, but either can turn between them. */}
       <div className="dk-hello">
-        <OrbisMark size={34} />
         <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(istParts(now).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
       </div>
       <button type="button" className="dk-search" onClick={onSearch} aria-keyshortcuts="Control+K Meta+K">

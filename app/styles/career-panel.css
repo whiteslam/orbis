@@ -98,17 +98,63 @@
 .cp-tip { position: absolute; top: 50%; left: calc(100% + 14px); z-index: 2; display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 10px; background: var(--fd-ink); color: var(--sys-bg); font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; pointer-events: none; transform: translate(-4px, -50%); transition: opacity .12s ease, transform .12s ease; }
 .cp-tip kbd { padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--sys-bg) 18%, transparent); font: inherit; font-size: 11px; }
 .cp-rail-btn:hover .cp-tip, .cp-rail-btn:focus-visible .cp-tip { opacity: 1; transform: translate(0, -50%); }
+
+/* The sidebar's name and row labels show only when the rail is the app's
+   navigation on a wide window (below). */
+.cp-rail-brand, .cp-rail-label { display: none; }
+
+/* ─── Desktop layout on: the sidebar. The same object as /active's
+   (.dk-rail in desktop.css): a glass panel down the window's leading edge,
+   the Orbis name, then each tab as an icon and its name; the selected one is
+   the tint on a grey fill. A narrower window folds it to an icon column with
+   tooltips, as /active's does. ─── */
+@media (min-width: 900px) {
+  .cp-panel:has(.cp-rail-nav) { --cp-rail-w: 60px; }
+  .cp-rail.cp-rail-nav {
+    top: 10px;
+    bottom: 10px;
+    left: max(10px, calc(50vw - 960px + 10px));
+    align-items: center;
+    gap: 4px;
+    width: var(--cp-rail-w);
+    padding: 12px 7px 8px;
+    border: var(--glass-hairline);
+    border-radius: 18px;
+    background: var(--glass-chrome-bg);
+    -webkit-backdrop-filter: var(--glass-chrome-blur);
+    backdrop-filter: var(--glass-chrome-blur);
+    transform: none;
+  }
+  .cp-rail-nav .cp-rail-apps { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+  .cp-rail-nav .cp-rail-brand { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 28px; margin: 0 0 12px; color: var(--sys-label); font: var(--t-headline); }
+  .cp-rail-nav .cp-rail-brand span { display: none; }
+  .cp-rail-nav .cp-rail-apps ul { gap: 2px; }
+  .cp-rail-nav .cp-rail-btn { border-radius: 10px; color: var(--sys-label); }
+  .cp-rail-nav .cp-rail-btn svg { color: var(--tint); }
+  .cp-rail-nav .cp-rail-btn:hover { background: color-mix(in srgb, var(--sys-fill) 40%, transparent); color: var(--sys-label); }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"] { background: var(--sys-fill); color: var(--tint-label); }
+  .cp-rail-nav .cp-rail-btn:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
+  .cp-panel:has(.cp-rail-nav) .cp-frame { padding-left: calc(10px + var(--cp-rail-w) + clamp(32px, 3vw, 48px)); }
+}
+@media (min-width: 1280px) {
+  .cp-panel:has(.cp-rail-nav) { --cp-rail-w: 216px; }
+  .cp-rail.cp-rail-nav { align-items: stretch; padding: 14px 10px 10px; }
+  .cp-rail-nav .cp-rail-apps { align-items: stretch; }
+  .cp-rail-nav .cp-rail-brand { justify-content: flex-start; padding: 0 10px; }
+  .cp-rail-nav .cp-rail-brand span { display: inline; }
+  .cp-rail-nav .cp-rail-apps ul { align-items: stretch; }
+  .cp-rail-nav .cp-rail-btn { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; height: auto; min-height: 36px; padding: 0 10px; font: var(--t-subhead); text-align: left; }
+  .cp-rail-nav .cp-rail-btn[aria-current="page"] { font-weight: 600; }
+  .cp-rail-nav .cp-rail-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cp-rail-nav .cp-tip { display: none; }
+}
 /* ─── Desktop layout on: the rail is navigation only (the same as /active's
    .dk-rail), and Career's actions sit on the page as labelled buttons
    (.cp-actions). Below 900px the bottom bar is unchanged. ─── */
 .cp-actions, .cp-head-theme { display: none; }
 @media (min-width: 900px) {
   /* The same frame as /active's desktop layout: the window, up to 1920px. */
-  .cp-panel:has(.cp-rail-nav) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); padding-left: calc(var(--cp-rail-w) + 56px); }
-  .cp-rail.cp-rail-nav { left: max(24px, calc(50vw - 960px + 24px)); }
-  .cp-rail-nav .cp-rail-btn { width: 46px; height: 46px; }
-  .cp-rail-nav .cp-rail-btn[aria-current="page"] { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--brand-teal) 70%, transparent); }
-  .cp-rail-nav .cp-rail-btn[aria-current="page"]:focus-visible { outline-color: var(--fd-ink); }
+  .cp-panel:has(.cp-rail-nav) .cp-frame { max-width: 1920px; padding-right: clamp(32px, 3vw, 56px); }
   .cp-rail:has(.cp-rail-apps) .cp-rail-tools { display: none; }
   .cp-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
   .cp-actions .cp-tool-btn { min-height: 38px; padding: 0 14px; }
