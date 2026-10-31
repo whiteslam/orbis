@@ -9,6 +9,7 @@ import { HistoryPanel, type HistoryRow } from '@/components/journal/history-pane
 import { VoiceNotes } from '@/components/journal/voice-notes';
 import { journalRevisionLine, type JournalRevision } from '@/lib/history/describe';
 import { MOODS, SUGGESTED_TAGS, type JournalEntry, type JournalSummary } from '@/lib/journal/types';
+import { MoodEmoji } from '@/components/journal/mood-emoji';
 import { safeAction } from '@/lib/client/safe-action';
 
 /** Past entries shown before "All N past entries". */
@@ -197,7 +198,7 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
       <div className="pf-moods" role="radiogroup" aria-label="Mood">
         {MOODS.map((item) => (
           <button key={item.value} type="button" role="radio" aria-checked={mood === item.value} onClick={() => setMood(item.value)} disabled={isPending}>
-            <span aria-hidden="true">{item.emoji}</span>{item.label}
+            <MoodEmoji value={item.value} size={36} />{item.label}
           </button>
         ))}
       </div>
@@ -262,7 +263,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
         </header>
         {todayEntry && editingDate !== todayKey ? (
           <div className="pf-entry-view jr-today" data-new={!seen.has(todayKey) || undefined}>
-            <p className="jr-feeling" data-mood={todayEntry.mood}><span aria-hidden="true">{moodOf(todayEntry.mood).emoji}</span> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
+            <p className="jr-feeling" data-mood={todayEntry.mood}><MoodEmoji value={todayEntry.mood} size={22} /> Feeling {moodOf(todayEntry.mood).label.toLowerCase()}</p>
             {todayEntry.body && <p className="fd-prose jr-prose">{todayEntry.body}</p>}
             {todayEntry.tags.length > 0 && <p className="pf-entry-tags">{hashtags(todayEntry.tags)}</p>}
             <div className="fd-act">
@@ -299,7 +300,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
                                 <span className="jr-dot" aria-hidden="true" />
                                 <div>
                                   <strong>{prettyDate(entry.date)}</strong>
-                                  <small><span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}>{moodOf(entry.mood).emoji}</span> {moodOf(entry.mood).label}</small>
+                                  <small><span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}><MoodEmoji value={entry.mood} size={18} /></span> {moodOf(entry.mood).label}</small>
                                 </div>
                                 <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
                               </div>

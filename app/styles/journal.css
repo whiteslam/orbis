@@ -56,7 +56,8 @@
 /* The editor: how you feel, the page itself, then tags and save. */
 .jr .pf-editor { margin-top: 20px; }
 .jr .jr-prompt { margin: 0; color: var(--sys-label); font: var(--t-headline); letter-spacing: 0; }
-/* Moods: five equal tiles, the emoji over its word; the chosen one in the tint. */
+/* Moods: five equal tiles, the face over its word; the chosen one in the tint.
+   The faces are Fluent 3D images (components/journal/mood-emoji.tsx). */
 .jr .pf-moods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 .jr .pf-moods button {
   min-width: 0;
@@ -72,7 +73,7 @@
   font: var(--t-caption);
   transition: background-color .15s ease, color .15s ease;
 }
-.jr .pf-moods button span { font-size: 22px; line-height: 28px; }
+.jr .pf-moods .mood-emoji { display: block; width: 36px; height: 36px; }
 .jr .pf-moods button[aria-checked="true"] { background: var(--tint); color: var(--on-tint); font-weight: 600; }
 .jr .pf-moods button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .jr .jr-paper {
@@ -104,7 +105,7 @@
 /* Today, written: the entry reads as the page. */
 .jr-today { margin-top: 20px; }
 .jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px 0 8px; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-label); font: var(--t-subhead); font-weight: 600; }
-.jr-feeling span { font-size: 20px; line-height: 1; }
+.jr-feeling .mood-emoji { display: block; width: 22px; height: 22px; }
 .jr .jr-prose { margin-top: 14px; color: var(--sys-label); font: var(--t-body); line-height: 26px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .jr .jr-today .pf-entry-tags { margin-top: 12px; color: var(--sys-secondary); font: var(--t-subhead); }
 .jr .jr-today .fd-act { align-items: center; gap: 16px; margin-top: 16px; }
@@ -158,7 +159,8 @@
 .jr-dot { position: absolute; top: 19px; left: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--jr-mood, var(--sys-tertiary)); }
 .jr .jr-entry-head strong { color: var(--sys-label); font: var(--t-headline); }
 .jr .jr-entry-head small { margin-top: 2px; color: var(--sys-secondary); font: var(--t-subhead); }
-.jr .jr-entry-head .pf-entry-mood { font-size: 15px; }
+.jr .jr-entry-head .pf-entry-mood { display: inline-flex; vertical-align: -3px; }
+.jr .jr-entry-head .pf-entry-mood .mood-emoji { display: block; width: 18px; height: 18px; }
 .jr .jr-entry-body { margin: 6px 8px 0 0; color: var(--sys-label); font: var(--t-subhead); white-space: pre-wrap; overflow-wrap: anywhere; }
 .jr .jr-entry-body.folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .jr-entry-tags { margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-footnote); overflow-wrap: anywhere; }
@@ -211,6 +213,9 @@
 @media (prefers-reduced-motion: no-preference) {
   .jr :is(.jr-today[data-new], .jr-entry[data-new], .vn-list li[data-new], .pf-card[data-new], .hs-panel) { animation: jr-enter var(--spring-dur) var(--spring) both; }
   @keyframes jr-enter { from { opacity: 0; transform: translate3d(0, 8px, 0); } }
+  /* The chosen face lifts a little on the spring, and settles back when another is picked. */
+  .jr .pf-moods .mood-emoji { transition: scale var(--spring-snappy-dur) var(--spring-bouncy); }
+  .jr .pf-moods button[aria-checked="true"] .mood-emoji { scale: 1.15; }
 }
 @media (prefers-reduced-motion: reduce) {
   .jr :is(.pf-moods button, .pf-tags button, .vn-record, .pf-delete) { transition: none; }
