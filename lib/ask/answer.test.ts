@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 // The paid calls (Sarvam, Jev, the model) and the credit claim are counted;
 // everything else is stubbed to let a request through.
-const calls = vi.hoisted(() => ({ order: [] as string[], allowed: true, used: ['journal'] as string[] }));
+const calls = vi.hoisted(() => ({ order: [] as string[], allowed: true, used: ['journal'] as string[], reply: null as string | null }));
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/ai/gate', () => ({ aiBlocked: async () => null }));
@@ -19,7 +19,7 @@ vi.mock('@/lib/ai/jev', () => ({
 vi.mock('@/lib/ai/router', () => ({
   routeJson: async () => {
     calls.order.push('model');
-    return { text: JSON.stringify({ answer: 'You spent less.', citations: [] }) };
+    return { text: calls.reply ?? JSON.stringify({ answer: 'You spent less.', citations: [] }) };
   },
 }));
 vi.mock('@/lib/supabase/admin', () => ({
@@ -57,6 +57,7 @@ beforeEach(() => {
   calls.order = [];
   calls.allowed = true;
   calls.used = ['journal'];
+  calls.reply = null;
   process.env.SARVAM_API_KEY = 'test-key';
 });
 
@@ -91,4 +92,23 @@ test('with the allowance used up, a spoken question is never transcribed', async
   const result = await talkToOrbisAction(spoken());
   assert.deepEqual(result, { success: false, message: SPENT });
   assert.deepEqual(calls.order, ['claim']);
+});
+
+test('an answer carries what was inferred and the follow-ups, cleaned and capped', async () => {
+  calls.reply = JSON.stringify({
+    answer: 'You spent ₹6,240 on eating out.',
+    citations: [],
+    inferred: ['Weekends seem to drive it.', '  ', 42, 'Weekends seem to drive it.', 'A third one is dropped.'],
+    followUps: ['Which weekend cost the most?', 'Is ₹6,240 above my usual month?', 'What counts as eating out?', 'A fourth is dropped?'],
+  });
+  const result = await answerFromRecords({ userId: 'user-1', question: 'how much did I eat out', sources: ['journal'] });
+  assert.deepEqual(result.inferred, ['Weekends seem to drive it.', 'A third one is dropped.']);
+  assert.deepEqual(result.followUps, ['Which weekend cost the most?', 'Is ₹6,240 above my usual month?', 'What counts as eating out?']);
+});
+
+test('a reply without the new fields still answers, with empty lists', async () => {
+  const result = await answerFromRecords({ userId: 'user-1', question: 'how much did I spend', sources: ['journal'] });
+  assert.equal(result.answer, 'You spent less.');
+  assert.deepEqual(result.inferred, []);
+  assert.deepEqual(result.followUps, []);
 });

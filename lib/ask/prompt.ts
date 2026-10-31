@@ -12,8 +12,17 @@ const RULES = [
   'Be specific: name weeks, dates and amounts from the data. Do not diagnose, and do not give financial or medical advice beyond what the records show.',
 ];
 
-const FORMAT =
-  'Return JSON only: {"answer":"","citations":["id"]} where every citation is an id copied exactly from the data (for example "journal:2026-09-12"). Use at most 8, and none if nothing supports the answer.';
+// "inferred" and "followUps" make the answer checkable: what Orbis read
+// straight from the records is cited, what it concluded beyond them is said
+// separately, and the follow-ups point at what is worth checking before acting
+// on it (the extracted/inferred split from graphify, the follow-ups from
+// Anthropic's discernment-nudge skill).
+const FORMAT = [
+  'Return JSON only: {"answer":"","citations":["id"],"inferred":[""],"followUps":[""]}.',
+  '"citations": ids copied exactly from the data (for example "journal:2026-09-12"), at most 8, none if nothing supports the answer.',
+  '"inferred": at most 2 short sentences for anything in the answer that goes beyond what the records state (a pattern, a likely reason, a general-knowledge point); empty when everything was read straight from the data.',
+  '"followUps": 2 or 3 short questions, under 70 characters each, written as the person would ask Orbis next and tied to this answer: one that checks a key figure or date against their records, one that tests an assumption or reason the answer gave, one that adds context the answer had to assume. Empty for a simple lookup or when nothing could be answered.',
+].join('\n');
 
 // When the question is about something Orbis showed them (a headline, the
 // market reading, a holding), that item travels as "about". It is not their
