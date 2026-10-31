@@ -12,7 +12,9 @@ export function loadEnv(): Record<string, string> {
   return { ...env, ...process.env } as Record<string, string>;
 }
 
-export const AUTH_DIR = path.join(__dirname, '..', '.auth');
+// E2E_AUTH_DIR lets runs that overlap keep their own users: each run deletes
+// its users and this folder when it ends, which would sign out the others.
+export const AUTH_DIR = process.env.E2E_AUTH_DIR ?? path.join(__dirname, '..', '.auth');
 export const USERS_FILE = path.join(AUTH_DIR, 'users.json');
 // Device PIN for test users (not a weak pattern, so the PIN rules accept it).
 export const TEST_PIN = '583921';

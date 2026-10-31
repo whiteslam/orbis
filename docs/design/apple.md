@@ -132,35 +132,53 @@ adds a visible border.
 
 ## Motion
 
-From Emil's rules, with Apple's spring values where a gesture is involved.
+Fluid and physical, the way Apple's "Designing Fluid Interfaces" describes
+it, with Emil Kowalski's rules for when not to animate.
 
-```
---ease-out:    cubic-bezier(0.23, 1, 0.32, 1)     enter, exit, press
---ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)    something moving on screen
---ease-drawer: cubic-bezier(0.32, 0.72, 0, 1)     sheets and drawers (iOS curve)
-```
+**Springs.** Things move on springs described the way Apple does: a damping
+ratio (1 = no overshoot) and a response in seconds. `lib/motion/spring.ts`
+holds them and turns each into a CSS `linear()` easing; the tokens in
+`app/styles/brand.css` are its output, and a unit test keeps them in step.
 
-| What | Duration | Easing |
+| Token (+ `-dur`) | Spring | Use |
 | --- | --- | --- |
-| Press (`:active` scale .97) | 120ms | ease-out |
-| Hover, colour | 150ms | ease |
-| Popover, menu, tooltip | 180ms | ease-out, from the trigger |
-| Sheet, drawer | 400ms in, 250ms out | drawer |
-| Ask panel | 320ms | ease-out, from the Ask button |
+| `--spring` | damping 1, response .4 | sheets, pages, most movement |
+| `--spring-snappy` | damping 1, response .28 | thumbs, knobs, menus, small state |
+| `--spring-bouncy` | damping .8, response .4 | only after a flick or drag let go |
 
-Rules:
+`transition: transform var(--spring-dur) var(--spring)`. The cubic-bezier
+tokens (`--ease-out`, `--ease-in-out`, `--ease-drawer`) remain for the
+moment of a press and for hover.
 
-- **Never animate what people do many times a day**: switching tabs, keyboard
-  shortcuts, the command palette, typing. Tabs swap instantly.
-- **Never ease-in** on UI. Never animate from `scale(0)`; start at .95 with
-  opacity 0.
-- **Enter and exit the same way.** A sheet that rises goes back down.
-- **Transitions over keyframes** for anything that can be interrupted
-  (toggles, segments, chips), so a second tap reverses from where it is.
-- Only `transform` and `opacity` (and `filter` under 20px). No
-  `transition: all`.
-- Springs (`bounce` 0, `duration` .4) for drag-driven motion; a little bounce
-  (.2) only after a flick.
-- Reduce Motion: no movement, short opacity fades only.
-- One signature moment is allowed: the Ask Orbis mark, which already animates
-  its own phases.
+**What moves, and how**
+
+| What | Motion |
+| --- | --- |
+| Press | Every button scales to .97 the instant it's pressed (100ms ease-out), springs back on release. Rows .985, tab bar and Ask button .9. Uses the `scale` property so it composes with any transform. |
+| Selection | The selected background of segmented controls, the tab bar and the desktop rail glides to the new item on `--spring-snappy` (motion runtime). |
+| Switch | The knob springs across and stretches while held, as on iOS. |
+| Page opened from a tab | Pushes in from the right on `--spring`. |
+| Settings (phone) | Rises from the foot; sinks back when closed with a tap; can be dragged down by its header. |
+| Ask Orbis (phone) | Grows out of its button and shrinks back into it; can be dragged down by its header. |
+| Desktop dialog / docked panel | The dialog grows in place (.96); the docked panel slides in from its edge. |
+| Menus, popovers | Scale from their trigger (.96) on `--spring-snappy`. |
+| Things that appear because of a tap | Opacity plus an 8px rise on `--spring`. |
+
+**Gestures** (`components/motion/motion-runtime.tsx`): a drag tracks the
+finger 1:1 after 10px, resists past the edge (rubber-banding), and on
+release the finger's velocity is handed to the spring; whether the sheet
+closes is decided by where the flick would come to rest (Apple's momentum
+projection), not where the finger let go.
+
+**Rules**
+
+- Never animate what people do many times a day: the content of a tab swaps
+  instantly (only the tab bar's selection glides). Keyboard actions never
+  animate: Escape or Enter closes a sheet at once.
+- Enter and exit the same way. Exits are quicker than entrances.
+- Interruptible state uses transitions, not keyframes, so a second tap
+  reverses from wherever it is.
+- Only `transform`, `scale` and `opacity` (and `filter` under 20px). No
+  `transition: all`. Never from `scale(0)`; never ease-in.
+- Reduce Motion: nothing moves; sheets fade.
+- One signature moment: the Ask Orbis mark animates its own phases.

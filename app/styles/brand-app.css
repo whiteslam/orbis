@@ -162,10 +162,13 @@ input[type="checkbox"][role="switch"]::before {
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06);
-  transition: transform .25s var(--ease-out);
+  /* The knob springs across, and stretches while held, as on iOS. */
+  transition: transform var(--spring-snappy-dur) var(--spring-snappy), width var(--spring-snappy-dur) var(--spring-snappy);
 }
 input[type="checkbox"][role="switch"]:checked { background: var(--sys-switch); }
 input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20px); }
+input[type="checkbox"][role="switch"]:not(:disabled):active::before { width: 33px; }
+input[type="checkbox"][role="switch"]:checked:not(:disabled):active::before { transform: translateX(14px); }
 input[type="checkbox"][role="switch"]:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {

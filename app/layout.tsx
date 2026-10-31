@@ -12,6 +12,7 @@ import './styles/marketing.css';
 import './styles/brand.css';
 import './styles/page-public.css';
 import { KeyboardAware } from '@/components/mobile/keyboard-aware';
+import { MotionRuntime } from '@/components/motion/motion-runtime';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import { SITE_NAME, siteUrl } from '@/lib/site';
 
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body>
         <KeyboardAware />
+        <MotionRuntime />
         <RegisterServiceWorker />
         {children}
       </body>
