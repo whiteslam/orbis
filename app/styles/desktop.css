@@ -7,10 +7,10 @@
    The query is DESKTOP_QUERY in lib/shell/desktop.ts, word for word; change
    both together. The second clause keeps a short touch screen out of it.
 
-   Switched off until the layout is finished: every rule is scoped under
-   .stage[data-desktop], which the shell sets only when the build has
-   NEXT_PUBLIC_DESKTOP_LAYOUT=1 (lib/shell/desktop.ts, .env.example). Off,
-   a wide window gets the phone mock-up exactly as before.
+   On by default: every rule is scoped under .stage[data-desktop], which the
+   shell sets unless the build has NEXT_PUBLIC_DESKTOP_LAYOUT=0
+   (lib/shell/desktop.ts, .env.example). Off, a wide window gets the phone
+   mock-up exactly as before.
 
    The look is the Career panel's (career-panel.css): a floating pill rail on
    the left, a header across the top, glass cards on the house wallpaper. The

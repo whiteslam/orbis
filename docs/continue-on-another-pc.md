@@ -27,7 +27,7 @@ To pick it up with Claude Code, open the repo and say: *"Continue the desktop we
 
 ## The two switches
 
-- **Desktop layout:** off unless the build has `NEXT_PUBLIC_DESKTOP_LAYOUT=1`. To see it locally, add that line to `.env.local` and run `pnpm dev -p 3101`. The phone layout is the same either way. Remove the switch when the plan's Task 10 is done.
+- **Desktop layout:** on unless the build has `NEXT_PUBLIC_DESKTOP_LAYOUT=0`, which keeps the phone mock-up at every width. The phone layout is the same either way.
 - **Research desk:** hidden, and none of its tables are read, unless `ORBIS_RESEARCH_DESK_EMAILS` has your email **and** both `ORBIS_RESEARCH_GITHUB_TOKEN` and `ORBIS_RESEARCH_GITHUB_REPO` are set.
 
 ## Python worker (Research desk)

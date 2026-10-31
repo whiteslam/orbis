@@ -1,12 +1,12 @@
 import { expect, openApp, openTab, settle, test, TABS } from '../support/fixtures';
 
-// The desktop layout (docs/superpowers/plans/2026-10-27-web-desktop.md) is
-// behind NEXT_PUBLIC_DESKTOP_LAYOUT=1, a build-time switch. A build without it
-// is the phone mock-up at every width, which the other responsive specs cover,
-// so these skip unless the app under test was built with it on.
+// The desktop layout (docs/superpowers/plans/2026-10-27-web-desktop.md) is on
+// unless the build has NEXT_PUBLIC_DESKTOP_LAYOUT=0. A build with it off is the
+// phone mock-up at every width, which the other responsive specs cover, so
+// these skip when the app under test was built that way.
 test.beforeEach(async ({ page }) => {
   await openApp(page);
-  test.skip(await page.locator('.stage[data-desktop]').count() === 0, 'built without NEXT_PUBLIC_DESKTOP_LAYOUT=1');
+  test.skip(await page.locator('.stage[data-desktop]').count() === 0, 'built with NEXT_PUBLIC_DESKTOP_LAYOUT=0');
 });
 
 test.describe('at 1440x900', () => {

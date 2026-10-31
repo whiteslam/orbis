@@ -14,12 +14,12 @@ import { partOfDay } from '@/lib/home/note';
 export const DESKTOP_QUERY = '(min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px)';
 
 /**
- * Whether this build ships the desktop layout at all. Off until it is finished
- * (docs/superpowers/plans/2026-10-27-web-desktop.md): turn it on with
- * NEXT_PUBLIC_DESKTOP_LAYOUT=1. Inlined at build time, so the server and the
- * browser agree and rendering on it causes no hydration mismatch.
+ * Whether this build ships the desktop layout at all. On by default; a build
+ * with NEXT_PUBLIC_DESKTOP_LAYOUT=0 keeps the phone mock-up at every width.
+ * Inlined at build time, so the server and the browser agree and rendering on
+ * it causes no hydration mismatch.
  */
-export const DESKTOP_LAYOUT = process.env.NEXT_PUBLIC_DESKTOP_LAYOUT === '1';
+export const DESKTOP_LAYOUT = process.env.NEXT_PUBLIC_DESKTOP_LAYOUT !== '0';
 
 /** Whether the desktop layout is showing. For event handlers only: never branch a render on it. */
 export function isDesktop(): boolean {
