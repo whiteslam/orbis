@@ -1,0 +1,23 @@
+# The Orbis Shorts worker as a systemd user service. Install (see README.md):
+#   cp workers/shorts-studio/orbis-shorts.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now orbis-shorts
+# Edit the two paths below if your checkout or Node live elsewhere.
+
+[Unit]
+Description=Orbis Shorts worker (faceless-shorts skill via Claude Code)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/orbis-starter
+ExecStart=%h/.nvm/versions/node/v24.18.0/bin/node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON workers/shorts-studio/src/main.ts
+# Node's own folder first (the skill's capture tools call `node`), then the usual places for ffmpeg and Chrome.
+Environment=PATH=%h/.nvm/versions/node/v24.18.0/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Restart=on-failure
+RestartSec=30
+# Let the current step finish writing before the worker is killed.
+TimeoutStopSec=60
+Nice=5
+
+[Install]
+WantedBy=default.target

@@ -14,7 +14,6 @@ const WORKING: readonly JobStatus[] = ['queued', 'planning', 'building'];
 export const OFFLINE_AFTER_MS = 120_000;
 
 const VOICE = /^[a-z]{2}_[a-z]+$/;
-// eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/g;
 
 /** One line of plain text: control characters dropped, whitespace collapsed. */

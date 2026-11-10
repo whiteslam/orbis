@@ -37,8 +37,7 @@ test('a good plan is accepted and trimmed', () => {
 });
 
 test('notes and sources are optional', () => {
-  const { sources: _sources, ...rest } = GOOD;
-  const result = validatePlan(rest);
+  const result = validatePlan({ title: GOOD.title, seconds: GOOD.seconds, lines: GOOD.lines });
   assert.ok(result.ok);
   assert.deepEqual(result.plan.sources, []);
 });
