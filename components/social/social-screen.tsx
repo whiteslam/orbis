@@ -8,6 +8,7 @@ import { SocialGrid, SocialList, dayLabel, type SocialSort } from '@/components/
 import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
+import { ShortsView } from '@/components/shorts/shorts-view';
 import { loadSocialMonthAction } from '@/app/social/actions';
 import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, type SocialFormat, type SocialPost, type SocialStatus } from '@/lib/social/types';
@@ -16,12 +17,15 @@ import { safeAction } from '@/lib/client/safe-action';
 import type { SocialConnectNotice } from '@/lib/social/connect-notice';
 
 type View = 'list' | 'grid';
+type Area = 'planner' | 'shorts';
 type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
 
 const VIEWS: Array<[View, string]> = [['list', 'List'], ['grid', 'Grid']];
 /** The pipeline, in the order a post moves through it. */
 const STAGES: SocialStatus[] = ['idea', 'draft', 'ready', 'published'];
 const HASH_PREFIX = '#social/';
+const SHORTS_HASH = '#social/shorts';
+const AREAS: Array<[Area, string]> = [['planner', 'Planner'], ['shorts', 'Shorts']];
 /** The banner class for each connect result; 'info' takes the plain banner. */
 const NOTICE_TONE_CLASS: Record<SocialConnectNotice['tone'], string> = { success: 'success', error: 'error', info: '' };
 
@@ -45,6 +49,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   const [view, setView] = useState<View>('list');
   const [sort, setSort] = useState<SocialSort>('status');
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
+  const [area, setArea] = useState<Area>('planner');
   const [selected, setSelected] = useState<string | null>(() => indiaToday());
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [isLoading, startLoading] = useTransition();
@@ -61,6 +66,12 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
       setMonth({ posts: result.posts, databaseReady: result.databaseReady, loadError: result.loadError });
     });
   }
+
+  // A reload onto #social/shorts opens Shorts. Read after mount: the server has no hash.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (window.location.hash.startsWith(SHORTS_HASH)) setArea('shorts');
+  }, []);
 
   // A reload onto #social/2026-11 opens that month rather than this one.
   useEffect(() => {
@@ -121,6 +132,30 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
     </div>
   );
 
+  /** Planner or Shorts; the hash follows, so a reload stays on the same one. */
+  function chooseArea(next: Area) {
+    setArea(next);
+    const hash = next === 'shorts' ? SHORTS_HASH : `${HASH_PREFIX}${period.slice(0, 7)}`;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
+  }
+
+  const areaSwitch = (
+    <div className="so-mini so-area" role="radiogroup" aria-label="Social area">
+      {AREAS.map(([id, label]) => (
+        <button key={id} type="button" role="radio" aria-checked={area === id} onClick={() => chooseArea(id)}>{label}</button>
+      ))}
+    </div>
+  );
+
+  if (area === 'shorts') return (
+    <div className="screen-body field so-screen">
+      <span ref={top} hidden />
+      <FieldHead title="Social" subtitle="Faceless shorts, made on your PC" />
+      {areaSwitch}
+      <ShortsView />
+    </div>
+  );
+
   const posts = [...month.posts].sort((left, right) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999') || left.position - right.position);
   const ready = month.databaseReady && !month.loadError;
   const isThisMonth = period === periodOfDate(today);
@@ -132,6 +167,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
     <div className="screen-body field so-screen">
       <span ref={top} hidden />
       <FieldHead title="Social" subtitle="Your own posts, planned for the month" />
+      {areaSwitch}
 
       {connectNotice && (
         <output className={`finance-notice ${NOTICE_TONE_CLASS[connectNotice.tone]}`}>
