@@ -37,7 +37,7 @@ export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-m
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
 
 // One row per person, keyed by user_id; every other table has its own id.
-const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings']);
+const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings', 'user_settings']);
 
 /**
  * The person's own content, read through their own session so row-level
@@ -61,6 +61,7 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_context_notes',
   'user_locations',
   'ai_preferences',
+  'user_settings',
   'notification_preferences',
   'transactions',
   'investment_holdings',

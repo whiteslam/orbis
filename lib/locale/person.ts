@@ -1,0 +1,57 @@
+// A person's own time zone, currency, language and chosen modules.
+// Pure and client-safe: no server imports, so client components can use it too.
+
+export type PersonLocale = { timeZone: string; currency: string; locale: string };
+
+/** What anyone without a settings row gets. India first, exactly as before accounts could differ. */
+export const DEFAULT_PERSON_LOCALE: PersonLocale = { timeZone: 'Asia/Kolkata', currency: 'INR', locale: 'en-IN' };
+
+/** One per tab in lib/shell/tabs.ts. */
+export type ModuleId = 'money' | 'health' | 'journal' | 'social' | 'career';
+export const ALL_MODULES: ModuleId[] = ['money', 'health', 'journal', 'social', 'career'];
+
+export type PersonSettings = PersonLocale & { modules: ModuleId[]; onboardedAt: string | null };
+
+export function isValidTimeZone(value: string): boolean {
+  if (typeof value !== 'string' || value.length < 1 || value.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isValidCurrency(value: string): boolean {
+  if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value)) return false;
+  try {
+    new Intl.NumberFormat('en', { style: 'currency', currency: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isValidLocale(value: string): boolean {
+  if (typeof value !== 'string' || value.length < 2 || value.length > 35) return false;
+  try {
+    return Intl.getCanonicalLocales(value).length === 1;
+  } catch {
+    return false;
+  }
+}
+
+function isModuleId(value: unknown): value is ModuleId {
+  return typeof value === 'string' && (ALL_MODULES as string[]).includes(value);
+}
+
+/** Turns a user_settings row (or no row) into settings. Anything invalid or missing falls back to the defaults. */
+export function normalizeSettings(row: Record<string, unknown> | null): PersonSettings {
+  const timeZone = row && typeof row.timezone === 'string' && isValidTimeZone(row.timezone) ? row.timezone : DEFAULT_PERSON_LOCALE.timeZone;
+  const currency = row && typeof row.currency === 'string' && isValidCurrency(row.currency) ? row.currency : DEFAULT_PERSON_LOCALE.currency;
+  const locale = row && typeof row.locale === 'string' && isValidLocale(row.locale) ? row.locale : DEFAULT_PERSON_LOCALE.locale;
+  // A missing or malformed list means every module; a real list keeps only known ones, once each.
+  const modules = row && Array.isArray(row.modules) ? [...new Set(row.modules.filter(isModuleId))] : [...ALL_MODULES];
+  const onboardedAt = row && typeof row.onboarded_at === 'string' && row.onboarded_at ? row.onboarded_at : null;
+  return { timeZone, currency, locale, modules, onboardedAt };
+}
