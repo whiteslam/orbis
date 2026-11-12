@@ -24,3 +24,22 @@ export function isNewAccount(createdAt: string | undefined, flowStartedAt: Date 
   if (flowStartedAt) return created >= flowStartedAt.getTime() - CLOCK_SLACK_MS;
   return now.getTime() - created <= NO_COOKIE_WINDOW_MS;
 }
+
+/**
+ * Whether the callback should delete and turn away this session's account.
+ * Only a Google/OAuth sign-in while sign-ups are closed, and only for an
+ * account this flow just created. Email links (confirmation, invite, magic
+ * link, recovery) are never refused here: an account the owner created or
+ * invited deliberately must be able to use its link, and email sign-up is
+ * already refused by the signUp action while sign-ups are closed.
+ */
+export function shouldRefuseNewAccount({ signupsOpen, oauth, createdAt, flowStartedAt, now }: {
+  signupsOpen: boolean;
+  oauth: boolean;
+  createdAt: string | undefined;
+  flowStartedAt: Date | null;
+  now: Date;
+}): boolean {
+  if (signupsOpen || !oauth) return false;
+  return isNewAccount(createdAt, flowStartedAt, now);
+}

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { UNLOCK_METHODS, signedInWithOAuth } from '@/lib/security/unlock-token';
 import { accessAllowed, signupsOpen } from '@/lib/security/access';
-import { isNewAccount } from '@/lib/security/new-account';
+import { shouldRefuseNewAccount } from '@/lib/security/new-account';
 import { OAUTH_START_COOKIE, verifyFlowStart } from '@/lib/security/oauth-start';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -59,15 +59,17 @@ export async function GET(request: NextRequest) {
   // while ORBIS_OPEN_SIGNUPS is off (turn both on together): this callback can
   // be bypassed by exchanging the code at Supabase directly.
   //
-  // A first Google sign-in makes Supabase create an account. If this session's
-  // account was created by the flow now finishing (judged from the signed
-  // cookie set when it began; see isNewAccount), remove it and turn the person
-  // away. Existing accounts are left alone.
+  // This covers Google/OAuth sign-ins only: a first Google sign-in makes
+  // Supabase create an account. If this session's account was created by the
+  // flow now finishing (judged from the signed cookie set when it began; see
+  // isNewAccount), remove it and turn the person away. Existing accounts are
+  // left alone, and email links (confirmation, invite, magic link, recovery)
+  // skip this check, so an account the owner creates or invites works.
   const cookieStore = await cookies();
   const flowStartedAt = verifyFlowStart(cookieStore.get(OAUTH_START_COOKIE)?.value);
   cookieStore.delete(OAUTH_START_COOKIE);
   const user = data.session?.user;
-  if (user && !signupsOpen() && isNewAccount(user.created_at, flowStartedAt, new Date())) {
+  if (user && shouldRefuseNewAccount({ signupsOpen: signupsOpen(), oauth: signedInWithOAuth(claims?.claims?.amr), createdAt: user.created_at, flowStartedAt, now: new Date() })) {
     await removeNewAccount(user.id);
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL('/login?error=private', request.url));

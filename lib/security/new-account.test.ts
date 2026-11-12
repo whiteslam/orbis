@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { isNewAccount } from './new-account.ts';
+import { isNewAccount, shouldRefuseNewAccount } from './new-account.ts';
 
 const NOW = new Date('2026-11-12T10:30:00Z');
 const FLOW = new Date('2026-11-12T10:29:00Z');
@@ -26,4 +26,13 @@ test('with no cookie, created days ago is not new', () => {
 test('a missing or unreadable created_at is treated as new', () => {
   assert.equal(isNewAccount(undefined, FLOW, NOW), true);
   assert.equal(isNewAccount('nonsense', null, NOW), true);
+});
+
+test('only a new account arriving by OAuth while sign-ups are closed is refused', () => {
+  const base = { createdAt: '2026-11-12T10:29:02Z', flowStartedAt: FLOW, now: NOW };
+  assert.equal(shouldRefuseNewAccount({ ...base, signupsOpen: false, oauth: true }), true);
+  // An invited or confirmed email-link account made minutes ago is left alone.
+  assert.equal(shouldRefuseNewAccount({ ...base, flowStartedAt: null, signupsOpen: false, oauth: false }), false);
+  assert.equal(shouldRefuseNewAccount({ ...base, signupsOpen: true, oauth: true }), false);
+  assert.equal(shouldRefuseNewAccount({ ...base, createdAt: '2026-11-10T10:00:00Z', signupsOpen: false, oauth: true }), false);
 });
