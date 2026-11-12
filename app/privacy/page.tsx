@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <ul>
           <li>{SITE_NAME} holds only what you type in, upload or connect.</li>
           <li>Nothing is sent to an AI provider until you turn AI on. It is off for every new account.</li>
-          <li>Inside the app, each person’s data is visible only to that person.</li>
+          <li>Your data is visible only to you, not to other users of the app.</li>
           <li>We do not sell your data and we do not run ads.</li>
           <li>You can export or delete your data, or turn any connection off, whenever you like.</li>
           <li>{SITE_NAME} is for people aged 18 and over.</li>
@@ -176,7 +176,8 @@ export default function PrivacyPage() {
         </ul>
         <p>
           If a health document search index is switched on for this deployment, the text of a document you add is sent
-          to OpenRouter to build that index, using a model that may train on it. Adding a document needs AI to be on.
+          to OpenRouter to build that index. So is the text you search your documents with (up to 2,000 characters).
+          Both go to a model that may train on what it receives. Adding a document needs AI to be on.
         </p>
         <p>
           AI can be wrong. Read the <Link href="/terms">terms</Link> on what its output is and is not.
@@ -191,7 +192,7 @@ export default function PrivacyPage() {
           People who run {SITE_NAME} are a different case, and we want to be straight about it. The service needs
           technical access to run: for backups, scheduled jobs such as notifications and job searches, deleting
           accounts, and the few tables people cannot reach themselves. That access skips row-level security. We limit
-          it. Every use is reviewed, each query is for one person’s own job, and an automated test fails if new code starts using it without being listed. {SITE_NAME} is not zero-knowledge: your content is not encrypted
+          it. Every use has been reviewed, each query is for one person’s own job, and an automated test fails if new code starts using it without being listed. {SITE_NAME} is not zero-knowledge: your content is not encrypted
           separately for each person, so someone with full access to our servers could read it. Only your connection
           tokens (Gmail, Zerodha, Groww, Instagram and Threads) are stored encrypted.
         </p>
@@ -249,12 +250,23 @@ export default function PrivacyPage() {
 
         <h2>Coming with the Android app</h2>
         <p>
-          We are building an Android app. This part describes how it is meant to work, and it will be updated before
-          it launches. Nothing on your phone is read until you turn each source on, one by one. Raw phone data, such
-          as notification text, stays on your phone. Only facts taken from it, such as a transaction or a missed call,
-          are sent to your account. A private vault, such as Android’s Private Space, is never read. Apps and contacts
-          you block are never read or stored. Phone data will go only to AI providers that do not train on it, and
-          the stored phone content will be encrypted on the server for each person.
+          None of this is in force today, because the Android app is not released. Orbis does not read anything from
+          your phone now. This section says what we plan, and we will update it before the app launches.
+        </p>
+        <p>
+          The Android app is being designed so that nothing on your phone is read until you turn each source on, one
+          by one. We plan to keep raw phone data, such as notification text, on your phone, and to send your account
+          only facts taken from it, such as a transaction or a missed call. Sometimes the phone will need AI to pull
+          out a fact or answer a question. Then it will send the text, with sensitive details such as OTPs and card
+          numbers masked, to our server for a short time. The server will keep only the fact it extracts and discard
+          the text.
+        </p>
+        <p>
+          We plan for apps and contacts you block to be skipped as the phone captures data, so they are not stored.
+          Android’s Private Space and Samsung’s Secure Folder are separate profiles that Orbis should not be able to
+          see. We still have to confirm this on real phones. We also plan to send phone data only to AI providers
+          that do not train on it. That check is not built yet. We plan to encrypt stored phone content on the server
+          for each person, but not zero-knowledge: whoever holds the server’s secrets could decrypt it.
         </p>
 
         <h2>Contact and grievance officer</h2>
