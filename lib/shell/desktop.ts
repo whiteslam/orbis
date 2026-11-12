@@ -26,7 +26,7 @@ export function isDesktop(): boolean {
   return DESKTOP_LAYOUT && typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches;
 }
 
-/** The header's hello, by the hour in India. Late at night it stays "evening"; before five it is a plain hello. */
+/** The header's hello, by the hour on the person's clock. Late at night it stays "evening"; before five it is a plain hello. */
 export function greeting(hour: number, name: string | null): string {
   const part = partOfDay(hour);
   const words = part === 'early' ? 'Hello' : `Good ${part === 'night' ? 'evening' : part}`;

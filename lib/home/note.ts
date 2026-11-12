@@ -10,7 +10,8 @@
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { SourceId } from '@/lib/focus/types';
 // Relative, so the unit tests can load this module under plain Node.
-import { count, istParts, money } from './../focus/types.ts';
+import { count, money } from './../focus/types.ts';
+import { localParts } from './../locale/dates.ts';
 import type { BriefWeather } from '@/lib/home/weather';
 import type { BriefPortfolio } from '@/lib/home/portfolio';
 import type { BriefTraining } from '@/lib/home/training';
@@ -49,6 +50,8 @@ export type NoteInput = {
   missed?: RoutineToday[];
   name?: string | null;
   now?: Date;
+  /** The person's zone: the note speaks from their clock. */
+  timeZone: string;
 };
 
 /**
@@ -228,17 +231,15 @@ export function partOfDay(hour: number): PartOfDay {
   return 'night';
 }
 
-function clock(now: Date) {
-  return new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TIME_ZONE })
+function clock(now: Date, timeZone: string) {
+  return new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone })
     .format(now)
     .replace(/\s?([ap])m$/i, (_match, half: string) => ` ${half.toLowerCase()}m`);
 }
 
-const TIME_ZONE = 'Asia/Kolkata';
-
 export function composeNote(input: NoteInput): HomeNote {
   const now = input.now ?? new Date();
-  const today = istParts(now);
+  const today = localParts(now, input.timeZone);
   const seed = today.year * 400 + today.month * 32 + today.day;
   const firstName = input.name?.trim().split(/\s+/)[0] || null;
   const when = partOfDay(today.hour);
@@ -278,7 +279,7 @@ export function composeNote(input: NoteInput): HomeNote {
     return {
       id: 'quiet',
       greeting: greet(today.hour, firstName, seed),
-      time: clock(now),
+      time: clock(now, input.timeZone),
       when,
       caption: 'Nothing needs you right now. I’ll let you know when something does.',
       sources: ['orbis'],
@@ -288,7 +289,7 @@ export function composeNote(input: NoteInput): HomeNote {
   return {
     id: kept[0].id,
     greeting: greet(today.hour, firstName, seed),
-    time: clock(now),
+    time: clock(now, input.timeZone),
     when,
     // Sources are listed for what the caption actually kept, not for every
     // reading that was considered and cut.

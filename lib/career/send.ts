@@ -7,7 +7,8 @@ import {
   addEvent, CareerError, claimSendLock, countSentSince, downloadCareerFile, getApplication, getApplicationFiles, getCareerRow, getJob, getOffer,
   listEvents, releaseSendLock, sentAddresses, setJobState, transitionApplication, updateApplication, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
-import { careerToday } from '@/lib/career/scoring';
+import { careerToday, careerZone } from '@/lib/career/scoring';
+import { zonedIso } from '@/lib/locale/dates';
 import {
   addDays, applicationBody, applicationSubject, composeUrl, oneLine, recruiteeEndpoint, replyReferences, replySubject, resumeFileName,
 } from '@/lib/career/send-plan';
@@ -63,7 +64,6 @@ const LOCK_STALE_MS = 2 * 60_000;
 const NOT_IN_SENT = 'Gmail didn’t answer in time, and the email isn’t in your Sent folder, so it looks like nothing went out. Check Sent in Gmail before you send again.';
 const UNSURE_SENT = 'Gmail didn’t answer in time and Orbis couldn’t check your Sent folder. Check Sent in Gmail before you send again.';
 const PDF_TYPE = 'application/pdf';
-const IST_OFFSET = '+05:30';
 
 const DONE: readonly ApplicationStatus[] = [
   'sent', 'acknowledged', 'replied', 'assessment', 'interview', 'offer', 'accepted', 'declined', 'rejected', 'withdrawn', 'ghosted',
@@ -78,9 +78,9 @@ function messageOf(error: unknown): string {
   return NOTHING_WENT;
 }
 
-/** When the owner's day began, for the daily cap. Career counts days in India time, as careerToday does. */
-function dayStartIso(day: string) {
-  return new Date(`${day}T00:00:00${IST_OFFSET}`).toISOString();
+/** When the owner's day began, for the daily cap. Career counts days in the owner's zone, as careerToday does. */
+function dayStartIso(day: string, timeZone: string) {
+  return new Date(zonedIso(day, '00:00', timeZone)).toISOString();
 }
 
 const applyPage = (job: Pick<CareerJob, 'applyUrl' | 'url'>) => job.applyUrl ?? job.url;
@@ -162,6 +162,8 @@ type Context = {
   job: CareerJob;
   row: CareerRow & { profile: CareerProfile };
   now: Date;
+  /** The owner's zone, which their days are counted in. */
+  timeZone: string;
 };
 
 /**
@@ -194,7 +196,7 @@ async function release(ctx: Context, message: string | null) {
 async function snapshotPrediction(ctx: Context, route: ApplyRoute) {
   if (!ctx.row.spec) return ctx.app.prediction;
   try {
-    return await predictionFor(ctx.client, ctx.userId, { job: ctx.job, route, score: ctx.job.score ?? 0, spec: ctx.row.spec, today: careerToday(ctx.now) });
+    return await predictionFor(ctx.client, ctx.userId, { job: ctx.job, route, score: ctx.job.score ?? 0, spec: ctx.row.spec, today: careerToday(ctx.now, ctx.timeZone) });
   } catch (error) {
     console.error('The prediction snapshot at send failed', error);
     return ctx.app.prediction;
@@ -212,7 +214,7 @@ async function recordSent(ctx: Context, input: { route: ApplyRoute; threadId: st
     route: input.route,
     sentAt: now.toISOString(),
     gmailThreadId: input.threadId,
-    followUpDue: input.followUp ? addDays(careerToday(now), ctx.row.settings.followUpDays) : null,
+    followUpDue: input.followUp ? addDays(careerToday(now, ctx.timeZone), ctx.row.settings.followUpDays) : null,
     followUpDraft: null,
     prediction: await snapshotPrediction(ctx, input.route),
   };
@@ -375,7 +377,8 @@ export async function sendApplication(client: CareerDb, userId: string, applicat
   const blocked = notSendable(app, now);
   if (blocked) return { kind: 'refused', message: blocked };
   if (!row?.profile) return { kind: 'refused', message: 'Add your resume in Career → Setup first.' };
-  const sentToday = await countSentSince(userId, dayStartIso(careerToday(now)), client);
+  const timeZone = await careerZone(client, userId);
+  const sentToday = await countSentSince(userId, dayStartIso(careerToday(now, timeZone), timeZone), client);
   if (sentToday >= row.settings.dailySendCap) {
     return { kind: 'refused', message: `That’s ${sentToday} sent today, your daily limit. Raise it in Career → Setup, or send tomorrow.` };
   }
@@ -384,7 +387,7 @@ export async function sendApplication(client: CareerDb, userId: string, applicat
     if (refusal) return { kind: 'refused', message: refusal };
   }
   if (!(await claimSend(client, userId, app.id, now))) return { kind: 'refused', message: 'This was sent or is being sent already.' };
-  const ctx: Context = { client, userId, app, job, row: { ...row, profile: row.profile }, now };
+  const ctx: Context = { client, userId, app, job, row: { ...row, profile: row.profile }, now, timeZone };
   try {
     return await sendByRoute(ctx);
   } catch (error) {
@@ -405,7 +408,7 @@ export async function markApplied(client: CareerDb, userId: string, applicationI
   if (!job) return { ok: false, message: 'That job couldn’t be found.' };
   let prediction = app.prediction;
   if (row?.spec) {
-    prediction = await predictionFor(client, userId, { job, route: app.route, score: job.score ?? 0, spec: row.spec, today: careerToday(now) })
+    prediction = await predictionFor(client, userId, { job, route: app.route, score: job.score ?? 0, spec: row.spec, today: careerToday(now, await careerZone(client, userId)) })
       .catch((error: unknown) => {
         console.error('The prediction snapshot at "I applied" failed', error);
         return app.prediction;

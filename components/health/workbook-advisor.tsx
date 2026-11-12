@@ -11,6 +11,7 @@ import { safeAction } from '@/lib/client/safe-action';
 import { savedWhen, splitSummary, type AdviceSent, type ShownAdvice } from '@/lib/workbook/shown-advice';
 import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
 import { createClient } from '@/lib/supabase/client';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -329,6 +330,7 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
 
 /** The advice itself: a headline, numbered steps with the observations they rest on, and what was sent. */
 export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readonly<{ advice: ShownAdvice; onDeleted: () => void; onPlan: () => void; onBack: () => void }>) {
+  const { timeZone } = usePersonLocale();
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -363,7 +365,7 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
       <section className="fd-focus fd-advice" aria-live="polite">
         <h1>{summary.headline}</h1>
         {summary.rest && <p>{summary.rest}</p>}
-        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</p>
+        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt, timeZone)}` : ''}</p>
       </section>
 
       <FieldLabel>{steps.length === 1 ? '1 step' : `${steps.length} steps`}</FieldLabel>

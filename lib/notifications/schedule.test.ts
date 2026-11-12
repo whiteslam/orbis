@@ -56,3 +56,9 @@ test('a test send is worded by Orbis, so it can be sent any number of times with
   assert.equal(wordedByAi('test'), false);
   for (const slot of ['morning', 'lunch', 'evening', 'night'] as const) assert.equal(wordedByAi(slot), true);
 });
+
+test('the morning slot is sent at 06:30 Los Angeles time for someone there', () => {
+  const la = prefs({ timezone: 'America/Los_Angeles' });
+  assert.deepEqual(dueSlots(la, new Date('2026-11-12T14:29:00Z')).slots, []);
+  assert.deepEqual(dueSlots(la, new Date('2026-11-12T14:30:00Z')), { date: '2026-11-12', slots: ['morning'] });
+});

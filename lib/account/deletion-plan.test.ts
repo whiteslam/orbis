@@ -89,9 +89,9 @@ test('a missing bucket is recognised so it can be skipped', () => {
 });
 
 test('the export file is named for the day it was made, in India', () => {
-  assert.equal(exportFilename(new Date('2026-09-28T06:00:00Z')), 'orbis-export-2026-09-28.json');
+  assert.equal(exportFilename('Asia/Kolkata', new Date('2026-09-28T06:00:00Z')), 'orbis-export-2026-09-28.json');
   // 20:00 UTC is already the next morning in India.
-  assert.equal(exportFilename(new Date('2026-09-28T20:00:00Z')), 'orbis-export-2026-09-29.json');
+  assert.equal(exportFilename('Asia/Kolkata', new Date('2026-09-28T20:00:00Z')), 'orbis-export-2026-09-29.json');
 });
 
 test('a refused export or deletion says what to do, and a signed-out export is a 401', () => {

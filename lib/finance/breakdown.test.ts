@@ -7,7 +7,7 @@ const row = (amount: number, category: string, direction = 'expense', occurred_a
 
 test('money moved into an investment is not counted as spent', () => {
   const rows = [row(2_000, 'Groceries'), row(10_000, 'FD'), row(5_000, 'SIP / Mutual fund'), row(50_000, 'Salary', 'income')];
-  const month = monthBreakdown(rows, new Map([['INR', 2_000]]), 2026, 9)!;
+  const month = monthBreakdown(rows, new Map([['INR', 2_000]]), 2026, 9, 'Asia/Kolkata')!;
   assert.equal(month.spent, 2_000);
   assert.equal(month.invested, 15_000);
   assert.equal(month.received, 50_000);
@@ -30,4 +30,12 @@ test('own investments are summed by category, largest first', () => {
 
 test('no investments gives an empty summary', () => {
   assert.deepEqual(summariseOwnInvestments([]), { currency: 'INR', total: 0, categories: [] });
+});
+
+test('a day is counted in the person\'s own zone', () => {
+  const late = [row(700, 'Groceries', 'expense', '2026-11-01T02:00:00Z')];
+  const newYork = monthBreakdown(late, new Map([['INR', 700]]), 2026, 10, 'America/New_York')!;
+  assert.equal(newYork.daily[30].amount, 700, '31 Oct in New York');
+  const india = monthBreakdown(late, new Map([['INR', 700]]), 2026, 11, 'Asia/Kolkata')!;
+  assert.equal(india.daily[0].amount, 700, '1 Nov in India');
 });

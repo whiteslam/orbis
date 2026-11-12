@@ -17,7 +17,8 @@ import { loadLivePortfolio } from '@/lib/invest/live';
 import { researchDeskAvailable } from '@/lib/research/access';
 import { deskHoldings, portfolioContextFor } from '@/lib/research/context';
 import { dispatchConfig, dispatchRuns } from '@/lib/research/dispatch';
-import { cancelRun, istMonthStart, queueRuns } from '@/lib/research/queue';
+import { cancelRun, monthStartIn, queueRuns } from '@/lib/research/queue';
+import { getPersonSettings } from '@/lib/locale/repository';
 import {
   countRunsSince, getRun, getSettings, getSettlement, listEvents, listRuns, listSettlements, researchQueueDb, ResearchError, saveSettings,
   type ResearchDb,
@@ -79,11 +80,12 @@ export async function loadResearchDeskAction(): Promise<Result<ResearchDesk | nu
   if (me === 'signed-out') return SIGN_IN;
   if (me === 'not-allowed') return ok(null);
   try {
+    const { timeZone } = await getPersonSettings(me.userId);
     const [runs, settlements, settings, monthUsed] = await Promise.all([
       listRuns(me.db, me.userId),
       listSettlements(me.db, me.userId),
       getSettings(me.db, me.userId),
-      countRunsSince(me.db, me.userId, istMonthStart(new Date())),
+      countRunsSince(me.db, me.userId, monthStartIn(new Date(), timeZone)),
     ]);
     return ok({ runs: withStatus(runs), settlements, settings, configured: true, monthUsed });
   } catch (error) {
@@ -127,10 +129,10 @@ export async function startResearchAction(input: unknown): Promise<Result<{ runI
     if (!target.ok) return fail(targetMessage(target));
 
     const admin = createAdminClient();
-    const settings = await getSettings(me.db, me.userId);
+    const [settings, { timeZone }] = await Promise.all([getSettings(me.db, me.userId), getPersonSettings(me.userId)]);
     const queued = await queueRuns(
       { db: researchQueueDb(admin), dispatch: (request) => dispatchRuns(request, { config: dispatchConfig() }), configured: dispatchConfig() !== null },
-      { userId: me.userId, targets: [target], portfolio: portfolioContextFor(holdings), settings, source: 'manual', now: new Date() },
+      { userId: me.userId, targets: [target], portfolio: portfolioContextFor(holdings), settings, source: 'manual', now: new Date(), timeZone },
     );
     refresh();
     if (!queued.ok) return fail(queued.message);

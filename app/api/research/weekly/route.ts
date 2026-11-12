@@ -4,7 +4,10 @@ import { loadLivePortfolio } from '@/lib/invest/live';
 import { researchDeskAvailable, researchDeskEmails } from '@/lib/research/access';
 import { deskHoldings, portfolioContextFor } from '@/lib/research/context';
 import { dispatchConfig, dispatchRuns, type DispatchConfig } from '@/lib/research/dispatch';
-import { istDate, queueRuns } from '@/lib/research/queue';
+import { queueRuns } from '@/lib/research/queue';
+import { localDate } from '@/lib/locale/dates';
+import { DEFAULT_PERSON_LOCALE } from '@/lib/locale/person';
+import { getPersonSettingsAdmin } from '@/lib/locale/repository';
 import {
   accountEmail, getSettings, hasUnsettledDue, hasWeeklyRunsOn, raiseWeeklyHeadsup, researchQueueDb, weeklyCandidates, weeklyRunsBetween,
   type ResearchDb,
@@ -18,7 +21,7 @@ const TIME_BUDGET_MS = 50_000;
 /** A call needs its holding period behind it before it can settle. */
 const SETTLE_AFTER_DAYS = 8;
 
-type Owner = { userId: string; email: string; settings: ResearchSettings };
+type Owner = { userId: string; email: string; settings: ResearchSettings; timeZone: string };
 
 /**
  * The owners this run is for: on the desk's allowlist, with the desk on in its
@@ -32,16 +35,19 @@ async function* owners(admin: ResearchDb, userIds: Iterable<string>, deadline: n
     if (!email || !researchDeskAvailable(email, true)) continue;
     const settings = await getSettings(admin, userId);
     if (!settings.enabled) continue;
-    yield { userId, email, settings };
+    const { timeZone } = await getPersonSettingsAdmin(admin, userId);
+    yield { userId, email, settings, timeZone };
   }
 }
 
 /** Saturday, 09:00 IST: settle due calls, then queue the weekly batch when it is on. */
 async function queueStep(admin: ResearchDb, config: DispatchConfig, now: Date, deadline: number) {
-  const today = istDate(now);
+  // Finding candidates looks back weeks, so the default zone is close enough; each owner's own day is used below.
+  const candidatesFrom = localDate(now, DEFAULT_PERSON_LOCALE.timeZone);
   const summary = { users: 0, settling: 0, queued: 0, failed: 0 };
-  for await (const owner of owners(admin, await weeklyCandidates(admin, today), deadline)) {
+  for await (const owner of owners(admin, await weeklyCandidates(admin, candidatesFrom), deadline)) {
     summary.users += 1;
+    const today = localDate(now, owner.timeZone);
     try {
       if (await hasUnsettledDue(admin, owner.userId, today, SETTLE_AFTER_DAYS)) {
         const started = await dispatchRuns({ mode: 'settle', runIds: [], userId: owner.userId }, { config });
@@ -55,7 +61,7 @@ async function queueStep(admin: ResearchDb, config: DispatchConfig, now: Date, d
       if (!picks.length) continue;
       const queued = await queueRuns(
         { db: researchQueueDb(admin), dispatch: (request) => dispatchRuns(request, { config }), configured: true },
-        { userId: owner.userId, targets: picks, portfolio: portfolioContextFor(holdings), settings, source: 'weekly', now },
+        { userId: owner.userId, targets: picks, portfolio: portfolioContextFor(holdings), settings, source: 'weekly', now, timeZone: owner.timeZone },
       );
       // The refusal's message can name a ticker, so only the count is kept.
       if (queued.ok) summary.queued += queued.runIds.length;
@@ -69,7 +75,8 @@ async function queueStep(admin: ResearchDb, config: DispatchConfig, now: Date, d
 
 /** Monday, 08:00 IST: a heads-up for each owner whose weekly runs finished. */
 async function summaryStep(admin: ResearchDb, now: Date, deadline: number) {
-  const weekOf = mondayOf(istDate(now));
+  // Everyone's weekly runs are read at once, so the week is placed in the default zone.
+  const weekOf = mondayOf(localDate(now, DEFAULT_PERSON_LOCALE.timeZone));
   const byUser = await weeklyRunsBetween(admin, weekBefore(weekOf), weekOf);
   const summary = { users: 0, raised: 0 };
   for await (const owner of owners(admin, byUser.keys(), deadline)) {

@@ -9,11 +9,12 @@ import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
 import { loadSocialMonthAction } from '@/app/social/actions';
-import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
+import { PERIOD_PATTERN, todayIn, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, type SocialFormat, type SocialPost, type SocialStatus } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
 import type { SocialConnectNotice } from '@/lib/social/connect-notice';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 type View = 'list' | 'grid';
 type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
@@ -40,16 +41,17 @@ function periodFromHash() {
  * month lives in the URL hash, so a reload stays where it was.
  */
 export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
+  const { timeZone } = usePersonLocale();
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
   const [view, setView] = useState<View>('list');
   const [sort, setSort] = useState<SocialSort>('status');
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
-  const [selected, setSelected] = useState<string | null>(() => indiaToday());
+  const [selected, setSelected] = useState<string | null>(() => todayIn(timeZone));
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [isLoading, startLoading] = useTransition();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
-  const today = indiaToday();
+  const today = todayIn(timeZone);
 
   function load(next: string) {
     setPeriod(next);

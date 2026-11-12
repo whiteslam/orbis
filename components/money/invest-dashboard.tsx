@@ -16,6 +16,7 @@ import { OwnInvestmentsList } from '@/components/money/own-investments';
 import { PortfolioNewsCard } from '@/components/money/portfolio-news';
 import { ResearchDeskSection } from '@/components/research/research-desk';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { FieldHead, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { inr } from '@/components/money/format';
@@ -134,6 +135,7 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
   onAdvice: () => void;
 }>) {
   const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
+  const { timeZone } = usePersonLocale();
   const hasData = analysis.positions.length > 0;
   const failures = (live?.brokers ?? [])
     .filter((broker) => broker.state === 'error')
@@ -147,6 +149,7 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
     failures,
     connected,
     savedAdviceAt: advice?.createdAt ?? null,
+    timeZone,
   });
 
   const gain = gainDelta(analysis);

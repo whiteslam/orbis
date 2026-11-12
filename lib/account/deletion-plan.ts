@@ -3,7 +3,7 @@
 
 import { rateLimitMessage } from '@/lib/security/rate-limit-rules';
 import { hasFreshAuth } from '@/lib/security/unlock-token';
-import { indiaToday } from '@/lib/social/month';
+import { todayIn } from '@/lib/social/month';
 
 export type DeletionStep = 'revoke-connections' | 'remove-research' | 'remove-storage' | 'delete-user' | 'sweep-storage';
 
@@ -151,6 +151,7 @@ export function isMissingBucketError(error: unknown) {
   return typeof message === 'string' && /bucket not found/i.test(message);
 }
 
-export function exportFilename(now = new Date()) {
-  return `orbis-export-${indiaToday(now)}.json`;
+/** Named for the day it was made, in the person's zone. */
+export function exportFilename(timeZone: string, now = new Date()) {
+  return `orbis-export-${todayIn(timeZone, now)}.json`;
 }

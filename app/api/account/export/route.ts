@@ -2,6 +2,7 @@ import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename, refusalMessage, refusal
 import { sensitiveRequester } from '@/lib/account/sensitive-auth';
 import { listUserObjects } from '@/lib/account/storage';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getPersonSettings } from '@/lib/locale/repository';
 import type { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
+  const { timeZone } = await getPersonSettings(userId);
   const body = {
     exportedAt: now.toISOString(),
     account: { id: userId, email: email || null },
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
     headers: {
       ...NO_STORE,
       'content-type': 'application/json; charset=utf-8',
-      'content-disposition': `attachment; filename="${exportFilename(now)}"`,
+      'content-disposition': `attachment; filename="${exportFilename(timeZone, now)}"`,
     },
   });
 }

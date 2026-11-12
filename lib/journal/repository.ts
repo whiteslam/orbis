@@ -3,9 +3,11 @@ import 'server-only';
 import type { JournalEntry, JournalSummary } from '@/lib/journal/types';
 import { createClient } from '@/lib/supabase/server';
 import { listVoiceNotes } from '@/lib/voice/repository';
+import { localDate } from '@/lib/locale/dates';
+import { getPersonSettings } from '@/lib/locale/repository';
 
-function istToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+function todayIn(timeZone: string) {
+  return localDate(new Date(), timeZone);
 }
 
 function previousDay(date: string) {
@@ -15,8 +17,8 @@ function previousDay(date: string) {
 }
 
 // Consecutive days with an entry, ending today (or yesterday if today is still open).
-function streakOf(dates: Set<string>) {
-  let day = istToday();
+function streakOf(dates: Set<string>, timeZone: string) {
+  let day = todayIn(timeZone);
   if (!dates.has(day)) day = previousDay(day);
   let streak = 0;
   while (dates.has(day)) {
@@ -44,6 +46,7 @@ export async function getJournal(userId: string): Promise<JournalSummary> {
     body: row.body,
     tags: row.tags ?? [],
   }));
-  const voice = await listVoiceNotes(userId, Array.from(new Set([istToday(), ...entries.map((entry) => entry.date)])));
-  return { state: 'ready', entries, streak: streakOf(new Set(entries.map((entry) => entry.date))), voice };
+  const { timeZone } = await getPersonSettings(userId);
+  const voice = await listVoiceNotes(userId, Array.from(new Set([todayIn(timeZone), ...entries.map((entry) => entry.date)])));
+  return { state: 'ready', entries, streak: streakOf(new Set(entries.map((entry) => entry.date)), timeZone), voice };
 }

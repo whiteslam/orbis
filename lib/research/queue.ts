@@ -6,6 +6,7 @@
 import type { DispatchInput, DispatchResult } from '@/lib/research/dispatch';
 import type { PortfolioContext, ResearchSettings, RunSource } from '@/lib/research/types';
 import type { ResearchTarget } from '@/lib/research/tickers';
+import { localDate, localParts, monthStartUtc } from '@/lib/locale/dates';
 
 export type NewRunRow = {
   user_id: string;
@@ -41,6 +42,8 @@ export type QueueInput = {
   settings: ResearchSettings;
   source: RunSource;
   now: Date;
+  /** The owner's zone: the trade date and the month's run cap are counted in it. */
+  timeZone: string;
 };
 
 export type QueueResult = { ok: true; runIds: string[]; skipped: string[] } | { ok: false; message: string };
@@ -48,17 +51,10 @@ export type QueueResult = { ok: true; runIds: string[]; skipped: string[] } | { 
 /** Indian tickers only, so `social` (US forums) is never asked for (the spec's decision 5). */
 export const INDIA_ANALYSTS = ['market', 'fundamentals', 'news'] as const;
 
-const IST_OFFSET_MS = 330 * 60_000;
-
-/** Today's date in India, YYYY-MM-DD. */
-export function istDate(now: Date) {
-  return new Date(now.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-/** The instant the current month began in India, as an ISO string. */
-export function istMonthStart(now: Date) {
-  const local = new Date(now.getTime() + IST_OFFSET_MS);
-  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - IST_OFFSET_MS).toISOString();
+/** The instant the current month began in the owner's zone, as an ISO string. */
+export function monthStartIn(now: Date, timeZone: string) {
+  const { year, month } = localParts(now, timeZone);
+  return monthStartUtc(year, month, timeZone);
 }
 
 export const NOT_CONFIGURED_MESSAGE = 'The research worker isn’t set up on this server yet.';
@@ -77,12 +73,12 @@ export async function queueRuns(deps: QueueDeps, input: QueueInput): Promise<Que
   if (!input.targets.length) return { ok: false, message: 'There’s nothing to analyse.' };
 
   const [used, active] = await Promise.all([
-    deps.db.countRunsSince(input.userId, istMonthStart(input.now)),
+    deps.db.countRunsSince(input.userId, monthStartIn(input.now, input.timeZone)),
     deps.db.activeTickers(input.userId),
   ]);
   let room = Math.max(0, input.settings.monthlyRunCap - used);
   const busy = new Set(active);
-  const tradeDate = istDate(input.now);
+  const tradeDate = localDate(input.now, input.timeZone);
   const runIds: string[] = [];
   const skipped: string[] = [];
   let firstReason: string | null = null;

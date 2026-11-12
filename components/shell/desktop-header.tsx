@@ -7,7 +7,8 @@ import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Headsups } from '@/components/today/headsups';
-import { istParts } from '@/lib/focus/types';
+import { localParts } from '@/lib/locale/dates';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import { greeting } from '@/lib/shell/desktop';
 
@@ -51,6 +52,7 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
   onHeadsup: (action: HeadsupAction) => void;
 }>) {
   const mod = useModKey();
+  const { timeZone } = usePersonLocale();
   const now = new Date();
   const today = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
   return (
@@ -58,7 +60,7 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
       {/* The hour and the date are India's on both sides, but either can turn between them. */}
       <div className="dk-hello">
         <OrbisMark size={34} />
-        <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(istParts(now).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
+        <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(localParts(now, timeZone).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
       </div>
       <button type="button" className="dk-search" onClick={onSearch} aria-keyshortcuts="Control+K Meta+K">
         <Search size={17} aria-hidden="true" />

@@ -1,6 +1,8 @@
 // Notification preferences shared by the settings screen and its actions.
 // Matches docs/superpowers/specs/2026-09-24-daily-notifications-design.md.
 
+import { DEFAULT_PERSON_LOCALE } from '@/lib/locale/person';
+
 export const NOTIFICATION_SLOTS = [
   { id: 'morning', label: 'Morning', hint: 'Today at a glance and a workout nudge', defaultTime: '06:30' },
   { id: 'lunch', label: 'Lunch', hint: 'Afternoon plan, food and hydration', defaultTime: '14:00' },
@@ -23,8 +25,9 @@ export type NotificationSettings = {
   pushConfigured: boolean;
 };
 
+/** With no settings row and no saved preferences; a signed-in person's own zone replaces the timezone (lib/notifications/repository.ts). */
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
   enabled: false,
-  timezone: 'Asia/Kolkata',
+  timezone: DEFAULT_PERSON_LOCALE.timeZone,
   slots: Object.fromEntries(NOTIFICATION_SLOTS.map((slot) => [slot.id, { enabled: true, time: slot.defaultTime }])) as NotificationPreferences['slots'],
 };

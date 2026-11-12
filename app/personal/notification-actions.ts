@@ -8,6 +8,7 @@ import { deliverSlot } from '@/lib/notifications/deliver';
 import { localClock, type Slot } from '@/lib/notifications/schedule';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 import { isMissingTable } from '@/lib/supabase/errors';
+import { getPersonSettings } from '@/lib/locale/repository';
 
 const MAX_DEVICES = 10;
 
@@ -98,7 +99,7 @@ export async function sendTestNotificationAction() {
 
   const admin = createAdminClient();
   const { data: prefs } = await admin.from('notification_preferences').select('timezone').eq('user_id', auth.userId).maybeSingle();
-  const timeZone = prefs?.timezone || 'Asia/Kolkata';
+  const timeZone = prefs?.timezone || (await getPersonSettings(auth.userId)).timeZone;
   const now = new Date();
   const clock = localClock(now, timeZone);
 

@@ -16,6 +16,8 @@ export type InvestFocusInput = {
   /** True once at least one account is linked, connected or not yet syncing. */
   connected: boolean;
   savedAdviceAt?: string | null;
+  /** The person's zone, for dates in the copy. */
+  timeZone: string;
 };
 
 function failureFocus(failures: InvestFocusInput['failures']): Focus {
@@ -30,10 +32,10 @@ function failureFocus(failures: InvestFocusInput['failures']): Focus {
 }
 
 /** The total, said in terms of live gain or loss when there is a live price, else cost. */
-function positionsFocus(analysis: PortfolioAnalysis, savedAdviceAt: string | null | undefined): Focus {
+function positionsFocus(analysis: PortfolioAnalysis, savedAdviceAt: string | null | undefined, timeZone: string): Focus {
   const top = analysis.byClass.slice().sort((left, right) => right.value - left.value)[0];
   const mostly = top ? ` Mostly ${top.assetClass.toLowerCase()} at ${percent(top.share)}.` : '';
-  const saved = savedAdviceAt ? ` Suggestions saved ${shortDate(savedAdviceAt)}.` : '';
+  const saved = savedAdviceAt ? ` Suggestions saved ${shortDate(savedAdviceAt, timeZone)}.` : '';
   const headline = `${money(analysis.total)} across ${count(analysis.positions.length, 'holding')}.`;
   if (analysis.livePnl !== null && analysis.liveInvested > 0) {
     const up = analysis.livePnl >= 0;
@@ -59,7 +61,7 @@ function signedMoney(value: number) {
   return `${value >= 0 ? '+' : '−'}${money(Math.abs(value))}`;
 }
 
-export function composeInvestFocus({ analysis, loaded, failures, connected, savedAdviceAt }: InvestFocusInput): Focus {
+export function composeInvestFocus({ analysis, loaded, failures, connected, savedAdviceAt, timeZone }: InvestFocusInput): Focus {
   // Holdings arrive from the broker after the page renders, so an empty screen
   // during that first fetch must not read as "you own nothing".
   if (!loaded) {
@@ -101,7 +103,7 @@ export function composeInvestFocus({ analysis, loaded, failures, connected, save
     };
   }
 
-  return positionsFocus(analysis, savedAdviceAt);
+  return positionsFocus(analysis, savedAdviceAt, timeZone);
 }
 
 export function composeInvestRows({ analysis }: { analysis: PortfolioAnalysis }): QuietRow[] {

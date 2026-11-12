@@ -13,6 +13,8 @@ export type HealthFocusInput = {
   libraryState: 'ready' | 'setup' | 'unavailable';
   savedAdviceAt?: string | null;
   now?: Date;
+  /** The person's zone, for dates in the copy. */
+  timeZone: string;
 };
 
 function stepTrend(steps: StepsSummary) {
@@ -25,11 +27,11 @@ function signedPercent(value: number) {
 }
 
 /** A month-on-month step change of 10% or more, worded; null when there is none. */
-function stepsFocus(steps: StepsSummary): Focus | null {
+function stepsFocus(steps: StepsSummary, timeZone: string): Focus | null {
   const trend = stepTrend(steps);
   if (trend === null || Math.abs(trend) < 10 || steps.average30 === null || steps.previous30 === null) return null;
   const falling = trend < 0;
-  const lastRead = steps.latest ? `, last read ${shortDate(steps.latest.date)}` : '';
+  const lastRead = steps.latest ? `, last read ${shortDate(steps.latest.date, timeZone)}` : '';
   return {
     id: falling ? 'steps-falling' : 'steps-rising',
     headline: `Your daily steps are ${falling ? 'down' : 'up'} ${Math.abs(trend)}% on the month before.`,
@@ -38,7 +40,7 @@ function stepsFocus(steps: StepsSummary): Focus | null {
   };
 }
 
-export function composeHealthFocus({ steps, documentCount, planCount, libraryState, savedAdviceAt }: HealthFocusInput): Focus {
+export function composeHealthFocus({ steps, documentCount, planCount, libraryState, savedAdviceAt, timeZone }: HealthFocusInput): Focus {
   if (libraryState === 'setup') {
     return {
       id: 'health-setup',
@@ -56,7 +58,7 @@ export function composeHealthFocus({ steps, documentCount, planCount, librarySta
     };
   }
 
-  const stepsChange = stepsFocus(steps);
+  const stepsChange = stepsFocus(steps, timeZone);
   if (stepsChange) return stepsChange;
 
   if (documentCount === 0) {
@@ -80,19 +82,19 @@ export function composeHealthFocus({ steps, documentCount, planCount, librarySta
     id: 'health-settled',
     headline: `${count(documentCount, 'document')} and ${count(planCount, 'plan')} saved.`,
     body: savedAdviceAt
-      ? `Your advice from ${shortDate(savedAdviceAt)} is below, with the observations it came from. Ask again whenever the underlying numbers change.`
+      ? `Your advice from ${shortDate(savedAdviceAt, timeZone)} is below, with the observations it came from. Ask again whenever the underlying numbers change.`
       : 'Ask Orbis about any of them and it will answer from what is in the files, quoting the rows it used.',
     action: null,
   };
 }
 
-export function composeHealthRows({ steps, documentCount, planCount }: Pick<HealthFocusInput, 'steps' | 'documentCount' | 'planCount'>): QuietRow[] {
+export function composeHealthRows({ steps, documentCount, planCount, timeZone }: Pick<HealthFocusInput, 'steps' | 'documentCount' | 'planCount' | 'timeZone'>): QuietRow[] {
   const trend = stepTrend(steps);
   return [
     { label: 'Steps today', value: steps.latest ? whole(steps.latest.steps) : 'Not imported', empty: !steps.latest, target: null },
     { label: '7-day average', value: steps.average7 !== null ? whole(steps.average7) : 'No data', empty: steps.average7 === null, target: null },
     { label: '30 days vs before', value: trend === null ? 'No data' : signedPercent(trend), empty: trend === null, target: null },
-    { label: 'Best day', value: steps.best ? `${whole(steps.best.steps)} · ${shortDate(steps.best.date)}` : 'No data', empty: !steps.best, target: null },
+    { label: 'Best day', value: steps.best ? `${whole(steps.best.steps)} · ${shortDate(steps.best.date, timeZone)}` : 'No data', empty: !steps.best, target: null },
     { label: 'Documents', value: documentCount ? count(documentCount, 'file') : 'None yet', empty: documentCount === 0, target: null },
     { label: 'Plans', value: planCount ? String(planCount) : 'None yet', empty: planCount === 0, target: null },
   ];

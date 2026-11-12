@@ -6,6 +6,7 @@ export function documentSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function documentAdded(value: string) {
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(value));
+/** The day a document was added, in the person's zone. */
+export function documentAdded(value: string, timeZone: string) {
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone }).format(new Date(value));
 }

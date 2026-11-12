@@ -15,7 +15,7 @@ import {
   addEvent, applicationFilePath, CareerError, createApplication, getApplicationFiles, getApplicationForJob, getCareerRow, getJob,
   listApplications, listEvents, listJobsByIds, updateApplication, uploadCareerFile, type CareerDb,
 } from '@/lib/career/repository';
-import { careerToday, ensureRequirements } from '@/lib/career/scoring';
+import { careerTodayFor, ensureRequirements } from '@/lib/career/scoring';
 import { mergeAnswers, type TailorInput } from '@/lib/career/tailor';
 import { checkTailored, type TruthResult } from '@/lib/career/truth';
 import { CAREER_BUCKET } from '@/lib/storage/upload-rules';
@@ -188,7 +188,7 @@ export async function predictionFor(
 
 async function draftInto(client: CareerDb, userId: string, application: CareerApplication, context: Context, options: DraftOptions) {
   const { job, profile, spec } = context;
-  const today = options.today ?? careerToday();
+  const today = options.today ?? (await careerTodayFor(client, userId));
   const requirements = await ensureRequirements(client, userId, job, { timeoutMs: 20_000 });
   if (!requirements) throw new DraftFailure(NO_REQUIREMENTS);
   const match = scoreMatch({ profile, spec, job, requirements, today, synonyms: context.synonyms });

@@ -10,20 +10,19 @@ import { AI_WORDED_PER_DAY, dueForScan, localNow, mergeAction, pruneBefore, runC
 import { mayPush } from '@/lib/headsups/push-rules';
 import { wordFinding } from '@/lib/headsups/word';
 import { SCAN_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
-import { localClock } from '@/lib/notifications/schedule';
+import { localDate } from '@/lib/locale/dates';
+import { getPersonSettingsAdmin } from '@/lib/locale/repository';
 import { pushToUser } from '@/lib/notifications/push';
 import { admittedUserIds } from '@/lib/security/admission';
 
 type Admin = ReturnType<typeof createAdminClient>;
-const INDIA = 'Asia/Kolkata';
-
-const indiaDate = (iso: string) => localClock(new Date(iso), INDIA).date;
 // A model call can take up to 15 s (router timeout × 1.5); with less than this
 // left, Orbis's own wording is used so the person's scan still finishes in time.
 const AI_TIME_NEEDED_MS = 16_000;
 
 /** Everything the checks read for one person, loaded once. */
-async function loadInput(admin: Admin, userId: string, today: string) {
+async function loadInput(admin: Admin, userId: string, today: string, timeZone: string) {
+  const dayOf = (iso: string) => localDate(iso, timeZone);
   // Four calendar months back covers "the three months before this one" and the 90-day median.
   const since = `${addDays(today, -125)}T00:00:00Z`;
   const [expenses, routines, events, lastDone, steps, plans] = await Promise.all([
@@ -42,11 +41,11 @@ async function loadInput(admin: Admin, userId: string, today: string) {
   for (const row of lastDone.data ?? []) if (row.routine_id && !lastDoneBy.has(row.routine_id)) lastDoneBy.set(row.routine_id, row.local_date);
   const newest = plans.data?.[0];
   return {
-    expenses: (expenses.data ?? []).filter((row) => !isInvestmentCategory(row.category)).map((row): Expense => ({ id: row.id, amount: Number(row.amount), currency: row.currency, category: row.category, merchant: row.merchant, localDate: indiaDate(row.occurred_at) })),
-    routines: (routines.data ?? []).map((row): RoutineRow => ({ id: row.id, title: row.title, days: row.days, active: row.active, archivedAt: row.archived_at, createdDate: indiaDate(row.created_at), lastDoneDate: lastDoneBy.get(row.id) ?? null })),
+    expenses: (expenses.data ?? []).filter((row) => !isInvestmentCategory(row.category)).map((row): Expense => ({ id: row.id, amount: Number(row.amount), currency: row.currency, category: row.category, merchant: row.merchant, localDate: dayOf(row.occurred_at) })),
+    routines: (routines.data ?? []).map((row): RoutineRow => ({ id: row.id, title: row.title, days: row.days, active: row.active, archivedAt: row.archived_at, createdDate: dayOf(row.created_at), lastDoneDate: lastDoneBy.get(row.id) ?? null })),
     events: (events.data ?? []).map((row): RoutineEventRow => ({ routineId: row.routine_id, localDate: row.local_date, status: row.status })),
     steps: (steps.data ?? []).map((row): StepDay => ({ date: row.date, steps: row.steps })),
-    plan: newest ? ({ id: newest.id, title: newest.title, createdDate: indiaDate(newest.created_at), durationWeeks: Number((newest.plan as { durationWeeks?: number })?.durationWeeks) || 1 } satisfies PlanRow) : null,
+    plan: newest ? ({ id: newest.id, title: newest.title, createdDate: dayOf(newest.created_at), durationWeeks: Number((newest.plan as { durationWeeks?: number })?.durationWeeks) || 1 } satisfies PlanRow) : null,
   };
 }
 
@@ -124,7 +123,7 @@ type ScanCounts = { scanned: number; findings: number; failed: number };
 /** Claims today's scan for one person, runs every check they have on and saves what it finds. */
 async function scanPerson(
   admin: Admin,
-  person: { userId: string; localDate: string },
+  person: { userId: string; localDate: string; timeZone: string },
   disabled: string[],
   lastScanDate: string | null,
   now: Date,
@@ -137,7 +136,7 @@ async function scanPerson(
   if (!claimed?.length) return;
   try {
     const today = person.localDate;
-    const input = await loadInput(admin, person.userId, today);
+    const input = await loadInput(admin, person.userId, today, person.timeZone);
     const moneyInput = { today, expenses: input.expenses };
     const { findings, failed } = runChecks([
       { kind: 'money.big_spend', run: () => bigSpend(moneyInput) },
@@ -171,7 +170,13 @@ export async function scanDue(admin: Admin, now: Date, deadline: number) {
   const zones = new Map((notify.data ?? []).map((row) => [row.user_id as string, row.timezone as string]));
   // Anyone signed in can write their own heads-up preferences; only admitted accounts are scanned.
   const admitted = await admittedUserIds(admin, (prefs.data ?? []).map((row) => row.user_id as string));
-  const people = (prefs.data ?? []).filter((row) => admitted.has(row.user_id as string)).map((row) => ({ userId: row.user_id as string, timeZone: zones.get(row.user_id) ?? INDIA, lastScanDate: row.last_scan_date as string | null, disabled: (row.disabled_kinds ?? []) as string[] }));
+  // A saved notification zone wins; without one, the person's own zone from their settings.
+  const people = await Promise.all((prefs.data ?? []).filter((row) => admitted.has(row.user_id as string)).map(async (row) => ({
+    userId: row.user_id as string,
+    timeZone: zones.get(row.user_id) ?? (await getPersonSettingsAdmin(admin, row.user_id as string)).timeZone,
+    lastScanDate: row.last_scan_date as string | null,
+    disabled: (row.disabled_kinds ?? []) as string[],
+  })));
   const disabledBy = new Map(people.map((person) => [person.userId, person.disabled]));
   const lastScanBy = new Map(people.map((person) => [person.userId, person.lastScanDate]));
   const counts: ScanCounts = { scanned: 0, findings: 0, failed: 0 };
@@ -212,7 +217,7 @@ async function pushOne(admin: Admin, headsup: WaitingHeadsup, now: Date): Promis
     admin.from('notification_preferences').select('enabled,timezone').eq('user_id', headsup.user_id).maybeSingle(),
     admin.from('push_subscriptions').select('endpoint', { count: 'exact', head: true }).eq('user_id', headsup.user_id),
   ]);
-  const clock = localNow(now, prefs.data?.timezone ?? INDIA);
+  const clock = localNow(now, prefs.data?.timezone ?? (await getPersonSettingsAdmin(admin, headsup.user_id)).timeZone);
   const { count: pushesToday } = await admin.from('notification_log').select('id', { count: 'exact', head: true }).eq('user_id', headsup.user_id).eq('slot', 'headsup').eq('local_date', clock.date);
   const allowed = mayPush(
     { urgency: headsup.urgency, createdAt: headsup.created_at, pushedAt: headsup.pushed_at, snoozedUntil: headsup.snoozed_until, status: headsup.status },

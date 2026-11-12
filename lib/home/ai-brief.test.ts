@@ -16,7 +16,7 @@ const finance = (over: Partial<FinanceSummary> = {}): FinanceSummary => ({
 
 const steps = (over: Partial<StepsSummary> = {}): StepsSummary => ({ latest: null, average7: null, average30: null, days: [], ...over } as StepsSummary);
 
-const base = { finance: finance(), steps: steps(), documentCount: 0, name: null, now: NOW };
+const base = { finance: finance(), steps: steps(), documentCount: 0, name: null, now: NOW, timeZone: 'Asia/Kolkata' };
 
 test('the fingerprint moves when the data does, or when the day turns a corner', () => {
   const quiet = snapshotFingerprint(briefSnapshot(base));

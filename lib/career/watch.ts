@@ -15,7 +15,7 @@ import {
   pruneCareerMail, reclassifyEvent, releaseCareerRun, seenMessageIds, setLastMailScan, transitionApplication, updateApplication,
   upsertJobs, type CareerDb, type CareerRow, type MailOutcome,
 } from '@/lib/career/repository';
-import { careerToday, scoreJob } from '@/lib/career/scoring';
+import { careerToday, careerZone, scoreJob } from '@/lib/career/scoring';
 import { isWatched, isWatchedNow, statusFromReply } from '@/lib/career/status';
 import { htmlToText } from '@/lib/career/text';
 import { APPLICATION_STATUSES } from '@/lib/career/types';
@@ -48,7 +48,6 @@ const FOLLOW_UP_AI_MS = 12_000;
 const LANES = 3;
 /** The cron runs every 15 minutes; a claim younger than this is another run's. */
 const CLAIM_STALE_MS = 10 * 60_000;
-const INDIA = 'Asia/Kolkata';
 const EMPTY_TERMS: OfferTerms = { fixed: null, variable: null, joiningBonus: null, equity: null, currency: null, period: null, startDate: null, deadline: null };
 
 type Person = {
@@ -74,7 +73,8 @@ async function personPrefs(admin: CareerDb, userId: string) {
     admin.from('notification_preferences').select('timezone').eq('user_id', userId).maybeSingle(),
   ]);
   const disabled = Array.isArray(prefs.data?.disabled_kinds) ? (prefs.data.disabled_kinds as string[]) : [];
-  const timeZone = typeof notify.data?.timezone === 'string' && notify.data.timezone ? notify.data.timezone : INDIA;
+  // A saved notification zone wins; without one, the owner's own zone from their settings.
+  const timeZone = typeof notify.data?.timezone === 'string' && notify.data.timezone ? notify.data.timezone : await careerZone(admin, userId);
   return { disabled: new Set(disabled), timeZone };
 }
 
