@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { ALL_MODULES, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings } from './person.ts';
+import { ALL_MODULES, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings, ONBOARDED_UNKNOWN, settingsFromRead } from './person.ts';
 
 test('a missing row gives the India defaults, every module, and not onboarded', () => {
   assert.deepEqual(normalizeSettings(null), { ...DEFAULT_PERSON_LOCALE, modules: ALL_MODULES, onboardedAt: null });
@@ -39,7 +39,18 @@ test('time zones, currencies and locales are checked', () => {
   assert.equal(isValidCurrency('USD'), true);
   assert.equal(isValidCurrency('usd'), false);
   assert.equal(isValidCurrency('XYZ1'), false);
+  assert.equal(isValidCurrency('XYZ'), false);
+  assert.equal(normalizeSettings({ currency: 'XYZ' }).currency, 'INR');
   assert.equal(isValidLocale('en-IN'), true);
   assert.equal(isValidLocale(''), false);
   assert.equal(isValidLocale('not a locale'), false);
+});
+
+test('a failed read counts as onboarded; only a good read with no row does not', () => {
+  assert.deepEqual(settingsFromRead(null, true), { ...DEFAULT_PERSON_LOCALE, modules: ALL_MODULES, onboardedAt: ONBOARDED_UNKNOWN });
+  assert.equal(settingsFromRead({ onboarded_at: '2026-11-12T00:00:00Z' }, true).onboardedAt, ONBOARDED_UNKNOWN);
+  assert.equal(settingsFromRead(null, false).onboardedAt, null);
+  const row = settingsFromRead({ timezone: 'America/Los_Angeles', onboarded_at: '2026-11-12T00:00:00Z' }, false);
+  assert.equal(row.timeZone, 'America/Los_Angeles');
+  assert.equal(row.onboardedAt, '2026-11-12T00:00:00Z');
 });

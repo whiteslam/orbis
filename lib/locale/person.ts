@@ -24,6 +24,8 @@ export function isValidTimeZone(value: string): boolean {
 
 export function isValidCurrency(value: string): boolean {
   if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value)) return false;
+  // Intl.NumberFormat accepts any well-formed code (even 'XYZ'), so check the real list too.
+  if (!Intl.supportedValuesOf('currency').includes(value)) return false;
   try {
     new Intl.NumberFormat('en', { style: 'currency', currency: value });
     return true;
@@ -54,4 +56,17 @@ export function normalizeSettings(row: Record<string, unknown> | null): PersonSe
   const modules = row && Array.isArray(row.modules) ? [...new Set(row.modules.filter(isModuleId))] : [...ALL_MODULES];
   const onboardedAt = row && typeof row.onboarded_at === 'string' && row.onboarded_at ? row.onboarded_at : null;
   return { timeZone, currency, locale, modules, onboardedAt };
+}
+
+// Settings couldn't be read; treat the person as onboarded.
+export const ONBOARDED_UNKNOWN = '1970-01-01T00:00:00.000Z';
+
+/**
+ * Turns the result of reading user_settings into settings. A failed read (or a
+ * missing table) gives the defaults marked onboarded, so a blip never sends an
+ * existing person back to onboarding; only a good read with no row is "not onboarded".
+ */
+export function settingsFromRead(data: Record<string, unknown> | null, failed: boolean): PersonSettings {
+  if (failed) return { ...normalizeSettings(null), onboardedAt: ONBOARDED_UNKNOWN };
+  return normalizeSettings(data);
 }
