@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type FormEvent } from 'react';
+import { useId, useState, useTransition, type FormEvent } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { joinWaitlistAction } from '@/app/waitlist/actions';
 
@@ -19,6 +19,10 @@ export function WaitlistForm() {
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState<{ email: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  // The page can show this form twice (the hero and the close), so its ids are per copy.
+  const uid = useId();
+  const errorId = `${uid}-error`;
+  const websiteId = `${uid}-website`;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,15 +61,15 @@ export function WaitlistForm() {
           value={email}
           onChange={(event) => { setEmail(event.target.value); setError(null); }}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'wl-error' : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </label>
       {/* Bots fill this in; people never see it. */}
       <div className="wl-honeypot" aria-hidden="true">
-        <label htmlFor="wl-website">Website</label>
-        <input id="wl-website" type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+        <label htmlFor={websiteId}>Website</label>
+        <input id={websiteId} type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
       </div>
-      {error ? <p id="wl-error" className="wl-error" role="alert">{error}</p> : null}
+      {error ? <p id={errorId} className="wl-error" role="alert">{error}</p> : null}
       <button type="submit" className="wl-submit" disabled={pending}>
         {pending ? 'Joining…' : <>Join the waitlist <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" /></>}
       </button>

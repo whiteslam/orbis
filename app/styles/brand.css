@@ -57,6 +57,7 @@
   --wl-card-fill: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.03));
   --wl-card-shadow: 0 28px 60px -28px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.09);
   --wl-submit-glow: 0 10px 28px -10px rgba(66,204,168,.6);
+  --wl-sheet-shadow: 0 40px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.06); /* the sample brief: lifted by a lightness step, a shadow with offset, no outline */
 
   /* The logo ring. */
   --mark-ring: conic-gradient(from 200deg, #5bb4e8, #42cca8, #3dc87a, #5bb4e8);
