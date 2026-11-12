@@ -10,16 +10,16 @@ import { inr, signedInr } from '@/components/money/format';
 import { LedgerAmount } from '@/components/money/transaction-list';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const SOURCE_LABEL: Record<PriceSource, string> = { groww: 'LTP', zerodha: 'LTP', amfi: 'NAV', alpha_vantage: 'BSE', coingecko: 'Price' };
 
-function shortDate(value: string) {
+// A bare 'YYYY-MM-DD' is a calendar day already, so it's read in UTC to stay that day.
+function shortDate(value: string, loc: PersonLocale) {
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: value.length === 10 ? 'UTC' : 'Asia/Kolkata' }).format(date);
-}
-
-function syncedAt(value: string) {
-  return new Intl.DateTimeFormat('en-IN', { timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
+  return Number.isNaN(date.getTime()) ? value : formatWhen(date, value.length === 10 ? { ...loc, timeZone: 'UTC' } : loc, 'day');
 }
 
 /**
@@ -176,20 +176,21 @@ function connectionStatus(needsReconnect: boolean, connected: boolean) {
 }
 
 function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
+  const loc = usePersonLocale();
   const cost = holding.quantity * holding.averagePrice;
   const value = holding.lastPrice === null ? null : holding.quantity * holding.lastPrice;
   return (
     <div className="groww-row">
       <div className="groww-row-name">
         <strong>{holding.symbol}</strong>
-        <small>{holding.quantity.toLocaleString('en-IN')} shares · avg {inr(holding.averagePrice)}</small>
+        <small>{holding.quantity.toLocaleString(loc.locale)} shares · avg {inr(holding.averagePrice, loc.locale)}</small>
         {holding.lastPrice !== null && holding.priceSource
-          ? <small className="groww-price">{SOURCE_LABEL[holding.priceSource]} {inr(holding.lastPrice)}{holding.priceAsOf ? ` · ${shortDate(holding.priceAsOf)}` : ''}{holding.priceStale ? ' · last saved' : ''}</small>
+          ? <small className="groww-price">{SOURCE_LABEL[holding.priceSource]} {inr(holding.lastPrice, loc.locale)}{holding.priceAsOf ? ` · ${shortDate(holding.priceAsOf, loc)}` : ''}{holding.priceStale ? ' · last saved' : ''}</small>
           : <small className="groww-price missing">Price unavailable</small>}
       </div>
       <div className="groww-row-value">
         <strong><LedgerAmount amount={value ?? cost} currency="INR" /></strong>
-        {value !== null ? <small className={value - cost >= 0 ? 'up' : 'down'}>{signedInr(value - cost)}</small> : <small>invested</small>}
+        {value !== null ? <small className={value - cost >= 0 ? 'up' : 'down'}>{signedInr(value - cost, loc.locale)}</small> : <small>invested</small>}
       </div>
     </div>
   );
@@ -197,6 +198,7 @@ function HoldingRow({ holding }: Readonly<{ holding: BrokerHolding }>) {
 
 /** A loaded account: its holdings, then where the prices came from and when. */
 function BrokerHoldings({ meta, portfolio }: Readonly<{ meta: BrokerMeta; portfolio: BrokerPortfolio }>) {
+  const loc = usePersonLocale();
   return (
     <>
       {portfolio.holdings.length ? (
@@ -209,7 +211,7 @@ function BrokerHoldings({ meta, portfolio }: Readonly<{ meta: BrokerMeta; portfo
         {meta.priceNote}
         {!portfolio.livePrices && ' Holdings without a price count at the amount invested.'}
         {meta.gapNote ? ` ${meta.gapNote}` : ''}
-        {portfolio.fetchedAt && ` Synced ${syncedAt(portfolio.fetchedAt)}.`}
+        {portfolio.fetchedAt && ` Synced ${formatWhen(portfolio.fetchedAt, loc, 'shortTime')}.`}
       </p>
     </>
   );

@@ -22,7 +22,7 @@ import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { FocusTarget } from '@/lib/focus/types';
 import { composeNote, partOfDay, type HomeNote } from '@/lib/home/note';
-import { localParts } from '@/lib/locale/dates';
+import { formatWhen, localParts } from '@/lib/locale/dates';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { trainingForToday } from '@/lib/home/training';
 import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
@@ -68,12 +68,13 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   // A minute hand. Home can sit open from 6 pm to 9 pm; without this nothing
   // would re-render, so the routine would stay "coming up" after it had come.
   const [, tick] = useReducer((count: number) => count + 1, 0);
-  const { timeZone } = usePersonLocale();
+  const loc = usePersonLocale();
+  const { timeZone } = loc;
   useEffect(() => {
     const timer = setInterval(() => tick(), 60_000);
     return () => clearInterval(timer);
   }, []);
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const today = formatWhen(new Date(), loc, 'dayLong');
 
 
   // The daily investing line. Holdings come from the broker, so Home asks for

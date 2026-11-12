@@ -7,6 +7,8 @@ import { HistoryPanel } from '@/components/journal/history-panel';
 import type { ContextNote } from '@/lib/memory/notes';
 import { noteRevisionLine } from '@/lib/history/describe';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
 
 /** Notes shown before "N more notes". */
 const NOTES_PREVIEW = 3;
@@ -46,6 +48,7 @@ async function loadDeleted() {
 export function ContextNotes({ ready, notes }: Readonly<{ ready: boolean; notes: ContextNote[] }>) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const loc = usePersonLocale();
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -95,7 +98,7 @@ export function ContextNotes({ ready, notes }: Readonly<{ ready: boolean; notes:
         ) : <>
           <p>{item.note}</p>
           <div>
-            <small>{new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(item.updatedAt))}</small>
+            <small>{formatWhen(item.updatedAt, loc, 'medium')}</small>
             <span className="hs-links">
               <button className="pf-pill" type="button" disabled={pending} onClick={() => { setDraft(item.note); setEditing(item.id); }}>Edit</button>
               <button className="pf-pill" type="button" aria-expanded={historyId === item.id} onClick={() => setHistoryId(historyId === item.id ? null : item.id)}>History</button>

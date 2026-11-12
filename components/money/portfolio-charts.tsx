@@ -2,6 +2,7 @@
 
 import type { AssetClass, PortfolioAnalysis, Status } from '@/lib/invest/analysis';
 import { compactInr, inr, percent } from '@/components/money/format';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 // Validated categorical palette, one fixed hue per asset class.
 const CLASS_COLOR: Record<AssetClass, string> = {
@@ -64,6 +65,7 @@ export function PortfolioHealth({ analysis }: Readonly<{ analysis: PortfolioAnal
 
 /** Where the money sits: by class as one strip, then the holdings that fill it. */
 export function AllocationBreakdown({ analysis }: Readonly<{ analysis: PortfolioAnalysis }>) {
+  const { locale } = usePersonLocale();
   const top = analysis.positions.slice(0, 6);
   const rest = analysis.positions.slice(6).reduce((sum, position) => sum + position.value, 0);
   const rows = rest > 0
@@ -75,12 +77,12 @@ export function AllocationBreakdown({ analysis }: Readonly<{ analysis: Portfolio
     <section className="invest-allocation" aria-label="Allocation">
       <div className="invest-strip" role="img" aria-label={analysis.byClass.map((item) => `${item.assetClass} ${percent(item.share)}`).join(', ')}>
         {analysis.byClass.map((item) => (
-          <i key={item.assetClass} style={{ flexGrow: item.share, background: CLASS_COLOR[item.assetClass] }} title={`${item.assetClass}: ${inr(item.value)} (${percent(item.share)})`} />
+          <i key={item.assetClass} style={{ flexGrow: item.share, background: CLASS_COLOR[item.assetClass] }} title={`${item.assetClass}: ${inr(item.value, locale)} (${percent(item.share)})`} />
         ))}
       </div>
       <ul className="invest-legend">
         {analysis.byClass.map((item) => (
-          <li key={item.assetClass}><i style={{ background: CLASS_COLOR[item.assetClass] }} /><span>{item.assetClass}</span><strong>{percent(item.share)}</strong><small>{compactInr(item.value)}</small></li>
+          <li key={item.assetClass}><i style={{ background: CLASS_COLOR[item.assetClass] }} /><span>{item.assetClass}</span><strong>{percent(item.share)}</strong><small>{compactInr(item.value, locale)}</small></li>
         ))}
       </ul>
 
@@ -89,7 +91,7 @@ export function AllocationBreakdown({ analysis }: Readonly<{ analysis: Portfolio
         {rows.map((row) => {
           const share = row.value / analysis.total;
           return (
-            <div className="invest-bar" key={row.key} title={`${row.name}: ${inr(row.value)} (${percent(share)})`}>
+            <div className="invest-bar" key={row.key} title={`${row.name}: ${inr(row.value, locale)} (${percent(share)})`}>
               <span>{row.name}</span>
               <div><i style={{ width: `${(share / maxShare) * 100}%` }} /></div>
               <strong>{percent(share)}</strong>

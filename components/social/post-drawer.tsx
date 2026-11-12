@@ -33,6 +33,8 @@ import {
 } from '@/lib/social/types';
 import { createClient } from '@/lib/supabase/client';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
 
 type Form = {
   title: string;
@@ -90,6 +92,7 @@ const busyLabel = (busy: string | null, key: string, idle: string, working: stri
 type Publishing = { platform: string; link: string };
 
 function HistoryList({ history }: Readonly<{ history: SocialRevision[] }>) {
+  const loc = usePersonLocale();
   if (!history.length) return <p className="fd-empty">No history yet.</p>;
   return (
     <ul>
@@ -100,7 +103,7 @@ function HistoryList({ history }: Readonly<{ history: SocialRevision[] }>) {
         return (
           <li key={entry.id}>
             <strong>{ACTION_LABEL[entry.action] ?? entry.action}</strong>
-            <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</time>
+            <time dateTime={entry.createdAt}>{formatWhen(entry.createdAt, loc, 'mediumTime')}</time>
             {changed.length > 0 && (
               <details className="so-diff">
                 <summary>{changed.map((key) => FIELD_LABEL[key] ?? key).join(', ')}</summary>
@@ -132,7 +135,8 @@ function HistoryPanel({ history, loading }: Readonly<{ history: SocialRevision[]
 
 /** Status, AI mark, format and day, under the post's title. */
 function DrawerLead({ saved }: Readonly<{ saved: SocialPost }>) {
-  const day = saved.plannedFor ? ` · ${dayLabel(saved.plannedFor)}` : ' · no date yet';
+  const { locale } = usePersonLocale();
+  const day = saved.plannedFor ? ` · ${dayLabel(saved.plannedFor, locale)}` : ' · no date yet';
   return (
     <span className="so-tags">
       <StatusChip status={saved.status} />
@@ -143,9 +147,10 @@ function DrawerLead({ saved }: Readonly<{ saved: SocialPost }>) {
 }
 
 function PublishedNote({ published }: Readonly<{ published: NonNullable<SocialPost['published']> }>) {
+  const loc = usePersonLocale();
   return (
     <p className="so-published-note">
-      Published on {platformLabel(published.platform)}, {new Date(published.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}.
+      Published on {platformLabel(published.platform)}, {formatWhen(published.at, loc, 'mediumTime')}.
       {published.link && <> <a href={published.link} target="_blank" rel="noopener noreferrer">Open the post</a></>}
       {' '}Mark it as not published to change it.
     </p>
@@ -154,7 +159,8 @@ function PublishedNote({ published }: Readonly<{ published: NonNullable<SocialPo
 
 /** Characters used against each chosen platform's caption limit. */
 function CaptionCounter({ platforms, length }: Readonly<{ platforms: SocialPlatform[]; length: number }>) {
-  const used = length.toLocaleString('en-IN');
+  const { locale } = usePersonLocale();
+  const used = length.toLocaleString(locale);
   return (
     <p className="so-counter" aria-live="polite">
       {platforms.length
@@ -162,7 +168,7 @@ function CaptionCounter({ platforms, length }: Readonly<{ platforms: SocialPlatf
           const over = length > CAPTION_LIMIT[platform];
           return (
             <span key={platform} className={over ? 'over' : undefined}>
-              {platformLabel(platform)} {used} / {CAPTION_LIMIT[platform].toLocaleString('en-IN')}{over ? ', too long' : ''}
+              {platformLabel(platform)} {used} / {CAPTION_LIMIT[platform].toLocaleString(locale)}{over ? ', too long' : ''}
             </span>
           );
         })

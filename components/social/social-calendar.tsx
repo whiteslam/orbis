@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { PostRow, dayLabel } from '@/components/social/social-list';
 import { monthGrid, placePosts } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, formatLabel, type SocialPost } from '@/lib/social/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const WEEKDAY_REST = ['on', 'ue', 'ed', 'hu', 'ri', 'at', 'un'];
@@ -28,6 +29,7 @@ export function SocialCalendar({ period, posts, today, selected, loading = false
   onOpen: (post: SocialPost) => void;
   onNew: (date: string | null) => void;
 }>) {
+  const { locale } = usePersonLocale();
   const { byDay } = placePosts(posts);
   const weeks = monthGrid(period);
   const chosen = selected?.startsWith(period.slice(0, 8)) ? selected : null;
@@ -62,7 +64,7 @@ export function SocialCalendar({ period, posts, today, selected, loading = false
                   type="button"
                   className={`so-day${date === today ? ' today' : ''}${date < today ? ' past' : ''}`}
                   aria-pressed={chosen === date}
-                  aria-label={`${dayLabel(date)}${planned}`}
+                  aria-label={`${dayLabel(date, locale)}${planned}`}
                   onClick={() => onSelect(date)}
                 >
                   <b>{Number(date.slice(8))}</b>
@@ -90,10 +92,10 @@ export function SocialCalendar({ period, posts, today, selected, loading = false
       <div className="so-dayplan" aria-live="polite">
         {chosen ? (
           <>
-            <h3 className="so-dayplan-title">{dayLabel(chosen)}{chosen === today && <span>Today</span>}</h3>
+            <h3 className="so-dayplan-title">{dayLabel(chosen, locale)}{chosen === today && <span>Today</span>}</h3>
             {dayPosts.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} />)}
             {!dayPosts.length && <p className="fd-empty">Nothing planned for this day.</p>}
-            <button type="button" className="so-add-day" onClick={() => onNew(chosen)}><Plus size={15} aria-hidden="true" />New post on {dayLabel(chosen)}</button>
+            <button type="button" className="so-add-day" onClick={() => onNew(chosen)}><Plus size={15} aria-hidden="true" />New post on {dayLabel(chosen, locale)}</button>
           </>
         ) : (
           <p className="so-dayplan-hint">Pick a day to see what is planned, or to add a post to it.</p>

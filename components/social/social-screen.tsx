@@ -41,7 +41,7 @@ function periodFromHash() {
  * month lives in the URL hash, so a reload stays where it was.
  */
 export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
-  const { timeZone } = usePersonLocale();
+  const { timeZone, locale } = usePersonLocale();
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
   const [view, setView] = useState<View>('list');
@@ -158,7 +158,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
                 <>
                   <span className="so-lead-sep" aria-hidden="true" />
                   <button type="button" className="so-next" onClick={() => openPost(nextUp)}>
-                    Next up: <b>{nextUp.title}</b>, {nextUp.plannedFor === today ? 'today' : dayLabel(nextUp.plannedFor ?? today)}
+                    Next up: <b>{nextUp.title}</b>, {nextUp.plannedFor === today ? 'today' : dayLabel(nextUp.plannedFor ?? today, locale)}
                   </button>
                 </>
               )}

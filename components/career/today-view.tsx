@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { AttentionList, StageStrip, attentionItems, attentionLead } from '@/components/career/attention';
 import { allApplications, openCount } from '@/components/career/panel/panel-data';
 import type { CareerHome } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** The week's sends against the goal, as one line and a thin meter. */
 export function WeekLine({ week }: Readonly<{ week: CareerHome['week'] }>) {
@@ -27,7 +28,8 @@ export function TodayView({ home, onOpenJobId, onApplications, onJobs }: Readonl
   onApplications: () => void;
   onJobs: () => void;
 }>) {
-  const items = attentionItems(home);
+  const loc = usePersonLocale();
+  const items = attentionItems(home, loc);
   const cards = allApplications(home);
   const open = openCount(cards);
   const matches = home.counts.forYou;

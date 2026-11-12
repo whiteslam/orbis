@@ -10,6 +10,7 @@ import { useTheme } from '@/components/career/panel/panel-hooks';
 import { PANEL_NAV, allApplications, hrefFor, navOf, panelHeadsups, type PanelHeadsup, type PanelPage } from '@/components/career/panel/panel-data';
 import { isOpen } from '@/lib/career/status';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const HEADSUP_ICON: Record<PanelHeadsup['kind'], typeof Bell> = {
   interview: CalendarClock,
@@ -66,7 +67,8 @@ function NotifyButton() {
   const box = useRef<HTMLDivElement | null>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, box, close);
-  const items = home ? panelHeadsups(home) : [];
+  const loc = usePersonLocale();
+  const items = home ? panelHeadsups(home, loc) : [];
   const urgent = items.some((item) => item.urgent);
   return (
     <div className="cp-pop-wrap" ref={box}>

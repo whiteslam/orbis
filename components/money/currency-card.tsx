@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED'] as const;
 
@@ -29,23 +30,26 @@ async function loadRates(): Promise<{ data: Rates } | { error: string }> {
   }
 }
 
-function sourceLine(data: Rates, note?: string) {
+// The ECB date is a calendar day, so it's labelled in UTC to stay that day.
+function sourceLine(data: Rates, locale: string, note?: string) {
   const saved = data.stale ? 'Last saved · ' : '';
   const midnight = `${data.date}T00:00:00Z`;
-  const day = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(midnight));
+  const day = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(midnight));
   const extra = note ? ` · ${note}` : '';
   return `${saved}ECB, ${day}${extra}`;
 }
 
-const inr = (perInr: number | null | undefined) => (perInr ? `₹${(1 / perInr).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}` : '—');
+// The rates are quoted against the rupee, so the sign stays ₹; the digits follow the person's language.
+const inr = (perInr: number | null | undefined, locale: string) => (perInr ? `₹${(1 / perInr).toLocaleString(locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}` : '—');
 
-function peekLine(data: Rates | null, error: string | null) {
+function peekLine(data: Rates | null, error: string | null, locale: string) {
   if (error) return 'Unavailable';
-  return data ? `1 USD ${inr(data.rates.USD)}` : 'Loading…';
+  return data ? `1 USD ${inr(data.rates.USD, locale)}` : 'Loading…';
 }
 
 // Reference rates to INR. `note` adds to the source line (e.g. "works without any account").
 export function CurrencyCard({ note }: Readonly<{ note?: string }>) {
+  const { locale } = usePersonLocale();
   const [data, setData] = useState<Rates | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Reference, not something to act on: one line until asked for.
@@ -61,8 +65,8 @@ export function CurrencyCard({ note }: Readonly<{ note?: string }>) {
     return () => { cancelled = true; };
   }, []);
 
-  const source = data ? sourceLine(data, note) : null;
-  const peek = peekLine(data, error);
+  const source = data ? sourceLine(data, locale, note) : null;
+  const peek = peekLine(data, error, locale);
 
   return (
     <section className="fd-rates" aria-label="Rates to INR">
@@ -78,7 +82,7 @@ export function CurrencyCard({ note }: Readonly<{ note?: string }>) {
               {CURRENCIES.map((code) => (
                 <div key={code}>
                   <span>1 {code}</span>
-                  <strong>{inr(data.rates[code])}</strong>
+                  <strong>{inr(data.rates[code], locale)}</strong>
                 </div>
               ))}
             </div>

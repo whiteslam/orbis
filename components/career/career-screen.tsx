@@ -18,6 +18,7 @@ import { useRun } from '@/components/career/use-run';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import type { CareerJob } from '@/lib/career/types';
 import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /**
  * The views. Three are on the switch: Today (what needs you, then where things
@@ -171,9 +172,10 @@ export function CareerView({ home, intent = null, onReload, onHome, initialTab =
   const [intentMiss, setIntentMiss] = useState(false);
   const top = useScrollTop(tab);
   const handledIntent = useRef(false);
+  const loc = usePersonLocale();
   const { state } = home;
   const context: SheetContext = { profile: state.profile, threshold: state.settings.threshold, canSend: state.gmail.canSend };
-  const waiting = state.profile && state.spec ? attentionItems(home).length : 0;
+  const waiting = state.profile && state.spec ? attentionItems(home, loc).length : 0;
 
   // A heads-up's application opens once, as the tab mounts from that tap.
   useEffect(() => {

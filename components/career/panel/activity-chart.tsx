@@ -5,6 +5,7 @@ import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip,
 import { MiniSwitch, PanelCard } from '@/components/career/panel/panel-bits';
 import { percent, weeklySeries, type WeekPoint } from '@/components/career/panel/panel-data';
 import type { CareerHome } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 type Range = '8' | '26';
 const RANGES: ReadonlyArray<readonly [Range, string]> = [['8', '8 weeks'], ['26', '26 weeks']];
@@ -39,7 +40,8 @@ function ChartTip({ active, payload }: Readonly<Partial<TooltipContentProps<numb
 /** Applications over time: sent per week with replies and interviews over it, 8 or 26 weeks. */
 export function ActivityChart({ home }: Readonly<{ home: CareerHome }>) {
   const [range, setRange] = useState<Range>('8');
-  const { points, partial, empty } = weeklySeries(home, Number(range));
+  const loc = usePersonLocale();
+  const { points, partial, empty } = weeklySeries(home, Number(range), loc);
   const totals = { sent: 0, replies: 0, interviews: 0 };
   for (const point of points) {
     totals.sent += point.sent;

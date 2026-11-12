@@ -6,6 +6,9 @@ import { clearHomeCityAction, saveHomeCityAction } from '@/app/personal/actions'
 import type { HomeLocation } from '@/lib/personal/repository';
 import type { Integration } from '@/lib/providers/status';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen, localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const STATE_LABEL: Record<Integration['state'], string> = {
   connected: 'Connected',
@@ -23,10 +26,9 @@ const STATE_CLASS: Record<Integration['state'], string> = {
   degraded: 'pf-warn',
 };
 
-function syncTime(value: string) {
-  const date = new Date(value);
-  const sameDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(date) === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-  return new Intl.DateTimeFormat('en-IN', sameDay ? { timeStyle: 'short', timeZone: 'Asia/Kolkata' } : { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(date);
+function syncTime(value: string, loc: PersonLocale) {
+  const sameDay = localDate(value, loc.timeZone) === localDate(new Date(), loc.timeZone);
+  return formatWhen(value, loc, sameDay ? 'shortTime' : 'mediumTime');
 }
 
 export function HomeCityEditor({ location }: Readonly<{ location: HomeLocation }>) {
@@ -67,6 +69,7 @@ export function HomeCityEditor({ location }: Readonly<{ location: HomeLocation }
 }
 
 export function Integrations({ items, heading = true }: Readonly<{ items: Integration[]; heading?: boolean }>) {
+  const loc = usePersonLocale();
   return (
     <section className="pf-services" aria-labelledby={heading ? 'integrations-title' : undefined} aria-label={heading ? undefined : 'Data services'}>
       {heading && <h2 className="fd-label" id="integrations-title">Integrations</h2>}
@@ -79,7 +82,7 @@ export function Integrations({ items, heading = true }: Readonly<{ items: Integr
           <span className="pf-service-state">
             <b className={STATE_CLASS[item.state]}>{STATE_LABEL[item.state]}</b>
             {item.detail && <small>{item.detail}</small>}
-            {item.lastSyncAt && <small>Last synced {syncTime(item.lastSyncAt)}</small>}
+            {item.lastSyncAt && <small>Last synced {syncTime(item.lastSyncAt, loc)}</small>}
             {item.usage && <small>{item.usage.used}/{item.usage.limit} calls today</small>}
           </span>
         </div>

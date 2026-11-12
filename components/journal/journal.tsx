@@ -10,28 +10,33 @@ import { VoiceNotes } from '@/components/journal/voice-notes';
 import { journalRevisionLine, type JournalRevision } from '@/lib/history/describe';
 import { MOODS, SUGGESTED_TAGS, type JournalEntry, type JournalSummary } from '@/lib/journal/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 /** Past entries shown before "All N past entries". */
 const PAST_PREVIEW = 5;
 
-function today() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+/** Today's date in the person's own zone: the day the server files a new entry under. */
+function today(timeZone: string) {
+  return localDate(new Date(), timeZone);
 }
 
-function prettyDate(date: string) {
-  if (date === today()) return 'Today';
-  return new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+// Entry dates are calendar days ('YYYY-MM-DD'), so they're labelled in UTC to stay that day.
+function prettyDate(date: string, loc: PersonLocale) {
+  if (date === today(loc.timeZone)) return 'Today';
+  return new Intl.DateTimeFormat(loc.locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function longDate(date: string) {
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+function longDate(date: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function weekday(date: string) {
-  return new Intl.DateTimeFormat('en-IN', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+function weekday(date: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 }
 
-/** The seven calendar days ending today (India time), oldest first. */
+/** The seven calendar days ending today (the person's own zone), oldest first. */
 function lastSevenDays(todayKey: string) {
   return Array.from({ length: 7 }, (_, index) => {
     const day = new Date(`${todayKey}T12:00:00Z`);
@@ -65,8 +70,8 @@ function pastToggleLabel(showAll: boolean, pastCount: number, loadedCount: numbe
 }
 
 /** A day's initial, under its dot on the week strip. */
-function initial(date: string) {
-  return new Intl.DateTimeFormat('en-IN', { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+function initial(date: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 }
 
 /**
@@ -75,9 +80,10 @@ function initial(date: string) {
  * while it is still open.
  */
 function StreakStrip({ journal, todayKey }: Readonly<{ journal: JournalSummary; todayKey: string }>) {
+  const { locale } = usePersonLocale();
   const written = new Set(journal.entries.map((entry) => entry.date));
   const days = lastSevenDays(todayKey);
-  const missed = days.filter((day) => day !== todayKey && !written.has(day)).map(weekday);
+  const missed = days.filter((day) => day !== todayKey && !written.has(day)).map((day) => weekday(day, locale));
   const count = journal.entries.length;
   // The journal loads the latest 60 entries, so a full page means "at least".
   const countLabel = `${count >= 60 ? '60+' : count} ${count === 1 ? 'entry' : 'entries'}`;
@@ -94,16 +100,16 @@ function StreakStrip({ journal, todayKey }: Readonly<{ journal: JournalSummary; 
         {count > 0 && <span className="jr-count">{countLabel}</span>}
       </p>
       <ol className="jr-week" role="img" aria-label={`Last seven days: ${summary}.`}>
-        {days.map((day) => <li key={day} className={weekDayClass(day, written, todayKey)}><i /><span>{initial(day)}</span></li>)}
+        {days.map((day) => <li key={day} className={weekDayClass(day, written, todayKey)}><i /><span>{initial(day, locale)}</span></li>)}
       </ol>
     </div>
   );
 }
 
 /** Past entries in groups a diary reads by: this week, last week, then by month. */
-function groupByWeek(entries: JournalEntry[], todayKey: string) {
+function groupByWeek(entries: JournalEntry[], todayKey: string, locale: string) {
   const now = Date.parse(`${todayKey}T00:00:00Z`);
-  const month = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const month = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const groups: { label: string; entries: JournalEntry[] }[] = [];
   for (const entry of entries) {
     const ago = Math.round((now - Date.parse(`${entry.date}T00:00:00Z`)) / 86_400_000);
@@ -141,7 +147,7 @@ async function loadHistory(date: string) {
   return { success: result.success, message: result.message, rows: historyRows(result.items ?? []) };
 }
 
-async function loadDeleted() {
+async function loadDeleted(loc: PersonLocale) {
   const result = await safeAction(loadDeletedJournalAction)();
   return {
     success: result.success,
@@ -149,7 +155,7 @@ async function loadDeleted() {
     rows: (result.items ?? []).map((item) => ({
       id: item.id,
       createdAt: item.createdAt,
-      line: `${prettyDate(item.date)} · ${item.previous?.body.trim().slice(0, 80) || 'no text'}`,
+      line: `${prettyDate(item.date, loc)} · ${item.previous?.body.trim().slice(0, 80) || 'no text'}`,
       before: item.previous?.body || null,
       restore: item.previous ? restoreVersion(item.date, item.previous) : undefined,
       restoreLabel: 'Bring back',
@@ -164,7 +170,8 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
   const [tags, setTags] = useState<string[]>(entry?.tags ?? []);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isToday = date === today();
+  const loc = usePersonLocale();
+  const isToday = date === today(loc.timeZone);
 
   function toggleTag(tag: string) {
     setTags((current) => withTagToggled(current, tag));
@@ -192,7 +199,7 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
 
   return (
     <form className="fd-form pf-editor jr-editor" onSubmit={save}>
-      <p className="pf-prompt jr-prompt">{isToday ? 'How are you feeling today?' : `How were you feeling on ${prettyDate(date)}?`}</p>
+      <p className="pf-prompt jr-prompt">{isToday ? 'How are you feeling today?' : `How were you feeling on ${prettyDate(date, loc)}?`}</p>
       <div className="pf-moods" role="radiogroup" aria-label="Mood">
         {MOODS.map((item) => (
           <button key={item.value} type="button" role="radio" aria-checked={mood === item.value} onClick={() => setMood(item.value)} disabled={isPending}>
@@ -221,6 +228,7 @@ function Editor({ entry, date, onDone }: Readonly<{ entry: JournalEntry | null; 
 
 export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; notes?: ReactNode }>) {
   const router = useRouter();
+  const loc = usePersonLocale();
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [historyDate, setHistoryDate] = useState<string | null>(null);
@@ -231,7 +239,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
   if (journal.state === 'setup') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal isn’t set up yet. Apply the profile/journal migration in Supabase, then refresh.</p>{notes}</>;
   if (journal.state === 'unavailable') return <><FieldLabel>Journal</FieldLabel><p className="fd-msg bad">Journal could not be loaded. Refresh the app and try again.</p>{notes}</>;
 
-  const todayKey = today();
+  const todayKey = today(loc.timeZone);
   const todayEntry = journal.entries.find((entry) => entry.date === todayKey) ?? null;
   const past = journal.entries.filter((entry) => entry.date !== todayKey);
   const shown = showAll ? past : past.slice(0, PAST_PREVIEW);
@@ -241,20 +249,20 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
   const toggleHistory = (date: string) => setHistoryDate(historyDate === date ? null : date);
 
   function remove(date: string) {
-    if (!window.confirm(`Delete your journal entry for ${prettyDate(date)}? You can bring it back from Deleted entries.`)) return;
+    if (!window.confirm(`Delete your journal entry for ${prettyDate(date, loc)}? You can bring it back from Deleted entries.`)) return;
     startTransition(async () => {
       await safeAction(deleteJournalEntryAction)(date);
       router.refresh();
     });
   }
 
-  const groups = groupByWeek(shown, todayKey);
+  const groups = groupByWeek(shown, todayKey, loc.locale);
 
   return (
     <div className="jr">
       <section className="pf-today jr-write" aria-label="Today’s entry">
         <header className="jr-write-head">
-          <h2 className="jr-date"><span>{weekday(todayKey)}</span>{longDate(todayKey)}</h2>
+          <h2 className="jr-date"><span>{weekday(todayKey, loc.locale)}</span>{longDate(todayKey, loc.locale)}</h2>
           <StreakStrip journal={journal} todayKey={todayKey} />
         </header>
         {todayEntry && editingDate !== todayKey ? (
@@ -295,10 +303,10 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
                               <div className="pf-entry-head jr-entry-head">
                                 <span className="jr-dot" aria-hidden="true" />
                                 <div>
-                                  <strong>{prettyDate(entry.date)}</strong>
+                                  <strong>{prettyDate(entry.date, loc)}</strong>
                                   <small><span className="pf-entry-mood" role="img" aria-label={moodOf(entry.mood).label}>{moodOf(entry.mood).emoji}</span> {moodOf(entry.mood).label}</small>
                                 </div>
-                                <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
+                                <button type="button" className="pf-delete" aria-label={`Delete entry for ${prettyDate(entry.date, loc)}`} onClick={() => remove(entry.date)} disabled={isPending}><Trash2 size={14} aria-hidden="true" /></button>
                               </div>
                               {entry.body && <p className={`pf-entry-body jr-entry-body${long && !open ? ' folded' : ''}`}>{entry.body}</p>}
                               {entry.tags.length > 0 && <p className="jr-entry-tags">{hashtags(entry.tags)}</p>}
@@ -308,7 +316,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
                                 <button type="button" className="fd-link pf-edit" onClick={() => setEditingDate(entry.date)}>Edit</button>
                                 <button type="button" className="fd-link pf-edit" aria-expanded={historyDate === entry.date} onClick={() => toggleHistory(entry.date)}>History</button>
                               </div>
-                              {historyDate === entry.date && <HistoryPanel title={`Changes to ${prettyDate(entry.date)}`} load={() => loadHistory(entry.date)} empty="No changes recorded yet." />}
+                              {historyDate === entry.date && <HistoryPanel title={`Changes to ${prettyDate(entry.date, loc)}`} load={() => loadHistory(entry.date)} empty="No changes recorded yet." />}
                             </>
                           )}
                         </li>
@@ -330,7 +338,7 @@ export function Journal({ journal, notes }: Readonly<{ journal: JournalSummary; 
 
         <footer className="jr-foot">
           <button type="button" className="fd-link pf-more" aria-expanded={showDeleted} onClick={() => setShowDeleted(!showDeleted)}>{showDeleted ? 'Hide deleted entries' : 'Deleted entries'}</button>
-          {showDeleted && <HistoryPanel title="Deleted entries" load={loadDeleted} empty="Nothing deleted. Entries you delete wait here." />}
+          {showDeleted && <HistoryPanel title="Deleted entries" load={() => loadDeleted(loc)} empty="Nothing deleted. Entries you delete wait here." />}
           <p className="fd-note">Entries and voice notes stay private to your account. Orbis doesn’t use them for advice or notifications; Ask reads them only when you ask a question with Journal ticked.</p>
         </footer>
       </div>

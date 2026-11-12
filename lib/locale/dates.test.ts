@@ -56,6 +56,18 @@ test('formatWhen presets in the default locale', () => {
   assert.equal(formatWhen(at, loc, 'dayTime'), '12 Nov, 3:05 pm');
   assert.equal(formatWhen(at, loc, 'medium'), '12 Nov 2026');
   assert.equal(formatWhen(at, loc, 'weekday'), 'Thursday');
+  assert.equal(formatWhen(at, loc, 'shortTime'), '3:05 pm');
+  assert.equal(formatWhen(at, loc, 'weekdayDayTime'), 'Thu, 12 Nov, 3:05 pm');
+  assert.equal(formatWhen(at, loc, 'mediumTime'), '12 Nov 2026, 3:05 pm');
+});
+
+test('formatWhen clock presets follow the language', () => {
+  const at = '2026-11-12T09:35:00Z'; // 01:35 in Los Angeles
+  const us = { timeZone: 'America/Los_Angeles', currency: 'USD', locale: 'en-US' };
+  assert.equal(formatWhen(at, us, 'shortTime'), '1:35 AM');
+  assert.equal(formatWhen(at, us, 'weekdayDayTime'), 'Thu, Nov 12, 1:35 AM');
+  assert.equal(formatWhen(at, us, 'mediumTime'), 'Nov 12, 2026, 1:35 AM');
+  assert.equal(formatWhen(at, { ...us, locale: 'en-GB' }, 'shortTime'), '01:35');
 });
 
 test('formatWhen uses the person\'s zone', () => {

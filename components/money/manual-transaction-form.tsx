@@ -7,22 +7,16 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES, MANUAL_NO
 import { FieldSubHead } from '@/components/field/field';
 import { CurrencyCard } from '@/components/money/currency-card';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localDate, localParts, zonedIso } from '@/lib/locale/dates';
 
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY'];
 
-// Orbis treats every finance date as India time (see getFinanceSummary).
-function nowInIndia() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date());
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? '';
-  return { date: `${part('year')}-${part('month')}-${part('day')}`, time: `${part('hour')}:${part('minute')}` };
+// Finance dates are the person's own wall clock (see getFinanceSummary).
+function nowIn(timeZone: string) {
+  const parts = localParts(new Date(), timeZone);
+  const two = (value: number) => String(value).padStart(2, '0');
+  return { date: localDate(new Date(), timeZone), time: `${two(parts.hour)}:${two(parts.minute)}` };
 }
 
 type Kind = 'expense' | 'income' | 'investment';
@@ -36,21 +30,24 @@ const KIND_COPY: Record<Kind, { label: string; categories: readonly string[]; co
 
 /** The manual entry view. `onClose` leaves it; `onSaved` leaves it after a save, with the result to show. */
 export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Readonly<{ onClose: () => void; onSaved: (message: string) => void; initialCategory?: string }>) {
+  const loc = usePersonLocale();
   const [direction, setDirection] = useState<Kind>(() => isInvestmentCategory(initialCategory) ? 'investment' : 'expense');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('INR');
+  // A new entry starts in the person's own currency.
+  const [currency, setCurrency] = useState(loc.currency);
   const [category, setCategory] = useState(() => initialCategory && ([...EXPENSE_CATEGORIES, ...INVESTMENT_CATEGORIES] as readonly string[]).includes(initialCategory) ? initialCategory : '');
   const [merchant, setMerchant] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi');
-  const [date, setDate] = useState(() => nowInIndia().date);
-  const [time, setTime] = useState(() => nowInIndia().time);
+  const [date, setDate] = useState(() => nowIn(loc.timeZone).date);
+  const [time, setTime] = useState(() => nowIn(loc.timeZone).time);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const copy = KIND_COPY[direction];
   const categories = copy.categories;
-  const today = nowInIndia().date;
+  const today = localDate(new Date(), loc.timeZone);
+  const currencies = CURRENCIES.includes(loc.currency) ? CURRENCIES : [loc.currency, ...CURRENCIES];
   const isIncome = direction === 'income';
   const isInvestment = direction === 'investment';
   const noun = direction;
@@ -75,7 +72,7 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Rea
         category,
         merchant,
         paymentMethod,
-        occurredAt: `${date}T${time || '12:00'}:00+05:30`,
+        occurredAt: zonedIso(date, time || '12:00', loc.timeZone),
         note,
       });
       if (result.success) onSaved(result.message);
@@ -100,7 +97,7 @@ export function ManualTransactionForm({ onClose, onSaved, initialCategory }: Rea
         <label className="fd-label" htmlFor="manual-amount">Amount</label>
         <div className="fd-amount">
           <select aria-label="Currency" value={currency} onChange={(event) => setCurrency(event.currentTarget.value)} disabled={isPending}>
-            {CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}
+            {currencies.map((code) => <option key={code} value={code}>{code}</option>)}
           </select>
           <input id="manual-amount" inputMode="decimal" type="number" min="0.01" step="0.01" max="100000000" placeholder="0.00" required value={amount} onChange={(event) => setAmount(event.currentTarget.value)} disabled={isPending} />
         </div>

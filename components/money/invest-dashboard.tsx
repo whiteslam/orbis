@@ -45,9 +45,9 @@ const ZERODHA_NOTICE: Record<string, string> = {
 // Atlas leads on the figure; the composed statement below it deliberately
 // spends its words on what the figure does not say. Gain is only shown where
 // every contributing position had a live price, which is what livePnl means.
-function gainDelta(analysis: PortfolioAnalysis) {
+function gainDelta(analysis: PortfolioAnalysis, locale: string) {
   if (analysis.livePnl !== null && analysis.liveInvested > 0) {
-    return { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl))} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const };
+    return { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl), locale)} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const };
   }
   return null;
 }
@@ -135,7 +135,7 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
   onAdvice: () => void;
 }>) {
   const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
-  const { timeZone } = usePersonLocale();
+  const { timeZone, locale } = usePersonLocale();
   const hasData = analysis.positions.length > 0;
   const failures = (live?.brokers ?? [])
     .filter((broker) => broker.state === 'error')
@@ -152,7 +152,7 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
     timeZone,
   });
 
-  const gain = gainDelta(analysis);
+  const gain = gainDelta(analysis, locale);
 
   return (
     <>

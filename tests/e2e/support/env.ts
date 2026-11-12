@@ -59,6 +59,17 @@ export function supabaseAdmin() {
       const response = await fetch(`${url}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers });
       if (!response.ok) throw new Error(`Could not clear ${table}: ${response.status}`);
     },
+    // Reads rows matching a PostgREST query (e.g. `select=entry_date&user_id=eq.<id>`).
+    async selectRows<T = Record<string, unknown>>(table: string, query: string): Promise<T[]> {
+      const response = await fetch(`${url}/rest/v1/${table}?${query}`, { headers });
+      if (!response.ok) throw new Error(`Could not read ${table}: ${response.status}`);
+      return await response.json() as T[];
+    },
+    // Inserts a row, or replaces the one with the same primary key.
+    async upsertRow(table: string, row: Record<string, unknown>) {
+      const response = await fetch(`${url}/rest/v1/${table}`, { method: 'POST', headers: { ...headers, prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(row) });
+      if (!response.ok) throw new Error(`Could not write ${table}: ${response.status}`);
+    },
     // Signs in as a test user with the public key: what a browser holding that user's session could do.
     async userToken(email: string, password: string) {
       const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {

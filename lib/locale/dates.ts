@@ -91,14 +91,18 @@ export function monthStartUtc(year: number, month: number, timeZone: string): st
   return new Date(zonedIso(`${String(year).padStart(4, '0')}-${two(month)}-01`, '00:00', timeZone)).toISOString();
 }
 
-export type WhenPreset = 'day' | 'dayLong' | 'time' | 'dayTime' | 'medium' | 'weekday';
+export type WhenPreset = 'day' | 'dayLong' | 'time' | 'shortTime' | 'dayTime' | 'weekdayDayTime' | 'medium' | 'mediumTime' | 'weekday';
 
 const presets: Record<WhenPreset, Intl.DateTimeFormatOptions> = {
   day: { day: 'numeric', month: 'short' },
   dayLong: { weekday: 'long', day: 'numeric', month: 'long' },
   time: { hour: 'numeric', minute: '2-digit', hour12: true },
+  // The locale's own short clock: "3:05 pm" in en-IN, "15:05" in en-GB.
+  shortTime: { timeStyle: 'short' },
   dayTime: { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true },
+  weekdayDayTime: { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' },
   medium: { dateStyle: 'medium' },
+  mediumTime: { dateStyle: 'medium', timeStyle: 'short' },
   weekday: { weekday: 'long' },
 };
 
