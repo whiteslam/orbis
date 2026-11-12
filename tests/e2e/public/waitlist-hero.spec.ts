@@ -28,14 +28,38 @@ test('the hero names the beta, picks out "one calm page" in the brand gradient, 
   await expect(chips).toHaveText(['Read-only connections', 'Never trains AI on your data', 'Private by default']);
 });
 
-test('the join form is one glass panel with a gradient button and still joins', async ({ page }) => {
+test('the join form sits on the page with no panel around it, and has a gradient button', async ({ page }) => {
   await page.goto('/');
   const card = page.locator('#join');
-  expect(await card.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px');
+  const panel = await card.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { border: s.borderTopWidth, image: s.backgroundImage, color: s.backgroundColor };
+  });
+  expect(panel).toEqual({ border: '0px', image: 'none', color: 'rgba(0, 0, 0, 0)' });
   const button = card.getByRole('button', { name: /join the waitlist/i });
   expect(await button.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('linear-gradient');
   await expect(card.getByLabel('Email')).toBeVisible();
   await expect(card.getByText('One email when your invite is ready. Nothing else, ever.')).toBeVisible();
+});
+
+test('the hero backdrop is the Orbis ring as an eclipse in a starfield, drawn without a canvas', async ({ page }) => {
+  await page.goto('/');
+  const space = page.locator('.wl-hero .wl-space');
+  await expect(space).toHaveAttribute('aria-hidden', 'true');
+  await expect(space.locator('.wl-eclipse-ring')).toBeVisible();
+  await expect(space.locator('.wl-stars')).toHaveCount(2);
+  await expect(page.locator('.wl-hero canvas')).toHaveCount(0);
+  const ring = await space.locator('.wl-eclipse-ring').evaluate((el) => getComputedStyle(el).animationName);
+  expect(ring).toBe('wl-spin');
+});
+
+test('with reduced motion the sky holds still', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await page.goto('/');
+  const names = await page.locator('.wl-space *').evaluateAll((els) => els.map((el) => getComputedStyle(el).animationName));
+  expect(names.every((name) => name === 'none')).toBe(true);
+  await context.close();
 });
 
 test('on a phone the header keeps Log in and Join, and nothing scrolls sideways', async ({ browser }) => {
