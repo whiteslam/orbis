@@ -45,7 +45,7 @@
 .field .fd-prose.clamp { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
 .field .fd-note-lead { margin-top: 10px; color: var(--sys-secondary); font: var(--t-footnote); }
 .field .fd-row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.field .fd-row-actions .finance-button { min-height: 36px; padding: 0 15px; font-size: 12px; }
+.field .fd-row-actions .finance-button { min-height: 36px; padding: 0 15px; font-size: 13px; }
 .fd-group-note { margin-top: 6px; }
 .field .section-title { margin: 24px 0 0; }
 .field .section-title h3 { color: var(--sys-secondary); font: var(--t-footnote); }
@@ -54,7 +54,7 @@
 .field .personal-form { display: grid; gap: 13px; margin-top: 12px; padding: 0; background: none; box-shadow: none; }
 .field .personal-form > strong { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 650; color: var(--fd-ink); }
 .field .personal-form > strong svg { color: var(--fd-accent); }
-.field .personal-form label { gap: 7px; color: var(--fd-faint); font-size: 11.5px; font-weight: 600; letter-spacing: 0; }
+.field .personal-form label { gap: 7px; color: var(--fd-faint); font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .field .personal-form input,
 .field .personal-form select,
 .field .personal-form textarea,
@@ -65,7 +65,7 @@
   border-radius: var(--r-md);
   background: var(--fd-surface);
   color: var(--fd-ink);
-  font-size: 13.5px;
+  font-size: 14px;
 }
 .field .personal-form input, .field .personal-form select, .field .home-city-row input { min-height: 44px; height: auto; padding: 0 12px; }
 .field .personal-form textarea, .field .journal-editor textarea { padding: 12px; line-height: 1.6; }
@@ -77,17 +77,17 @@
 .field .home-city-note { color: var(--fd-accent); }
 
 /* One button shape across the screen: a pill, filled or quiet. */
-.field .finance-button { min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 650; }
+.field .finance-button { min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--r-pill); font-size: 13px; font-weight: 650; }
 .field .finance-button.primary { background: var(--fd-btn); color: var(--fd-btn-ink); }
 .field .finance-button.secondary { background: var(--fd-chip); color: var(--fd-soft); box-shadow: inset 0 0 0 1px var(--fd-rule); }
-.field .finance-notice { margin-top: 12px; padding: 12px 13px; border: 0; border-radius: var(--r-md); font-size: 12.5px; line-height: 1.5; }
+.field .finance-notice { margin-top: 12px; padding: 12px 13px; border: 0; border-radius: var(--r-md); font-size: 13px; line-height: 1.5; }
 .field .finance-notice.success { background: var(--fd-wash); color: var(--fd-accent); }
 .field .finance-notice.error { background: var(--fd-alert-wash); color: var(--fd-alert); }
 .field .app-disconnect, .field .gmail-review-message, .field .gmail-review-message.success { color: var(--fd-alert); }
 .field .empty-state { margin-top: 10px; padding: 16px 0; background: none; text-align: left; }
 .field .empty-state svg { color: var(--fd-accent); }
-.field .empty-state strong { margin-top: 8px; font-size: 13.5px; color: var(--fd-ink); }
-.field .empty-state p { margin: 5px 0 0; color: var(--fd-faint); font-size: 12.5px; line-height: 1.55; }
+.field .empty-state strong { margin-top: 8px; font-size: 14px; color: var(--fd-ink); }
+.field .empty-state p { margin: 5px 0 0; color: var(--fd-faint); font-size: 13px; line-height: 1.55; }
 .field .home-city { margin-top: 12px; }
 .field .home-city-row { gap: 8px; }
 
@@ -95,8 +95,8 @@
 .field .memory-list { gap: 8px; margin-top: 14px; }
 .field .memory-note { padding: 14px 15px; }
 .field .memory-note p { margin: 0 0 11px; color: var(--fd-ink); font-size: 13px; line-height: 1.6; }
-.field .memory-note small { color: var(--fd-faint); font-size: 11px; }
-.field .memory-note .finance-button { min-height: 32px; padding: 0 13px; font-size: 11.5px; }
+.field .memory-note small { color: var(--fd-faint); font-size: 12px; }
+.field .memory-note .finance-button { min-height: 32px; padding: 0 13px; font-size: 12px; }
 
 /* Connected apps: a row each, separated by a hairline rather than boxed. */
 .field .app-integrations { gap: 0; margin-top: 8px; }
@@ -104,18 +104,18 @@
 .field .app-card:last-of-type { border-bottom: 0; }
 .field .app-card-head { gap: 12px; }
 .field .app-card-head strong { font-size: 14px; color: var(--fd-ink); }
-.field .app-card-head small { color: var(--fd-faint); font-size: 11.5px; }
+.field .app-card-head small { color: var(--fd-faint); font-size: 12px; }
 .field .app-logo { width: 36px; height: 36px; border: 0; border-radius: var(--r-md); background: var(--fd-chip); color: var(--fd-accent); }
 .field .app-logo.google, .field .app-logo.health { border: 0; background: var(--fd-chip); color: var(--fd-ink); }
 .field .app-logo.health { color: var(--fd-accent); }
-.field .app-status { font-size: 11.5px; font-weight: 650; color: var(--fd-faint); }
+.field .app-status { font-size: 12px; font-weight: 650; color: var(--fd-faint); }
 .field .app-status i { background: var(--fd-rule); }
 .field .app-status.on { color: var(--fd-accent); }
 .field .app-status.on i { background: var(--fd-accent); }
 .field .app-status.warn { color: var(--sys-amber); }
 .field .app-status.warn i { background: var(--sys-amber); }
 .field .app-scopes { gap: 7px; margin-top: 12px; }
-.field .app-scopes li { color: var(--fd-faint); font-size: 11.5px; }
+.field .app-scopes li { color: var(--fd-faint); font-size: 12px; }
 .field .app-scopes li.on { color: var(--fd-soft); }
 .field .app-scopes li.on svg { color: var(--fd-accent); }
 .field .app-card-actions { gap: 8px; margin-top: 12px; }
@@ -127,14 +127,14 @@
 .field .integrations li.connected { --dot: var(--fd-accent); --dot-text: var(--fd-accent); }
 .field .integrations li.idle, .field .integrations li.not_configured { --dot: var(--fd-rule); --dot-text: var(--fd-faint); }
 .field .integrations li strong { font-size: 13px; color: var(--fd-ink); }
-.field .integrations li small { color: var(--fd-faint); font-size: 11px; }
-.field .integration-status span { font-size: 12px; font-weight: 650; }
+.field .integrations li small { color: var(--fd-faint); font-size: 12px; }
+.field .integration-status span { font-size: 13px; font-weight: 650; }
 .field .integrations li.not_configured .integration-status span { color: var(--fd-faint); }
 
 /* Notifications: a switch, then the four slots as rows. */
 .field .notify-settings { gap: 15px; margin-top: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .field .notify-master strong { font-size: 14px; color: var(--fd-ink); }
-.field .notify-master small, .field .notify-slot small { color: var(--fd-faint); font-size: 11.5px; line-height: 1.45; }
+.field .notify-master small, .field .notify-slot small { color: var(--fd-faint); font-size: 12px; line-height: 1.45; }
 .field .notify-settings input[type=checkbox] { accent-color: var(--fd-accent); }
 .field .notify-slots { border-top: 1px solid var(--fd-rule); }
 .field .notify-slot { padding: 12px 0; border-bottom: 1px solid var(--fd-rule); }
@@ -144,25 +144,25 @@
 .field .notify-device { padding: 13px 14px; border-radius: var(--r-lg); background: var(--fd-card); }
 .field .notify-device > svg { color: var(--fd-accent); }
 .field .notify-device strong { font-size: 13px; color: var(--fd-ink); }
-.field .notify-device small { color: var(--fd-faint); font-size: 11.5px; }
+.field .notify-device small { color: var(--fd-faint); font-size: 12px; }
 
 /* Journal: today is the screen's one lifted object, past entries are cards. */
 .field .journal-today { margin-top: 16px; padding: 18px 17px; border: 0; border-radius: 24px; background: var(--fd-surface); box-shadow: var(--fd-lift-slide); }
-.field .journal-head small { color: var(--fd-faint); font-size: 10px; font-weight: 700; }
+.field .journal-head small { color: var(--fd-faint); font-size: 11px; font-weight: 700; }
 .field .journal-head h3 { margin: 4px 0 0; font-size: 21px; font-weight: 650; letter-spacing: -.025em; color: var(--fd-ink); }
-.field .journal-streak { background: var(--fd-chip); color: var(--fd-faint); font-size: 11px; font-weight: 650; }
+.field .journal-streak { background: var(--fd-chip); color: var(--fd-faint); font-size: 12px; font-weight: 650; }
 .field .journal-streak.on { background: var(--fd-wash); color: var(--fd-accent); }
 .field .journal-editor { gap: 13px; margin-top: 14px; }
-.field .journal-prompt { font-size: 13.5px; font-weight: 650; color: var(--fd-ink); }
-.field .journal-actions small { color: var(--fd-faint); font-size: 11px; }
-.field .journal-entry-view p { font-size: 13.5px; font-weight: 650; color: var(--fd-ink); }
+.field .journal-prompt { font-size: 14px; font-weight: 650; color: var(--fd-ink); }
+.field .journal-actions small { color: var(--fd-faint); font-size: 12px; }
+.field .journal-entry-view p { font-size: 14px; font-weight: 650; color: var(--fd-ink); }
 .field .journal-entry-view blockquote { border-left: 3px solid var(--fd-rule); background: none; padding: 2px 0 2px 12px; color: var(--fd-soft); font-size: 13px; line-height: 1.6; }
-.field .journal-entry-tags span { background: var(--fd-chip); color: var(--fd-faint); font-size: 11px; }
+.field .journal-entry-tags span { background: var(--fd-chip); color: var(--fd-faint); font-size: 12px; }
 .field .journal-list { gap: 8px; margin-top: 10px; }
 .field .journal-item { padding: 14px 15px; border: 0; border-radius: var(--r-lg); background: var(--fd-card); }
 .field .journal-item strong { font-size: 13px; color: var(--fd-ink); }
-.field .journal-item small { color: var(--fd-faint); font-size: 11px; }
-.field .journal-item > p { color: var(--fd-soft); font-size: 12.5px; line-height: 1.6; }
-.field .journal-edit-link { color: var(--fd-accent); font-size: 11.5px; font-weight: 650; }
+.field .journal-item small { color: var(--fd-faint); font-size: 12px; }
+.field .journal-item > p { color: var(--fd-soft); font-size: 13px; line-height: 1.6; }
+.field .journal-edit-link { color: var(--fd-accent); font-size: 12px; font-weight: 650; }
 .field .workbook-icon-button { border: 0; border-radius: 50%; background: var(--fd-chip); color: var(--fd-faint); }
 

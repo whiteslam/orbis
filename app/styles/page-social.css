@@ -88,7 +88,7 @@
   backdrop-filter: none;
   color: var(--fd-ink);
   font: inherit;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
@@ -100,7 +100,7 @@
 .so-lead .so-new .so-action { width: 100%; }
 .so-lead .so-actions > .so-action { flex: 1 1 140px; }
 .so-lead .so-new-menu { left: 0; right: auto; min-width: 180px; }
-.so-screen .so-new-menu button { min-height: 44px; font-size: 14.5px; }
+.so-screen .so-new-menu button { min-height: 44px; font-size: 15px; }
 
 /* ─── The planner: the page's one surface ─── */
 .so-calcard {
@@ -117,11 +117,11 @@
 .so-calcard[aria-busy="true"] { opacity: .55; }
 .so-calcard .so-cal { margin-top: 0; }
 .so-cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin: 0 2px 8px; }
-.so-calcard .so-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--fd-faint); font-size: 12px; }
+.so-calcard .so-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--fd-faint); font-size: 13px; }
 .so-calcard:not(.open) .so-cal-bar .so-legend { visibility: hidden; }
 .so-cal-toggle { flex: none; min-height: 36px; margin-left: auto; font-size: 13px; font-weight: 650; }
 
-.so-calcard .so-cal-head > span { padding-bottom: 6px; color: var(--fd-faint); font-size: 12px; font-weight: 650; text-align: center; }
+.so-calcard .so-cal-head > span { padding-bottom: 6px; color: var(--fd-faint); font-size: 13px; font-weight: 650; text-align: center; }
 .so-calcard .so-cal-head > span > span { display: none; padding: 0; }
 .so-calcard .so-cal-head > span > b { font-weight: 650; }
 /* The phone shows one week until the month is asked for. */
@@ -130,7 +130,8 @@
 .so-calcard .so-day { min-height: 54px; padding: 4px 2px 6px; border-radius: 14px; background: transparent; transition: background-color .18s ease; }
 .so-calcard .so-day b { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 650; line-height: 1; }
 .so-calcard .so-day.past b { color: var(--fd-soft); }
-.so-calcard .so-day.today b { background: var(--so-accent); color: var(--on-fill, var(--fd-btn-ink)); font-weight: 750; }
+/* Dark ink on the violet: 8.2:1, where white was 2.3:1. */
+.so-calcard .so-day.today b { background: var(--so-accent); color: var(--brand-on-accent); font-weight: 700; }
 .so-calcard .so-day[aria-pressed="true"] { background: var(--so-accent-wash); }
 .so-calcard .so-day:hover:not(.out) { background: color-mix(in srgb, var(--fd-ink) 6%, transparent); }
 .so-calcard .so-day[aria-pressed="true"]:hover { background: var(--so-accent-wash); }
@@ -141,9 +142,9 @@
 /* The chosen day, under a hairline. */
 .so-dayplan { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fd-rule); }
 .so-dayplan-title { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; color: var(--fd-ink); font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
-.so-dayplan-title span { padding: 2px 9px; border-radius: var(--r-pill); background: var(--so-accent-wash); color: var(--so-accent); font-size: 12px; font-weight: 700; }
-.so-dayplan .fd-empty { margin: 8px 0 0; color: var(--fd-faint); font-size: 13.5px; }
-.so-dayplan-hint { margin: 0; color: var(--fd-faint); font-size: 13.5px; line-height: 1.5; }
+.so-dayplan-title span { padding: 2px 9px; border-radius: var(--r-pill); background: var(--so-accent-wash); color: var(--so-accent); font-size: 13px; font-weight: 700; }
+.so-dayplan .fd-empty { margin: 8px 0 0; color: var(--fd-faint); font-size: 14px; }
+.so-dayplan-hint { margin: 0; color: var(--fd-faint); font-size: 14px; line-height: 1.5; }
 .so-dayplan .so-row:last-of-type { border-bottom: 0; }
 .so-screen .so-add-day { min-height: 44px; margin-top: 6px; font-size: 14px; }
 
@@ -153,12 +154,12 @@
 .so-screen .so-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: -2px; border-radius: 10px; }
 .so-screen .so-thumb { width: 44px; height: 44px; border-radius: 12px; }
 .so-screen .so-row-text strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 15px; font-weight: 650; letter-spacing: -.01em; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
-.so-screen .so-row-text small { gap: 4px 0; margin-top: 3px; color: var(--fd-soft); font-size: 12.5px; }
+.so-screen .so-row-text small { gap: 4px 0; margin-top: 3px; color: var(--fd-soft); font-size: 13px; }
 .so-screen .so-row-text small > span:not(.so-ai) + span:not(.so-ai)::before { content: "·"; margin: 0 6px; color: var(--fd-faint); }
 .so-screen .so-row-text small .so-ai { margin-left: 8px; }
 .so-screen .so-row > .so-status { flex: none; }
-.so-screen .so-status { padding: 3px 9px; font-size: 11.5px; letter-spacing: 0; }
-.so-screen .so-ai { font-size: 11.5px; }
+.so-screen .so-status { padding: 3px 9px; font-size: 12px; letter-spacing: 0; }
+.so-screen .so-ai { font-size: 12px; }
 
 /* ─── The pipeline: posts by stage, on the page ─── */
 .so-pipeline, .so-empty { margin-top: 34px; }
@@ -170,7 +171,7 @@
 
 /* The four stages left to right, each with its count: the month as a pipeline. */
 .so-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 6px; margin: 16px 0 4px; padding: 0; list-style: none; }
-.so-stage { min-width: 0; color: var(--fd-soft); font-size: 12.5px; font-weight: 600; }
+.so-stage { min-width: 0; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
 .so-stage i { display: block; height: 4px; margin-bottom: 9px; border-radius: 2px; background: var(--so-stage); }
 .so-stage b { display: block; color: var(--fd-ink); font-size: 22px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .so-stage[data-empty] i { background: var(--fd-rule); }
@@ -183,7 +184,7 @@
 .so-rows-group { margin-top: 22px; }
 .so-group-label { margin: 0 0 2px; color: var(--fd-faint); font-size: 13px; font-weight: 650; letter-spacing: 0; }
 .so-group-label > span { margin-left: 2px; font-variant-numeric: tabular-nums; }
-.so-group-label small { display: block; margin-top: 1px; color: var(--fd-faint); font-size: 12px; font-weight: 500; }
+.so-group-label small { display: block; margin-top: 1px; color: var(--fd-faint); font-size: 13px; font-weight: 500; }
 .so-rows-group .so-row:last-child { border-bottom: 0; }
 /* Grouped by stage, the group already says the stage. */
 .so-rows[data-sort="status"] .so-row > .so-status { display: none; }
@@ -195,10 +196,10 @@
 .so-screen .so-card:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 3px; border-radius: 16px; }
 .so-screen .so-card-text { padding: 8px 2px 0; }
 .so-screen .so-card-text strong { font-size: 14px; }
-.so-screen .so-card-text small { gap: 5px 8px; font-size: 12px; color: var(--fd-soft); }
+.so-screen .so-card-text small { gap: 5px 8px; font-size: 13px; color: var(--fd-soft); }
 
 /* Nothing planned: say what to do, with both ways to do it. */
-.so-screen .so-empty p { margin: 8px 0 0; color: var(--fd-soft); font-size: 14.5px; line-height: 1.6; max-width: 56ch; }
+.so-screen .so-empty p { margin: 8px 0 0; color: var(--fd-soft); font-size: 15px; line-height: 1.6; max-width: 56ch; }
 .so-empty-act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 10px; }
 .so-empty .so-h, .so-posts-head .so-h { display: flex; align-items: center; min-height: 36px; }
 .so-empty-act .fd-link { min-height: 44px; font-size: 14px; font-weight: 650; }
@@ -214,17 +215,17 @@
 .so-screen .so-insight-top .fd-two { font-size: 15px; font-weight: 700; }
 .so-screen .so-followers { font-size: 13px; }
 .so-screen .so-followers b { font-size: 20px; font-weight: 750; letter-spacing: -.02em; }
-.so-screen .so-window { margin: 16px 0 6px; font-size: 12.5px; font-weight: 600; }
+.so-screen .so-window { margin: 16px 0 6px; font-size: 13px; font-weight: 600; }
 .so-screen .so-stats { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 16px; }
 .so-screen .so-stats div { padding: 0; border-radius: 0; background: none; }
-.so-screen .so-stats dt { font-size: 12px; font-weight: 600; }
+.so-screen .so-stats dt { font-size: 13px; font-weight: 600; }
 .so-screen .so-stats dd { font-size: 22px; font-weight: 750; }
 .so-screen .so-insight-posts { margin-top: 12px; border-top: 1px solid var(--fd-rule); }
 .so-screen .so-insight-posts .so-thumb { width: 40px; height: 40px; }
 .so-screen .so-insight-posts .so-row-text strong { font-size: 14px; }
-.so-screen .so-insight-card > .so-problem { margin-top: 10px; padding: 0; background: none; font-size: 13.5px; }
+.so-screen .so-insight-card > .so-problem { margin-top: 10px; padding: 0; background: none; font-size: 14px; }
 
-.so-screen .so-foot { margin-top: 36px; font-size: 12.5px; }
+.so-screen .so-foot { margin-top: 36px; font-size: 13px; }
 
 /* ─── Post drawer and AI draft: the writing leads ─── */
 .so-drawer .so-edit-main, .so-drawer .so-edit-side, .so-ai-dialog .so-ai-brief, .so-ai-dialog .so-ai-options { display: flex; flex-direction: column; min-width: 0; }
@@ -280,7 +281,7 @@
   .stage[data-desktop] .so-calcard .so-cal-week { display: grid; }
   .stage[data-desktop][data-tab="social"] .so-calcard :is(.so-cal-head, .so-cal-week) { gap: 0; }
   .stage[data-desktop][data-tab="social"] .so-calcard .so-cal-week + .so-cal-week { margin-top: 0; }
-  .stage[data-desktop][data-tab="social"] .so-calcard .so-cal-head > span { padding: 0 10px 8px; text-align: left; font-size: 12.5px; }
+  .stage[data-desktop][data-tab="social"] .so-calcard .so-cal-head > span { padding: 0 10px 8px; text-align: left; font-size: 13px; }
   .stage[data-desktop] .so-calcard .so-cal-head > span > span { display: inline; padding: 0; font-weight: 650; }
   .stage[data-desktop] .so-calcard .so-cal-week { border-top: 1px solid var(--fd-rule); }
   .stage[data-desktop][data-tab="social"] .so-calcard .so-day {
@@ -308,7 +309,7 @@
     border-radius: 7px;
     background: var(--so-tint);
     color: var(--so-tint-ink);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 650;
     line-height: 1.35;
     text-align: left;
@@ -321,7 +322,7 @@
   }
   .so-chip:is(.idea, .draft) { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--so-tint-ink) 55%, transparent); }
   .so-chip.published { opacity: .7; }
-  .stage[data-desktop] .so-day-posts .so-more { padding-left: 7px; color: var(--fd-faint); font-size: 11.5px; font-weight: 650; line-height: 1.4; }
+  .stage[data-desktop] .so-day-posts .so-more { padding-left: 7px; color: var(--fd-faint); font-size: 12px; font-weight: 650; line-height: 1.4; }
 
   .stage[data-desktop] .so-dayplan { margin-top: 0; padding: 4px 0 0 26px; border-top: 0; border-left: 1px solid var(--fd-rule); }
   .stage[data-desktop] .so-dayplan-title { font-size: 19px; }

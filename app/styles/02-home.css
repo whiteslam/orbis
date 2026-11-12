@@ -43,7 +43,7 @@
   --sys-wash-border: var(--fd-rule);
 }
 .fd-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
-.fd-date { margin: 0; color: var(--fd-faint); font-size: 12px; }
+.fd-date { margin: 0; color: var(--fd-faint); font-size: 13px; }
 /* The Orbis logo beside the date, at the top of every tab. */
 .fd-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .fd-top-actions { display: flex; align-items: center; gap: 6px; }
@@ -52,7 +52,7 @@
 
 /* The statement sits on the ground: no fill, no border, no shadow. */
 .fd-focus { padding: 0; background: none; }
-.fd-focus p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; }
+.fd-focus p { margin: 10px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
 .fd-act { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
 .fd-act:empty { display: none; }
 

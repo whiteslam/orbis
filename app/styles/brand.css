@@ -93,6 +93,8 @@
   --ease-out: cubic-bezier(.23, 1, .32, 1);
   --ease-in-out: cubic-bezier(.77, 0, .175, 1);
   --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  /* The iOS switch knob's lift. */
+  --switch-knob-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06);
   /* Springs: use the -dur beside each as the transition's duration. --spring
      for most things, --spring-snappy for small state changes, --spring-bouncy
      only after a gesture carried momentum. */
@@ -299,7 +301,7 @@
    the first :root block above. */
 body { font-weight: 400; }
 /* One label style everywhere; :not(#_) lifts it above every class-scoped label rule without !important. */
-:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 11px; font-weight: 500; }
+:is(.eyebrow, .page-head small, .fd-label):not(#_) { font-size: 12px; font-weight: 500; }
 
 /* ─── Logo ─────────────────────────────────────────────────────────────
    A conic-gradient ring and a hole div at 45% — never an SVG stroke. The ring

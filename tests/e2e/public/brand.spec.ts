@@ -27,12 +27,13 @@ test('a stored light choice still wins', async ({ browser }) => {
   await context.close();
 });
 
-test('DM Sans is the body font and ships without a request to Google', async ({ page }) => {
+// The owner chose the system font (SF Pro on Apple devices) over DM Sans.
+test('the body font is the system font, and no web font is fetched', async ({ page }) => {
   const external: string[] = [];
-  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) external.push(r.url()); });
+  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com|\.woff2?(\?|$)/.test(r.url())) external.push(r.url()); });
   await page.goto('/login');
   const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-  expect(family).toMatch(/DM Sans|dm_sans|__DM_Sans/i);
+  expect(family).toMatch(/^-apple-system, BlinkMacSystemFont, system-ui/);
   expect(external).toEqual([]);
 });
 
@@ -117,10 +118,10 @@ test('sheets that kept their own dark values follow the default, not the OS sett
   await context.close();
 });
 
-test('DM Sans also reaches the public pages that never load the app stylesheets', async ({ page }) => {
+test('the public pages that never load the app stylesheets use the system font too', async ({ page }) => {
   await page.goto('/privacy');
   const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-  expect(family).toMatch(/DM Sans/i);
+  expect(family).toMatch(/^-apple-system/);
 });
 
 test('the logo hole is see-through: the ring is masked, not painted over', async ({ page }) => {

@@ -21,11 +21,11 @@
   .phone-screen { border-radius: 32px; }
 }
 
-/* ─── Bottom nav: 60px, 20px icons, 10px labels, gradient on the active tab ── */
+/* ─── Bottom nav: 60px, 20px icons, 11px labels, gradient on the active tab ── */
 /* Six tabs beside the Ask circle leave each about 42px at 360px wide, so the
-   labels shrink with the bar (down to 8px) and never wrap; icons keep 20px. */
+   labels shrink with the bar (down to 9px) and never wrap; icons keep 20px. */
 .bottom-nav { container-type: inline-size; padding-inline: 4px; }
-.bottom-nav button span { font-size: clamp(8px, 3.6cqi, 10px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.bottom-nav button span { font-size: clamp(9px, 3.9cqi, 11px); font-weight: 500; letter-spacing: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: clip; }
 .bottom-nav button.active { background: var(--brand-gradient); color: var(--brand-on-accent); box-shadow: var(--shadow-tab-active); font-weight: 600; }
 .bottom-nav button.active svg { stroke: var(--brand-on-accent); }
 .talk-fab { background: var(--brand-gradient); color: var(--brand-on-accent); border: 0; }
@@ -43,7 +43,7 @@
 }
 .pf-pill.alert { background: var(--pill-alert-bg); color: var(--fd-alert); }
 
-.pill { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
+.pill { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 500; }
 .pill.teal { background: var(--pill-teal-bg); color: var(--brand-teal); }
 .pill.blue { background: var(--pill-blue-bg); color: var(--brand-blue); }
 .pill.red  { background: var(--pill-red-bg); color: var(--brand-red); }
@@ -93,14 +93,16 @@ input[type="checkbox"][role="switch"]::before {
   height: 27px;
   border-radius: 50%;
   background: var(--on-fill);
-  box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06);
-  /* The knob springs across, and stretches while held, as on iOS. */
-  transition: transform var(--spring-snappy-dur) var(--spring-snappy), width var(--spring-snappy-dur) var(--spring-snappy);
+  box-shadow: var(--switch-knob-shadow);
+  /* The knob springs across, and stretches while held, as on iOS: the stretch
+     is a scale from the edge it rests on, so only transform moves. */
+  transform-origin: left center;
+  transition: transform var(--spring-snappy-dur) var(--spring-snappy);
 }
 input[type="checkbox"][role="switch"]:checked { background: var(--sys-switch); }
-input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20px); }
-input[type="checkbox"][role="switch"]:not(:disabled):active::before { width: 33px; }
-input[type="checkbox"][role="switch"]:checked:not(:disabled):active::before { transform: translateX(14px); }
+input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20px); transform-origin: right center; }
+input[type="checkbox"][role="switch"]:not(:disabled):active::before { transform: scaleX(1.22); }
+input[type="checkbox"][role="switch"]:checked:not(:disabled):active::before { transform: translateX(20px) scaleX(1.22); }
 input[type="checkbox"][role="switch"]:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 input[type="checkbox"][role="switch"]:disabled { opacity: .5; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {

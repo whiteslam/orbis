@@ -1,5 +1,7 @@
-/* Hallmark · checked: 2026-10-31 · genre: modern-minimal (inferred) · shape: app screen
+/* Hallmark · checked: 2026-10-31 (second pass) · genre: modern-minimal (inferred) · shape: app screen
  * floor: fixed 189 (48, 7a, 67, 54, 19, 39a, 10a, 34) · built: the project · redesign: polish · v2.0.0
+ * owner's picks, kept on top of the polish: the system font in place of DM Sans; motion, iOS Settings and lock screen, and the macOS sidebar from the Apple pass
+ * critique: legibility was the weak point, not the look: 750 sizes under 15px were lifted one step (10 to 11, 11 to 12, 12 to 13, 13.5 to 14, 14.5 to 15); layout, cards, buttons and wallpaper unchanged
  * waive 19 · app/privacy, app/terms · legal text is never reworded
  * waive 19 · date ranges and the empty-value dash (setup-profile, resume-preview, steps-card, insights-page) are data, not copy
  * waive 19 · "unlock" names the app lock screen, the product's own function (passkey-prompt, pin-setup)
@@ -7,7 +9,13 @@
  * waive 54 · waitlist "Private beta · opening in small batches" is a live status fact; its caps and tracking are gone
  * waive 67 · .rd-typed input uppercases a ticker symbol, which is data formatting
  * waive 34 · app/error.tsx is linted without the root stylesheets; 01-base clips html and body. .cp-pop's 100vw only applies under 412px, where scrollbars overlay
- * waive 62 · .cp-tip is a CSS-only hover/focus tooltip, aria-hidden, with a reduced-motion fallback */
+ * waive 62 · .cp-tip is a CSS-only hover/focus tooltip, aria-hidden, with a reduced-motion fallback
+ * waive 40 · the 1.01:1 and 3.48:1 readings pair one theme's ink with the other theme's surface; rendered, each theme's own pair is 16.6:1 dark and 18.1:1 light, and .health-doc-pin.on is 9.1:1 dark, 6.2:1 light
+ * waive 38iii · .cp-titlerow h1 span is the date or context set as its own line at a second size, which is the fix the gate names
+ * waive 28b · Social's post previews are the user's own videos; no poster exists for them, and they sit below the fold
+ * waive 2b · the waitlist's gradient phrase is the brand's front door, not part of this pass
+ * waive 62 · .auth-submit-label fades only while the form is submitting (aria-busy), never at rest; it stays the button's accessible name
+ * kept · the Settings index row's handler still sets and jumps to its section; it now also slides the section in, for pointer taps only */
 /* ─── One system, two themes ──────────────────────────────────────────
    Every tab uses the iOS palette and SF Pro; the Health/Finance
    "grouped" look is now the baseline rather than a local override.
@@ -183,7 +191,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.04em; }
 .avatar { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--sys-label); color: var(--sys-bg); font-size: 13px; cursor: pointer; }
 .icon-btn { position: relative; width: 34px; height: 34px; border: 0; background: var(--sys-surface); border-radius: var(--r-md); display: grid; place-items: center; box-shadow: var(--e2); color: var(--ink); }
-.eyebrow, .page-head small { font-size: 10px; font-weight: 800; color: var(--accent); }
+.eyebrow, .page-head small { font-size: 11px; font-weight: 800; color: var(--accent); }
 
 /* ─── Screen geometry ─────────────────────────────────────────────────
    The floating tab bar and everything that has to keep clear of it or of

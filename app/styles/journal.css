@@ -45,7 +45,7 @@
 .jr-week i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fd-ink) 22%, transparent); }
 .jr-week li.on i { background: var(--fd-accent); box-shadow: none; }
 .jr-week li.open i { box-shadow: inset 0 0 0 2px var(--fd-accent); }
-.jr-week span { color: var(--fd-faint); font-size: 10.5px; font-weight: 600; }
+.jr-week span { color: var(--fd-faint); font-size: 12px; font-weight: 600; }
 
 /* The editor: the mood row, then the page itself, then tags and save. */
 .jr .pf-editor { margin-top: 22px; }
@@ -77,13 +77,13 @@
 .jr .jr-paper:focus { border: 0; box-shadow: none; outline: none; }
 .jr .jr-paper:focus-visible { outline: 2px solid color-mix(in srgb, var(--fd-accent) 55%, transparent); outline-offset: 6px; }
 .jr .pf-tags { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fd-rule); }
-.jr .pf-tags button { min-height: 30px; font-size: 12.5px; }
+.jr .pf-tags button { min-height: 30px; font-size: 13px; }
 .jr .jr-save { align-items: center; margin-top: 16px; }
 .jr .jr-save .pf-count { margin-left: 0; margin-right: auto; }
 
 /* Today, written: the entry reads as the page. */
 .jr-today { margin-top: 20px; }
-.jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--jr-mood) 16%, transparent); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; }
+.jr-feeling { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--jr-mood) 16%, transparent); color: var(--fd-ink); font-size: 14px; font-weight: 650; }
 .jr-feeling span { font-size: 17px; }
 .jr .jr-prose { margin-top: 16px; color: var(--fd-ink); font-size: 16.5px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
 .jr .jr-today .pf-entry-tags { margin-top: 14px; }
@@ -100,14 +100,14 @@
 .jr .jr-entry { position: relative; padding: 12px 0 14px 26px; border-bottom: 0; }
 .jr-entry-head { gap: 10px; }
 .jr-dot { position: absolute; top: 17px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--jr-mood, var(--fd-accent)); box-shadow: 0 0 0 3px var(--fd-bg, var(--sys-bg)); }
-.jr .jr-entry-head strong { font-size: 14.5px; }
-.jr .jr-entry-head small { margin-top: 1px; font-size: 12.5px; color: var(--fd-soft); }
+.jr .jr-entry-head strong { font-size: 15px; }
+.jr .jr-entry-head small { margin-top: 1px; font-size: 13px; color: var(--fd-soft); }
 .jr .jr-entry-head .pf-entry-mood { font-size: 13px; }
 .jr .jr-entry .pf-delete { width: 34px; height: 34px; background: transparent; color: var(--fd-faint); transition: color .18s ease, background-color .18s ease; }
 .jr .jr-entry .pf-delete:hover { background: var(--fd-chip); color: var(--fd-alert); }
-.jr .jr-entry-body { margin-top: 8px; color: var(--fd-soft); font-size: 14.5px; line-height: 1.7; }
+.jr .jr-entry-body { margin-top: 8px; color: var(--fd-soft); font-size: 15px; line-height: 1.7; }
 .jr .jr-entry-body.folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
-.jr-entry-tags { margin: 8px 0 0; color: var(--fd-accent); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
+.jr-entry-tags { margin: 8px 0 0; color: var(--fd-accent); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .jr .jr-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
 .jr .jr-links .pf-edit { display: inline; margin-top: 0; }
 .jr .jr-entry .pf-editor { margin-top: 0; }
@@ -118,7 +118,7 @@
 .jr-sub { margin: 6px 0 0; color: var(--fd-faint); font-size: 13px; line-height: 1.5; }
 .jr-foot { display: flex; flex-direction: column; gap: 10px; }
 .jr-foot .pf-more { margin-top: 0; }
-.jr-foot .fd-note { margin: 0; font-size: 12px; }
+.jr-foot .fd-note { margin: 0; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
   .jr .jr-entry .pf-delete { transition: none; }

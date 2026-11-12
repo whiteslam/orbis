@@ -1,6 +1,6 @@
 import { expect, openApp, openTab, test, TABS } from '../support/fixtures';
 
-test('Glass: wallpaper behind every tab, frosted chrome, Figtree text', async ({ page }) => {
+test('Glass: wallpaper behind every tab, frosted chrome, system font', async ({ page }) => {
   await openApp(page);
   for (const tab of TABS) {
     await openTab(page, tab);
@@ -11,5 +11,5 @@ test('Glass: wallpaper behind every tab, frosted chrome, Figtree text', async ({
     return { blur: nav.backdropFilter || nav.getPropertyValue('-webkit-backdrop-filter'), font: getComputedStyle(document.body).fontFamily };
   });
   expect(chrome.blur).toContain('blur');
-  expect(chrome.font.toLowerCase()).toContain('figtree');
+  expect(chrome.font).toMatch(/^-apple-system, BlinkMacSystemFont, system-ui/);
 });

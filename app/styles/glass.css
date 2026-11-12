@@ -131,7 +131,7 @@
 .today-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .today-widget { aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 6px; padding: 14px; border-radius: 26px; border: var(--gl-edge); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--gl-shadow); color: var(--fd-ink); font: inherit; text-align: left; cursor: pointer; }
 .today-widget .activity-rings { align-self: center; }
-.today-widget-cap { font-size: 12px; font-weight: 600; color: var(--fd-soft); }
+.today-widget-cap { font-size: 13px; font-weight: 600; color: var(--fd-soft); }
 .today-widget-value { font-family: var(--rounded); font-size: 28px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .today-widget-bars { display: flex; align-items: flex-end; gap: 3px; width: 100%; height: 34px; }
 .today-widget-bars i { flex: 1; border-radius: 3px; background: color-mix(in srgb, var(--fd-ink) 16%, transparent); }
@@ -140,15 +140,15 @@
 /* What the widgets say under their picture: a number, then one or two quiet lines. */
 .today-widget-foot { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
 .today-widget-value.small { font-size: 21px; line-height: 1.15; }
-.today-widget-value small { font-family: var(--font-text); font-size: 11.5px; font-weight: 600; letter-spacing: 0; color: var(--fd-soft); }
-.today-widget-sub { overflow: hidden; font-size: 11.5px; line-height: 1.35; color: var(--fd-soft); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.today-widget-value small { font-family: var(--font-text); font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--fd-soft); }
+.today-widget-sub { overflow: hidden; font-size: 12px; line-height: 1.35; color: var(--fd-soft); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .today-widget-bars i.none { height: 8%; opacity: .45; }
 /* Today's setup reminder: one line — the next step, how many are left, and a close. */
 .setup-list { display: flex; align-items: center; gap: 6px; margin: 12px 0 16px; padding: 7px 8px 7px 10px; border-radius: 20px; }
 .setup-row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0; border: 0; background: none; font: inherit; color: var(--fd-faint); text-align: left; cursor: pointer; }
 .setup-row .fd-tile { width: 30px; height: 30px; border-radius: 10px; }
 .setup-row-label { flex: 1; min-width: 0; overflow: hidden; color: var(--fd-ink); font-size: 13px; font-weight: 600; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-.setup-row-label small { display: block; overflow: hidden; color: var(--fd-faint); font-size: 10.5px; font-weight: 500; text-overflow: ellipsis; }
+.setup-row-label small { display: block; overflow: hidden; color: var(--fd-faint); font-size: 12px; font-weight: 500; text-overflow: ellipsis; }
 .setup-row svg:last-child { flex: none; }
 .setup-row:active { opacity: .8; }
 .setup-list .fd-round { width: 28px; height: 28px; }
@@ -174,7 +174,7 @@
 .so-bar-month { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .so-bar-month > div { min-width: 0; text-align: center; }
 .so-bar-month h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.02em; color: var(--fd-ink); white-space: nowrap; }
-.so-bar-month .so-summary { margin: 1px 0 0; font-size: 11px; white-space: nowrap; }
+.so-bar-month .so-summary { margin: 1px 0 0; font-size: 12px; white-space: nowrap; }
 .so-bar-month .fd-round { width: 28px; height: 28px; }
 .so-nav-row { display: flex; justify-content: center; margin-top: 14px; }
 /* The two add actions: equal tiles, each an icon, a name and what it does. */
@@ -183,8 +183,8 @@
 .so-action-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-accent); }
 .so-action.primary .so-action-icon { background: var(--fd-accent); box-shadow: none; color: var(--gl-ground); }
 .so-action-text { min-width: 0; }
-.so-action-text b { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
-.so-action-text small { display: block; margin-top: 1px; overflow: hidden; color: var(--fd-faint); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.so-action-text b { display: block; font-size: 14px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.so-action-text small { display: block; margin-top: 1px; overflow: hidden; color: var(--fd-faint); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .so-actions .so-new-menu { left: auto; right: 0; }
 .so-calcard .so-cal { margin-top: 4px; }
 .so-calcard .so-day { min-height: 42px; padding: 4px 2px; background: none; }
@@ -192,11 +192,11 @@
 .so-calcard .so-row:last-of-type { border-bottom: 0; }
 .so-calcard .so-add-day { margin-top: 6px; min-height: 32px; }
 .so-mini { display: inline-flex; align-items: center; height: 32px; padding: 2px; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
-.so-mini button { min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.so-mini button { min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: none; color: var(--fd-soft); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .so-mini button[aria-checked="true"] { background: var(--gl-fill-strong); color: var(--fd-ink); box-shadow: var(--shadow-seg-sm); }
 .so-posts-head { min-height: 32px; }
 .so-posts-tools { display: flex; align-items: center; gap: 6px; }
-.so-sort-pick { height: 32px; padding: 0 8px 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.so-sort-pick { height: 32px; padding: 0 8px 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 /* Rows line up with the card's own edge: the thumbnail starts where the label does. */
 .mn-card .so-rows { margin-top: 6px; }
 .mn-card .so-row { padding-left: 0; padding-right: 0; }
@@ -224,9 +224,9 @@
 .talk-a { font-size: 16px; line-height: 1.55; color: var(--fd-ink); }
 .talk-error { color: var(--fd-alert); }
 .talk-sources-wrap { padding: 0 16px 10px; }
-.talk-sources-label { margin: 0 2px 8px; font-size: 10px; font-weight: 700; color: var(--fd-soft); }
+.talk-sources-label { margin: 0 2px 8px; font-size: 11px; font-weight: 700; color: var(--fd-soft); }
 .talk-sheet .talk-sources { gap: 7px; padding: 0; }
-.talk-sheet .talk-sources button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px 0 11px; border-radius: var(--r-pill); border: var(--gl-edge); background: var(--gl-fill); box-shadow: none; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); color: var(--fd-soft); font-size: 12.5px; font-weight: 600; opacity: .72; }
+.talk-sheet .talk-sources button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px 0 11px; border-radius: var(--r-pill); border: var(--gl-edge); background: var(--gl-fill); box-shadow: none; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); color: var(--fd-soft); font-size: 13px; font-weight: 600; opacity: .72; }
 .talk-sheet .talk-sources button svg { color: var(--fd-faint); }
 .talk-sheet .talk-sources button[aria-pressed="true"] { background: var(--gl-fill-strong); border-color: color-mix(in srgb, var(--fd-accent) 45%, transparent); color: var(--fd-ink); font-weight: 650; opacity: 1; }
 .talk-sheet .talk-sources button[aria-pressed="true"] svg { color: var(--fd-accent); }
