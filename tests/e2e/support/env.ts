@@ -1,15 +1,11 @@
 import { readFileSync } from 'node:fs';
+import { e2eEnv } from './env-files';
 import path from 'node:path';
 
-// Reads .env.local without printing it. Used only by test setup/teardown.
+// Reads .env.local, then .env.test.local (staging) over it, without printing either.
+// Used only by test setup/teardown.
 export function loadEnv(): Record<string, string> {
-  const file = path.join(__dirname, '..', '..', '..', '.env.local');
-  const env: Record<string, string> = {};
-  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line);
-    if (match) env[match[1]] = match[2].replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
-  }
-  return { ...env, ...process.env } as Record<string, string>;
+  return e2eEnv();
 }
 
 export const AUTH_DIR = path.join(__dirname, '..', '.auth');
