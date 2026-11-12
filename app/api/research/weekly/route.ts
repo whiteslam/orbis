@@ -1,10 +1,11 @@
 import { cronAuthorized } from '@/lib/cron/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadLivePortfolio } from '@/lib/invest/live';
-import { researchDeskAvailable, researchDeskEmails } from '@/lib/research/access';
+import { researchDeskAvailable } from '@/lib/research/access';
 import { deskHoldings, portfolioContextFor } from '@/lib/research/context';
 import { dispatchConfig, dispatchRuns, type DispatchConfig } from '@/lib/research/dispatch';
 import { queueRuns } from '@/lib/research/queue';
+import { getRoleAdmin } from '@/lib/security/roles';
 import { localDate } from '@/lib/locale/dates';
 import { DEFAULT_PERSON_LOCALE } from '@/lib/locale/person';
 import { getPersonSettingsAdmin } from '@/lib/locale/repository';
@@ -24,15 +25,15 @@ const SETTLE_AFTER_DAYS = 8;
 type Owner = { userId: string; email: string; settings: ResearchSettings; timeZone: string };
 
 /**
- * The owners this run is for: on the desk's allowlist, with the desk on in its
- * settings. The allowlist lives in the environment, so each account found in
- * the tables is checked against it here.
+ * The owners this run is for: holding the owner role (or on the fallback
+ * email list), with the desk on in its settings. Each account found in the
+ * tables is checked here.
  */
 async function* owners(admin: ResearchDb, userIds: Iterable<string>, deadline: number): AsyncGenerator<Owner> {
   for (const userId of userIds) {
     if (Date.now() > deadline) return;
     const email = await accountEmail(admin, userId);
-    if (!email || !researchDeskAvailable(email, true)) continue;
+    if (!email || !researchDeskAvailable(await getRoleAdmin(admin, userId), email, true)) continue;
     const settings = await getSettings(admin, userId);
     if (!settings.enabled) continue;
     const { timeZone } = await getPersonSettingsAdmin(admin, userId);
@@ -89,15 +90,14 @@ async function summaryStep(admin: ResearchDb, now: Date, deadline: number) {
 
 // Called by pg_cron (supabase/cron/research_schedule.sql): ?step=queue on
 // Saturday morning and ?step=summary on Monday morning, India time. Until the
-// desk is set up on this deployment (the worker's env vars and the owner
-// allowlist) it answers without touching a single research table.
+// desk is set up on this deployment (the worker's env vars) it answers without touching a single research table.
 export async function POST(request: Request) {
   if (!cronAuthorized(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const step = new URL(request.url).searchParams.get('step');
   if (step !== 'queue' && step !== 'summary') return Response.json({ error: 'Unknown step.' }, { status: 400 });
 
   const config = dispatchConfig();
-  if (!config || researchDeskEmails().length === 0) return Response.json({ step, skipped: 'not_configured' });
+  if (!config) return Response.json({ step, skipped: 'not_configured' });
 
   const now = new Date();
   const deadline = Date.now() + TIME_BUDGET_MS;

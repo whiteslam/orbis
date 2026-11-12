@@ -57,24 +57,24 @@ afterEach(() => {
 
 test('the desk is shut to everyone until an address is listed', () => {
   delete process.env.ORBIS_RESEARCH_DESK_EMAILS;
-  assert.equal(researchDeskAllowed('owner@example.com'), false);
+  assert.equal(researchDeskAllowed('user', 'owner@example.com'), false);
   process.env.ORBIS_RESEARCH_DESK_EMAILS = '  ';
-  assert.equal(researchDeskAllowed('owner@example.com'), false);
+  assert.equal(researchDeskAllowed('user', 'owner@example.com'), false);
 });
 
 test('only listed addresses get the desk, whatever their case', () => {
   process.env.ORBIS_RESEARCH_DESK_EMAILS = 'Owner@Example.com, other@example.com';
-  assert.equal(researchDeskAllowed('owner@example.com'), true);
-  assert.equal(researchDeskAllowed(' OWNER@example.com '), true);
-  assert.equal(researchDeskAllowed('stranger@example.com'), false);
-  assert.equal(researchDeskAllowed(null), false);
-  assert.equal(researchDeskAllowed(''), false);
+  assert.equal(researchDeskAllowed('user', 'owner@example.com'), true);
+  assert.equal(researchDeskAllowed('user', ' OWNER@example.com '), true);
+  assert.equal(researchDeskAllowed('user', 'stranger@example.com'), false);
+  assert.equal(researchDeskAllowed('user', null), false);
+  assert.equal(researchDeskAllowed('user', ''), false);
 });
 
 test('the desk only shows when the worker is set up as well', async () => {
   const { researchDeskAvailable } = await import('./access');
   process.env.ORBIS_RESEARCH_DESK_EMAILS = 'owner@example.com';
-  assert.equal(researchDeskAvailable('owner@example.com', true), true);
-  assert.equal(researchDeskAvailable('owner@example.com', false), false);
-  assert.equal(researchDeskAvailable('stranger@example.com', true), false);
+  assert.equal(researchDeskAvailable('user', 'owner@example.com', true), true);
+  assert.equal(researchDeskAvailable('user', 'owner@example.com', false), false);
+  assert.equal(researchDeskAvailable('user', 'stranger@example.com', true), false);
 });

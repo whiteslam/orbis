@@ -115,6 +115,10 @@ test('the export includes the settings, keyed by person', () => {
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'user_settings')?.key, 'user_id');
 });
 
+test('the export includes the person\'s role, keyed by person', () => {
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'account_roles')?.key, 'user_id');
+});
+
 test('the export includes the Research desk, its settings keyed by person', () => {
   const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
   for (const table of ['research_runs', 'research_events', 'research_settlements']) assert.equal(byTable.get(table)?.key, 'id', table);

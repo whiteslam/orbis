@@ -2,7 +2,7 @@
 
 // The Research desk's server actions: the contract between Money → Investments
 // (and the panel at /active/research) and lib/research. Every one checks the
-// signed-in owner and the desk's own allowlist (ORBIS_RESEARCH_DESK_EMAILS)
+// signed-in owner (the 'owner' role, or the ORBIS_RESEARCH_DESK_EMAILS fallback)
 // first, then validates what the browser sent. The app only queues and reads:
 // a run takes 3-10 minutes, so the Python worker on GitHub Actions does it.
 // Nothing here talks to a broker except to read holdings, and nothing places,
@@ -12,6 +12,7 @@ import { revalidatePath } from 'next/cache';
 import { claimsEmail, requireUser } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
+import { getRole } from '@/lib/security/roles';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadLivePortfolio } from '@/lib/invest/live';
 import { researchDeskAvailable } from '@/lib/research/access';
@@ -44,7 +45,7 @@ async function owner(): Promise<Owner | 'signed-out' | 'not-allowed'> {
   const email = claimsEmail(signedIn.claims);
   // Owner only, and only on a deployment whose worker is set up: otherwise the
   // desk doesn't exist here and none of its tables is touched.
-  if (!researchDeskAvailable(email, dispatchConfig() !== null)) return 'not-allowed';
+  if (!researchDeskAvailable(await getRole(signedIn.userId), email, dispatchConfig() !== null)) return 'not-allowed';
   return { userId: signedIn.userId, email, db: signedIn.supabase };
 }
 

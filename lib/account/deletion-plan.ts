@@ -37,7 +37,7 @@ export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-m
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
 
 // One row per person, keyed by user_id; every other table has its own id.
-const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings', 'user_settings']);
+const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings', 'user_settings', 'account_roles']);
 
 /**
  * The person's own content, read through their own session so row-level
@@ -48,8 +48,9 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * staged_upload_claims, workbook_ai_usage, ai_feature_usage, social_ai_usage, ask_orbis_usage,
  * ai_generation_events, and career_mail, the career watcher's record of which
  * Gmail messages it has handled, which goes with the account by cascade).
- * Shared tables with no user_id (api_*, ai_providers, ai_models) hold nothing
- * personal. The career-documents bucket (the resume and tailored files) is
+ * account_roles is the person's own role, read-only to them; it goes with the
+ * account by cascade. Shared tables with no user_id (api_*, ai_providers,
+ * ai_models) hold nothing personal. The career-documents bucket (the resume and tailored files) is
  * listed and emptied like the other buckets, and so is research-memory (the
  * Research desk's memory log, written only by its worker). The research tables
  * are deleted outright before storage is emptied (see `deletionSteps`); every
@@ -62,6 +63,7 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_locations',
   'ai_preferences',
   'user_settings',
+  'account_roles',
   'notification_preferences',
   'transactions',
   'investment_holdings',
