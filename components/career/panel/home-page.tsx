@@ -11,6 +11,7 @@ import { allApplications, hrefFor, openCount, weekPace } from '@/components/care
 import { panelAttention } from '@/components/career/panel/title-row';
 import type { CareerJob } from '@/lib/career/types';
 import type { CareerHome } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** A new match as a row: its score, what it is, and what it pays. */
 function MatchRow({ job, drafted, onOpen, languages }: Readonly<{ job: CareerJob; drafted: boolean; onOpen: () => void; languages: readonly string[] }>) {
@@ -40,12 +41,13 @@ function MatchRow({ job, drafted, onOpen, languages }: Readonly<{ job: CareerJob
  */
 export function HomePage({ home }: Readonly<{ home: CareerHome }>) {
   const { openJob, openJobId } = usePanel();
-  const items = panelAttention(home);
+  const loc = usePersonLocale();
+  const items = panelAttention(home, loc);
   const cards = allApplications(home);
   const open = openCount(cards);
   const drafted = new Set(home.queue.map((card) => card.job.id));
   const jobs = home.hotMatches.slice(0, 5);
-  const pace = weekPace(home.week);
+  const pace = weekPace(home.week, loc.timeZone);
   let paceLine = `Send ${pace.perDay} a day to reach your goal by Sunday.`;
   if (pace.done) paceLine = 'Goal met for this week. Anything more is a bonus.';
   else if (pace.daysLeft === 1) paceLine = `${pace.left} to go today to reach it.`;

@@ -8,11 +8,21 @@ import { ActivityRings } from '@/components/health/activity-rings';
 import type { StepsSummary } from '@/lib/health/types';
 import type { WorkerMessage } from '@/components/health/apple-health.worker';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
-const number = (value: number) => Math.round(value).toLocaleString('en-IN');
-const dayLabel = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { ...options, timeZone: 'UTC' });
-// "Friday 30 October", built in two parts: Node and the browser punctuate the combined format differently.
-const longDay = (date: string) => `${dayLabel(date, { weekday: 'long' })} ${dayLabel(date, { day: 'numeric', month: 'long' })}`;
+type StepFormats = { number: (value: number) => string; dayLabel: (date: string, options: Intl.DateTimeFormatOptions) => string; longDay: (date: string) => string; loc: PersonLocale };
+
+/** Counts and step days in the person's own language. Step dates are calendar days, so they're labelled in UTC. */
+function useStepFormats(): StepFormats {
+  const loc = usePersonLocale();
+  const number = (value: number) => Math.round(value).toLocaleString(loc.locale);
+  const dayLabel = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString(loc.locale, { ...options, timeZone: 'UTC' });
+  // "Friday 30 October", built in two parts: Node and the browser punctuate the combined format differently.
+  const longDay = (date: string) => `${dayLabel(date, { weekday: 'long' })} ${dayLabel(date, { day: 'numeric', month: 'long' })}`;
+  return { number, dayLabel, longDay, loc };
+}
 const shiftDate = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 // Health used to carry Apple's Activity palette — pink, green, cyan, orange —
@@ -59,8 +69,8 @@ type Latest = NonNullable<StepsSummary['latest']>;
 type LastImport = NonNullable<StepsSummary['lastImport']>;
 
 /** "Imported 3 Oct, data up to 1 Oct": when the last export arrived and how far it reached. */
-function importedLine(lastImport: LastImport) {
-  const importedOn = new Date(lastImport.importedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+function importedLine(lastImport: LastImport, { dayLabel, loc }: StepFormats) {
+  const importedOn = formatWhen(lastImport.importedAt, loc, 'day');
   const reach = lastImport.lastDate ? `, data up to ${dayLabel(lastImport.lastDate, { day: 'numeric', month: 'short' })}` : '';
   return `Imported ${importedOn}${reach}`;
 }
@@ -72,20 +82,21 @@ function tickInterval(span: number) {
 }
 
 /** The latest day against the goal, in words: how far to go, or that it is reached. */
-function goalLine(steps: number, stepGoal: number) {
+function goalLine(steps: number, stepGoal: number, number: StepFormats['number']) {
   if (steps >= stepGoal) return `Your ${number(stepGoal)} step goal is reached`;
   return `${number(stepGoal - steps)} to go for your ${number(stepGoal)} goal`;
 }
 
 /** The figure, the rings beside it, and what each ring means. */
 function StepRings({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummary; latest: Latest; stepGoal: number }>) {
+  const { number } = useStepFormats();
   const goalDays = series(summary, 7).filter((day) => day.steps >= stepGoal).length;
   return (
     <>
       <div className="hl-rings">
         <div className="hl-figure">
           <p className="hl-figure-num"><b>{number(latest.steps)}</b> steps</p>
-          <p className="hl-figure-sub">{goalLine(latest.steps, stepGoal)}</p>
+          <p className="hl-figure-sub">{goalLine(latest.steps, stepGoal, number)}</p>
         </div>
         <ActivityRings size={124} rings={[
           { label: 'Steps', value: latest.steps / stepGoal, color: COLORS.steps, track: TRACK },
@@ -106,6 +117,7 @@ function StepRings({ summary, latest, stepGoal }: Readonly<{ summary: StepsSumma
 
 /** The last seven days as seven bars against the goal line: the week at a glance. */
 function StepWeek({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummary; latest: Latest; stepGoal: number }>) {
+  const { number, dayLabel, longDay } = useStepFormats();
   const week = series(summary, 7);
   const goalDays = week.filter((day) => day.steps >= stepGoal).length;
   const scale = Math.max(stepGoal * 1.15, ...week.map((day) => day.steps));
@@ -127,6 +139,7 @@ function StepWeek({ summary, latest, stepGoal }: Readonly<{ summary: StepsSummar
 }
 
 function StepsChart({ summary, latest, span, onSpan }: Readonly<{ summary: StepsSummary; latest: Latest; span: number; onSpan: (span: number) => void }>) {
+  const { number, dayLabel } = useStepFormats();
   const chart = series(summary, span);
   const recorded = chart.filter((day) => day.recorded);
   const rangeAverage = recorded.length ? recorded.reduce((sum, day) => sum + day.steps, 0) / recorded.length : 0;
@@ -155,6 +168,7 @@ function StepsChart({ summary, latest, span, onSpan }: Readonly<{ summary: Steps
 }
 
 function TrendBars({ average30, previous30 }: Readonly<{ average30: number; previous30: number }>) {
+  const { number } = useStepFormats();
   const trendUp = average30 >= previous30;
   const trendMax = Math.max(average30, previous30, 1);
   const trendPercent = previous30 > 0 ? Math.round(((average30 - previous30) / previous30) * 100) : null;
@@ -224,6 +238,8 @@ function ImportProgress({ progress, isSaving }: Readonly<{ progress: Progress | 
  * the longer trend, so the plans come before the chart on the phone.
  */
 export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: StepsSummary; stepGoal: number; children?: ReactNode }>) {
+  const formats = useStepFormats();
+  const { number, dayLabel, longDay } = formats;
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
@@ -279,7 +295,7 @@ export function StepsCard({ summary, stepGoal, children }: Readonly<{ summary: S
             <span className="category-tile" style={{ background: COLORS.steps }} aria-hidden="true"><Upload size={15} strokeWidth={2.4} /></span>
             <div>
               <strong>Apple Health</strong>
-              <small>{summary.lastImport ? importedLine(summary.lastImport) : 'Not imported yet'}</small>
+              <small>{summary.lastImport ? importedLine(summary.lastImport, formats) : 'Not imported yet'}</small>
             </div>
             <input ref={input} type="file" accept=".zip,.xml,application/zip,text/xml,application/xml" hidden onChange={(event) => {
               const file = event.target.files?.[0];

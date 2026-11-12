@@ -11,9 +11,11 @@ import { allApplications } from '@/components/career/panel/panel-data';
 import { STAGE_GROUPS, isOpen } from '@/lib/career/status';
 import type { CareerEvent } from '@/lib/career/types';
 import type { ApplicationCard, CareerHome } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import type { PersonLocale } from '@/lib/locale/person';
 
 /** What the owner does next, from where the application stands. */
-export function nextStep(card: ApplicationCard, interviewAt: string | null): string | null {
+export function nextStep(card: ApplicationCard, interviewAt: string | null, loc: PersonLocale): string | null {
   const { application } = card;
   switch (application.status) {
     case 'opened': return 'Press “I applied” once it’s in';
@@ -21,10 +23,10 @@ export function nextStep(card: ApplicationCard, interviewAt: string | null): str
     case 'sent':
     case 'acknowledged':
       if (application.followUpDraft) return 'Follow-up drafted. Review and send';
-      return application.followUpDue ? `Follow up on ${dayMonth(application.followUpDue)} if quiet` : 'Waiting for a reply';
+      return application.followUpDue ? `Follow up on ${dayMonth(application.followUpDue, loc)} if quiet` : 'Waiting for a reply';
     case 'replied': return 'They wrote back. Read and answer';
     case 'assessment': return 'Complete their assessment';
-    case 'interview': return interviewAt ? `Interview ${dayTime(interviewAt)}` : 'Prepare with the prep pack';
+    case 'interview': return interviewAt ? `Interview ${dayTime(interviewAt, loc)}` : 'Prepare with the prep pack';
     case 'offer': return 'Confirm the terms, then get advice';
     case 'ghosted': return application.followUpDraft ? 'No reply yet. A follow-up is drafted' : 'No reply. A late one revives it';
     default: return null;
@@ -32,8 +34,9 @@ export function nextStep(card: ApplicationCard, interviewAt: string | null): str
 }
 
 function TrackerRow({ card, latest, interviewAt, onOpen }: Readonly<{ card: ApplicationCard; latest: string | null; interviewAt: string | null; onOpen: (card: ApplicationCard) => void }>) {
+  const loc = usePersonLocale();
   const chance = isOpen(card.application.status) ? replyChance(card.application.prediction) : null;
-  const step = nextStep(card, interviewAt);
+  const step = nextStep(card, interviewAt, loc);
   return (
     <li>
       <button type="button" className="cr-track" onClick={() => onOpen(card)}>
@@ -62,12 +65,13 @@ export function UnmatchedReply({ event, options, onAttached }: Readonly<{ event:
   const from = typeof event.details.from === 'string' ? event.details.from : null;
   const snippet = typeof event.details.snippet === 'string' ? event.details.snippet : null;
   const { busy, notice, run } = useRun();
+  const loc = usePersonLocale();
   const attach = () => run('attach', () => attachReplyAction(event.id, target), () => {
     onAttached();
   });
   return (
     <li className="cr-unmatched-item">
-      <p><b>{event.summary || 'A reply'}</b><time dateTime={event.at}>{dayMonth(event.at)}</time></p>
+      <p><b>{event.summary || 'A reply'}</b><time dateTime={event.at}>{dayMonth(event.at, loc)}</time></p>
       {from && <small className="cr-unmatched-from">From {from}</small>}
       {snippet && <small className="cr-unmatched-snippet">{snippet}</small>}
       <div className="cr-attach">

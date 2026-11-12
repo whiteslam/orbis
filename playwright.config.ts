@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertNotProduction, e2eEnv } from './tests/e2e/support/env-files';
+
+// This suite creates real accounts, so it must never point at production. Values in
+// .env.test.local (staging) win over .env.local; the server we build and start below
+// inherits them, so the app and the test setup talk to the same project.
+const env = e2eEnv();
+assertNotProduction(env);
+for (const key of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY']) {
+  if (env[key]) process.env[key] = env[key];
+}
 
 // E2E suite: creates two temporary users, runs against a local production build, then deletes them.
 // Run with `pnpm test:e2e`. It builds and serves Orbis on :3100 so dev-only overlays don't

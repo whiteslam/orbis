@@ -44,9 +44,8 @@
 }
 
 @media (max-width: 767px) {
-  /* The hole sits under the copy; give it a clear band so the trust row never
-     lands on the bright disc. */
-  .wl-hero { padding-bottom: clamp(340px, 92vw, 440px); }
+  /* The eclipse hangs above the copy now, so nothing needs reserving below it. */
+  .wl-hero { padding-bottom: 56px; }
   .wl-body { padding-top: 8px; }
 }
 

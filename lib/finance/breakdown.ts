@@ -2,6 +2,7 @@
 
 import type { FinanceSummary, OwnInvestments } from '@/lib/finance/types';
 import { isInvestmentCategory } from '@/lib/finance/manual';
+import { localParts } from '@/lib/locale/dates';
 
 export function summariseOwnInvestments(rows: Array<{ amount: number; currency: string; category: string | null; occurred_at: string }>): OwnInvestments {
   const byCurrency = new Map<string, number>();
@@ -20,8 +21,8 @@ export function summariseOwnInvestments(rows: Array<{ amount: number; currency: 
   return { currency, total: list.reduce((sum, entry) => sum + entry.amount, 0), categories: list };
 }
 
-// Charts show one currency: whichever had the most spending this month (INR when there is none).
-export function monthBreakdown(rows: Array<{ amount: number; currency: string; direction: string; category: string | null; occurred_at: string }>, totals: Map<string, number>, year: number, month: number): FinanceSummary['month'] {
+// Days are counted in the person's own zone. Charts show one currency: whichever had the most spending this month (INR when there is none).
+export function monthBreakdown(rows: Array<{ amount: number; currency: string; direction: string; category: string | null; occurred_at: string }>, totals: Map<string, number>, year: number, month: number, timeZone: string): FinanceSummary['month'] {
   const currency = [...totals].sort((a, b) => b[1] - a[1])[0]?.[0] ?? rows[0]?.currency ?? 'INR';
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const daily = Array.from({ length: daysInMonth }, (_, index) => ({ day: index + 1, amount: 0 }));
@@ -47,7 +48,7 @@ export function monthBreakdown(rows: Array<{ amount: number; currency: string; d
     spent += row.amount;
     const category = row.category || 'Other';
     categories.set(category, (categories.get(category) ?? 0) + row.amount);
-    const day = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date(row.occurred_at)));
+    const day = localParts(row.occurred_at, timeZone).day;
     if (daily[day - 1]) daily[day - 1].amount += row.amount;
   }
   return {

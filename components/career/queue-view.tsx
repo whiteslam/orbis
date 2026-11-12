@@ -3,6 +3,7 @@ import { JobCard } from '@/components/career/job-card';
 import { StatusChip } from '@/components/career/status-chip';
 import { dayMonth } from '@/components/career/format';
 import type { ApplicationCard } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 function QueueCard({ card, threshold, onOpen }: Readonly<{ card: ApplicationCard; threshold: number | null; onOpen: (card: ApplicationCard) => void }>) {
   const { application } = card;
@@ -32,6 +33,7 @@ function QueueCard({ card, threshold, onOpen }: Readonly<{ card: ApplicationCard
 
 /** Drafted applications waiting for the owner's Send, and follow-ups that are due. */
 export function QueueView({ queue, followUps, threshold, onOpen }: Readonly<{ queue: ApplicationCard[]; followUps: ApplicationCard[]; threshold: number | null; onOpen: (card: ApplicationCard) => void }>) {
+  const loc = usePersonLocale();
   return (
     <div className="cr-view">
       {queue.length === 0 ? (
@@ -53,7 +55,7 @@ export function QueueView({ queue, followUps, threshold, onOpen }: Readonly<{ qu
               <span className="fd-two">
                 <b>{card.job.company}</b>
                 <small>
-                  {card.job.title}, sent {dayMonth(card.application.sentAt ?? card.application.updatedAt)}
+                  {card.job.title}, sent {dayMonth(card.application.sentAt ?? card.application.updatedAt, loc)}
                   {card.application.followUpDraft ? '. Draft ready to review' : ''}
                 </small>
               </span>

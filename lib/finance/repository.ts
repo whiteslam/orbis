@@ -5,6 +5,8 @@ import type { FinanceSummary, OwnInvestments } from '@/lib/finance/types';
 import { INVESTMENT_CATEGORIES, isInvestmentCategory } from '@/lib/finance/manual';
 import { monthBreakdown, summariseOwnInvestments } from '@/lib/finance/breakdown';
 import { isMissingTable } from '@/lib/supabase/errors';
+import { localParts, monthStartUtc } from '@/lib/locale/dates';
+import { getPersonSettings } from '@/lib/locale/repository';
 
 const emptySummary: FinanceSummary = {
   databaseReady: true,
@@ -89,14 +91,9 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
   const supabase = await createClient();
 
   const now = new Date();
-  const monthParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: 'numeric',
-  }).formatToParts(now);
-  const year = Number(monthParts.find((part) => part.type === 'year')?.value);
-  const month = Number(monthParts.find((part) => part.type === 'month')?.value);
-  const start = new Date(Date.UTC(year, month - 1, 1) - 330 * 60 * 1000);
+  const { timeZone } = await getPersonSettings(userId);
+  const { year, month } = localParts(now, timeZone);
+  const start = new Date(monthStartUtc(year, month, timeZone));
 
   const [transactionsResult, expensesResult, plan, ownInvestments] = await Promise.all([
     loadRecentTransactions(supabase, userId),
@@ -141,6 +138,6 @@ export async function getFinanceSummary(userId: string): Promise<FinanceSummary>
       note: transaction.note,
     })),
     monthlyExpenses: Array.from(totals, ([currency, amount]) => ({ currency, amount })),
-    month: monthBreakdown(monthRows, totals, year, month),
+    month: monthBreakdown(monthRows, totals, year, month, timeZone),
   };
 }

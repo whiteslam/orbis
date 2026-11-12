@@ -35,7 +35,7 @@ describe('weeklySpending', () => {
       { amount: 250, currency: 'INR', occurredAt: '2026-09-29T05:00:00Z', merchant: 'Grocer', category: 'groceries' },
       { amount: 40, currency: 'INR', occurredAt: '2026-09-20T05:00:00Z', merchant: 'Cafe', category: null },
       { amount: 9, currency: 'USD', occurredAt: '2026-09-28T05:00:00Z', merchant: 'App', category: null },
-    ]);
+    ], 'Asia/Kolkata');
     expect(result.currency).toBe('INR');
     expect(result.weeks).toEqual([
       { week: '2026-09-28', total: 350, count: 2, top: ['groceries', 'Cafe'] },
@@ -44,7 +44,7 @@ describe('weeklySpending', () => {
   });
 
   it('is empty without transactions', () => {
-    expect(weeklySpending([])).toEqual({ currency: null, weeks: [] });
+    expect(weeklySpending([], 'Asia/Kolkata')).toEqual({ currency: null, weeks: [] });
   });
 });
 

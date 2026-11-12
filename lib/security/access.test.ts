@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { accessAllowed, accessRestricted, allowedEmails, signupsOpen } from './access.ts';
+import { accessAllowed, accessRestricted, allowedEmails, googleSignInEnabled, signupsOpen } from './access.ts';
 
 function withList<T>(value: string | undefined, run: () => T): T {
   const before = process.env.ORBIS_ALLOWED_EMAILS;
@@ -87,4 +87,20 @@ test('an allowlist shuts sign-up even when it was opened', () => {
   withList('you@example.com', () => {
     withSignups('true', () => assert.equal(signupsOpen(), false));
   });
+});
+
+test('Google sign-in is off unless the switch is exactly true', () => {
+  const before = process.env.ORBIS_GOOGLE_SIGNIN;
+  try {
+    for (const value of [undefined, '', 'false', '1', 'yes']) {
+      if (value === undefined) delete process.env.ORBIS_GOOGLE_SIGNIN;
+      else process.env.ORBIS_GOOGLE_SIGNIN = value;
+      assert.equal(googleSignInEnabled(), false, `ORBIS_GOOGLE_SIGNIN=${JSON.stringify(value)}`);
+    }
+    process.env.ORBIS_GOOGLE_SIGNIN = 'true';
+    assert.equal(googleSignInEnabled(), true);
+  } finally {
+    if (before === undefined) delete process.env.ORBIS_GOOGLE_SIGNIN;
+    else process.env.ORBIS_GOOGLE_SIGNIN = before;
+  }
 });

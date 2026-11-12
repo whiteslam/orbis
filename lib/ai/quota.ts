@@ -10,7 +10,7 @@
  * Pure apart from the injected rpc, so the rules are unit-tested.
  */
 export type AiQuotaFeature =
-  | 'home_brief' | 'workbook_advice' | 'portfolio_advice' | 'health_plan' | 'portfolio_news'
+  | 'ask_orbis' | 'home_brief' | 'workbook_advice' | 'portfolio_advice' | 'health_plan' | 'portfolio_news'
   // Career (lib/career/ai.ts): the crons read hundreds of jobs and emails a day.
   | 'career_profile' | 'career_spec' | 'career_requirements' | 'career_tailor' | 'career_alerts'
   | 'career_mail' | 'career_offer' | 'career_prep' | 'career_followup';

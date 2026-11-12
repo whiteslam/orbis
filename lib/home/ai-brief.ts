@@ -10,7 +10,8 @@
 // snapshot rather than against the clock, so answering an alert or finishing a
 // routine writes a new one, while a minute passing does not.
 import { createHash } from 'node:crypto';
-import { count, istParts, money } from '@/lib/focus/types';
+import { count, money } from '@/lib/focus/types';
+import { localDate, localParts } from '@/lib/locale/dates';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { RoutineState } from '@/lib/routines/today';
 import { isInvestmentCategory } from '@/lib/finance/manual';
@@ -58,17 +59,19 @@ export function briefSnapshot(input: {
   name: string | null;
   weather?: BriefWeatherFacts | null;
   now?: Date;
+  /** The person's zone: "today" and the clock are theirs. */
+  timeZone: string;
 }): BriefSnapshot {
   const now = input.now ?? new Date();
-  const today = istParts(now);
-  const todayKey = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+  const today = localParts(now, input.timeZone);
+  const todayKey = localDate(now, input.timeZone);
 
   const spend = input.finance.monthlyExpenses.length === 1 ? input.finance.monthlyExpenses[0] : null;
   const topCategory = (() => {
     if (!spend) return null;
     const totals = new Map<string, number>();
     for (const transaction of input.finance.transactions) {
-      const when = istParts(new Date(transaction.occurredAt));
+      const when = localParts(transaction.occurredAt, input.timeZone);
       if (transaction.direction !== 'expense' || !transaction.category || isInvestmentCategory(transaction.category) || when.year !== today.year || when.month !== today.month) continue;
       totals.set(transaction.category, (totals.get(transaction.category) ?? 0) + transaction.amount);
     }
@@ -78,7 +81,7 @@ export function briefSnapshot(input: {
   return {
     today: todayKey,
     partOfDay: partOfDay(today.hour),
-    localTime: new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).format(now),
+    localTime: new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: input.timeZone }).format(now),
     name: input.name?.trim().split(/\s+/)[0] || null,
     finance: {
       available: input.finance.databaseReady && !input.finance.loadError,

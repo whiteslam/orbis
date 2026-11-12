@@ -14,13 +14,13 @@ import type { HealthPlan, PlanAnswer, PlanQuestion } from '@/lib/health-docs/typ
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
 import { ALREADY_CLAIMED_MESSAGE, claimStaged, createUploadTarget, downloadOwned, removeStaged } from '@/lib/storage/signed-upload';
 import { stagedInput } from '@/lib/storage/upload-rules';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { parseDocument } from '@/lib/workbook/parse';
 
 type Result<T> = { success: true; data: T; message?: string } | { success: false; message: string };
 
-const DAILY_AI_LIMIT = 10;
 const MAX_DOCUMENTS = 50;
 const DOCUMENT_CAP_MESSAGE = `You can keep up to ${MAX_DOCUMENTS} documents. Delete one you no longer need to add another.`;
 
@@ -41,9 +41,10 @@ async function consumeAiRequest(userId: string) {
   } catch {
     return 'AI usage limits are not available right now. Try again later.';
   }
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'health_plan', DAILY_AI_LIMIT);
+  const limit = await dailyLimit(admin, userId, 'health_plan');
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'health_plan', limit);
   if (credit === 'error') return 'AI requests aren’t available right now. Try again later.';
-  if (credit === 'limit') return `You’ve reached today’s limit of ${DAILY_AI_LIMIT} AI requests. Try again tomorrow.`;
+  if (credit === 'limit') return `You’ve reached today’s limit of ${limit} AI requests. Try again tomorrow.`;
   return null;
 }
 

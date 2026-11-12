@@ -16,6 +16,7 @@ import { OwnInvestmentsList } from '@/components/money/own-investments';
 import { PortfolioNewsCard } from '@/components/money/portfolio-news';
 import { ResearchDeskSection } from '@/components/research/research-desk';
 import { composeInvestFocus, composeInvestRows } from '@/lib/focus/invest';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { FieldHead, FocusSurface, QuietList, useScrollTop } from '@/components/field/field';
 import { inr } from '@/components/money/format';
@@ -44,9 +45,9 @@ const ZERODHA_NOTICE: Record<string, string> = {
 // Atlas leads on the figure; the composed statement below it deliberately
 // spends its words on what the figure does not say. Gain is only shown where
 // every contributing position had a live price, which is what livePnl means.
-function gainDelta(analysis: PortfolioAnalysis) {
+function gainDelta(analysis: PortfolioAnalysis, locale: string) {
   if (analysis.livePnl !== null && analysis.liveInvested > 0) {
-    return { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl))} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const };
+    return { text: `${analysis.livePnl >= 0 ? '+' : '−'}${inr(Math.abs(analysis.livePnl), locale)} · ${Math.abs((analysis.livePnl / analysis.liveInvested) * 100).toFixed(1)}%`, tone: analysis.livePnl >= 0 ? 'up' as const : 'down' as const };
   }
   return null;
 }
@@ -134,6 +135,7 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
   onAdvice: () => void;
 }>) {
   const analysis = useMemo(() => analysePortfolio(live?.brokers ?? []), [live]);
+  const { timeZone, locale } = usePersonLocale();
   const hasData = analysis.positions.length > 0;
   const failures = (live?.brokers ?? [])
     .filter((broker) => broker.state === 'error')
@@ -147,9 +149,10 @@ export function InvestMain({ live, isLoading, onRefresh, advice, ownInvestments,
     failures,
     connected,
     savedAdviceAt: advice?.createdAt ?? null,
+    timeZone,
   });
 
-  const gain = gainDelta(analysis);
+  const gain = gainDelta(analysis, locale);
 
   return (
     <>

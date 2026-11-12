@@ -51,6 +51,15 @@ export function signupsOpen() {
   return !accessRestricted() && process.env.ORBIS_OPEN_SIGNUPS?.trim().toLowerCase() === 'true';
 }
 
+/**
+ * Whether the Google sign-in button is offered. Off unless ORBIS_GOOGLE_SIGNIN
+ * is exactly 'true', because the provider has to be enabled in Supabase Auth
+ * first; a button that always fails is worse than none.
+ */
+export function googleSignInEnabled() {
+  return process.env.ORBIS_GOOGLE_SIGNIN?.trim().toLowerCase() === 'true';
+}
+
 /** What someone turned away is told. It does not hint at who is on the list. */
 export const ACCESS_DENIED_MESSAGE = 'Orbis is private right now and not accepting sign-ins.';
 

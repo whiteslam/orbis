@@ -7,11 +7,14 @@ import { generatePortfolioAdviceAction } from '@/app/invest/ai-actions';
 import type { SavedPortfolioAdvice } from '@/lib/ai/saved';
 import { FieldLabel, FieldStep, FieldSubHead } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const KIND_LABEL = { risk: 'Risk', opportunity: 'Opportunity', action: 'Next step' } as const;
 
-function savedWhen(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+function savedWhen(iso: string, loc: PersonLocale) {
+  return formatWhen(iso, loc, 'dayTime');
 }
 
 const LINE_BREAKS = new Set(['\n', '\r', '\u2028', '\u2029']);
@@ -41,9 +44,9 @@ function context(saved: SavedPortfolioAdvice) {
 }
 
 // "3 holdings · saved 4 Oct, 9:15 am", or just when it was saved.
-function adviceMeta(advice: SavedPortfolioAdvice) {
+function adviceMeta(advice: SavedPortfolioAdvice, loc: PersonLocale) {
   const { positionCount } = context(advice);
-  const saved = `saved ${savedWhen(advice.createdAt)}`;
+  const saved = `saved ${savedWhen(advice.createdAt, loc)}`;
   if (positionCount === null) return saved;
   return `${positionCount} ${positionCount === 1 ? 'holding' : 'holdings'} · ${saved}`;
 }
@@ -79,11 +82,12 @@ function AskStep({ hasSaved, onBackToSaved, onBack, consent, onConsent, isPendin
 
 /** The Invest screen's entry to suggestions: what is saved, or an offer to ask. */
 export function PortfolioAiRow({ advice, onOpen }: Readonly<{ advice: SavedPortfolioAdvice | null; onOpen: () => void }>) {
+  const loc = usePersonLocale();
   return (
     <section className="fd-quiet">
       <h2>Suggestions</h2>
       <div className="fd-line">
-        <span>{advice ? `Saved ${savedWhen(advice.createdAt)}. ${splitSummary(advice.result.summary).headline}` : 'Orbis can read the shape of your mix and say where it is concentrated.'}</span>
+        <span>{advice ? `Saved ${savedWhen(advice.createdAt, loc)}. ${splitSummary(advice.result.summary).headline}` : 'Orbis can read the shape of your mix and say where it is concentrated.'}</span>
         <button className="fd-link" type="button" onClick={onOpen}>{advice ? 'Read' : 'Ask'}</button>
       </div>
     </section>
@@ -92,6 +96,7 @@ export function PortfolioAiRow({ advice, onOpen }: Readonly<{ advice: SavedPortf
 
 /** The suggestions view: the consent step, or the saved advice as numbered steps. */
 export function PortfolioAi({ advice, setAdvice, onBack }: Readonly<{ advice: SavedPortfolioAdvice | null; setAdvice: (advice: SavedPortfolioAdvice | null) => void; onBack: () => void }>) {
+  const loc = usePersonLocale();
   const [asking, setAsking] = useState(!advice);
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -150,7 +155,7 @@ export function PortfolioAi({ advice, setAdvice, onBack }: Readonly<{ advice: Sa
   }
 
   const { headline, body } = splitSummary(advice.result.summary);
-  const meta = adviceMeta(advice);
+  const meta = adviceMeta(advice, loc);
 
   return (
     <>

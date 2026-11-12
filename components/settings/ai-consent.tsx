@@ -49,14 +49,33 @@ export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiP
     <div className="pf-notify">
       <label className="pf-master">
         <span>
-          <strong><Sparkles size={13} aria-hidden="true" /> Use AI features</strong>
-          <small>Off until you turn it on. While it is off, nothing is sent to an AI provider and Orbis uses its own wording.</small>
+          <strong><Sparkles size={13} aria-hidden="true" /> {AI_SWITCH.title}</strong>
+          <small>{AI_SWITCH.detail}</small>
         </span>
-        <input type="checkbox" role="switch" aria-label="Use AI features" checked={enabled} onChange={(event) => toggle(event.currentTarget.checked)} disabled={isPending || blocked} />
+        <input type="checkbox" role="switch" aria-label={AI_SWITCH.title} checked={enabled} onChange={(event) => toggle(event.currentTarget.checked)} disabled={isPending || blocked} />
       </label>
       {reason && <p className="fd-note">{reason}</p>}
       {enabled && <AiUsageLine />}
 
+      <AiDisclosure externalDocumentIndexing={preferences.externalDocumentIndexing} />
+      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
+    </div>
+  );
+}
+
+/** The switch's name and the line under it, shared with onboarding so agreeing always reads the same. */
+export const AI_SWITCH = {
+  title: 'Use AI features',
+  detail: 'Off until you turn it on. While it is off, nothing is sent to an AI provider and Orbis uses its own wording.',
+};
+
+/**
+ * What each feature sends, and where, once AI is on. Shown beside the switch
+ * here and in onboarding; every line matches what the code sends.
+ */
+export function AiDisclosure({ externalDocumentIndexing }: Readonly<{ externalDocumentIndexing: boolean }>) {
+  return (
+    <>
       <p className="fd-note">When it is on, each feature sends only what it needs, and only when it runs:</p>
       <ul className="pf-scopes">
         <li><b>Home brief:</b> your first name, this month’s spending total and top category, the routine due now and how many you missed, how many health documents you keep, and the weather. Only if the brief setting below is on.</li>
@@ -74,13 +93,12 @@ export function AiConsent({ preferences, onChange }: Readonly<{ preferences: AiP
       <p className="fd-note">
         Before Ask Orbis or Talk to Orbis answers, Jev (a decision model by TypeSafe, through OpenRouter with zero data retention) reads your question, and only your question, to decide whether it needs Claude or a free model can answer it.
       </p>
-      {preferences.externalDocumentIndexing && (
+      {externalDocumentIndexing && (
         <p className="fd-note">
           One exception: adding a health document sends its text to OpenRouter to index it for search, and building a plan sends a short search from your answers the same way. That index is made by a model that may train on what it receives.
         </p>
       )}
-      {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
-    </div>
+    </>
   );
 }
 

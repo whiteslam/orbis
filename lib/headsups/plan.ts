@@ -1,5 +1,6 @@
 import { localClock } from '@/lib/notifications/schedule';
 import type { Finding, HeadsupKind } from '@/lib/headsups/types';
+import { DEFAULT_PERSON_LOCALE } from '@/lib/locale/person';
 
 export const SCAN_FROM_MINUTES = 6 * 60;
 export const DISMISS_HOLD_DAYS = 30;
@@ -11,7 +12,7 @@ export function localNow(now: Date, timeZone: string) {
   try {
     return localClock(now, timeZone);
   } catch {
-    return localClock(now, 'Asia/Kolkata');
+    return localClock(now, DEFAULT_PERSON_LOCALE.timeZone);
   }
 }
 

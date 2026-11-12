@@ -5,6 +5,7 @@ import { Briefcase, LayoutGrid, Settings, Sparkles, WalletCards } from 'lucide-r
 import { PaletteDialog } from '@/components/shell/palette-dialog';
 import { PAGE_META, PANEL_PAGES } from '@/components/career/panel/panel-data';
 import { appPalette, rankPalette, type AppPaletteItem, type PaletteGo } from '@/lib/shell/palette';
+import type { TabId } from '@/lib/shell/tabs';
 
 const KIND: Record<AppPaletteItem['kind'], { word: string; Icon: typeof LayoutGrid }> = {
   tab: { word: 'Tab', Icon: LayoutGrid },
@@ -17,8 +18,8 @@ const KIND: Record<AppPaletteItem['kind'], { word: string; Icon: typeof LayoutGr
 const CAREER_PAGES = PANEL_PAGES.map((id) => ({ id, label: PAGE_META[id].label }));
 
 /** The desktop's Ctrl/⌘+K: jump to any tab, Money view, Settings section or Career page. Loaded on first open. */
-export function AppPalette({ onGo, onClose }: Readonly<{ onGo: (go: PaletteGo) => void; onClose: () => void }>) {
-  const items = useMemo(() => appPalette(CAREER_PAGES), []);
+export function AppPalette({ tabs, onGo, onClose }: Readonly<{ tabs: TabId[]; onGo: (go: PaletteGo) => void; onClose: () => void }>) {
+  const items = useMemo(() => appPalette(CAREER_PAGES, tabs), [tabs]);
   const [query, setQuery] = useState('');
   const results = useMemo(() => rankPalette(items, query), [items, query]);
   return (

@@ -41,6 +41,7 @@
 .auth-passkey { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-size: 13.5px; font-weight: 650; cursor: pointer; }
 .auth-passkey:hover:not(:disabled) { color: var(--fd-accent); }
 .auth-passkey:disabled { cursor: not-allowed; opacity: .65; }
+.auth-passkey + .auth-passkey { margin-top: 10px; }
 .auth-foot { margin-top: auto; padding-top: 28px; }
 .auth-note { margin: 0; color: var(--fd-faint); font-size: 11px; line-height: 1.6; text-align: center; }
 .auth-legal { display: flex; justify-content: center; gap: 16px; margin: 14px 0 0; padding: 0; list-style: none; }

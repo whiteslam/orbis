@@ -9,8 +9,7 @@
  * Client-safe: pure functions over already-loaded data.
  */
 import { minutesOf, type Routine, type RoutineEvent, type RoutineToday, type RoutinesSummary } from '@/lib/routines/types';
-
-const TIME_ZONE = 'Asia/Kolkata';
+import { localDate, localParts as zoneParts } from '@/lib/locale/dates';
 
 /** How early a routine starts being "coming up" rather than "later today". */
 export const LEAD_MINUTES = 45;
@@ -38,22 +37,18 @@ export function routineState(item: RoutineToday): RoutineState {
   return 'unheard';
 }
 
-export function localParts(now: Date, timeZone = TIME_ZONE) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
-  }).formatToParts(now);
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** The routine clock in the person's zone: the date, minutes since midnight, and weekday with 0 for Sunday as routines store it. */
+export function localParts(now: Date, timeZone: string) {
+  const parts = zoneParts(now, timeZone);
   return {
-    date: `${get('year')}-${get('month')}-${get('day')}`,
-    minutes: Number(get('hour')) * 60 + Number(get('minute')),
-    weekday: Math.max(0, weekdays.indexOf(get('weekday'))),
+    date: localDate(now, timeZone),
+    minutes: parts.hour * 60 + parts.minute,
+    weekday: (parts.weekday + 1) % 7,
   };
 }
 
 /** Today's routines, in clock order, each with whatever was said about it. */
-export function routinesToday(summary: RoutinesSummary, now: Date, timeZone = TIME_ZONE): RoutineToday[] {
+export function routinesToday(summary: RoutinesSummary, now: Date, timeZone: string): RoutineToday[] {
   if (summary.state !== 'ready') return [];
   const { minutes, weekday } = localParts(now, timeZone);
   const byRoutine = new Map<string, RoutineEvent>();

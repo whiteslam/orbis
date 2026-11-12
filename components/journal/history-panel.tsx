@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from 'reac
 import { useRouter } from 'next/navigation';
 import { LoaderCircle } from 'lucide-react';
 import { historyTime } from '@/lib/history/describe';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 export type HistoryRow = {
   id: string;
@@ -27,6 +28,7 @@ export function HistoryPanel({ title, load, empty }: Readonly<{
   load: () => Promise<{ success: boolean; message: string; rows: HistoryRow[] }>;
   empty: string;
 }>) {
+  const { timeZone } = usePersonLocale();
   const router = useRouter();
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -70,7 +72,7 @@ export function HistoryPanel({ title, load, empty }: Readonly<{
         {rows.map((row) => (
           <li key={row.id}>
             <div className="hs-row">
-              <span><time dateTime={row.createdAt}>{historyTime(row.createdAt)}</time>{row.line}</span>
+              <span><time dateTime={row.createdAt}>{historyTime(row.createdAt, timeZone)}</time>{row.line}</span>
               <span className="hs-actions">
                 {row.before ? <button type="button" className="fd-link" aria-expanded={opened === row.id} onClick={() => setOpened(opened === row.id ? null : row.id)}>{opened === row.id ? 'Hide' : 'Before'}</button> : null}
                 {row.restore ? <button type="button" className="fd-link" disabled={isPending} onClick={() => restore(row)}>{row.restoreLabel ?? 'Restore'}</button> : null}

@@ -4,19 +4,20 @@
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { Focus, QuietRow } from '@/lib/focus/types';
 // Relative, so the unit tests can load this module under plain Node.
-import { count, istParts, money, percent } from './types.ts';
+import { count, money, percent } from './types.ts';
+import { localParts } from '../locale/dates.ts';
 
-function monthTotals(summary: FinanceSummary, now: Date) {
+function monthTotals(summary: FinanceSummary, now: Date, timeZone: string) {
   const month = summary.month;
   if (!month) return null;
-  const today = istParts(now);
+  const today = localParts(now, timeZone);
   const isThisMonth = month.year === today.year && month.month === today.month;
   const days = isThisMonth ? Math.max(today.day, 1) : new Date(month.year, month.month, 0).getDate();
   const top = month.categories.slice().sort((left, right) => right.amount - left.amount)[0] ?? null;
   return { month, days, top, isThisMonth };
 }
 
-export function composeFinanceFocus({ summary, now = new Date() }: { summary: FinanceSummary; now?: Date }): Focus {
+export function composeFinanceFocus({ summary, timeZone, now = new Date() }: { summary: FinanceSummary; timeZone: string; now?: Date }): Focus {
   if (!summary.databaseReady) {
     return {
       id: 'finance-setup',
@@ -33,7 +34,7 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
       action: null,
     };
   }
-  const totals = monthTotals(summary, now);
+  const totals = monthTotals(summary, now, timeZone);
   if (totals && totals.month.spent > 0) {
     const { month, days, top } = totals;
     const perDay = month.spent / days;
@@ -56,8 +57,8 @@ export function composeFinanceFocus({ summary, now = new Date() }: { summary: Fi
   };
 }
 
-export function composeFinanceRows({ summary, now = new Date() }: { summary: FinanceSummary; now?: Date }): QuietRow[] {
-  const totals = monthTotals(summary, now);
+export function composeFinanceRows({ summary, timeZone, now = new Date() }: { summary: FinanceSummary; timeZone: string; now?: Date }): QuietRow[] {
+  const totals = monthTotals(summary, now, timeZone);
   const month = totals?.month;
   const top = totals?.top ?? null;
   let expenses = 'No data';

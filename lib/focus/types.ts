@@ -4,6 +4,10 @@
 // and what to do about it, and demotes everything else to a hairline row. Each
 // tab has its own composer; they all return these two shapes.
 
+// Relative, so the unit tests can load this module under plain Node.
+import { DEFAULT_PERSON_LOCALE } from '../locale/person.ts';
+import { formatMoney } from '../locale/money.ts';
+
 export type FocusTarget = 'finance' | 'health' | 'invest' | 'personal' | 'social' | 'career';
 
 /**
@@ -37,20 +41,9 @@ export type QuietRow = {
   target: FocusTarget | null;
 };
 
-const TIME_ZONE = 'Asia/Kolkata';
-
-export function istParts(date: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', hourCycle: 'h23' }).formatToParts(date);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-  return { year: get('year'), month: get('month'), day: get('day'), hour: get('hour') };
-}
-
-export function money(amount: number, currency = 'INR') {
-  try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
-  } catch {
-    return `${currency} ${Math.round(amount).toLocaleString('en-IN')}`;
-  }
+/** Money as the brief says it: whole units, Indian grouping, rupees unless told otherwise. */
+export function money(amount: number, currency = DEFAULT_PERSON_LOCALE.currency) {
+  return formatMoney(amount, currency, DEFAULT_PERSON_LOCALE.locale, { decimals: 0 });
 }
 
 export function count(value: number, singular: string, plural = `${singular}s`) {
@@ -65,6 +58,7 @@ export function whole(value: number) {
   return Math.round(value).toLocaleString('en-IN');
 }
 
-export function shortDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: TIME_ZONE });
+/** "24 Sept" in the person's zone. A bare YYYY-MM-DD is already a calendar date, so it is read as one. */
+export function shortDate(iso: string, timeZone: string) {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: iso.length === 10 ? 'UTC' : timeZone });
 }

@@ -100,6 +100,7 @@ const input = {
   settings: DEFAULT_RESEARCH_SETTINGS,
   source: 'manual' as const,
   now: NOW,
+  timeZone: 'Asia/Kolkata',
 };
 
 const FINAL = '**Rating**: Overweight\n\n**Executive Summary**: Add on dips; margins are recovering.\n\n**Price Target**: ₹3,200';

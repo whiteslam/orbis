@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { dispatchConfig, dispatchRuns, type DispatchConfig } from './dispatch';
-import { cancelRun, istMonthStart, queueRuns, type QueueDb } from './queue';
+import { cancelRun, monthStartIn, queueRuns, type QueueDb } from './queue';
 import { deskHoldings, portfolioContextFor } from './context';
 import { DEFAULT_RESEARCH_SETTINGS } from './types';
 import type { BrokerPortfolio } from '@/lib/invest/types';
@@ -50,6 +50,7 @@ const base = {
   settings: DEFAULT_RESEARCH_SETTINGS,
   source: 'manual' as const,
   now: new Date('2026-10-27T04:00:00Z'),
+  timeZone: 'Asia/Kolkata',
 };
 
 test('the dispatch config needs a token and an owner/name repo', () => {
@@ -142,8 +143,8 @@ test('only a queued or running run can be cancelled', async () => {
 
 test('the month starts on the 1st in India', () => {
   // 31 Oct 20:00 UTC is already 1 Nov in India.
-  assert.equal(istMonthStart(new Date('2026-10-31T20:00:00Z')), '2026-10-31T18:30:00.000Z');
-  assert.equal(istMonthStart(new Date('2026-10-27T04:00:00Z')), '2026-09-30T18:30:00.000Z');
+  assert.equal(monthStartIn(new Date('2026-10-31T20:00:00Z'), 'Asia/Kolkata'), '2026-10-31T18:30:00.000Z');
+  assert.equal(monthStartIn(new Date('2026-10-27T04:00:00Z'), 'Asia/Kolkata'), '2026-09-30T18:30:00.000Z');
 });
 
 const brokers: BrokerPortfolio[] = [

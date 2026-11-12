@@ -58,3 +58,8 @@ test('open heads-ups a check no longer finds are withdrawn, but only for checks 
   const stale = staleIds(open, [finding('health.steps_down')].map((item) => ({ ...item, dedupeKey: 'health.steps_down:2026-09-28' })), ['routine.slipping', 'health.steps_down']);
   assert.deepEqual(stale, ['1']);
 });
+
+test('a person in Los Angeles is scanned on their own date', () => {
+  const people = [{ userId: 'a', timeZone: 'America/Los_Angeles', lastScanDate: null }];
+  assert.deepEqual(dueForScan(people, at('2026-11-12T04:00:00Z')), [{ userId: 'a', localDate: '2026-11-11', timeZone: 'America/Los_Angeles' }]);
+});

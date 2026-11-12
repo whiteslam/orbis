@@ -7,6 +7,8 @@
  * id the answer can cite.
  */
 
+import { localDate } from '@/lib/locale/dates';
+
 export type AskSource = 'journal' | 'notes' | 'spending' | 'routines' | 'steps';
 
 export const ASK_SOURCES: Array<{ id: AskSource; label: string }> = [
@@ -66,16 +68,11 @@ export function weekOf(date: string): string {
   return day.toISOString().slice(0, 10);
 }
 
-/** India-time calendar date of a timestamp. */
-export function istDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(iso));
-}
-
 /**
- * Spending per week in the most common currency, with the top places. Amounts
+ * Spending per week (weeks in the person's zone) in the most common currency, with the top places. Amounts
  * in other currencies are left out rather than mixed.
  */
-export function weeklySpending(transactions: AskTransaction[]) {
+export function weeklySpending(transactions: AskTransaction[], timeZone: string) {
   if (!transactions.length) return { currency: null as string | null, weeks: [] as Array<{ week: string; total: number; count: number; top: string[] }> };
   const counts = new Map<string, number>();
   transactions.forEach((row) => counts.set(row.currency, (counts.get(row.currency) ?? 0) + 1));
@@ -84,7 +81,7 @@ export function weeklySpending(transactions: AskTransaction[]) {
   const weeks = new Map<string, { total: number; count: number; places: Map<string, number> }>();
   for (const row of transactions) {
     if (row.currency !== currency) continue;
-    const week = weekOf(istDate(row.occurredAt));
+    const week = weekOf(localDate(row.occurredAt, timeZone));
     const bucket = weeks.get(week) ?? { total: 0, count: 0, places: new Map() };
     bucket.total += row.amount;
     bucket.count += 1;

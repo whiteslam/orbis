@@ -35,7 +35,7 @@ const training = (over: Partial<BriefTraining> = {}): BriefTraining => ({
 });
 
 const settled = (over: Partial<Parameters<typeof composeNote>[0]> = {}) =>
-  composeNote({ finance: finance(), now: NOW, ...over });
+  composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), now: NOW, ...over });
 
 const text = (note: ReturnType<typeof composeNote>) => note.caption;
 const raining = weather({ rainingNow: true, condition: 'Rain showers', weatherCode: 80, rain: { soon: 90, peak: { probability: 90, hour: '11 pm' } } });
@@ -44,13 +44,13 @@ test('the note opens by greeting the hour, and the person when it knows them', (
   assert.match(settled().greeting, /[Ee]vening/);
   assert.match(settled({ name: 'Rahul Chandrakar' }).greeting, /Rahul\b/);
   assert.ok(!settled({ name: 'Rahul Chandrakar' }).greeting.includes('Chandrakar'), 'first name only');
-  assert.match(composeNote({ finance: finance(), now: new Date('2026-09-24T02:30:00Z') }).greeting, /[Mm]orning/);
+  assert.match(composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), now: new Date('2026-09-24T02:30:00Z') }).greeting, /[Mm]orning/);
 });
 
 test('the wording holds within a stretch of the day rather than re-rolling', () => {
   const spend = finance({ monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] });
-  const nine = composeNote({ finance: spend, now: new Date('2026-09-24T03:30:00Z') });
-  const eleven = composeNote({ finance: spend, now: new Date('2026-09-24T05:30:00Z') });
+  const nine = composeNote({ timeZone: 'Asia/Kolkata', finance: spend, now: new Date('2026-09-24T03:30:00Z') });
+  const eleven = composeNote({ timeZone: 'Asia/Kolkata', finance: spend, now: new Date('2026-09-24T05:30:00Z') });
   assert.equal(nine.caption, eleven.caption, 'same morning, same note');
 });
 
@@ -154,20 +154,20 @@ test('the note carries the time it was written for', () => {
   assert.match(settled().time, /^\d{1,2}:\d{2} (am|pm)$/);
   // 2pm UTC is 7:30pm in Kolkata, which is what the note must say.
   assert.equal(settled().time, '8:00 pm');
-  assert.equal(composeNote({ finance: finance(), now: new Date('2026-09-24T03:30:00Z') }).when, 'morning');
-  assert.equal(composeNote({ finance: finance(), now: new Date('2026-09-24T14:30:00Z') }).when, 'evening');
-  assert.equal(composeNote({ finance: finance(), now: new Date('2026-09-24T17:00:00Z') }).when, 'night');
+  assert.equal(composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), now: new Date('2026-09-24T03:30:00Z') }).when, 'morning');
+  assert.equal(composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), now: new Date('2026-09-24T14:30:00Z') }).when, 'evening');
+  assert.equal(composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), now: new Date('2026-09-24T17:00:00Z') }).when, 'night');
 });
 
 test('what it says about the gym depends on the hour', () => {
-  const morning = composeNote({ finance: finance(), training: training(), now: new Date('2026-09-24T02:30:00Z') });
+  const morning = composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), training: training(), now: new Date('2026-09-24T02:30:00Z') });
   assert.match(morning.caption, /Gym today|You’re down for/i);
 
   // By the evening the session is either done or it is not, so it asks.
-  const evening = composeNote({ finance: finance(), training: training(), now: new Date('2026-09-24T14:30:00Z') });
+  const evening = composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), training: training(), now: new Date('2026-09-24T14:30:00Z') });
   assert.match(evening.caption, /if you haven’t got to it/i);
 
-  const night = composeNote({ finance: finance(), training: training(), now: new Date('2026-09-24T17:00:00Z') });
+  const night = composeNote({ timeZone: 'Asia/Kolkata', finance: finance(), training: training(), now: new Date('2026-09-24T17:00:00Z') });
   assert.match(night.caption, /tomorrow’s the better fight/i);
 });
 

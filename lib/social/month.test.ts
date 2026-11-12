@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { editUnreadies, indiaToday, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth, socialReminder } from './month.ts';
+import { editUnreadies, todayIn, monthGrid, monthName, monthSummary, overLimit, periodOf, periodOfDate, placePosts, readyProblem, shiftMonth, socialReminder } from './month.ts';
 import type { SocialPost } from './types.ts';
 
 const post = (over: Partial<SocialPost> = {}): SocialPost => ({
@@ -9,10 +9,12 @@ const post = (over: Partial<SocialPost> = {}): SocialPost => ({
   published: null, source: 'manual', position: 0, updatedAt: '2026-09-01T00:00:00Z', ...over,
 });
 
-test('indiaToday reads the date in Asia/Kolkata, not UTC', () => {
+test('todayIn reads the date in the given zone, not UTC', () => {
   // 20:00 UTC on 30 September is already 1 October in India.
-  assert.equal(indiaToday(new Date('2026-09-30T20:00:00Z')), '2026-10-01');
-  assert.equal(indiaToday(new Date('2026-09-30T10:00:00Z')), '2026-09-30');
+  assert.equal(todayIn('Asia/Kolkata', new Date('2026-09-30T20:00:00Z')), '2026-10-01');
+  assert.equal(todayIn('Asia/Kolkata', new Date('2026-09-30T10:00:00Z')), '2026-09-30');
+  // And still 30 September in Los Angeles.
+  assert.equal(todayIn('America/Los_Angeles', new Date('2026-09-30T20:00:00Z')), '2026-09-30');
 });
 
 test('periodOf pads the month', () => {

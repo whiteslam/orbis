@@ -9,9 +9,11 @@ import { safeAction } from '@/lib/client/safe-action';
 import { documentAdded, documentSize } from '@/lib/health-docs/format';
 import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
 import { createClient } from '@/lib/supabase/client';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** The body of the Documents view: how many there are, the upload box, and each saved file. */
 export function HealthLibrary({ documents, state }: Readonly<{ documents: HealthDocument[]; state: 'ready' | 'setup' | 'unavailable' }>) {
+  const { timeZone } = usePersonLocale();
   const inputId = useId();
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -112,7 +114,7 @@ export function HealthLibrary({ documents, state }: Readonly<{ documents: Health
                 <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
                 <div>
                   <strong>{document.fileName}</strong>
-                  {document.alwaysInclude ? <small className="on">Read in every plan</small> : <small>{documentAdded(document.createdAt)} · {documentSize(document.sizeBytes)}</small>}
+                  {document.alwaysInclude ? <small className="on">Read in every plan</small> : <small>{documentAdded(document.createdAt, timeZone)} · {documentSize(document.sizeBytes)}</small>}
                 </div>
                 <button
                   type="button"

@@ -8,40 +8,40 @@ import { PrepPack } from '@/components/career/sheet/prep-pack';
 import { StatusChip } from '@/components/career/status-chip';
 import { PanelCard, PanelEmpty } from '@/components/career/panel/panel-bits';
 import { usePanel } from '@/components/career/panel/panel-context';
-import { allApplications, istDay, latestEvents, untilText } from '@/components/career/panel/panel-data';
+import { allApplications, latestEvents, untilText } from '@/components/career/panel/panel-data';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import type { ApplicationCard, CareerHome, UpcomingInterview } from '@/lib/career/view';
+import { formatWhen, localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
-function dayHeading(iso: string | null): string {
+function dayHeading(iso: string | null, loc: PersonLocale): string {
   if (!iso) return 'Time not given yet';
-  const today = istDay(new Date());
-  const tomorrow = istDay(new Date(Date.now() + 86_400_000));
-  const day = istDay(iso);
-  const date = new Date(iso).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const today = localDate(new Date(), loc.timeZone);
+  const tomorrow = localDate(new Date(Date.now() + 86_400_000), loc.timeZone);
+  const day = localDate(iso, loc.timeZone);
+  const date = formatWhen(iso, loc, 'dayLong');
   if (day === today) return `Today, ${date}`;
   if (day === tomorrow) return `Tomorrow, ${date}`;
   return date;
 }
 
-function timeOnly(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
-}
-
 /** Upcoming interviews grouped by day, soonest first. */
-function groupByDay(items: UpcomingInterview[]): Array<{ heading: string; items: UpcomingInterview[] }> {
+function groupByDay(items: UpcomingInterview[], loc: PersonLocale): Array<{ heading: string; items: UpcomingInterview[] }> {
   const groups = new Map<string, UpcomingInterview[]>();
   const sorted = [...items].sort((left, right) => (left.at ?? '9').localeCompare(right.at ?? '9'));
   for (const item of sorted) {
-    const heading = dayHeading(item.at);
+    const heading = dayHeading(item.at, loc);
     groups.set(heading, [...(groups.get(heading) ?? []), item]);
   }
   return [...groups].map(([heading, list]) => ({ heading, items: list }));
 }
 
 function AgendaItem({ item, selected, onSelect }: Readonly<{ item: UpcomingInterview; selected: boolean; onSelect: () => void }>) {
+  const loc = usePersonLocale();
   return (
     <li>
       <button type="button" className={`cp-agenda-item${selected ? ' on' : ''}`} aria-pressed={selected} onClick={onSelect}>
-        <span className="cp-agenda-time">{item.at ? <><b>{timeOnly(item.at)}</b><small>{untilText(item.at)}</small></> : <b>TBC</b>}</span>
+        <span className="cp-agenda-time">{item.at ? <><b>{formatWhen(item.at, loc, 'time')}</b><small>{untilText(item.at)}</small></> : <b>TBC</b>}</span>
         <span className="cp-agenda-text">
           <b>{item.job.company}</b>
           <span>{item.job.title}</span>
@@ -55,6 +55,7 @@ function AgendaItem({ item, selected, onSelect }: Readonly<{ item: UpcomingInter
 /** The selected interview's logistics and its prep pack (the sheet's own section). */
 function PrepColumn({ item }: Readonly<{ item: UpcomingInterview }>) {
   const { sheet, openJob } = usePanel();
+  const loc = usePersonLocale();
   return (
     <PanelCard
       title={`${item.job.company}, ${item.job.title}`}
@@ -64,7 +65,7 @@ function PrepColumn({ item }: Readonly<{ item: UpcomingInterview }>) {
       {item.application.prep ? <PrepPack prep={item.application.prep} profile={sheet.profile} /> : (
         <>
           <ul className="cr-logistics">
-            <li><CalendarClock size={14} aria-hidden="true" /><span>{item.at ? dayTime(item.at) : 'Time not given yet'}</span></li>
+            <li><CalendarClock size={14} aria-hidden="true" /><span>{item.at ? dayTime(item.at, loc) : 'Time not given yet'}</span></li>
             {item.format && <li><Video size={14} aria-hidden="true" /><span>{item.format}</span></li>}
             {item.link && <li><Link2 size={14} aria-hidden="true" /><MeetingLink url={item.link} /></li>}
           </ul>
@@ -97,6 +98,7 @@ function PastInterviews({ past }: Readonly<{ past: Array<ApplicationCard & { sum
 
 /** Interviews: the agenda with its prep packs, and the ones already had with their outcomes. */
 export function InterviewsPage({ home }: Readonly<{ home: CareerHome }>) {
+  const loc = usePersonLocale();
   // Read once per visit: an interview stays in the agenda for two hours after it starts.
   const [now] = useState(() => Date.now());
   const upcoming = home.upcoming.filter((item) => !item.at || Date.parse(item.at) > now - 2 * 3_600_000);
@@ -117,7 +119,7 @@ export function InterviewsPage({ home }: Readonly<{ home: CareerHome }>) {
     <div className="cp-interviews">
       <div className="cp-agenda-col">
         <PanelCard title="Upcoming" className="cp-agenda">
-          {upcoming.length === 0 ? <p className="cp-quiet">Nothing booked. New invites appear here as Orbis reads them.</p> : groupByDay(upcoming).map((group) => (
+          {upcoming.length === 0 ? <p className="cp-quiet">Nothing booked. New invites appear here as Orbis reads them.</p> : groupByDay(upcoming, loc).map((group) => (
             <div key={group.heading} className="cp-agenda-day">
               <h3>{group.heading}</h3>
               <ul>{group.items.map((item) => <AgendaItem key={item.application.id} item={item} selected={selected?.application.id === item.application.id} onSelect={() => setPicked(item.application.id)} />)}</ul>

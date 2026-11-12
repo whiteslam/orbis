@@ -9,6 +9,8 @@ import { useRun } from '@/components/career/use-run';
 import { fallbackFollowUp, isFollowUpDue } from '@/lib/career/followup';
 import type { ApplicationStatus, CareerApplication, CareerEvent, CareerJob, EventKind } from '@/lib/career/types';
 import type { ApplicationDetail } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localDate } from '@/lib/locale/dates';
 
 export const EVENT_LABEL: Record<EventKind, string> = {
   sent: 'Sent',
@@ -27,6 +29,7 @@ export const EVENT_LABEL: Record<EventKind, string> = {
 /** Every event on the application, newest first. */
 export function Timeline({ events }: Readonly<{ events: CareerEvent[] }>) {
   const sorted = [...events].sort((left, right) => right.at.localeCompare(left.at));
+  const loc = usePersonLocale();
   return (
     <section className="cr-block" aria-labelledby="cr-timeline-title">
       <h2 className="fd-label" id="cr-timeline-title">Timeline</h2>
@@ -36,7 +39,7 @@ export function Timeline({ events }: Readonly<{ events: CareerEvent[] }>) {
             <li key={event.id} className={`cr-ev-${event.kind}`}>
               <i aria-hidden="true" />
               <div>
-                <p><b>{EVENT_LABEL[event.kind]}</b><time dateTime={event.at}>{dayTime(event.at)}</time></p>
+                <p><b>{EVENT_LABEL[event.kind]}</b><time dateTime={event.at}>{dayTime(event.at, loc)}</time></p>
                 {event.summary && <span>{event.summary}</span>}
               </div>
             </li>
@@ -82,12 +85,14 @@ export function FollowUp({ application, job, events, name, onDetail }: Readonly<
   const id = useId();
   const [text, setText] = useState(() => startingText(events, application, job, name));
   const { busy, notice, run } = useRun();
-  const today = new Date().toISOString().slice(0, 10);
+  const loc = usePersonLocale();
+  // The person's own calendar day, as the server counts follow-ups.
+  const today = localDate(new Date(), loc.timeZone);
   const state = followUpState(application, today);
   // Sending clears the draft; the confirmation stays where the editor was.
   if (state === null) return notice?.ok ? <div className="cr-block"><NoticeLine notice={notice} /></div> : null;
   if (state === 'later' && application.followUpDue) {
-    return <p className="cr-followup-later">Follow-up due {dayMonth(application.followUpDue)} if they haven’t replied by then.</p>;
+    return <p className="cr-followup-later">Follow-up due {dayMonth(application.followUpDue, loc)} if they haven’t replied by then.</p>;
   }
   const drafted = Boolean(application.followUpDraft?.trim());
   const threaded = Boolean(application.gmailThreadId);
@@ -95,7 +100,7 @@ export function FollowUp({ application, job, events, name, onDetail }: Readonly<
     onDetail(detail);
     return 'Follow-up sent in the same thread.';
   });
-  let note = `No reply since ${dayMonth(application.sentAt ?? application.updatedAt)}.`;
+  let note = `No reply since ${dayMonth(application.sentAt ?? application.updatedAt, loc)}.`;
   note += drafted ? ' Orbis drafted this follow-up; change anything you like.' : '';
   note += threaded
     ? ' It goes in the same Gmail thread, only when you press Send.'

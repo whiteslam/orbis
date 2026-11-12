@@ -6,12 +6,13 @@ import { deleteIncomePlanAction, saveIncomePlanAction } from '@/app/finance/acti
 import { INCOME_CATEGORIES } from '@/lib/finance/manual';
 import type { FinanceSummary } from '@/lib/finance/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
-function money(amount: number, currency: string) {
+function money(amount: number, currency: string, locale: string) {
   try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
   } catch {
-    return `${currency} ${Math.round(amount).toLocaleString('en-IN')}`;
+    return `${currency} ${Math.round(amount).toLocaleString(locale)}`;
   }
 }
 
@@ -36,10 +37,11 @@ const ordinal = (day: number) => `${day}${ordinalSuffix(day)}`;
  */
 export function MoneyIn({ summary, shown, onShown }: Readonly<{ summary: FinanceSummary; shown: boolean; onShown: (next: boolean) => void }>) {
   const month = summary.month;
+  const { locale } = usePersonLocale();
   const [open, setOpen] = useState(false);
   // What you earn stays covered until you ask for it (the screen owns the
   // switch, so Received above follows it too).
-  const amount = (value: number, code: string) => (shown ? money(value, code) : '••••');
+  const amount = (value: number, code: string) => (shown ? money(value, code, locale) : '••••');
   const [draft, setDraft] = useState({ label: 'Salary', amount: '', currency: 'INR', payDay: 1, category: 'Salary' });
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);

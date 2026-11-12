@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { hasFreshAuth, signUnlockToken, UNLOCK_METHODS, verifyUnlockToken } from './unlock-token.ts';
+import { hasFreshAuth, signUnlockToken, signedInWithOAuth, UNLOCK_METHODS, verifyUnlockToken } from './unlock-token.ts';
 
 const secret = 'test-secret-that-is-long-enough-for-hmac';
 const userId = '5b0c1f3e-7a2d-4c1e-9f7a-1234567890ab';
@@ -65,4 +65,16 @@ test('a passkey unlock does not count a freshly verified MFA factor', () => {
     assert.equal(hasFreshAuth([{ method, timestamp: now - 5 }], now, 60, emailLink), true, method);
   }
   assert.equal(hasFreshAuth([{ method: 'totp', timestamp: now - 5 }], now, 60, emailLink), false);
+});
+
+test('the oauth unlock rule accepts only an oauth sign-in', () => {
+  assert.equal(hasFreshAuth([{ method: 'oauth', timestamp: 1000 }], 1000, 60, UNLOCK_METHODS.oauth), true);
+  assert.equal(hasFreshAuth([{ method: 'password', timestamp: 1000 }], 1000, 60, UNLOCK_METHODS.oauth), false);
+});
+
+test('signedInWithOAuth reads the amr claim', () => {
+  assert.equal(signedInWithOAuth([{ method: 'oauth', timestamp: 1 }]), true);
+  assert.equal(signedInWithOAuth([{ method: 'otp', timestamp: 1 }]), false);
+  assert.equal(signedInWithOAuth(undefined), false);
+  assert.equal(signedInWithOAuth('oauth'), false);
 });

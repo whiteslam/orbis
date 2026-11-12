@@ -11,6 +11,7 @@ import { safeAction } from '@/lib/client/safe-action';
 import { savedWhen, splitSummary, type AdviceSent, type ShownAdvice } from '@/lib/workbook/shown-advice';
 import { UPLOAD_BUCKET, uploadProblem } from '@/lib/storage/upload-rules';
 import { createClient } from '@/lib/supabase/client';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 function fileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -97,13 +98,14 @@ function PickFile({ inputId, isPending, message, onFile, onBack }: Readonly<{ in
 
 /** The chosen file: its name, how much was read, and a way to drop it. */
 function FileSummary({ preview, bytes, isPdf, disabled, onClear }: Readonly<{ preview: WorkbookPreview; bytes: number | null; isPdf: boolean; disabled: boolean; onClear: () => void }>) {
+  const { locale } = usePersonLocale();
   const rows = preview.sheets.reduce((sum, sheet) => sum + sheet.rowCount, 0);
   return (
     <div className="hl-file">
       <span className="hl-file-tile" aria-hidden="true">{isPdf ? <FileText size={18} strokeWidth={1.8} /> : <FileSpreadsheet size={18} strokeWidth={1.8} />}</span>
       <div>
         <strong>{preview.fileName}</strong>
-        <small>{rows.toLocaleString('en-IN')} {isPdf ? 'text lines' : 'data rows'} · {preview.sheets.length} {preview.sheets.length === 1 ? 'sheet' : 'sheets'}{bytes !== null ? ` · ${fileSize(bytes)}` : ''}</small>
+        <small>{rows.toLocaleString(locale)} {isPdf ? 'text lines' : 'data rows'} · {preview.sheets.length} {preview.sheets.length === 1 ? 'sheet' : 'sheets'}{bytes !== null ? ` · ${fileSize(bytes)}` : ''}</small>
       </div>
       <button className="fd-round" type="button" onClick={onClear} disabled={disabled} aria-label="Remove this file"><X size={15} strokeWidth={2.2} aria-hidden="true" /></button>
     </div>
@@ -112,10 +114,11 @@ function FileSummary({ preview, bytes, isPdf, disabled, onClear }: Readonly<{ pr
 
 /** One sheet (or the PDF's text) as Orbis read it: its size, columns and first rows. */
 function SheetPreview({ sheet, index, sheetCount }: Readonly<{ sheet: WorkbookSheetPreview; index: number; sheetCount: number }>) {
+  const { locale } = usePersonLocale();
   return (
     <section className="hl-sheet">
       <FieldLabel>{sheetCount > 1 ? `Sheet ${index + 1} of ${sheetCount} · ` : ''}{sheet.name}</FieldLabel>
-      <p className="hl-sheet-meta">{sheet.rowCount.toLocaleString('en-IN')} rows · {sheet.columnCount} columns{sheet.columns.length ? ` · ${sheet.columns.join(' · ')}` : ''}</p>
+      <p className="hl-sheet-meta">{sheet.rowCount.toLocaleString(locale)} rows · {sheet.columnCount} columns{sheet.columns.length ? ` · ${sheet.columns.join(' · ')}` : ''}</p>
       {sheet.previewRows.length > 0 && (
         <div className="hl-table-wrap">
           <table className="hl-table">
@@ -329,6 +332,7 @@ export function WorkbookAsk({ hasStepData = false, savedContextCount = 0, hasSav
 
 /** The advice itself: a headline, numbered steps with the observations they rest on, and what was sent. */
 export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readonly<{ advice: ShownAdvice; onDeleted: () => void; onPlan: () => void; onBack: () => void }>) {
+  const { timeZone } = usePersonLocale();
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -363,7 +367,7 @@ export function WorkbookAdviceView({ advice, onDeleted, onPlan, onBack }: Readon
       <section className="fd-focus fd-advice" aria-live="polite">
         <h1>{summary.headline}</h1>
         {summary.rest && <p>{summary.rest}</p>}
-        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</p>
+        <p className="fd-src"><Sparkles size={11} aria-hidden="true" />{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt, timeZone)}` : ''}</p>
       </section>
 
       <FieldLabel>{steps.length === 1 ? '1 step' : `${steps.length} steps`}</FieldLabel>

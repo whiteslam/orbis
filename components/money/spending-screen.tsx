@@ -8,9 +8,11 @@ import { LedgerAmount, TransactionList } from '@/components/money/transaction-li
 import { FieldHead, useScrollTop } from '@/components/field/field';
 import { MoneyIn } from '@/components/money/money-in';
 import { PartLoading } from '@/components/shell/loading';
-import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { HeadsupAction } from '@/lib/headsups/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localParts } from '@/lib/locale/dates';
+import { formatMoney } from '@/lib/locale/money';
 
 const ManualTransactionForm = dynamic(() => import('@/components/money/manual-transaction-form').then((m) => m.ManualTransactionForm), { loading: PartLoading });
 const SpendingSummary = dynamic(() => import('@/components/money/spending-summary').then((m) => m.SpendingSummary), { loading: PartLoading });
@@ -20,8 +22,8 @@ type FinanceView = 'main' | 'add';
 // The ledger opens on the last week or so; the rest is one tap away.
 const TRANSACTIONS_SHOWN = 8;
 
-function monthLabel(month: FinanceSummary['month']) {
-  return month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) : '';
+function monthLabel(month: FinanceSummary['month'], locale: string) {
+  return month ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString(locale, { month: 'long', timeZone: 'UTC' }) : '';
 }
 
 // Nothing saved: the screen is a doorway, not a dashboard.
@@ -64,6 +66,7 @@ function Ledger({ summary, all, onAll }: Readonly<{ summary: FinanceSummary; all
 
 export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ summary: FinanceSummary; switcher?: ReactNode; intent?: HeadsupAction | null }>) {
   // A heads-up can open this ready to add a spend, or pointing at one category.
+  const loc = usePersonLocale();
   const [view, setView] = useState<FinanceView>(() => intent?.type === 'open_spending_entry' ? 'add' : 'main');
   const prefill = intent?.type === 'open_spending_entry' ? intent.category : undefined;
   const highlight = intent?.type === 'review_category' ? intent.category : null;
@@ -80,8 +83,8 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
   const month = summary.month;
   const ready = summary.databaseReady && !summary.loadError;
   const monthReady = ready && Boolean(month);
-  const monthName = monthLabel(month);
-  const dayOfMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
+  const monthName = monthLabel(month, loc.locale);
+  const dayOfMonth = localParts(new Date(), loc.timeZone).day;
   const firstRun = isFirstRun(summary, ready);
 
   // addManualTransactionAction has already revalidated '/', so the new row is on its way.
@@ -158,8 +161,8 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
             </div>
             {monthReady && month && month.spent > 0 && (
               <p className="mn-pace" suppressHydrationWarning>
-                <span className="fd-delta flat">{money(pace, month.currency)} a day</span>
-                {onPace !== null && <span>On pace for {money(onPace, month.currency)} by {daysInMonth} {monthName}</span>}
+                <span className="fd-delta flat">{formatMoney(pace, month.currency, loc.locale)} a day</span>
+                {onPace !== null && <span>On pace for {formatMoney(onPace, month.currency, loc.locale)} by {daysInMonth} {monthName}</span>}
               </p>
             )}
             {month && <SpendingSummary month={month} highlight={highlight} incomeShown={incomeShown} />}

@@ -27,8 +27,9 @@ export function adviceFromSaved(saved: SavedWorkbookAdvice | null): ShownAdvice 
   };
 }
 
-export function savedWhen(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+/** When advice was saved, in the person's zone. */
+export function savedWhen(iso: string, timeZone: string) {
+  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone });
 }
 
 /** Splits the model's summary into a headline sentence and whatever follows it. */

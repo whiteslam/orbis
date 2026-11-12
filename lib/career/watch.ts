@@ -22,6 +22,7 @@ import { APPLICATION_STATUSES } from '@/lib/career/types';
 import type { CareerApplication, CareerEvent, CareerJob, CareerProfile, CareerSpec, NormalizedJob, OfferTerms, ReplyClassification } from '@/lib/career/types';
 import { admittedUserIds } from '@/lib/security/admission';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { personZoneAdmin } from '@/lib/locale/repository';
 import {
   eventKindFor, ghostedSummary, logisticsOnlyPrep, openAppsFrom, replyDetails, replyGmailQuery, retryClassification,
 } from '@/lib/career/watch-plan';
@@ -48,7 +49,6 @@ const FOLLOW_UP_AI_MS = 12_000;
 const LANES = 3;
 /** The cron runs every 15 minutes; a claim younger than this is another run's. */
 const CLAIM_STALE_MS = 10 * 60_000;
-const INDIA = 'Asia/Kolkata';
 const EMPTY_TERMS: OfferTerms = { fixed: null, variable: null, joiningBonus: null, equity: null, currency: null, period: null, startDate: null, deadline: null };
 
 type Person = {
@@ -74,7 +74,8 @@ async function personPrefs(admin: CareerDb, userId: string) {
     admin.from('notification_preferences').select('timezone').eq('user_id', userId).maybeSingle(),
   ]);
   const disabled = Array.isArray(prefs.data?.disabled_kinds) ? (prefs.data.disabled_kinds as string[]) : [];
-  const timeZone = typeof notify.data?.timezone === 'string' && notify.data.timezone ? notify.data.timezone : INDIA;
+  // The person's own zone (user_settings) wins; the notification zone only when that can't be read.
+  const timeZone = await personZoneAdmin(admin, userId, notify.data?.timezone);
   return { disabled: new Set(disabled), timeZone };
 }
 

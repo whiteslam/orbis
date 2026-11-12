@@ -8,6 +8,8 @@ import type { HealthPlan, HealthPlanRecord, PlanQuestion } from '@/lib/health-do
 import { FieldSubHead, useScrollTop } from '@/components/field/field';
 import { safeAction } from '@/lib/client/safe-action';
 import { planWeek } from '@/lib/health/plan-week';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
 
 const MIN_ANSWERS = 10;
 // A long interview opens on its first few questions; the rest are one tap away.
@@ -17,10 +19,6 @@ type Stage =
   | { kind: 'idle' }
   | { kind: 'questions'; questions: PlanQuestion[] }
   | { kind: 'plan'; plan: HealthPlan };
-
-function planDate(value: string) {
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
-}
 
 function QuestionField({ question, value, onChange, disabled }: Readonly<{ question: PlanQuestion; value: string; onChange: (value: string) => void; disabled: boolean }>) {
   if (question.kind === 'single' || question.kind === 'multi') {
@@ -55,6 +53,7 @@ function BackLink({ onClick, disabled }: Readonly<{ onClick: () => void; disable
  * opens one plan directly from the Health tab.
  */
 export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBack }: Readonly<{ plans: HealthPlanRecord[]; state?: 'ready' | 'setup' | 'unavailable'; initialPlanId?: string | null; onBack: () => void }>) {
+  const loc = usePersonLocale();
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openPlanId, setOpenPlanId] = useState<string | null>(initialPlanId);
@@ -197,7 +196,7 @@ export function PlanBuilder({ plans, state = 'ready', initialPlanId = null, onBa
               <button type="button" onClick={() => { setMessage(null); setOpenPlanId(plan.id); }}>
                 <span className="hl-row-top"><strong>{plan.title}</strong><small>{done ? `${total} weeks · done` : `week ${week} of ${total}`}</small></span>
                 <span className="hl-bar" aria-hidden="true"><i style={{ '--fill': done ? 1 : week / total } as React.CSSProperties} /></span>
-                <small className="hl-row-meta">Written {planDate(plan.createdAt)}</small>
+                <small className="hl-row-meta">Written {formatWhen(plan.createdAt, loc, 'day')}</small>
               </button>
               <button type="button" className="fd-round hl-danger" onClick={() => remove(plan)} disabled={isPending} aria-label={`Delete ${plan.title}`}><Trash2 size={14} aria-hidden="true" /></button>
             </div>

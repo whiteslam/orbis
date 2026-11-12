@@ -2,6 +2,7 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import { localParts } from '@/lib/routines/today';
+import { getPersonSettings } from '@/lib/locale/repository';
 import type { Routine, RoutineEvent, RoutineKind, RoutineStatus, RoutinesSummary } from '@/lib/routines/types';
 
 const isMissingTable = (code?: string) => ['PGRST205', 'PGRST204', '42P01'].includes(code ?? '');
@@ -41,7 +42,8 @@ function toEvent(row: Record<string, unknown>): RoutineEvent {
 export async function getRoutinesSummary(userId: string, now = new Date()): Promise<RoutinesSummary> {
   try {
     const supabase = await createClient();
-    const today = localParts(now).date;
+    const { timeZone } = await getPersonSettings(userId);
+    const today = localParts(now, timeZone).date;
     const listRoutines = (columns: string) => supabase.from('routines').select(columns).eq('user_id', userId).order('at_time').limit(60);
     const [first, events] = await Promise.all([
       listRoutines('id,title,kind,at_time,days,active,archived_at,flexible'),
@@ -118,7 +120,8 @@ export async function recordRoutineEvent(
   now = new Date(),
 ) {
   const supabase = await createClient();
-  const localDate = localParts(now).date;
+  const { timeZone } = await getPersonSettings(userId);
+  const localDate = localParts(now, timeZone).date;
   const { error } = await supabase
     .from('routine_events')
     .upsert({
@@ -134,5 +137,6 @@ export async function recordRoutineEvent(
 
 export async function clearRoutineEvent(userId: string, routineId: string, now = new Date()) {
   const supabase = await createClient();
-  await supabase.from('routine_events').delete().eq('user_id', userId).eq('routine_id', routineId).eq('local_date', localParts(now).date);
+  const { timeZone } = await getPersonSettings(userId);
+  await supabase.from('routine_events').delete().eq('user_id', userId).eq('routine_id', routineId).eq('local_date', localParts(now, timeZone).date);
 }

@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { isInvestmentCategory } from '@/lib/finance/manual';
-import { createAdminClient } from '@/lib/supabase/admin';
+import type { createAdminClient } from '@/lib/supabase/admin';
 import { localClock, type Slot } from '@/lib/notifications/schedule';
 import type { BriefRoutine } from '@/lib/home/ai-brief';
 import { currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';

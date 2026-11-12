@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AlertTriangle, Apple, BedDouble, Dumbbell, Flag, Target } from 'lucide-react';
 import type { HealthPlan } from '@/lib/health-docs/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const toMinutes = (value: string) => {
   const match = /^(\d{1,2}):(\d{2})/.exec(value);
@@ -28,20 +29,21 @@ function SleepClock({ bedtime, wakeTime }: Readonly<{ bedtime: string; wakeTime:
 }
 
 function TargetChart({ metric, unit, points }: Readonly<HealthPlan['targets'][number]>) {
+  const { locale } = usePersonLocale();
   const first = points[0];
   const last = points.at(-1) ?? first;
   return (
     <div className="hl-target">
       <div className="hl-target-head">
         <strong>{metric}</strong>
-        <span>{first.value.toLocaleString('en-IN')} → <b>{last.value.toLocaleString('en-IN')}</b> {unit}</span>
+        <span>{first.value.toLocaleString(locale)} → <b>{last.value.toLocaleString(locale)}</b> {unit}</span>
       </div>
       <ResponsiveContainer width="100%" height={112}>
         <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke={'var(--fd-rule)'} />
           <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} tickFormatter={(week: number) => (week === 0 ? 'Now' : `W${week}`)} />
-          <YAxis tickLine={false} axisLine={false} width={34} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString('en-IN', { notation: 'compact', maximumFractionDigits: 1 })} />
-          <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--fd-rule)', background: 'var(--fd-surface)', color: 'var(--fd-ink)', fontSize: 11 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString('en-IN')} ${unit}`, metric]} />
+          <YAxis tickLine={false} axisLine={false} width={34} tick={{ fontSize: 9, fill: 'var(--fd-faint)' }} domain={['auto', 'auto']} tickFormatter={(value: number) => value.toLocaleString(locale, { notation: 'compact', maximumFractionDigits: 1 })} />
+          <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--fd-rule)', background: 'var(--fd-surface)', color: 'var(--fd-ink)', fontSize: 11 }} labelFormatter={(week) => (Number(week) === 0 ? 'Today' : `Week ${week}`)} formatter={(value) => [`${Number(value).toLocaleString(locale)} ${unit}`, metric]} />
           <Line type="monotone" dataKey="value" stroke="var(--series-1)" strokeWidth={2} dot={{ r: 3, fill: 'var(--series-1)', stroke: 'var(--fd-surface)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
         </LineChart>
       </ResponsiveContainer>

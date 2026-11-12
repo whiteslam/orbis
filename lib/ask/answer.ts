@@ -5,13 +5,13 @@ import { askPayload, askSystem } from '@/lib/ask/prompt';
 import { keepCitations, type AskSource, type Citation } from '@/lib/ask/select';
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
+import { dailyLimit } from '@/lib/ai/limits';
 import { needsReasoning } from '@/lib/ai/jev';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { TalkTurn } from '@/lib/voice/talk';
 import type { AskAbout } from '@/lib/ask/about';
 
-export const DAILY_ASK_LIMIT = 20;
 const MAX_INPUT_BYTES = 60_000;
 
 export const NO_MODEL_MESSAGE = 'No private AI model is available right now, so your records stayed put. Try again later.';
@@ -45,9 +45,11 @@ export async function askBlockedMessage(userId: string): Promise<string | null> 
  */
 export async function claimAskCredit(userId: string): Promise<string | null> {
   try {
-    const { data: allowed, error } = await createAdminClient().rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: DAILY_ASK_LIMIT });
+    const admin = createAdminClient();
+    const limit = await dailyLimit(admin, userId, 'ask_orbis');
+    const { data: allowed, error } = await admin.rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: limit });
     if (error) return 'Ask Orbis is not set up yet. Apply the Ask Orbis migration in Supabase.';
-    if (!allowed) return `You have asked ${DAILY_ASK_LIMIT} questions today. Try again tomorrow.`;
+    if (!allowed) return `You have asked ${limit} questions today. Try again tomorrow.`;
     return null;
   } catch {
     return 'Ask Orbis is not available right now. Try again later.';

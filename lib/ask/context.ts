@@ -2,8 +2,10 @@ import 'server-only';
 
 import { isInvestmentCategory } from '@/lib/finance/manual';
 import { createClient } from '@/lib/supabase/server';
+import { localDate } from '@/lib/locale/dates';
+import { getPersonSettings } from '@/lib/locale/repository';
 import {
-  istDate, rankJournal, weeklyRoutines, weeklySpending, weeklySteps,
+  rankJournal, weeklyRoutines, weeklySpending, weeklySteps,
   type AskJournal, type AskSource,
 } from '@/lib/ask/select';
 
@@ -45,15 +47,16 @@ export async function buildAskContext(userId: string, question: string, sources:
   const want = new Set(sources);
   const none = Promise.resolve({ data: null, error: null });
 
-  const [journal, notes, transactions, events, steps] = await Promise.all([
+  const [journal, notes, transactions, events, steps, { timeZone }] = await Promise.all([
     want.has('journal') ? supabase.from('journal_entries').select('entry_date,mood,body,tags').eq('user_id', userId).gte('entry_date', since).order('entry_date', { ascending: false }).limit(200) : none,
     want.has('notes') ? supabase.from('user_context_notes').select('id,note,updated_at').eq('user_id', userId).order('updated_at', { ascending: false }).limit(30) : none,
     want.has('spending') ? supabase.from('transactions').select('amount,currency,occurred_at,merchant,category').eq('user_id', userId).eq('direction', 'expense').gte('occurred_at', `${since}T00:00:00Z`).limit(3000) : none,
     want.has('routines') ? supabase.from('routine_events').select('local_date,title,status').eq('user_id', userId).gte('local_date', since).limit(2000) : none,
     want.has('steps') ? supabase.from('health_daily_steps').select('date,steps').eq('user_id', userId).gte('date', since).limit(400) : none,
+    getPersonSettings(userId),
   ]);
 
-  const data: Record<string, unknown> = { today: istDate(new Date().toISOString()), lookbackStarts: since };
+  const data: Record<string, unknown> = { today: localDate(new Date(), timeZone), lookbackStarts: since };
   const citations = new Map<string, string>();
   const used: AskSource[] = [];
 
@@ -89,7 +92,7 @@ export async function buildAskContext(userId: string, question: string, sources:
     occurredAt: String(row.occurred_at),
     merchant: typeof row.merchant === 'string' ? row.merchant : null,
     category: typeof row.category === 'string' ? row.category : null,
-  })));
+  })), timeZone);
   if (spending.weeks.length) {
     data.spendingByWeek = { currency: spending.currency, weeks: spending.weeks.map((week) => ({ id: `spending:${week.week}`, weekStarting: week.week, total: week.total, payments: week.count, topPlaces: week.top })) };
     spending.weeks.forEach((week) => citations.set(`spending:${week.week}`, `Spending, week of ${shortDate(week.week)}`));

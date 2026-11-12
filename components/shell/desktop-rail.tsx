@@ -10,12 +10,14 @@ import { TAB_ICONS } from '@/components/shell/tab-icons';
  * The desktop's navigation: a macOS sidebar floating at the window's leading
  * edge, each tab an icon and its name. When the window is narrow or Ask Orbis
  * is docked it folds to icons, and the names become tooltips
- * (app/styles/desktop.css). The five tabs that live in this page switch in
+ * (app/styles/desktop.css). Only the tabs the person has on are listed
+ * (`tabs`, from lib/shell/modules.ts). Those that live in this page switch in
  * place; Career leaves for its full panel. Ask Orbis and Settings sit at the
  * foot. Always rendered, and hidden below the breakpoint, where the bottom nav
  * is the navigation instead.
  */
-export function DesktopRail({ tab, onTab, onAsk, onSettings }: Readonly<{
+export function DesktopRail({ tabs, tab, onTab, onAsk, onSettings }: Readonly<{
+  tabs: TabId[];
   tab: TabId;
   onTab: (tab: TabId) => void;
   onAsk: () => void;
@@ -25,7 +27,7 @@ export function DesktopRail({ tab, onTab, onAsk, onSettings }: Readonly<{
     <nav className="dk-rail" aria-label="Orbis">
       <p className="dk-rail-brand" aria-hidden="true"><OrbisMark size={22} /><span>Orbis</span></p>
       <ul>
-        {TABS.map(({ id, label }) => {
+        {TABS.filter(({ id }) => tabs.includes(id)).map(({ id, label }) => {
           const Icon = TAB_ICONS[id];
           // The selected row carries `active` as well as aria-current, as the bottom nav's does: the tests and the motion runtime find it either way.
           const className = tab === id ? 'dk-rail-btn active' : 'dk-rail-btn';
