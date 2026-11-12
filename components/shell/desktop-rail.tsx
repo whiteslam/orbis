@@ -7,12 +7,14 @@ import { TAB_ICONS } from '@/components/shell/tab-icons';
 
 /**
  * The desktop's navigation: a floating pill on the left, styled like the
- * Career panel's rail (.cp-rail). The five tabs that live in this page switch
- * in place; Career leaves for its full panel. Ask Orbis and Settings sit at
+ * Career panel's rail (.cp-rail). Only the tabs the person has on are listed
+ * (`tabs`, from lib/shell/modules.ts). Those that live in this page switch in
+ * place; Career leaves for its full panel. Ask Orbis and Settings sit at
  * the foot. Always rendered, and hidden by app/styles/desktop.css below the
  * breakpoint, where the bottom nav is the navigation instead.
  */
-export function DesktopRail({ tab, onTab, onAsk, onSettings }: Readonly<{
+export function DesktopRail({ tabs, tab, onTab, onAsk, onSettings }: Readonly<{
+  tabs: TabId[];
   tab: TabId;
   onTab: (tab: TabId) => void;
   onAsk: () => void;
@@ -21,7 +23,7 @@ export function DesktopRail({ tab, onTab, onAsk, onSettings }: Readonly<{
   return (
     <nav className="cp-rail dk-rail" aria-label="Orbis">
       <ul>
-        {TABS.map(({ id, label }) => {
+        {TABS.filter(({ id }) => tabs.includes(id)).map(({ id, label }) => {
           const Icon = TAB_ICONS[id];
           const body = (
             <>

@@ -34,6 +34,10 @@ export default async function globalSetup(config: FullConfig) {
     const email = `orbis-qa-${key}-${run}@example.com`;
     const password = `Qa-${randomBytes(12).toString('base64url')}!9`;
     const id = await admin.createUser(email, password);
+    // Mark them onboarded, as every existing account is, so the suite opens on Today.
+    // tests/e2e/onboarding/first-run.spec.ts clears this row to walk through first run.
+    // Without the user_settings migration nobody is sent to onboarding, so a failed write is fine.
+    await admin.upsertRow('user_settings', { user_id: id, onboarded_at: new Date().toISOString() }).catch(() => undefined);
     users[key] = { id, email, password, storageState: path.join(AUTH_DIR, `${key}.json`) };
   }));
   writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));

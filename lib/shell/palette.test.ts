@@ -25,6 +25,14 @@ describe('appPalette', () => {
     expect(items.find((item) => item.label === 'Security')?.go).toEqual({ to: 'settings', section: 'security' });
   });
 
+  it('leaves out the tabs, Money views and Career pages of switched-off modules, never Settings', () => {
+    const some = appPalette(CAREER_PAGES, ['today', 'journal']);
+    expect(some.filter((item) => item.kind === 'tab').map((item) => item.label)).toEqual(['Today', 'Journal']);
+    expect(some.filter((item) => item.kind === 'view' || item.kind === 'career')).toEqual([]);
+    expect(some.filter((item) => item.kind === 'settings')).toHaveLength(7);
+    expect(some.find((item) => item.kind === 'action')?.go).toEqual({ to: 'ask' });
+  });
+
   it('gives every item its own id', () => {
     expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
   });

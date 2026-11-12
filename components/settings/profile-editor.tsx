@@ -4,8 +4,11 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deletePersonalProfileAction, savePersonalProfileAction } from '@/app/personal/actions';
 import type { PersonalDataState, PersonalProfile } from '@/lib/personal/repository';
+import { saveSettings } from '@/app/onboarding/actions';
 import { safeAction } from '@/lib/client/safe-action';
-import { usePersonLocale } from '@/components/locale/person-locale';
+import { usePersonLocale, usePersonSettings } from '@/components/locale/person-locale';
+import { CurrencySelect, ModuleChoices, TimeZoneSelect } from '@/components/settings/place-fields';
+import type { ModuleId } from '@/lib/locale/person';
 
 const EMPTY_PROFILE: PersonalProfile = { preferredName: '', role: '', aboutMe: '' };
 
@@ -14,7 +17,16 @@ const NOTICE: Partial<Record<PersonalDataState, string>> = {
   unavailable: 'Your profile could not be loaded. Refresh and try again.',
 };
 
+/** Settings → You: the profile, then where you are and which tabs you use. */
 export function ProfileEditor({ state, profile }: Readonly<{ state: PersonalDataState; profile: PersonalProfile | null }>) {
+  return <>
+    <ProfileDetails state={state} profile={profile} />
+    <h3 className="fd-label st-sub">Place and tabs</h3>
+    <PlaceAndModules />
+  </>;
+}
+
+function ProfileDetails({ state, profile }: Readonly<{ state: PersonalDataState; profile: PersonalProfile | null }>) {
   const router = useRouter();
   const { locale } = usePersonLocale();
   const [draft, setDraft] = useState(profile ?? EMPTY_PROFILE);
@@ -81,4 +93,47 @@ export function ProfileEditor({ state, profile }: Readonly<{ state: PersonalData
     </form>
     {message && <output className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</output>}
   </section>;
+}
+
+type Place = { timeZone: string; currency: string; modules: ModuleId[] };
+
+/** Time zone, currency and the tabs to show, saved together through saveSettings. Language stays as it is. */
+function PlaceAndModules() {
+  const router = useRouter();
+  const settings = usePersonSettings();
+  const saved: Place = { timeZone: settings.timeZone, currency: settings.currency, modules: settings.modules };
+  const [draft, setDraft] = useState<Place>(saved);
+  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const savedKey = `${settings.timeZone}|${settings.currency}|${settings.modules.join(',')}`;
+  useEffect(() => {
+    // Keeps the draft in step with the saved settings after a save or reload.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft({ timeZone: settings.timeZone, currency: settings.currency, modules: settings.modules });
+    // savedKey stands for the three values read here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey]);
+
+  const changed = `${draft.timeZone}|${draft.currency}|${draft.modules.join(',')}` !== savedKey;
+
+  return <form className="fd-form" aria-label="Place and tabs" onSubmit={(event) => {
+    event.preventDefault();
+    setMessage('');
+    startTransition(async () => {
+      const result = await safeAction(saveSettings)({ ...draft, locale: settings.locale });
+      setMessage(result.message);
+      setSuccess(result.success);
+      if (result.success) router.refresh();
+    });
+  }}>
+    <TimeZoneSelect id="settings-zone" value={draft.timeZone} onChange={(timeZone) => setDraft({ ...draft, timeZone })} disabled={pending} />
+    <CurrencySelect id="settings-currency" value={draft.currency} onChange={(currency) => setDraft({ ...draft, currency })} disabled={pending} locale={settings.locale} />
+    <ModuleChoices idPrefix="settings-module" value={draft.modules} onChange={(modules) => setDraft({ ...draft, modules })} disabled={pending} />
+    <div className="fd-act">
+      <button type="submit" disabled={pending || !changed}>{pending ? 'Saving…' : 'Save'}</button>
+    </div>
+    <div role="status">{message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</p>}</div>
+  </form>;
 }
