@@ -1,12 +1,32 @@
+import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { UNLOCK_METHODS, signedInWithOAuth } from '@/lib/security/unlock-token';
 import { accessAllowed, signupsOpen } from '@/lib/security/access';
-import { isBrandNewAccount } from '@/lib/security/new-account';
+import { isNewAccount } from '@/lib/security/new-account';
+import { OAUTH_START_COOKIE, verifyFlowStart } from '@/lib/security/oauth-start';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const allowedDestinations = new Set(['/active', '/reset-password']);
+
+/** Deletes the account; if that fails, bans it so a later sign-in can't get in either. */
+async function removeNewAccount(userId: string) {
+  const admin = createAdminClient();
+  try {
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    if (!error) return;
+    console.error('auth callback: could not delete a new account', error.status ?? error.code);
+  } catch (caught) {
+    console.error('auth callback: could not delete a new account', caught instanceof Error ? caught.name : 'unknown');
+  }
+  try {
+    const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
+    if (error) console.error('auth callback: could not ban a new account', error.status ?? error.code);
+  } catch (caught) {
+    console.error('auth callback: could not ban a new account', caught instanceof Error ? caught.name : 'unknown');
+  }
+}
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -34,19 +54,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=private', request.url));
   }
 
-  // Sign-up is shut, yet a link or a Google sign-in can still mint an account
-  // (Supabase creates one on a first Google sign-in). If this session belongs
-  // to an account created a moment ago, remove it and turn the person away. An
-  // account that already existed, or an email link clicked later than a couple
-  // of minutes after sign-up, is left alone.
+  // Second line of defence while sign-ups are closed. The authoritative door
+  // is Supabase Auth's "Allow new users to sign up" switch, which must stay OFF
+  // while ORBIS_OPEN_SIGNUPS is off (turn both on together): this callback can
+  // be bypassed by exchanging the code at Supabase directly.
+  //
+  // A first Google sign-in makes Supabase create an account. If this session's
+  // account was created by the flow now finishing (judged from the signed
+  // cookie set when it began; see isNewAccount), remove it and turn the person
+  // away. Existing accounts are left alone.
+  const cookieStore = await cookies();
+  const flowStartedAt = verifyFlowStart(cookieStore.get(OAUTH_START_COOKIE)?.value);
+  cookieStore.delete(OAUTH_START_COOKIE);
   const user = data.session?.user;
-  if (user && !signupsOpen() && isBrandNewAccount(user.created_at, user.last_sign_in_at, new Date())) {
-    try {
-      const { error: deleteError } = await createAdminClient().auth.admin.deleteUser(user.id);
-      if (deleteError) console.error('auth callback: could not remove a new account', deleteError.status ?? deleteError.code);
-    } catch (caught) {
-      console.error('auth callback: could not remove a new account', caught instanceof Error ? caught.name : 'unknown');
-    }
+  if (user && !signupsOpen() && isNewAccount(user.created_at, flowStartedAt, new Date())) {
+    await removeNewAccount(user.id);
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL('/login?error=private', request.url));
   }
