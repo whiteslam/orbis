@@ -21,4 +21,5 @@ export const SENTRY_OPTIONS = {
     stackFrameVariables: false,
   },
   beforeSend: scrubEvent,
+  beforeSendTransaction: scrubEvent,
 };

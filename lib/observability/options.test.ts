@@ -19,3 +19,10 @@ test('events pass through the scrubber before they are sent', () => {
   assert.equal(sent.request?.data, undefined);
   assert.equal(sent.request?.cookies, undefined);
 });
+
+test('transactions are scrubbed too', () => {
+  assert.equal(SENTRY_OPTIONS.beforeSendTransaction, SENTRY_OPTIONS.beforeSend);
+  const sent = SENTRY_OPTIONS.beforeSendTransaction({ request: { query_string: 'code=1', headers: { cookie: 'a' } } });
+  assert.equal(sent.request?.query_string, undefined);
+  assert.deepEqual(sent.request?.headers, {});
+});
