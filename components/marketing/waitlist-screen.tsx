@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { EyeOff, Lock, ShieldCheck } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
-import { WaitlistBackdrop } from '@/components/marketing/waitlist-backdrop';
+import { EclipseBackdrop } from '@/components/marketing/eclipse-backdrop';
 import { WaitlistForm } from '@/components/marketing/waitlist-form';
 import { waitlistCount } from '@/lib/marketing/waitlist';
 import { SITE_NAME } from '@/lib/site';
@@ -58,7 +58,7 @@ export function WaitlistScreen() {
 
       <main className="wl-main">
         <section className="wl-hero">
-          <WaitlistBackdrop />
+          <EclipseBackdrop />
           <div className="wl-hero-copy">
             <p className="wl-eyebrow"><span className="wl-dot" aria-hidden="true" />Private beta · opening in small batches</p>
             <h1>Everything you keep track of, pulled into <span className="wl-grad">one calm page.</span></h1>
