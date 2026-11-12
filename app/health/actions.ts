@@ -1,7 +1,7 @@
 'use server';
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { getAuthenticatedUserId } from '@/lib/auth/session';
+import { getAuthenticatedUserId, requireUser, type SignedInSession } from '@/lib/auth/session';
 import { saveAiResult } from '@/lib/ai/results';
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
@@ -230,6 +230,8 @@ function isAdviceRequest(value: unknown): value is AdviceRequest {
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+/** The person's own session: their context is read under row-level security, not with the service role. */
+type OwnClient = SignedInSession['supabase'];
 
 type PersonalContext = {
   savedContextNotes: string[];
@@ -239,8 +241,8 @@ type PersonalContext = {
 };
 
 /** The saved notes most relevant to this workbook, within a character budget; null when they can't be read. */
-async function loadSavedContextNotes(admin: AdminClient, userId: string, preview: WorkbookPreview): Promise<string[] | null> {
-  const { data, error } = await admin
+async function loadSavedContextNotes(db: OwnClient, userId: string, preview: WorkbookPreview): Promise<string[] | null> {
+  const { data, error } = await db
     .from('user_context_notes')
     .select('note')
     .eq('user_id', userId)
@@ -265,8 +267,8 @@ async function loadSavedContextNotes(admin: AdminClient, userId: string, preview
   return notes;
 }
 
-async function loadFitnessPersona(admin: AdminClient, userId: string): Promise<string | null> {
-  const { data, error } = await admin
+async function loadFitnessPersona(db: OwnClient, userId: string): Promise<string | null> {
+  const { data, error } = await db
     .from('user_fitness_personas')
     .select('persona')
     .eq('user_id', userId)
@@ -276,8 +278,8 @@ async function loadFitnessPersona(admin: AdminClient, userId: string): Promise<s
   return data.persona.trim().slice(0, 3_000);
 }
 
-async function loadPersonalProfile(admin: AdminClient, userId: string): Promise<PersonalContext['personalProfile']> {
-  const { data, error } = await admin
+async function loadPersonalProfile(db: OwnClient, userId: string): Promise<PersonalContext['personalProfile']> {
+  const { data, error } = await db
     .from('user_personal_profiles')
     .select('preferred_name,role,about_me')
     .eq('user_id', userId)
@@ -291,8 +293,8 @@ async function loadPersonalProfile(admin: AdminClient, userId: string): Promise<
   };
 }
 
-async function loadSteps(admin: AdminClient, userId: string): Promise<PersonalContext['steps']> {
-  const { data, error } = await admin
+async function loadSteps(db: OwnClient, userId: string): Promise<PersonalContext['steps']> {
+  const { data, error } = await db
     .from('health_daily_steps')
     .select('date,steps')
     .eq('user_id', userId)
@@ -303,23 +305,23 @@ async function loadSteps(admin: AdminClient, userId: string): Promise<PersonalCo
 }
 
 /** Reads each piece of personal context the user chose to share, in order; a message when one isn't available. */
-async function loadPersonalContext(admin: AdminClient, userId: string, request: AdviceRequest, preview: WorkbookPreview): Promise<PersonalContext | { message: string }> {
+async function loadPersonalContext(db: OwnClient, userId: string, request: AdviceRequest, preview: WorkbookPreview): Promise<PersonalContext | { message: string }> {
   const context: PersonalContext = { savedContextNotes: [], fitnessPersona: null, personalProfile: null, steps: null };
   if (request.includeSavedContext) {
-    const notes = await loadSavedContextNotes(admin, userId, preview);
+    const notes = await loadSavedContextNotes(db, userId, preview);
     if (!notes) return { message: 'Your saved context isn’t available right now. Turn off context sharing or try again later.' };
     context.savedContextNotes = notes;
   }
   if (request.includeFitnessPersona) {
-    context.fitnessPersona = await loadFitnessPersona(admin, userId);
+    context.fitnessPersona = await loadFitnessPersona(db, userId);
     if (context.fitnessPersona === null) return { message: 'Your saved fitness persona isn’t available. Save it in Personal first, or turn off persona sharing.' };
   }
   if (request.includePersonalProfile) {
-    context.personalProfile = await loadPersonalProfile(admin, userId);
+    context.personalProfile = await loadPersonalProfile(db, userId);
     if (!context.personalProfile) return { message: 'Your personal profile isn’t available. Save it in Personal first, or turn off profile sharing.' };
   }
   if (request.includeSteps === true) {
-    context.steps = await loadSteps(admin, userId);
+    context.steps = await loadSteps(db, userId);
     if (!context.steps) return { message: 'Your step data is not available. Import an Apple Health export or turn off step sharing.' };
   }
   return context;
@@ -332,8 +334,9 @@ function creditRefusal(credit: Awaited<ReturnType<typeof claimAiCredit>>, limit:
 }
 
 export async function generateWorkbookAdviceAction(value: unknown): Promise<{ success: true; data: WorkbookAdvice; saved: AiResultStamp | null } | { success: false; message: string }> {
-  const userId = await getAuthenticatedUserId();
-  if (!userId) return { success: false, message: 'Sign in again before requesting advice.' };
+  const auth = await requireUser();
+  if (!auth) return { success: false, message: 'Sign in again before requesting advice.' };
+  const { userId, supabase } = auth;
 
   if (!isAdviceRequest(value)) return { success: false, message: 'Confirm what you want to share before requesting workbook advice.' };
   const preview = verifyPreview(userId, value.preview);
@@ -353,7 +356,7 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
   let context: Awaited<ReturnType<typeof loadPersonalContext>>;
   try {
     admin = createAdminClient();
-    context = await loadPersonalContext(admin, userId, value, preview);
+    context = await loadPersonalContext(supabase, userId, value, preview);
   } catch {
     return { success: false, message: 'Your selected personal details could not be loaded for this request.' };
   }
