@@ -33,10 +33,36 @@ export const FALLBACK_LIMITS: Readonly<Record<AiQuotaFeature, number>> = {
   career_followup: 100,
 };
 
-/** The plan's value when it is a positive whole number, else the fallback. */
+/**
+ * The most the claim functions in Postgres will accept as p_daily_limit; above
+ * it they refuse the request outright. consume_ask_orbis_request
+ * (202609280303_ask_orbis_usage.sql) caps at 50; consume_ai_feature_request
+ * (latest: 202610270002_career_followup.sql) caps at 1000. A plan's value is
+ * clamped to this so a generous plan raises the limit instead of locking
+ * the person out.
+ */
+export const RPC_CAPS: Readonly<Record<AiQuotaFeature, number>> = {
+  ask_orbis: 50,
+  home_brief: 1000,
+  portfolio_news: 1000,
+  workbook_advice: 1000,
+  health_plan: 1000,
+  portfolio_advice: 1000,
+  career_profile: 1000,
+  career_spec: 1000,
+  career_requirements: 1000,
+  career_tailor: 1000,
+  career_alerts: 1000,
+  career_mail: 1000,
+  career_offer: 1000,
+  career_prep: 1000,
+  career_followup: 1000,
+};
+
+/** The plan's value (at most the claim function's cap) when it is a positive whole number, else the fallback. */
 export function limitFor(feature: AiQuotaFeature, plan: PlanLimits | null): number {
   const value = plan?.[feature];
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : FALLBACK_LIMITS[feature];
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? Math.min(value, RPC_CAPS[feature]) : FALLBACK_LIMITS[feature];
 }
 
 type Admin = ReturnType<typeof createAdminClient>;

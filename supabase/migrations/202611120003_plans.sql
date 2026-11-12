@@ -22,10 +22,11 @@ create table if not exists public.account_plans (
   updated_at timestamptz not null default now()
 );
 
--- 'owner' is every feature at ten times its default allowance.
+-- 'owner' is every feature at ten times its default allowance, but never above
+-- what the claim functions accept (50 for Ask, 1000 for the rest).
 insert into public.plans (id, name, limits) values
   ('free', 'Free', '{}'::jsonb),
-  ('owner', 'Owner', '{"ask_orbis":200,"home_brief":80,"portfolio_news":40,"workbook_advice":50,"health_plan":100,"portfolio_advice":50,"career_profile":300,"career_spec":400,"career_requirements":8000,"career_tailor":800,"career_alerts":3000,"career_mail":3000,"career_offer":300,"career_prep":400,"career_followup":1000}'::jsonb)
+  ('owner', 'Owner', '{"ask_orbis":50,"home_brief":80,"portfolio_news":40,"workbook_advice":50,"health_plan":100,"portfolio_advice":50,"career_profile":300,"career_spec":400,"career_requirements":1000,"career_tailor":800,"career_alerts":1000,"career_mail":1000,"career_offer":300,"career_prep":400,"career_followup":1000}'::jsonb)
 on conflict (id) do nothing;
 
 alter table public.plans enable row level security;

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { dailyLimit, FALLBACK_LIMITS, limitFor } from './limits.ts';
+import { dailyLimit, FALLBACK_LIMITS, limitFor, RPC_CAPS } from './limits.ts';
 
 test('with no plan, a feature gets its fallback', () => {
   assert.equal(limitFor('home_brief', null), FALLBACK_LIMITS.home_brief);
@@ -26,13 +26,24 @@ test('today\'s limits are unchanged', () => {
   });
 });
 
-test('the owner plan in the migration is ten times every fallback', () => {
+test('the owner plan in the migration is ten times every fallback, up to the cap', () => {
   const sql = readFileSync(new URL('../../supabase/migrations/202611120003_plans.sql', import.meta.url), 'utf8');
   const literal = /\('owner',\s*'Owner',\s*'(\{[^']*\})'/.exec(sql)?.[1];
   assert.ok(literal, 'owner seed found');
   const owner = JSON.parse(literal) as Record<string, number>;
-  const expected = Object.fromEntries(Object.entries(FALLBACK_LIMITS).map(([feature, value]) => [feature, value * 10]));
+  const expected = Object.fromEntries(Object.entries(FALLBACK_LIMITS).map(([feature, value]) => [feature, Math.min(value * 10, RPC_CAPS[feature as keyof typeof RPC_CAPS])]));
   assert.deepEqual(owner, expected);
+  for (const [feature, value] of Object.entries(owner)) assert.ok(value <= RPC_CAPS[feature as keyof typeof RPC_CAPS], `${feature} is within its cap`);
+});
+
+test('a plan cannot raise a feature past what its claim function accepts', () => {
+  assert.equal(limitFor('ask_orbis', { ask_orbis: 200 }), 50);
+  assert.equal(limitFor('career_alerts', { career_alerts: 3000 }), 1000);
+  assert.equal(limitFor('home_brief', { home_brief: 40 }), 40);
+});
+
+test('every fallback is within its cap', () => {
+  for (const [feature, value] of Object.entries(FALLBACK_LIMITS)) assert.ok(value <= RPC_CAPS[feature as keyof typeof RPC_CAPS], feature);
 });
 
 type Reply = { data: unknown; error: unknown };
