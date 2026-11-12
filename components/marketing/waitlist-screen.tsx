@@ -142,6 +142,13 @@ export function WaitlistScreen() {
           </div>
         </section>
 
+        {/* The name, set as large as the container allows, straddling the line
+            where the dark ground meets the privacy band. Decorative: the name
+            is already in the header, so screen readers skip it. */}
+        <div className="wl-bigmark" aria-hidden="true">
+          <div className="wl-wrap"><p>{SITE_NAME}</p></div>
+        </div>
+
         <section className="wl-private" aria-labelledby="wl-private-title">
           <div className="wl-wrap wl-private-grid">
             <div>

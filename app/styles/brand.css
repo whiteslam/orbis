@@ -57,6 +57,7 @@
   --wl-card-fill: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.03));
   --wl-card-shadow: 0 28px 60px -28px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.09);
   --wl-submit-glow: 0 10px 28px -10px rgba(66,204,168,.6);
+  --wl-bigmark-fill: linear-gradient(180deg, rgba(245,252,250,.34) 0%, rgba(245,252,250,.16) 45%, rgba(245,252,250,.05) 72%, rgba(245,252,250,0) 96%); /* the big Orbis wordmark: soft light at the top, gone into the band at the foot */
   --wl-sheet-shadow: 0 40px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.06); /* the sample brief: lifted by a lightness step, a shadow with offset, no outline */
 
   /* The logo ring. */

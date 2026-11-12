@@ -152,6 +152,16 @@
 .wl-sample-from { margin: 24px 0 0; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 13px; }
 .wl-sample figcaption { margin: 14px 0 0 4px; color: var(--fd-faint); font-size: 13px; }
 
+/* The wordmark band: the dark ground above the middle, the privacy band's
+   step below it, and the name set across the full container on the seam.
+   Sized in container units so it fills the measure at every width. The
+   letters are lit from the top and dissolve into the band's own colour at
+   the foot, so the name blends into the section rather than sitting on it. */
+.wl-bigmark { background: linear-gradient(180deg, var(--fd-field) 30%, var(--brand-s1) 78%); }
+.wl-bigmark + .wl-private { padding-top: 72px; }
+.wl-bigmark .wl-wrap { container-type: inline-size; }
+.wl-bigmark p { margin: 0; font-size: 44.6cqi; font-weight: 700; letter-spacing: -.055em; line-height: .78; white-space: nowrap; user-select: none; color: var(--brand-s2); background: var(--wl-bigmark-fill); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
 .wl-private { padding: 120px 0; background: var(--brand-s1); }
 .wl-private-grid { align-items: start; }
 .wl-private-lede { margin: 20px 0 0; max-width: 32ch; color: var(--wl-lede); font-size: 18px; line-height: 1.6; }
