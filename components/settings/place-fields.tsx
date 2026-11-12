@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { ModuleId } from '@/lib/locale/person';
+import { canonicalTimeZone, type ModuleId } from '@/lib/locale/person';
 import { currencyOptions, timeZoneOptions } from '@/lib/locale/options';
 import { MODULES } from '@/lib/shell/modules';
 
@@ -9,11 +9,13 @@ import { MODULES } from '@/lib/shell/modules';
 
 /** Every time zone, as a plain list; the server checks the choice again. */
 export function TimeZoneSelect({ id, value, onChange, disabled }: Readonly<{ id: string; value: string; onChange: (value: string) => void; disabled?: boolean }>) {
-  const zones = useMemo(() => timeZoneOptions(value), [value]);
+  // By its current name, which is always one of the options (an old name like Asia/Calcutta is not).
+  const zone = canonicalTimeZone(value);
+  const zones = useMemo(() => timeZoneOptions(zone), [zone]);
   return (
     <label className="fd-field wide" htmlFor={id}>Time zone
-      <select id={id} value={value} onChange={(event) => onChange(event.currentTarget.value)} disabled={disabled}>
-        {zones.map((zone) => <option key={zone} value={zone}>{zone.replaceAll('_', ' ')}</option>)}
+      <select id={id} value={zone} onChange={(event) => onChange(event.currentTarget.value)} disabled={disabled}>
+        {zones.map((option) => <option key={option} value={option}>{option.replaceAll('_', ' ')}</option>)}
       </select>
     </label>
   );

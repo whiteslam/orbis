@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { SignedInSession } from '@/lib/auth/session';
+import { canonicalTimeZone } from '@/lib/locale/person';
 import type { SettingsInput } from '@/lib/locale/settings-input';
 import { isMissingTable } from '@/lib/supabase/errors';
 
@@ -18,13 +19,26 @@ export async function writePersonSettings(supabase: SignedInSession['supabase'],
   if (input.locale !== undefined) row.locale = input.locale;
   if (onboarded) row.onboarded_at = new Date().toISOString();
 
-  const { error } = await supabase.from('user_settings').upsert(row, { onConflict: 'user_id' });
-  if (error) {
-    console.error('Saving user_settings failed', error);
-    return false;
-  }
+  if (!(await upsertSettings(supabase, row))) return false;
 
   const { error: zoneError } = await supabase.from('notification_preferences').update({ timezone: input.timeZone }).eq('user_id', userId);
   if (zoneError && !isMissingTable(zoneError)) console.error('Keeping the notification time zone in step failed', zoneError);
   return true;
+}
+
+/**
+ * The other direction: Notifications saved a zone, so the settings row takes it
+ * too, by its current IANA name. Only the zone is written; a missing row is
+ * created with the column defaults for everything else (onboarded_at, modules
+ * and currency are left alone).
+ */
+export async function writePersonTimeZone(supabase: SignedInSession['supabase'], userId: string, timeZone: string): Promise<boolean> {
+  return upsertSettings(supabase, { user_id: userId, timezone: canonicalTimeZone(timeZone) });
+}
+
+async function upsertSettings(supabase: SignedInSession['supabase'], row: Record<string, unknown>): Promise<boolean> {
+  const { error } = await supabase.from('user_settings').upsert(row, { onConflict: 'user_id' });
+  if (!error) return true;
+  if (!isMissingTable(error)) console.error('Saving user_settings failed', error);
+  return false;
 }

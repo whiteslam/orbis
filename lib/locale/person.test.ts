@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { ALL_MODULES, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings, ONBOARDED_UNKNOWN, settingsFromRead } from './person.ts';
+import { ALL_MODULES, canonicalTimeZone, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings, ONBOARDED_UNKNOWN, settingsFromRead } from './person.ts';
 
 test('a missing row gives the India defaults, every module, and not onboarded', () => {
   assert.deepEqual(normalizeSettings(null), { ...DEFAULT_PERSON_LOCALE, modules: ALL_MODULES, onboardedAt: null });
@@ -53,4 +53,10 @@ test('a failed read counts as onboarded; only a good read with no row does not',
   const row = settingsFromRead({ timezone: 'America/Los_Angeles', onboarded_at: '2026-11-12T00:00:00Z' }, false);
   assert.equal(row.timeZone, 'America/Los_Angeles');
   assert.equal(row.onboardedAt, '2026-11-12T00:00:00Z');
+});
+
+test('a legacy zone alias reads as the IANA name the pickers list', () => {
+  assert.equal(normalizeSettings({ timezone: 'Asia/Calcutta' }).timeZone, 'Asia/Kolkata');
+  assert.equal(canonicalTimeZone('Asia/Calcutta'), 'Asia/Kolkata');
+  assert.equal(canonicalTimeZone('Europe/London'), 'Europe/London');
 });

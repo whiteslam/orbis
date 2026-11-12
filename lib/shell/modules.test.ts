@@ -2,7 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { ALL_MODULES } from '../locale/person.ts';
 import { TABS } from './tabs.ts';
-import { MODULES, parseModules, shownTab, visibleTabs } from './modules.ts';
+import { careerPanelOpen, MODULES, parseModules, shownTab, visibleTabs } from './modules.ts';
 
 test('visibleTabs keeps Today first and the chosen modules in tab order', () => {
   assert.deepEqual(visibleTabs(['money', 'journal']), ['today', 'money', 'journal']);
@@ -39,4 +39,11 @@ test('parseModules rejects anything else', () => {
   assert.equal(parseModules('money'), null);
   assert.equal(parseModules([1]), null);
   assert.equal(parseModules(null), null);
+});
+
+test('careerPanelOpen needs onboarding finished and Career switched on', () => {
+  const done = '2026-11-12T00:00:00.000Z';
+  assert.equal(careerPanelOpen({ modules: ['career'], onboardedAt: done }), true);
+  assert.equal(careerPanelOpen({ modules: ['money'], onboardedAt: done }), false);
+  assert.equal(careerPanelOpen({ modules: ['career'], onboardedAt: null }), false);
 });

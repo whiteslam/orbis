@@ -47,7 +47,7 @@ export default async function Page() {
     return (
       <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
         <PersonSettingsProvider value={settings}>
-          <Onboarding initialName={profile.profile?.preferredName ?? ''} aiAvailable={ai.state === 'ready'} externalDocumentIndexing={ai.externalDocumentIndexing} />
+          <Onboarding initialName={profile.profile?.preferredName ?? ''} initialAi={ai.aiEnabled} aiAvailable={ai.state === 'ready'} externalDocumentIndexing={ai.externalDocumentIndexing} />
         </PersonSettingsProvider>
       </AppLockGuard>
     );

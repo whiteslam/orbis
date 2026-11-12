@@ -22,6 +22,23 @@ export function isValidTimeZone(value: string): boolean {
   }
 }
 
+// ICU (Chrome, Node) still lists and resolves some zones by their old names.
+// Orbis stores and offers the current IANA name, so a stored zone always
+// matches one in the picker and the same place never appears twice.
+// A Map, so an untrusted string can't reach Object.prototype through the lookup.
+const ZONE_RENAMES: Map<string, string> = new Map([
+  ['Asia/Calcutta', 'Asia/Kolkata'],
+  ['Asia/Saigon', 'Asia/Ho_Chi_Minh'],
+  ['Asia/Katmandu', 'Asia/Kathmandu'],
+  ['Asia/Rangoon', 'Asia/Yangon'],
+  ['Europe/Kiev', 'Europe/Kyiv'],
+]);
+
+/** The current IANA name for a zone ICU may report by an old one ('Asia/Calcutta' → 'Asia/Kolkata'); anything else unchanged. */
+export function canonicalTimeZone(zone: string): string {
+  return ZONE_RENAMES.get(zone) ?? zone;
+}
+
 export function isValidCurrency(value: string): boolean {
   if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value)) return false;
   // Intl.NumberFormat accepts any well-formed code (even 'XYZ'), so check the real list too.
@@ -49,7 +66,7 @@ function isModuleId(value: unknown): value is ModuleId {
 
 /** Turns a user_settings row (or no row) into settings. Anything invalid or missing falls back to the defaults. */
 export function normalizeSettings(row: Record<string, unknown> | null): PersonSettings {
-  const timeZone = row && typeof row.timezone === 'string' && isValidTimeZone(row.timezone) ? row.timezone : DEFAULT_PERSON_LOCALE.timeZone;
+  const timeZone = row && typeof row.timezone === 'string' && isValidTimeZone(row.timezone) ? canonicalTimeZone(row.timezone) : DEFAULT_PERSON_LOCALE.timeZone;
   const currency = row && typeof row.currency === 'string' && isValidCurrency(row.currency) ? row.currency : DEFAULT_PERSON_LOCALE.currency;
   const locale = row && typeof row.locale === 'string' && isValidLocale(row.locale) ? row.locale : DEFAULT_PERSON_LOCALE.locale;
   // A missing or malformed list means every module; a real list keeps only known ones, once each.

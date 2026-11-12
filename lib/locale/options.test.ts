@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { canonicalTimeZone, normalizeSettings } from './person.ts';
 import { COMMON_CURRENCIES, currencyOptions, guessFromBrowser, timeZoneOptions } from './options.ts';
 
 test('the browser zone prefills the zone; India gets INR, everyone else USD', () => {
@@ -30,4 +31,10 @@ test('time zones: include the current one and UTC, use Asia/Kolkata not Asia/Cal
   assert.ok(!list.includes('Asia/Calcutta'));
   assert.equal(new Set(list).size, list.length);
   assert.deepEqual(list, [...list].sort());
+});
+
+test('the zone settings read back from an aliased row is always one of the options', () => {
+  const zone = normalizeSettings({ timezone: 'Asia/Calcutta' }).timeZone;
+  assert.ok(timeZoneOptions(zone).includes(zone));
+  assert.ok(timeZoneOptions('Asia/Calcutta').includes(canonicalTimeZone('Asia/Calcutta')));
 });

@@ -3,7 +3,7 @@
  * module they chose (lib/locale/person.ts). Pure, so the rule is tested.
  */
 
-import { ALL_MODULES, type ModuleId } from '@/lib/locale/person';
+import { ALL_MODULES, type ModuleId, type PersonSettings } from '@/lib/locale/person';
 import { TABS, type TabId } from '@/lib/shell/tabs';
 
 const DETAIL: Record<ModuleId, string> = {
@@ -36,4 +36,9 @@ export function parseModules(value: unknown): ModuleId[] | null {
   if (!Array.isArray(value)) return null;
   if (!value.every((item) => typeof item === 'string' && (ALL_MODULES as string[]).includes(item))) return null;
   return ALL_MODULES.filter((id) => value.includes(id));
+}
+
+/** The Career panel (/active/career) opens only for someone who finished onboarding and kept Career on. */
+export function careerPanelOpen(settings: Pick<PersonSettings, 'modules' | 'onboardedAt'>): boolean {
+  return settings.onboardedAt !== null && settings.modules.includes('career');
 }

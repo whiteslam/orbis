@@ -26,13 +26,14 @@ const STEPS = [
  * form, so Enter moves on; the heading takes focus on every step, and errors
  * are announced.
  */
-export function Onboarding({ initialName, aiAvailable, externalDocumentIndexing }: Readonly<{ initialName: string; aiAvailable: boolean; externalDocumentIndexing: boolean }>) {
+export function Onboarding({ initialName, initialAi, aiAvailable, externalDocumentIndexing }: Readonly<{ initialName: string; initialAi: boolean; aiAvailable: boolean; externalDocumentIndexing: boolean }>) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName);
   const [place, setPlace] = useState({ timeZone: DEFAULT_PERSON_LOCALE.timeZone, currency: DEFAULT_PERSON_LOCALE.currency });
   const [modules, setModules] = useState<ModuleId[]>([...ALL_MODULES]);
-  const [ai, setAi] = useState(false);
+  // Starts where the person's AI setting already is, so finishing never changes it unasked.
+  const [ai, setAi] = useState(initialAi);
   const [message, setMessage] = useState('');
   const [pending, startTransition] = useTransition();
   const heading = useRef<HTMLHeadingElement>(null);

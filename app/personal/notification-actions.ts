@@ -9,6 +9,8 @@ import { localClock, type Slot } from '@/lib/notifications/schedule';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { getPersonSettings } from '@/lib/locale/repository';
+import { canonicalTimeZone } from '@/lib/locale/person';
+import { writePersonTimeZone } from '@/lib/locale/settings-store';
 
 const MAX_DEVICES = 10;
 
@@ -29,7 +31,8 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
 
   let timezone: string;
   try {
-    timezone = new Intl.DateTimeFormat('en-US', { timeZone: input.timezone }).resolvedOptions().timeZone;
+    // ICU resolves some zones to old names (Asia/Kolkata → Asia/Calcutta); store the current one.
+    timezone = canonicalTimeZone(new Intl.DateTimeFormat('en-US', { timeZone: input.timezone }).resolvedOptions().timeZone);
   } catch {
     return { success: false, message: 'Choose a valid time zone.' };
   }
@@ -46,6 +49,8 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
 
   const { error } = await auth.supabase.from('notification_preferences').upsert(row, { onConflict: 'user_id' });
   if (error) return { success: false, message: isMissingTable(error) ? setupMessage : 'Settings could not be saved. Try again.' };
+  // Keep the person's own zone (Settings → You) in step. Best effort: the notification row is saved either way.
+  await writePersonTimeZone(auth.supabase, auth.userId, timezone);
   revalidatePath('/active');
   return { success: true, message: input.enabled ? 'Notification settings saved.' : 'Notifications are off.' };
 }

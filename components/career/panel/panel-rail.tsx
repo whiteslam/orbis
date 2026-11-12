@@ -9,6 +9,8 @@ import { useTheme } from '@/components/career/panel/panel-hooks';
 import { TAB_ICONS } from '@/components/shell/tab-icons';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import { TABS, appHref } from '@/lib/shell/tabs';
+import { visibleTabs } from '@/lib/shell/modules';
+import { usePersonSettings } from '@/components/locale/person-locale';
 
 type ActionProps = Readonly<{
   onSearch: () => void;
@@ -71,10 +73,12 @@ function RailButton({ label, hint, onClick, children, badge, busy = false }: Rea
  * actions and "Back to the app".
  */
 function AppNav() {
+  const { modules } = usePersonSettings();
+  const shown = visibleTabs(modules);
   return (
     <nav className="cp-rail-apps" aria-label="Orbis">
       <ul>
-        {TABS.map(({ id, label }) => {
+        {TABS.filter(({ id }) => shown.includes(id)).map(({ id, label }) => {
           const Icon = TAB_ICONS[id];
           const here = id === 'career';
           return (

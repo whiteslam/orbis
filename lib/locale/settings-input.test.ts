@@ -32,3 +32,9 @@ test('anything that is not an object is rejected', () => {
   assert.equal(parseSettingsInput(null).ok, false);
   assert.equal(parseSettingsInput([]).ok, false);
 });
+
+test('a legacy zone alias is saved under its IANA name', () => {
+  const parsed = parseSettingsInput({ ...good, timeZone: 'Asia/Calcutta' });
+  assert.ok(parsed.ok);
+  assert.equal(parsed.value.timeZone, 'Asia/Kolkata');
+});

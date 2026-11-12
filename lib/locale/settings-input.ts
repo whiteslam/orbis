@@ -3,7 +3,7 @@
  * Settings or onboarding. Pure, so the server actions share one tested rule.
  */
 
-import { isValidCurrency, isValidLocale, isValidTimeZone, type ModuleId } from '@/lib/locale/person';
+import { canonicalTimeZone, isValidCurrency, isValidLocale, isValidTimeZone, type ModuleId } from '@/lib/locale/person';
 import { parseModules } from '@/lib/shell/modules';
 
 /** `locale` is left out when the form doesn't ask for it (onboarding), so a saved one is kept. */
@@ -19,5 +19,5 @@ export function parseSettingsInput(value: unknown): ParsedSettings {
   if (input.locale !== undefined && (typeof input.locale !== 'string' || !isValidLocale(input.locale))) return { ok: false, message: 'Pick a valid language.' };
   const modules = parseModules(input.modules);
   if (!modules) return { ok: false, message: 'Pick modules from the list.' };
-  return { ok: true, value: { timeZone: input.timeZone, currency: input.currency, locale: input.locale, modules } };
+  return { ok: true, value: { timeZone: canonicalTimeZone(input.timeZone), currency: input.currency, locale: input.locale, modules } };
 }
