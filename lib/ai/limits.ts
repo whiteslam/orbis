@@ -73,19 +73,28 @@ function asLimits(value: unknown): PlanLimits | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as PlanLimits) : null;
 }
 
+/** The plan embedded in an account_plans read: an object (many-to-one), or a one-item list from an older PostgREST. */
+function embeddedLimits(row: unknown): PlanLimits | null {
+  const plans = (row as { plans?: unknown } | null)?.plans;
+  const plan = Array.isArray(plans) ? plans[0] : plans;
+  return asLimits((plan as { limits?: unknown } | null | undefined)?.limits);
+}
+
 /**
  * Today's allowance for one feature, from the person's plan (the 'free' plan
- * when they have no row). Any error, a missing table included, gives the
- * fallback, so this never blocks a feature that worked before.
+ * when they have no row). One read when they have a row: the plan's limits
+ * come embedded in it; a second read of 'free' only when they don't. Any
+ * error, a missing table included, gives the fallback, so this never blocks a
+ * feature that worked before.
  */
 export async function dailyLimit(admin: Admin, userId: string, feature: AiQuotaFeature): Promise<number> {
   try {
-    const account = await admin.from('account_plans').select('plan_id').eq('user_id', userId).maybeSingle();
+    const account = await admin.from('account_plans').select('plans(limits)').eq('user_id', userId).maybeSingle();
     if (account.error) return FALLBACK_LIMITS[feature];
-    const planId = typeof account.data?.plan_id === 'string' ? account.data.plan_id : DEFAULT_PLAN;
-    const plan = await admin.from('plans').select('limits').eq('id', planId).maybeSingle();
-    if (plan.error) return FALLBACK_LIMITS[feature];
-    return limitFor(feature, asLimits(plan.data?.limits));
+    if (account.data) return limitFor(feature, embeddedLimits(account.data));
+    const free = await admin.from('plans').select('limits').eq('id', DEFAULT_PLAN).maybeSingle();
+    if (free.error) return FALLBACK_LIMITS[feature];
+    return limitFor(feature, asLimits(free.data?.limits));
   } catch {
     return FALLBACK_LIMITS[feature];
   }

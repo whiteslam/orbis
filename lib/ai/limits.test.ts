@@ -48,11 +48,13 @@ test('every fallback is within its cap', () => {
 
 type Reply = { data: unknown; error: unknown };
 function fakeAdmin(replies: Record<string, Reply | 'throw'>) {
-  return {
+  const reads: Array<{ table: string; columns: string; value: unknown }> = [];
+  const admin = {
     from: (table: string) => ({
-      select: () => ({
-        eq: () => ({
+      select: (columns: string) => ({
+        eq: (_column: string, value: unknown) => ({
           maybeSingle: async () => {
+            reads.push({ table, columns, value });
             const reply = replies[table];
             if (reply === 'throw') throw new Error('network');
             return reply ?? { data: null, error: null };
@@ -61,22 +63,33 @@ function fakeAdmin(replies: Record<string, Reply | 'throw'>) {
       }),
     }),
   } as unknown as Parameters<typeof dailyLimit>[0];
+  return Object.assign(admin, { reads });
 }
 
-test('dailyLimit reads the person\'s plan', async () => {
-  const admin = fakeAdmin({ account_plans: { data: { plan_id: 'owner' }, error: null }, plans: { data: { limits: { home_brief: 80 } }, error: null } });
+test("dailyLimit reads the person's plan in one embedded read", async () => {
+  const admin = fakeAdmin({ account_plans: { data: { plans: { limits: { home_brief: 80 } } }, error: null } });
   assert.equal(await dailyLimit(admin, 'u', 'home_brief'), 80);
   assert.equal(await dailyLimit(admin, 'u', 'ask_orbis'), FALLBACK_LIMITS.ask_orbis);
+  assert.deepEqual(admin.reads.map((read) => `${read.table}:${read.columns}`), ['account_plans:plans(limits)', 'account_plans:plans(limits)']);
+});
+
+test('dailyLimit accepts the embedded plan as a one-item list too', async () => {
+  const admin = fakeAdmin({ account_plans: { data: { plans: [{ limits: { home_brief: 60 } }] }, error: null } });
+  assert.equal(await dailyLimit(admin, 'u', 'home_brief'), 60);
 });
 
 test('dailyLimit uses the free plan when there is no row, and the fallback when it is empty', async () => {
-  const admin = fakeAdmin({ plans: { data: { limits: {} }, error: null } });
-  assert.equal(await dailyLimit(admin, 'u', 'health_plan'), FALLBACK_LIMITS.health_plan);
+  const admin = fakeAdmin({ plans: { data: { limits: { health_plan: 12 } }, error: null } });
+  assert.equal(await dailyLimit(admin, 'u', 'health_plan'), 12);
+  assert.deepEqual(admin.reads.map((read) => [read.table, read.value]), [['account_plans', 'u'], ['plans', 'free']]);
+  const empty = fakeAdmin({ plans: { data: { limits: {} }, error: null } });
+  assert.equal(await dailyLimit(empty, 'u', 'health_plan'), FALLBACK_LIMITS.health_plan);
 });
 
 test('any error gives the fallback', async () => {
   const failed = { data: null, error: { code: '42P01' } };
   assert.equal(await dailyLimit(fakeAdmin({ account_plans: failed }), 'u', 'home_brief'), FALLBACK_LIMITS.home_brief);
-  assert.equal(await dailyLimit(fakeAdmin({ account_plans: { data: { plan_id: 'x' }, error: null }, plans: failed }), 'u', 'home_brief'), FALLBACK_LIMITS.home_brief);
+  assert.equal(await dailyLimit(fakeAdmin({ plans: failed }), 'u', 'home_brief'), FALLBACK_LIMITS.home_brief);
+  assert.equal(await dailyLimit(fakeAdmin({ account_plans: { data: { plans: null }, error: null } }), 'u', 'home_brief'), FALLBACK_LIMITS.home_brief);
   assert.equal(await dailyLimit(fakeAdmin({ account_plans: 'throw' }), 'u', 'home_brief'), FALLBACK_LIMITS.home_brief);
 });

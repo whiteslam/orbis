@@ -5,6 +5,12 @@ import { scrubEvent } from './scrub';
 // collect nearly everything, so every kind is switched off here. scrubEvent in
 // beforeSend is the second line of defence. Only the error, its stack and the
 // route it came from are sent.
+
+/** Console breadcrumbs carry whatever was logged (data included), so they are never sent. */
+export function dropConsoleBreadcrumb<B extends { category?: string; message?: string }>(breadcrumb: B): B | null {
+  return breadcrumb.category === 'console' ? null : breadcrumb;
+}
+
 export const SENTRY_OPTIONS = {
   tracesSampleRate: 0.1,
   dataCollection: {
@@ -22,4 +28,5 @@ export const SENTRY_OPTIONS = {
   },
   beforeSend: scrubEvent,
   beforeSendTransaction: scrubEvent,
+  beforeBreadcrumb: dropConsoleBreadcrumb,
 };

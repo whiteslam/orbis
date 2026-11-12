@@ -53,7 +53,7 @@ export function ModuleChoices({ idPrefix, value, onChange, disabled }: Readonly<
           <span><strong>{module.label}</strong><small>{module.detail}</small></span>
         </label>
       ))}
-      <p className="fd-note tight">Today is always there. You can change these any time in Settings → You.</p>
+      <p className="fd-note tight">Today is always there. Switching one off only hides its tab. You can change these any time in Settings → You.</p>
     </fieldset>
   );
 }

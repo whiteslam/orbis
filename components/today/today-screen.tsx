@@ -140,7 +140,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   return (
     <div className="screen-body field td">
       <header className="fd-top">
-        {/* The date is rendered in IST on both sides, but the day can turn between them. */}
+        {/* The date is rendered in the person's own zone on both sides, but the day can turn between them. */}
         <div className="fd-brand">
           <OrbisMark size={26} />
           <p className="fd-date" suppressHydrationWarning>{today}</p>

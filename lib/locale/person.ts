@@ -87,3 +87,14 @@ export function settingsFromRead(data: Record<string, unknown> | null, failed: b
   if (failed) return { ...normalizeSettings(null), onboardedAt: ONBOARDED_UNKNOWN };
   return normalizeSettings(data);
 }
+
+/**
+ * The zone to schedule a person's reminders and scans in. Their settings row
+ * (user_settings) is the record. The zone saved with their notifications is
+ * used only when that row couldn't be read or doesn't exist yet; then the default.
+ */
+export function zoneForPerson(settingsZone: string | null | undefined, notificationZone: unknown): string {
+  if (typeof settingsZone === 'string' && isValidTimeZone(settingsZone)) return canonicalTimeZone(settingsZone);
+  if (typeof notificationZone === 'string' && isValidTimeZone(notificationZone)) return canonicalTimeZone(notificationZone);
+  return DEFAULT_PERSON_LOCALE.timeZone;
+}

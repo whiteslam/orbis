@@ -11,7 +11,8 @@ import { mayPush } from '@/lib/headsups/push-rules';
 import { wordFinding } from '@/lib/headsups/word';
 import { SCAN_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
 import { localDate } from '@/lib/locale/dates';
-import { getPersonSettingsAdmin } from '@/lib/locale/repository';
+import { getPersonZonesAdmin, personZoneAdmin } from '@/lib/locale/repository';
+import { zoneForPerson } from '@/lib/locale/person';
 import { pushToUser } from '@/lib/notifications/push';
 import { admittedUserIds } from '@/lib/security/admission';
 
@@ -167,16 +168,18 @@ export async function scanDue(admin: Admin, now: Date, deadline: number) {
     admin.from('notification_preferences').select('user_id,timezone'),
   ]);
   if (prefs.error) throw new Error('Heads-up preferences could not be loaded.');
-  const zones = new Map((notify.data ?? []).map((row) => [row.user_id as string, row.timezone as string]));
+  const notifyZones = new Map((notify.data ?? []).map((row) => [row.user_id as string, row.timezone as unknown]));
   // Anyone signed in can write their own heads-up preferences; only admitted accounts are scanned.
   const admitted = await admittedUserIds(admin, (prefs.data ?? []).map((row) => row.user_id as string));
-  // A saved notification zone wins; without one, the person's own zone from their settings.
-  const people = await Promise.all((prefs.data ?? []).filter((row) => admitted.has(row.user_id as string)).map(async (row) => ({
+  const rows = (prefs.data ?? []).filter((row) => admitted.has(row.user_id as string));
+  // The person's own zone (user_settings) wins; the notification zone only when that can't be read.
+  const settingsZones = await getPersonZonesAdmin(admin, rows.map((row) => row.user_id as string));
+  const people = rows.map((row) => ({
     userId: row.user_id as string,
-    timeZone: zones.get(row.user_id) ?? (await getPersonSettingsAdmin(admin, row.user_id as string)).timeZone,
+    timeZone: zoneForPerson(settingsZones?.get(row.user_id as string), notifyZones.get(row.user_id as string)),
     lastScanDate: row.last_scan_date as string | null,
     disabled: (row.disabled_kinds ?? []) as string[],
-  })));
+  }));
   const disabledBy = new Map(people.map((person) => [person.userId, person.disabled]));
   const lastScanBy = new Map(people.map((person) => [person.userId, person.lastScanDate]));
   const counts: ScanCounts = { scanned: 0, findings: 0, failed: 0 };
@@ -217,7 +220,7 @@ async function pushOne(admin: Admin, headsup: WaitingHeadsup, now: Date): Promis
     admin.from('notification_preferences').select('enabled,timezone').eq('user_id', headsup.user_id).maybeSingle(),
     admin.from('push_subscriptions').select('endpoint', { count: 'exact', head: true }).eq('user_id', headsup.user_id),
   ]);
-  const clock = localNow(now, prefs.data?.timezone ?? (await getPersonSettingsAdmin(admin, headsup.user_id)).timeZone);
+  const clock = localNow(now, await personZoneAdmin(admin, headsup.user_id, prefs.data?.timezone));
   const { count: pushesToday } = await admin.from('notification_log').select('id', { count: 'exact', head: true }).eq('user_id', headsup.user_id).eq('slot', 'headsup').eq('local_date', clock.date);
   const allowed = mayPush(
     { urgency: headsup.urgency, createdAt: headsup.created_at, pushedAt: headsup.pushed_at, snoozedUntil: headsup.snoozed_until, status: headsup.status },

@@ -3,8 +3,8 @@ import { supabaseAdmin, TEST_PIN } from '../support/env';
 
 // First run: someone with no user_settings row walks through onboarding,
 // switches Social off, and lands on Today without a Social tab.
-// Run against staging only: it rewrites the test user's settings, profile and
-// notification zone, and puts each back afterwards.
+// Run against staging only: it rewrites the test user's settings, profile,
+// AI switch and notification zone, and puts each back afterwards.
 
 // The browser's zone prefills the place step: India gets INR.
 test.use({ timezoneId: 'Asia/Kolkata' });
@@ -17,8 +17,11 @@ test('onboarding: a new person chooses their modules and lands on Today without 
   const [settingsBefore] = await admin.selectRows<Row>('user_settings', `select=*&${own}`);
   const [profileBefore] = await admin.selectRows<Row>('user_personal_profiles', `select=*&${own}`);
   const [notifyBefore] = await admin.selectRows<Row>('notification_preferences', `select=*&${own}`);
+  const [aiBefore] = await admin.selectRows<Row>('ai_preferences', `select=*&${own}`);
   // No settings row is what makes this person new.
   await admin.deleteRows('user_settings', own);
+  // The AI step starts off, whatever another spec left behind.
+  await admin.upsertRow('ai_preferences', { user_id: userA.id, ai_enabled: false });
   try {
     await page.goto('/active');
     const first = page.getByRole('heading', { name: 'What should Orbis call you?' });
@@ -83,5 +86,7 @@ test('onboarding: a new person chooses their modules and lands on Today without 
     if (profileBefore) await admin.upsertRow('user_personal_profiles', profileBefore);
     else await admin.deleteRows('user_personal_profiles', own);
     if (notifyBefore) await admin.upsertRow('notification_preferences', notifyBefore);
+    if (aiBefore) await admin.upsertRow('ai_preferences', aiBefore);
+    else await admin.deleteRows('ai_preferences', own);
   }
 });

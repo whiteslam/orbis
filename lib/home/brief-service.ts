@@ -23,7 +23,9 @@ import { getPersonSettings } from '@/lib/locale/repository';
 // to not heard about, which is most of a day's rewrites. Eight a day covers
 // that and costs about ₹0.72 even when every one falls through to Claude.
 // After the eighth, Home shows Orbis's own wording, which is always accurate,
-// until tomorrow (the person's time). It has its own counter (lib/ai/quota.ts): a background brief
+// until the quota day turns, which is midnight India time for everyone (the claim
+// function in Postgres counts by Asia/Kolkata, not the person's own zone). It has
+// its own counter (lib/ai/quota.ts): a background brief
 // must never eat a request the user wanted to spend on asking a question.
 
 export type BriefResult =

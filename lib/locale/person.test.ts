@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { ALL_MODULES, canonicalTimeZone, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings, ONBOARDED_UNKNOWN, settingsFromRead } from './person.ts';
+import { ALL_MODULES, canonicalTimeZone, DEFAULT_PERSON_LOCALE, isValidCurrency, isValidLocale, isValidTimeZone, normalizeSettings, ONBOARDED_UNKNOWN, settingsFromRead, zoneForPerson } from './person.ts';
 
 test('a missing row gives the India defaults, every module, and not onboarded', () => {
   assert.deepEqual(normalizeSettings(null), { ...DEFAULT_PERSON_LOCALE, modules: ALL_MODULES, onboardedAt: null });
@@ -59,4 +59,21 @@ test('a legacy zone alias reads as the IANA name the pickers list', () => {
   assert.equal(normalizeSettings({ timezone: 'Asia/Calcutta' }).timeZone, 'Asia/Kolkata');
   assert.equal(canonicalTimeZone('Asia/Calcutta'), 'Asia/Kolkata');
   assert.equal(canonicalTimeZone('Europe/London'), 'Europe/London');
+});
+
+test('the settings zone wins over the notification zone', () => {
+  assert.equal(zoneForPerson('America/Los_Angeles', 'Asia/Kolkata'), 'America/Los_Angeles');
+  assert.equal(zoneForPerson('Asia/Calcutta', 'Europe/London'), 'Asia/Kolkata');
+});
+
+test('the notification zone is used only when there is no readable settings zone', () => {
+  assert.equal(zoneForPerson(null, 'Europe/London'), 'Europe/London');
+  assert.equal(zoneForPerson(undefined, 'Europe/Kiev'), 'Europe/Kyiv');
+  assert.equal(zoneForPerson('Mars/Base', 'Europe/London'), 'Europe/London');
+});
+
+test('with neither zone usable, the default', () => {
+  assert.equal(zoneForPerson(null, null), DEFAULT_PERSON_LOCALE.timeZone);
+  assert.equal(zoneForPerson(undefined, 'Nowhere/Real'), DEFAULT_PERSON_LOCALE.timeZone);
+  assert.equal(zoneForPerson(null, 42), DEFAULT_PERSON_LOCALE.timeZone);
 });

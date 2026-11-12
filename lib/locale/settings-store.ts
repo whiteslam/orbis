@@ -1,7 +1,6 @@
 import 'server-only';
 
 import type { SignedInSession } from '@/lib/auth/session';
-import { canonicalTimeZone } from '@/lib/locale/person';
 import type { SettingsInput } from '@/lib/locale/settings-input';
 import { isMissingTable } from '@/lib/supabase/errors';
 
@@ -10,9 +9,10 @@ import { isMissingTable } from '@/lib/supabase/errors';
  * is what ends onboarding. A locale left undefined is not written, so a new row
  * gets the default and an existing one keeps its own.
  *
- * Heads-ups, the career watch and notifications read the zone kept in
- * notification_preferences first, so when that row exists its zone is moved
- * in step. That second write is best effort: the settings row is the record.
+ * This row is the one record of the person's zone: heads-ups, the career
+ * watch and notifications read it first. notification_preferences keeps a
+ * copy, used only when this row can't be read, so when that row exists its
+ * zone is moved in step. That second write is best effort.
  */
 export async function writePersonSettings(supabase: SignedInSession['supabase'], userId: string, input: SettingsInput, { onboarded = false } = {}): Promise<boolean> {
   const row: Record<string, unknown> = { user_id: userId, timezone: input.timeZone, currency: input.currency, modules: input.modules };
@@ -24,16 +24,6 @@ export async function writePersonSettings(supabase: SignedInSession['supabase'],
   const { error: zoneError } = await supabase.from('notification_preferences').update({ timezone: input.timeZone }).eq('user_id', userId);
   if (zoneError && !isMissingTable(zoneError)) console.error('Keeping the notification time zone in step failed', zoneError);
   return true;
-}
-
-/**
- * The other direction: Notifications saved a zone, so the settings row takes it
- * too, by its current IANA name. Only the zone is written; a missing row is
- * created with the column defaults for everything else (onboarded_at, modules
- * and currency are left alone).
- */
-export async function writePersonTimeZone(supabase: SignedInSession['supabase'], userId: string, timeZone: string): Promise<boolean> {
-  return upsertSettings(supabase, { user_id: userId, timezone: canonicalTimeZone(timeZone) });
 }
 
 async function upsertSettings(supabase: SignedInSession['supabase'], row: Record<string, unknown>): Promise<boolean> {

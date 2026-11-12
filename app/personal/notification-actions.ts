@@ -8,9 +8,8 @@ import { deliverSlot } from '@/lib/notifications/deliver';
 import { localClock, type Slot } from '@/lib/notifications/schedule';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
 import { isMissingTable } from '@/lib/supabase/errors';
-import { getPersonSettings } from '@/lib/locale/repository';
-import { canonicalTimeZone } from '@/lib/locale/person';
-import { writePersonTimeZone } from '@/lib/locale/settings-store';
+import { getPersonSettings, personZoneAdmin } from '@/lib/locale/repository';
+import { ONBOARDED_UNKNOWN } from '@/lib/locale/person';
 
 const MAX_DEVICES = 10;
 
@@ -27,17 +26,14 @@ function slotForHour(hour: number): Slot {
 export async function saveNotificationPreferencesAction(input: NotificationPreferences) {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to update notifications.' };
-  if (!input || typeof input !== 'object' || typeof input.enabled !== 'boolean' || !input.slots || typeof input.timezone !== 'string') return { success: false, message: 'These settings are invalid.' };
+  if (!input || typeof input !== 'object' || typeof input.enabled !== 'boolean' || !input.slots) return { success: false, message: 'These settings are invalid.' };
 
-  let timezone: string;
-  try {
-    // ICU resolves some zones to old names (Asia/Kolkata → Asia/Calcutta); store the current one.
-    timezone = canonicalTimeZone(new Intl.DateTimeFormat('en-US', { timeZone: input.timezone }).resolvedOptions().timeZone);
-  } catch {
-    return { success: false, message: 'Choose a valid time zone.' };
-  }
-
-  const row: Record<string, unknown> = { user_id: auth.userId, enabled: input.enabled, timezone };
+  // The zone is the person's own (Settings → You, user_settings); one sent from
+  // the page is ignored, so a stale form can't move it back. It is copied here
+  // for older readers. If settings couldn't be read, the saved copy is left as it is.
+  const settings = await getPersonSettings(auth.userId);
+  const row: Record<string, unknown> = { user_id: auth.userId, enabled: input.enabled };
+  if (settings.onboardedAt !== ONBOARDED_UNKNOWN) row.timezone = settings.timeZone;
   for (const slot of NOTIFICATION_SLOTS) {
     const value = input.slots[slot.id];
     if (!value || typeof value.enabled !== 'boolean' || typeof value.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time)) {
@@ -49,8 +45,6 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
 
   const { error } = await auth.supabase.from('notification_preferences').upsert(row, { onConflict: 'user_id' });
   if (error) return { success: false, message: isMissingTable(error) ? setupMessage : 'Settings could not be saved. Try again.' };
-  // Keep the person's own zone (Settings → You) in step. Best effort: the notification row is saved either way.
-  await writePersonTimeZone(auth.supabase, auth.userId, timezone);
   revalidatePath('/active');
   return { success: true, message: input.enabled ? 'Notification settings saved.' : 'Notifications are off.' };
 }
@@ -104,7 +98,7 @@ export async function sendTestNotificationAction() {
 
   const admin = createAdminClient();
   const { data: prefs } = await admin.from('notification_preferences').select('timezone').eq('user_id', auth.userId).maybeSingle();
-  const timeZone = prefs?.timezone || (await getPersonSettings(auth.userId)).timeZone;
+  const timeZone = await personZoneAdmin(admin, auth.userId, prefs?.timezone);
   const now = new Date();
   const clock = localClock(now, timeZone);
 

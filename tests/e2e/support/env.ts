@@ -64,7 +64,11 @@ export function supabaseAdmin() {
     // Inserts a row, or replaces the one with the same primary key.
     async upsertRow(table: string, row: Record<string, unknown>) {
       const response = await fetch(`${url}/rest/v1/${table}`, { method: 'POST', headers: { ...headers, prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(row) });
-      if (!response.ok) throw new Error(`Could not write ${table}: ${response.status}`);
+      if (!response.ok) {
+        // The PostgREST error code rides along, so a caller can tell a missing table from a real failure.
+        const body = await response.json().catch(() => ({})) as { code?: string; message?: string };
+        throw Object.assign(new Error(`Could not write ${table}: ${response.status} ${body.code ?? ''} ${body.message ?? ''}`.trim()), { code: body.code });
+      }
     },
     // Signs in as a test user with the public key: what a browser holding that user's session could do.
     async userToken(email: string, password: string) {

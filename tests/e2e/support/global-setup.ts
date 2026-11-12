@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { chromium, type Browser, type FullConfig } from '@playwright/test';
 import { AUTH_DIR, TEST_PIN, USERS_FILE, supabaseAdmin, type TestUser, type TestUsers } from './env';
 import { APP_PATH } from './fixtures';
+import { isMissingTable } from '../../../lib/supabase/errors';
 
 // Signs a fresh user in, sets the device PIN every new account must choose, and saves the session.
 async function saveSignedInState(browser: Browser, baseURL: string, user: TestUser) {
@@ -36,8 +37,11 @@ export default async function globalSetup(config: FullConfig) {
     const id = await admin.createUser(email, password);
     // Mark them onboarded, as every existing account is, so the suite opens on Today.
     // tests/e2e/onboarding/first-run.spec.ts clears this row to walk through first run.
-    // Without the user_settings migration nobody is sent to onboarding, so a failed write is fine.
-    await admin.upsertRow('user_settings', { user_id: id, onboarded_at: new Date().toISOString() }).catch(() => undefined);
+    // Without the user_settings migration nobody is sent to onboarding, so only a missing table is fine.
+    await admin.upsertRow('user_settings', { user_id: id, onboarded_at: new Date().toISOString() }).catch((error: unknown) => {
+      if (isMissingTable(error as { code?: string })) return;
+      throw new Error(`Could not mark test user ${key} onboarded in user_settings; the suite would open on onboarding. ${error instanceof Error ? error.message : String(error)}`);
+    });
     users[key] = { id, email, password, storageState: path.join(AUTH_DIR, `${key}.json`) };
   }));
   writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));

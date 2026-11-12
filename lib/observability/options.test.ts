@@ -26,3 +26,11 @@ test('transactions are scrubbed too', () => {
   assert.equal(sent.request?.query_string, undefined);
   assert.deepEqual(sent.request?.headers, {});
 });
+
+test('console breadcrumbs are dropped; others are kept', () => {
+  assert.equal(SENTRY_OPTIONS.beforeBreadcrumb({ category: 'console', message: 'a logged secret' }), null);
+  const navigation = { category: 'navigation', data: { from: '/', to: '/active' } };
+  assert.equal(SENTRY_OPTIONS.beforeBreadcrumb(navigation), navigation);
+  const plain = { message: 'no category' };
+  assert.equal(SENTRY_OPTIONS.beforeBreadcrumb(plain), plain);
+});

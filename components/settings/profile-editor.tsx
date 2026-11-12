@@ -8,7 +8,7 @@ import { saveSettings } from '@/app/onboarding/actions';
 import { safeAction } from '@/lib/client/safe-action';
 import { usePersonLocale, usePersonSettings } from '@/components/locale/person-locale';
 import { CurrencySelect, ModuleChoices, TimeZoneSelect } from '@/components/settings/place-fields';
-import type { ModuleId } from '@/lib/locale/person';
+import { ONBOARDED_UNKNOWN, type ModuleId } from '@/lib/locale/person';
 
 const EMPTY_PROFILE: PersonalProfile = { preferredName: '', role: '', aboutMe: '' };
 
@@ -117,9 +117,12 @@ function PlaceAndModules() {
   }, [savedKey]);
 
   const changed = `${draft.timeZone}|${draft.currency}|${draft.modules.join(',')}` !== savedKey;
+  // Settings couldn't be read, so the form shows defaults; saving them would overwrite the real ones.
+  const unreadable = settings.onboardedAt === ONBOARDED_UNKNOWN;
 
   return <form className="fd-form" aria-label="Place and tabs" onSubmit={(event) => {
     event.preventDefault();
+    if (unreadable) return;
     setMessage('');
     startTransition(async () => {
       const result = await safeAction(saveSettings)({ ...draft, locale: settings.locale });
@@ -132,8 +135,9 @@ function PlaceAndModules() {
     <CurrencySelect id="settings-currency" value={draft.currency} onChange={(currency) => setDraft({ ...draft, currency })} disabled={pending} locale={settings.locale} />
     <ModuleChoices idPrefix="settings-module" value={draft.modules} onChange={(modules) => setDraft({ ...draft, modules })} disabled={pending} />
     <div className="fd-act">
-      <button type="submit" disabled={pending || !changed}>{pending ? 'Saving…' : 'Save'}</button>
+      <button type="submit" disabled={pending || !changed || unreadable}>{pending ? 'Saving…' : 'Save'}</button>
     </div>
+    {unreadable && <p className="fd-note tight">Your settings couldn’t be loaded, so they can’t be saved right now. Refresh and try again.</p>}
     <div role="status">{message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</p>}</div>
   </form>;
 }

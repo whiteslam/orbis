@@ -28,8 +28,12 @@ grant select, insert, update on public.user_settings to service_role;
 
 -- Everyone who already has an account counts as onboarded. Their time zone
 -- carries over from their notification settings when they have one.
+-- Only on the first run, while the table is still empty: run again after
+-- sign-up opens, it must not mark someone part-way through onboarding as done.
+-- Safe to re-run: a later run inserts nothing.
 insert into public.user_settings (user_id, timezone, onboarded_at)
 select u.id, coalesce(np.timezone, 'Asia/Kolkata'), now()
 from auth.users u
 left join public.notification_preferences np on np.user_id = u.id
+where not exists (select 1 from public.user_settings)
 on conflict (user_id) do nothing;
