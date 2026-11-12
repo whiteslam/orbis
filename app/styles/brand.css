@@ -64,14 +64,44 @@
   --mark-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
 
   /* DM Sans, here as well as in glass.css: the public pages never load glass.css. */
-  --font-text: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --rounded: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The system font (SF Pro on Apple devices, Segoe UI Variable on Windows),
+     which the owner preferred to DM Sans: it stays legible at small sizes. */
+  --font-text: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
+  --rounded: ui-rounded, "SF Pro Rounded", var(--font-display);
 
   /* Type: DM Sans 300–600. Display 28–32 / 600, heading 18–20 / 600, body
      14–15 / 400, label 11–12 / 500 uppercase with 0.5px tracking. */
-  --t-display: 600 clamp(28px, 6vw, 32px)/1.1 var(--font-text);
-  --t-heading: 600 19px/1.25 var(--font-text);
-  --t-body: 400 14.5px/1.5 var(--font-text);
+  /* Apple's iOS text styles, for the parts taken from the Apple pass
+     (Settings, the lock screen, the desktop sidebar). */
+  --t-large-title: 700 34px/41px var(--font-display);
+  --t-title-1: 700 28px/34px var(--font-display);
+  --t-title-2: 700 22px/28px var(--font-display);
+  --t-title-3: 600 20px/25px var(--font-display);
+  --t-headline: 600 17px/22px var(--font-text);
+  --t-body: 400 17px/22px var(--font-text);
+  --t-callout: 400 16px/21px var(--font-text);
+  --t-subhead: 400 15px/20px var(--font-text);
+  --t-footnote: 400 13px/18px var(--font-text);
+  --t-caption: 400 12px/16px var(--font-text);
+  --t-display: var(--t-large-title);
+  --t-heading: var(--t-title-3);
+  --r-card: 22px;
+  --r-field: 10px;
+
+  /* Motion (lib/motion/spring.ts generates the springs; its test keeps them in step). */
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  /* Springs: use the -dur beside each as the transition's duration. --spring
+     for most things, --spring-snappy for small state changes, --spring-bouncy
+     only after a gesture carried momentum. */
+  --spring: linear(0, 0.0006 0.39%, 0.0056 1.18%, 0.0193 2.27%, 0.0447 3.59%, 0.0832 5.13%, 0.1347 6.87%, 0.1973 8.79%, 0.2684 10.88%, 0.345 13.14%, 0.4237 15.55%, 0.5016 18.11%, 0.5761 20.82%, 0.6452 23.66%, 0.7078 26.64%, 0.7629 29.75%, 0.8105 32.99%, 0.8507 36.35%, 0.8839 39.83%, 0.911 43.43%, 0.9327 47.14%, 0.9497 50.97%, 0.9629 54.91%, 0.973 58.96%, 0.9805 63.11%, 0.9861 67.37%, 0.9902 71.73%, 0.9932 76.2%, 0.9953 80.76%, 0.9968 85.43%, 0.9979 90.19%, 0.9986 95.05%, 1);
+  --spring-dur: 592ms;
+  --spring-snappy: linear(0, 0.0006 0.39%, 0.0056 1.18%, 0.0191 2.27%, 0.0444 3.59%, 0.0827 5.13%, 0.1338 6.87%, 0.1961 8.79%, 0.2669 10.88%, 0.3432 13.14%, 0.4217 15.55%, 0.4995 18.11%, 0.5739 20.82%, 0.6431 23.66%, 0.7057 26.64%, 0.761 29.75%, 0.8087 32.99%, 0.8491 36.35%, 0.8826 39.83%, 0.9099 43.43%, 0.9317 47.14%, 0.9489 50.97%, 0.9623 54.91%, 0.9725 58.96%, 0.9801 63.11%, 0.9858 67.37%, 0.99 71.73%, 0.993 76.2%, 0.9952 80.76%, 0.9967 85.43%, 0.9978 90.19%, 0.9985 95.05%, 1);
+  --spring-snappy-dur: 412ms;
+  --spring-bouncy: linear(0, 0.0005 0.39%, 0.0048 1.18%, 0.0168 2.27%, 0.0396 3.59%, 0.0753 5.13%, 0.1246 6.87%, 0.1867 8.79%, 0.2597 10.88%, 0.3408 13.14%, 0.4269 15.55%, 0.5143 18.11%, 0.5997 20.82%, 0.6801 23.66%, 0.7532 26.64%, 0.8174 29.75%, 0.8717 32.99%, 0.9159 36.35%, 0.9503 39.83%, 0.9759 43.43%, 0.9939 47.14%, 1.0054 50.97%, 1.0119 54.91%, 1.0148 58.96%, 1.015 63.11%, 1.0137 67.37%, 1.0116 71.73%, 1.0092 76.2%, 1.0068 80.76%, 1.0048 85.43%, 1.0031 90.19%, 1.0018 95.05%, 1);
+  --spring-bouncy-dur: 542ms;
 
   /* Shape: cards and fields are 16px. Small pills stay on --r-pill (999px),
      which is indistinguishable from 20px at pill heights. */
@@ -81,6 +111,20 @@
 
 :root:not([data-theme="light"]) {
   color-scheme: dark;
+
+  /* For the parts taken from the Apple pass: the tint is the brand teal, and
+     the fills and switches are Apple's. */
+  --tint: var(--brand-teal);
+  --tint-press: #36b393;
+  --tint-label: var(--brand-teal);
+  --on-tint: var(--brand-on-accent);
+  --tint-wash: rgba(66,204,168,.16);
+  --sys-fill: rgba(118,118,128,.24);
+  --sys-fill-2: rgba(118,118,128,.18);
+  --sys-secondary-strong: #a9adb4;
+  --seg-thumb: #3a3a3e;
+  --sys-switch: #30d158;
+  --sys-switch-off: rgba(120,120,128,.32);
 
   --sys-bg: var(--brand-bg);
   --sys-surface: var(--brand-s1);
@@ -172,6 +216,18 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
+
+  --tint: #0d6e5b;
+  --tint-press: #0a5a4a;
+  --tint-label: #0d6e5b;
+  --on-tint: #ffffff;
+  --tint-wash: rgba(13,110,91,.1);
+  --sys-fill: rgba(120,120,128,.12);
+  --sys-fill-2: rgba(120,120,128,.08);
+  --sys-secondary-strong: #4c525c;
+  --seg-thumb: #ffffff;
+  --sys-switch: #34c759;
+  --sys-switch-off: #e9e9ea;
 
   --sys-bg: #f4f6f8;
   --sys-surface: #ffffff;

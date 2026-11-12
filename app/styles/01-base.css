@@ -49,8 +49,8 @@
   --sys-stage: radial-gradient(circle at top, #ffffff 0, #eef5f7 42%, #e8eef5 100%);
 
   /* Type. */
-  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", sans-serif;
-  --rounded: "SF Pro Rounded", ui-rounded, -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+  --rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* Radius scale, replacing fourteen ad-hoc values. */
   --r-xs: 8px;

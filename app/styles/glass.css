@@ -1,7 +1,5 @@
 /* ─── Glass: frosted surfaces over a soft wallpaper (light) ─────────── */
 :root {
-  --font-text: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --rounded: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --gl-ground: #eceee9;
   --gl-fill: rgba(255,255,255,.58);
   --gl-fill-strong: rgba(255,255,255,.82);
