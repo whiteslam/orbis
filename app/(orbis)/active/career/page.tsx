@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { CareerPanel } from '@/components/career/panel/career-panel';
+import { PersonSettingsProvider } from '@/components/locale/person-locale';
 import { AppLockGuard } from '@/components/security/app-lock-guard';
 import { appGate } from '@/lib/auth/app-gate';
+import { getPersonSettings } from '@/lib/locale/repository';
 import { APP_LOCK_IDLE_MS } from '@/lib/security/app-lock';
 
 // Server actions on this page (search now, tailoring, Send) can run long.
@@ -14,10 +16,14 @@ export default async function Page() {
   // The same door as /active (lib/auth/app-gate.tsx): session, allowlist, lock, PIN.
   const gate = await appGate();
   if (!gate.open) return gate.render;
+  // The panel's dates (today's agenda, the week's pace, follow-ups) are the person's own, as on /active.
+  const settings = await getPersonSettings(gate.userId);
 
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <CareerPanel email={gate.email} />
+      <PersonSettingsProvider value={settings}>
+        <CareerPanel email={gate.email} />
+      </PersonSettingsProvider>
     </AppLockGuard>
   );
 }

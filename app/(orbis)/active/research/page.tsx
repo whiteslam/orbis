@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { PersonSettingsProvider } from '@/components/locale/person-locale';
 import { ResearchPanel } from '@/components/research/panel/research-panel';
 import { AppLockGuard } from '@/components/security/app-lock-guard';
 import { appGate } from '@/lib/auth/app-gate';
+import { getPersonSettings } from '@/lib/locale/repository';
 import { researchDeskAvailable } from '@/lib/research/access';
 import { dispatchConfig } from '@/lib/research/dispatch';
 import { APP_LOCK_IDLE_MS } from '@/lib/security/app-lock';
@@ -16,10 +18,14 @@ export default async function Page() {
   if (!gate.open) return gate.render;
   // Then the desk's own: owner only, and only once its worker is set up.
   if (!researchDeskAvailable(gate.email, dispatchConfig() !== null)) notFound();
+  // Nothing on the desk reads it yet, but every signed-in page hands it down, so a shared component never falls back to India time here.
+  const settings = await getPersonSettings(gate.userId);
 
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <ResearchPanel />
+      <PersonSettingsProvider value={settings}>
+        <ResearchPanel />
+      </PersonSettingsProvider>
     </AppLockGuard>
   );
 }

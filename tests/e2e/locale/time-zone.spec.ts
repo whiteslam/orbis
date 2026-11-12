@@ -16,6 +16,7 @@ test('journal: an entry is filed under the day in the person’s own time zone',
     // Start from nothing written on either side of the date line, so the editor is empty.
     const laToday = localDate(new Date(), ZONE);
     const indiaToday = localDate(new Date(), 'Asia/Kolkata');
+    if (laToday === indiaToday) test.info().annotations.push({ type: 'note', description: 'LA and India share a date right now; this run does not distinguish the zones' });
     await admin.deleteRows('journal_entries', `user_id=eq.${userA.id}&entry_date=in.(${laToday},${indiaToday})`);
 
     const text = `QA zone ${Date.now()}`;
