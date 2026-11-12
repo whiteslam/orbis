@@ -25,7 +25,7 @@ test('the hero names the beta, picks out "one calm page" in the brand gradient, 
   expect(style.image).toContain('linear-gradient');
   expect(style.clip).toBe('text');
   const chips = hero.locator('.wl-trust li');
-  await expect(chips).toHaveText(['Read-only connections', 'Never trains AI on your data', 'Private by default']);
+  await expect(chips).toHaveText(['Read-only connections', 'AI you can switch off', 'Private by default']);
 });
 
 test('the join form sits on the page with no panel around it, and has a gradient button', async ({ page }) => {
@@ -71,4 +71,18 @@ test('on a phone the header keeps Log in and Join, and nothing scrolls sideways'
   await expect(header.getByRole('link', { name: 'Join waitlist' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= globalThis.innerWidth + 1)).toBe(true);
   await context.close();
+});
+
+test('below the hero: a captioned sample brief, four privacy controls, and the page ends on a second join form', async ({ page }) => {
+  await page.goto('/');
+  const sample = page.locator('figure.wl-sample');
+  await expect(sample).toBeVisible();
+  await expect(sample.locator('figcaption')).toHaveText('A sample brief. The figures are made up.');
+  await expect(page.getByRole('heading', { level: 2, name: 'Only what you connect' })).toBeVisible();
+  await expect(page.locator('.wl-controls li')).toHaveCount(4);
+  await expect(page.getByText(/never trains/i)).toHaveCount(0);
+  const close = page.locator('.wl-close');
+  await expect(close.getByRole('heading', { level: 2, name: 'Your invite, when it’s your turn' })).toBeVisible();
+  await expect(close.getByRole('button', { name: /join the waitlist/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /join the waitlist/i })).toHaveCount(2);
 });
