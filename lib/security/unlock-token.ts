@@ -50,7 +50,14 @@ export const UNLOCK_METHODS = {
   password: ['password'],
   // A confirmation or sign-in link opened through /auth/callback.
   emailLink: ['otp', 'magiclink', 'email/signup', 'invite'],
+  // Signing in with an identity provider (Google) through /auth/callback.
+  oauth: ['oauth'],
 } as const satisfies Record<string, MethodRule>;
+
+/** True when the JWT's `amr` claim records an OAuth sign-in (Supabase names the method 'oauth'). */
+export function signedInWithOAuth(amr: unknown) {
+  return Array.isArray(amr) && amr.some((entry) => Boolean(entry) && typeof entry === 'object' && (entry as { method?: unknown }).method === 'oauth');
+}
 
 function methodAllowed(method: unknown, rule: MethodRule) {
   if (typeof method !== 'string') return false;

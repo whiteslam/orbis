@@ -3,21 +3,34 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import Link from 'next/link';
 import { UserKey } from 'lucide-react';
-import { signIn, signUp, type AuthActionState } from '@/app/auth/actions';
+import { signIn, signInWithGoogle, signUp, type AuthActionState } from '@/app/auth/actions';
 import { confirmUnlockAction } from '@/app/security/actions';
 import { createClient } from '@/lib/supabase/client';
 import { passkeyErrorMessage, supportsPasskeys } from '@/components/security/passkey-errors';
 import { safeAction } from '@/lib/client/safe-action';
 import { MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
 
+/** Google's four-colour "G"; lucide ships no brand marks. */
+function GoogleMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.27-2.09 3.57-5.17 3.57-8.81Z" />
+      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.07.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1A12 12 0 0 0 12 24Z" />
+      <path fill="#FBBC05" d="M5.27 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.27a12 12 0 0 0 0 10.76l4-3.1Z" />
+      <path fill="#EA4335" d="M12 4.77c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.62l4 3.1C6.22 6.88 8.87 4.77 12 4.77Z" />
+    </svg>
+  );
+}
+
 const initialState: AuthActionState = { error: null, message: null };
 
 /**
+ * `googleSignIn` shows the Google button, in both modes, only when the server has it switched on.
  * `signupOpen` is false while the installation is restricted to an allowlist.
  * The tab is hidden rather than disabled: offering a control that the server
  * will always refuse is worse than not offering it.
  */
-export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initialMessage?: string; signupOpen?: boolean }>) {
+export function AuthForm({ initialMessage, signupOpen = true, googleSignIn = false }: Readonly<{ initialMessage?: string; signupOpen?: boolean; googleSignIn?: boolean }>) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [state, setState] = useState<AuthActionState>({ ...initialState, message: initialMessage ?? null });
   const [isPending, startTransition] = useTransition();
@@ -67,6 +80,16 @@ export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initi
     startTransition(async () => {
       const { error } = await createClient().auth.signInWithPasskey();
       await finishPasskeySignIn(error);
+    });
+  }
+
+  function continueWithGoogle() {
+    autofill.current?.abort();
+    setState(initialState);
+    startTransition(async () => {
+      // On success the action redirects to Google, so only a refusal comes back.
+      const result = await signInWithGoogle();
+      setState(result);
     });
   }
 
@@ -122,12 +145,17 @@ export function AuthForm({ initialMessage, signupOpen = true }: Readonly<{ initi
         </button>
       </form>
 
-      {!isSignup && canUsePasskey && <>
-        <div className="auth-divider"><span>or</span></div>
+      {(googleSignIn || (!isSignup && canUsePasskey)) && <div className="auth-divider"><span>or</span></div>}
+      {googleSignIn && (
+        <button className="auth-passkey" type="button" onClick={continueWithGoogle} disabled={isPending}>
+          <GoogleMark /> Continue with Google
+        </button>
+      )}
+      {!isSignup && canUsePasskey && (
         <button className="auth-passkey" type="button" onClick={signInWithPasskey} disabled={isPending}>
           <UserKey size={17} strokeWidth={1.8} aria-hidden="true" /> Continue with a passkey
         </button>
-      </>}
+      )}
 
       {!isSignup && <Link className="auth-link auth-forgot" href="/forgot-password">Forgot password?</Link>}
     </>
