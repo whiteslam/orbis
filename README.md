@@ -1,6 +1,6 @@
 # Orbis
 
-Orbis is a private, single-user personal intelligence app: one phone-frame shell over your finances, health documents, investments, daily routines and social drafts, with an AI layer that only ever sees what you've explicitly turned on.
+Orbis is a private personal intelligence app: one phone-frame shell over your finances, health documents, investments, daily routines and social drafts, with an AI layer that only ever sees what you've explicitly turned on. It is multi-user: people create their own accounts, each with their own data, time zone, currency and chosen modules. Sign-up is closed until you open it (see "Opening sign-up" below).
 
 ## Features by tab
 
@@ -12,6 +12,8 @@ Orbis is a private, single-user personal intelligence app: one phone-frame shell
 - **Ask Orbis:** the button on every screen. Type or talk (voice in Indian languages when `SARVAM_API_KEY` is set) about your journal, spending, routines and steps.
 - **Settings:** from the avatar on any screen. You, Connections (every link read-only), AI & privacy, Notifications, Your day, Security (lock now, change PIN), Your data (export, delete, sign out).
 
+The first time someone signs in they get a short setup (time zone, currency, which tabs to show, the AI switch); after that Settings lets them change all of it.
+
 Signed-out visitors get a separate public site: a landing page, `/privacy`, `/terms`, `/support`, `/delete-account`, an offline fallback, `robots.txt`/`sitemap.xml` and a generated share image — all reading the site name and canonical URL from `lib/site.ts`.
 
 ## Architecture
@@ -19,7 +21,14 @@ Signed-out visitors get a separate public site: a landing page, `/privacy`, `/te
 - **One shell, App Router.** `components/app-shell.tsx` renders the whole signed-in experience as a single phone-frame client component with a tab switcher; only Today is in the first download, everything else is `next/dynamic`. Tabs and legacy links are defined in `lib/shell/tabs.ts`. Today's own data comes from two route handlers (`/api/home/brief`, `/api/home/portfolio`) rather than server actions, so they can be requested in parallel with a timeout instead of blocking a render. The Glass look (frosted cards, soft wallpaper, Figtree font) lives in `app/styles/glass.css` and `app/styles/glass-dark.css`.
 - **Supabase for auth and storage, RLS everywhere.** Every user-owned table is row-level-secured to its owner; server code additionally narrows table grants explicitly (`202609280200_hardening.sql`) so RLS is not the only gate. Every server entry point derives the user from `supabase.auth.getClaims()` plus an app-lock check (`isAppUnlocked`) — never from a value the browser supplies.
 - **Server actions, typed results.** Mutations are `'use server'` functions that return `{ success: boolean; message: string; … }`; errors meant for the user are typed copy, everything else becomes a generic message and the real error goes to `console.error`.
-- **An AI router with sensitivity, not a hardcoded model.** `lib/ai/router.ts` reads a provider/model registry (`ai_providers`, `ai_models`) and routes `'personal'`-sensitivity requests (the brief, plans, workbook advice, portfolio suggestions) only to a provider the registry marks `may_train = false` — today, Groq. `'general'` requests may also reach OpenRouter, Gemini or Mistral. Nothing reaches any provider until the person turns AI on once in Settings (`ai_preferences.ai_enabled`, migration `202609280203_ai_consent.sql`); until then every AI feature falls back to wording Orbis wrote itself.
+- **An AI router with sensitivity, not a hardcoded model.** `lib/ai/router.ts` reads a provider/model registry (`ai_providers`, `ai_models`) and orders the enabled models by cost and quality. Sensitivity (`'personal'` or `'general'`) is carried on every request and logged, but since 2026-10-27 it no longer narrows the providers: a personal request can reach any enabled provider, including ones the registry marks `may_train = true`. Restoring the old rule means filtering candidates on `may_train` again in `candidates()`. Nothing reaches any provider until the person turns AI on once in Settings (`ai_preferences.ai_enabled`, migration `202609280203_ai_consent.sql`); until then every AI feature falls back to wording Orbis wrote itself.
+- **Per-person settings.** Time zone, currency, locale and chosen modules live in `user_settings` (`lib/locale/`; the India defaults `Asia/Kolkata`, `INR`, `en-IN` apply to anyone without a row). Dates, money and "today" follow the person, in the app and in the crons.
+- **Roles.** `account_roles` holds `owner`, `admin` or `user` (no row means `user`); `lib/security/roles.ts` reads it. Roles are granted from SQL or the service role, never from the app. The Research desk follows the owner role.
+- **Plans and AI limits.** `plans` and `account_plans` set the daily AI allowance per feature; `lib/ai/limits.ts` reads them and caps every value at what the claim functions accept. Everyone without a row is on `free`, which keeps today's allowances.
+- **First-run onboarding.** New accounts see a short setup once; accounts that existed before it count as onboarded.
+- **Service-role review.** Every file that opens the service-role client is listed with its reason in `docs/security/service-role-uses.md`, and `lib/security/admin-usage.test.ts` fails if a new one appears without being reviewed.
+- **Opt-in error reporting.** Sentry is off unless you set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` (`lib/observability/`); when on, it sends only the error, its stack and the route, with every other kind of data switched off, and the browser SDK loads lazily. `/privacy` says so.
+- **E2e production guard.** `pnpm test:e2e` refuses to run when `ORBIS_PRODUCTION_SUPABASE_URL` matches the Supabase URL it would use; run it against a staging project (`docs/ops/staging.md`).
 - **A nonce-based CSP.** `proxy.ts` (the Next.js proxy/middleware entry point) generates a fresh nonce per request, builds a strict `script-src 'self' 'nonce-…' 'strict-dynamic'` policy in `lib/security/csp.ts`, and forwards it as both a request header (so Next stamps its own scripts) and the response header. Static security headers (`Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) are set in `next.config.ts`.
 - **A PWA shell.** A service worker registers on every load in production, caches the app shell, and serves `/offline` when the network is unavailable; the manifest and icons make it installable.
 
@@ -50,7 +59,27 @@ The Phase 1 migrations. Apply **`0201`, `0202` and `0203` before deploying this 
 | `202609280202_staged_upload_claims.sql` | Makes each signed upload path claimable exactly once, so a reused upload token can't be processed twice. |
 | `202609280203_ai_consent.sql` | Adds the one AI on/off switch (`ai_preferences.ai_enabled`, default **false**) that `lib/ai/router.ts` checks before routing any request. **AI features stay off for everyone until this migration exists**, regardless of provider keys. |
 
-See `docs/phase-1-owner-actions.md` for the full pre-deploy checklist these migrations are part of.
+The multi-user migrations. All three are additive (new tables and one backfill of `user_settings`), safe to apply any time before deploying this branch, in filename order:
+
+| Migration | What it adds |
+| --- | --- |
+| `202611120001_user_settings.sql` | `user_settings`: per-person time zone, currency, locale, chosen modules and first-run state. Existing accounts are marked onboarded, with their notification time zone carried over. |
+| `202611120002_account_roles.sql` | `account_roles`: `owner`, `admin` or `user`. Nobody has a role until you grant one. |
+| `202611120003_plans.sql` | `plans` and `account_plans`: the `free` and `owner` plans that set the daily AI allowance. |
+
+After applying them, make yourself the owner and put yourself on the owner plan (SQL editor, your own address):
+
+```sql
+insert into public.account_roles (user_id, role)
+select id, 'owner' from auth.users where email = '<owner email>'
+on conflict (user_id) do update set role = excluded.role;
+
+insert into public.account_plans (user_id, plan_id)
+select id, 'owner' from auth.users where email = '<owner email>'
+on conflict (user_id) do update set plan_id = excluded.plan_id;
+```
+
+See `docs/phase-1-owner-actions.md` for the full pre-deploy checklist the Phase 1 migrations are part of, and `docs/ops/phase-0-owner-actions.md` for what only you can do before opening Orbis to other people.
 
 ## Scripts
 
@@ -84,8 +113,9 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 - **App lock.** After 5 minutes idle, or on return from the background, the app locks; the home page renders only the lock screen and every data action refuses to run until it's unlocked with a passkey, password, or a 6-digit device PIN (salted scrypt hash, server-only).
 - **Sensitive actions need fresh proof.** Changing your password, exporting your data, and deleting your account all require either a recent password-recovery sign-in or your current password re-entered while unlocked — not just an open session. New passwords must be at least 10 characters.
 - **Private build option.** `ORBIS_ALLOWED_EMAILS`, when set, closes sign-up entirely and signs out anyone already in a session whose address isn't listed, checked on every request.
+- **Opening sign-up.** Sign-up is closed by default. It opens only when `ORBIS_OPEN_SIGNUPS=true` **and** Supabase Auth's "Allow new users to sign up" is on; turn them on together. Supabase's switch is the real door, the app's check is a second lock. Google sign-in is optional (`ORBIS_GOOGLE_SIGNIN=true`, with the Google provider enabled in Supabase); keep it off while sign-up is closed.
 - **CSP and headers.** A strict, nonce-based Content-Security-Policy plus HSTS, frame-denial, MIME-sniffing protection and a locked-down Permissions-Policy (see Architecture above).
-- **AI consent and data sensitivity.** AI is off by default per account; the router only ever sends personally-sensitive requests to a provider that has committed not to train on them, and never sends anything until consent is recorded.
+- **AI consent and data sensitivity.** AI is off by default per account, and the router never sends anything until consent is recorded. Which providers a personal request may reach is no longer restricted (see Architecture); `/privacy` says which providers may keep or train on what they receive.
 - **Rate limits and uploads.** Costly actions (uploads, parsing, Gmail sync) are capped per person per day/hour, checked server-side and failing closed if the limiting mechanism itself is unavailable. Large files go straight from the browser to a private Storage bucket with a one-time signed URL and a server-side claim that can only be consumed once.
 - **Provider allowlists.** The AI router, push-notification sending, and OAuth (Google, Zerodha) all validate destination hosts and callback state against a fixed allowlist rather than trusting configuration alone.
 - **Data export and deletion.** Settings offers a full JSON export of your own data (fresh auth required) and permanent account deletion (typed confirmation, fresh auth required), covering the tables listed in `lib/account/deletion-plan.ts`.
@@ -94,4 +124,5 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 
 - [`AUDIT_REPORT.md`](./AUDIT_REPORT.md) — the codebase audit this Phase 1 plan was built from.
 - [`BUILD_ROADMAP.md`](./BUILD_ROADMAP.md) — where the project stands and what's next.
+- [`docs/ops/phase-0-owner-actions.md`](./docs/ops/phase-0-owner-actions.md) — the steps only the owner can do before opening sign-up to other people (migrations, owner role, staging, Google sign-in, Sentry, legal text).
 - [`docs/phase-1-owner-actions.md`](./docs/phase-1-owner-actions.md) — the checklist of steps only the project owner can do (Vercel/Supabase dashboard settings, migrations, legal copy).
