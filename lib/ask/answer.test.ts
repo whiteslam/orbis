@@ -42,10 +42,11 @@ vi.mock('@/lib/voice/sarvam', () => ({
   },
 }));
 
-const { answerFromRecords, DAILY_ASK_LIMIT } = await import('./answer.ts');
+const { answerFromRecords } = await import('./answer.ts');
+const { FALLBACK_LIMITS } = await import('../ai/limits.ts');
 const { talkToOrbisAction } = await import('../../app/ask/talk-actions.ts');
 
-const SPENT = `You have asked ${DAILY_ASK_LIMIT} questions today. Try again tomorrow.`;
+const SPENT = `You have asked ${FALLBACK_LIMITS.ask_orbis} questions today. Try again tomorrow.`;
 
 function spoken() {
   const form = new FormData();

@@ -3,6 +3,7 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { getLatestAiResult, saveAiResult } from '@/lib/ai/results';
 import { routeJson } from '@/lib/ai/router';
@@ -18,7 +19,6 @@ import { createClient } from '@/lib/supabase/server';
 // Written again only when the news batch or the holdings change, which is a
 // few times a day at most. Its own counter, so it never eats a request the
 // person wanted to spend on portfolio suggestions or a question.
-const DAILY_LIMIT = 4;
 const MAX_HOLDINGS = 30;
 
 type Holding = { name: string; kind: string; sharePercent: number | null };
@@ -73,7 +73,7 @@ export async function loadPortfolioNews(userId: string, email: string | null): P
   } catch {
     return { state: 'error', message: 'AI usage limits are not available right now.' };
   }
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'portfolio_news', DAILY_LIMIT);
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'portfolio_news', await dailyLimit(admin, userId, 'portfolio_news'));
   if (credit === 'error') return { state: 'error', message: 'This can’t be written right now. Try again later.' };
   if (credit === 'limit') {
     return saved?.result

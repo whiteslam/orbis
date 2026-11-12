@@ -12,6 +12,7 @@ import { getPersonalProfile } from '@/lib/personal/repository';
 import { getRoutinesSummary } from '@/lib/routines/repository';
 import { currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
 import { clockLabel } from '@/lib/routines/types';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPersonSettings } from '@/lib/locale/repository';
@@ -24,7 +25,6 @@ import { getPersonSettings } from '@/lib/locale/repository';
 // After the eighth, Home shows Orbis's own wording, which is always accurate,
 // until tomorrow (the person's time). It has its own counter (lib/ai/quota.ts): a background brief
 // must never eat a request the user wanted to spend on asking a question.
-const DAILY_BRIEF_LIMIT = 8;
 
 export type BriefResult =
   | { state: 'ok'; caption: string; generatedAt: string; fresh: boolean }
@@ -124,7 +124,7 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   } catch {
     return { state: 'error', message: 'AI usage limits are not available right now.' };
   }
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'home_brief', DAILY_BRIEF_LIMIT);
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'home_brief', await dailyLimit(admin, userId, 'home_brief'));
   if (credit === 'error') return { state: 'error', message: 'The brief can’t be written right now.' };
   if (credit === 'limit') return { state: 'error', message: 'Today’s AI requests are used up. The brief will write itself again tomorrow.' };
 

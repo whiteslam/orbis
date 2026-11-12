@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { aiBlocked } from '@/lib/ai/gate';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit, type AiQuotaFeature } from '@/lib/ai/quota';
 import { routeJson, type Sensitivity } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -26,8 +27,6 @@ import type {
 type CareerFeature = Extract<AiQuotaFeature, `career_${string}`>;
 
 type JobConfig = {
-  /** Daily credits. The owner lifted the cost cap; these only stop a runaway loop. */
-  daily: number;
   sensitivity: Sensitivity;
   maxTokens: number;
   temperature: number;
@@ -44,15 +43,15 @@ type JobConfig = {
  * application (lib/career/watch.ts).
  */
 export const CAREER_AI: Readonly<Record<CareerFeature, JobConfig>> = {
-  career_profile: { daily: 30, sensitivity: 'personal', maxTokens: 8000, temperature: 0.1, timeoutMs: 45_000 },
-  career_spec: { daily: 40, sensitivity: 'personal', maxTokens: 1500, temperature: 0.2, timeoutMs: 20_000 },
-  career_requirements: { daily: 800, sensitivity: 'general', maxTokens: 1800, temperature: 0.1, timeoutMs: 20_000 },
-  career_tailor: { daily: 80, sensitivity: 'personal', maxTokens: 6000, temperature: 0.3, timeoutMs: 40_000 },
-  career_alerts: { daily: 300, sensitivity: 'personal', maxTokens: 3000, temperature: 0.1, timeoutMs: 25_000 },
-  career_mail: { daily: 300, sensitivity: 'personal', maxTokens: 700, temperature: 0.1, timeoutMs: 15_000 },
-  career_offer: { daily: 30, sensitivity: 'personal', maxTokens: 2500, temperature: 0.4, timeoutMs: 35_000 },
-  career_prep: { daily: 40, sensitivity: 'personal', maxTokens: 3500, temperature: 0.4, timeoutMs: 35_000 },
-  career_followup: { daily: 100, sensitivity: 'personal', maxTokens: 500, temperature: 0.5, timeoutMs: 15_000 },
+  career_profile: { sensitivity: 'personal', maxTokens: 8000, temperature: 0.1, timeoutMs: 45_000 },
+  career_spec: { sensitivity: 'personal', maxTokens: 1500, temperature: 0.2, timeoutMs: 20_000 },
+  career_requirements: { sensitivity: 'general', maxTokens: 1800, temperature: 0.1, timeoutMs: 20_000 },
+  career_tailor: { sensitivity: 'personal', maxTokens: 6000, temperature: 0.3, timeoutMs: 40_000 },
+  career_alerts: { sensitivity: 'personal', maxTokens: 3000, temperature: 0.1, timeoutMs: 25_000 },
+  career_mail: { sensitivity: 'personal', maxTokens: 700, temperature: 0.1, timeoutMs: 15_000 },
+  career_offer: { sensitivity: 'personal', maxTokens: 2500, temperature: 0.4, timeoutMs: 35_000 },
+  career_prep: { sensitivity: 'personal', maxTokens: 3500, temperature: 0.4, timeoutMs: 35_000 },
+  career_followup: { sensitivity: 'personal', maxTokens: 500, temperature: 0.5, timeoutMs: 15_000 },
 };
 
 // A cron run asks for dozens of jobs for one person within seconds; the answer
@@ -76,7 +75,7 @@ async function claim(userId: string, feature: CareerFeature): Promise<boolean> {
   } catch {
     return false;
   }
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, feature, CAREER_AI[feature].daily);
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, feature, await dailyLimit(admin, userId, feature));
   if (credit === 'limit') console.warn(`Career AI: today's ${feature} credits are used up`);
   return credit === 'ok';
 }

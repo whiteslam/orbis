@@ -22,5 +22,6 @@ create policy "Users read their own role" on public.account_roles
   using ((select auth.uid()) = user_id);
 
 -- Read-only for the person; writes come from the service role / SQL.
+revoke all on public.account_roles from public, anon, authenticated;
 grant select on public.account_roles to authenticated;
 grant select, insert, update, delete on public.account_roles to service_role;

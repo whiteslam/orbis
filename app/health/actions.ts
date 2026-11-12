@@ -7,6 +7,7 @@ import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
 import { routeJson } from '@/lib/ai/router';
 import type { AiResultStamp } from '@/lib/ai/saved';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { workbookHasFitnessFields } from '@/lib/personal/fitness-persona';
@@ -22,7 +23,6 @@ const MAX_PREVIEW_BYTES = 24 * 1024;
 const MAX_AI_INPUT_BYTES = 40 * 1024;
 const MAX_MODEL_OUTPUT_TOKENS = 1_200;
 const MAX_ADVICE = 5;
-const DAILY_ADVICE_LIMIT = 5;
 const NO_PROVIDER_MESSAGE = 'No AI provider that can hold your documents is available right now. Try again shortly.';
 
 function signedPreview(userId: string, preview: ParsedWorkbookPreview) {
@@ -325,9 +325,9 @@ async function loadPersonalContext(admin: AdminClient, userId: string, request: 
   return context;
 }
 
-function creditRefusal(credit: Awaited<ReturnType<typeof claimAiCredit>>) {
+function creditRefusal(credit: Awaited<ReturnType<typeof claimAiCredit>>, limit: number) {
   if (credit === 'error') return 'AI advice isn’t available right now. Try again later.';
-  if (credit === 'limit') return `You have reached the limit of ${DAILY_ADVICE_LIMIT} workbook advice requests today. Try again tomorrow.`;
+  if (credit === 'limit') return `You have reached the limit of ${limit} workbook advice requests today. Try again tomorrow.`;
   return null;
 }
 
@@ -363,8 +363,9 @@ export async function generateWorkbookAdviceAction(value: unknown): Promise<{ su
   const payload = JSON.stringify({ workbook: workbookData, savedContextNotes, fitnessPersona, personalProfile, steps, today: new Date().toISOString().slice(0, 10) });
   if (Buffer.byteLength(payload, 'utf8') > MAX_AI_INPUT_BYTES) return { success: false, message: 'The workbook summary and selected personal context are too large to analyze. Try a smaller workbook.' };
 
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'workbook_advice', DAILY_ADVICE_LIMIT);
-  const refused = creditRefusal(credit);
+  const limit = await dailyLimit(admin, userId, 'workbook_advice');
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'workbook_advice', limit);
+  const refused = creditRefusal(credit, limit);
   if (refused) return { success: false, message: refused };
 
   // A workbook is the most personal thing a user hands Orbis, so this goes
