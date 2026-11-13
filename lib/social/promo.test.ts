@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { ORBIS_FACTS } from './orbis-facts.ts';
-import { PROMO_MAX, buildPromoPrompt, parsePromoReply, promoImagePrompt } from './promo.ts';
+import { PROMO_MAX, buildPromoPrompt, parsePromoReply, promoFirstDay, promoImagePrompt, readPromoRequest } from './promo.ts';
 
 test('the promo prompt carries every fact and nothing about AI training', () => {
   const { system, user } = buildPromoPrompt({ period: '2026-11-01', firstDay: 14, count: 3, brief: '' });
@@ -52,4 +52,21 @@ test('the image prompt bans text, faces and other logos and names the palette', 
   const prompt = promoImagePrompt('Your day, in one place', 'a calm dashboard glow');
   for (const must of ['no text', 'no faces', 'no logos', '#0E0E10', 'teal']) assert.ok(prompt.toLowerCase().includes(must.toLowerCase()), must);
   assert.ok(prompt.includes('a calm dashboard glow'));
+});
+
+test('promoFirstDay is tomorrow this month, the 1st later, and null for a past month', () => {
+  assert.equal(promoFirstDay('2026-11-01', '2026-11-13'), 14);
+  assert.equal(promoFirstDay('2026-11-01', '2026-11-30'), 30);
+  assert.equal(promoFirstDay('2026-12-01', '2026-11-13'), 1);
+  assert.equal(promoFirstDay('2026-10-01', '2026-11-13'), null);
+});
+
+test('readPromoRequest checks count, brief and month', () => {
+  assert.deepEqual(readPromoRequest({ period: '2026-11-01', count: 2, brief: '  calm money  ' }), { period: '2026-11-01', count: 2, brief: 'calm money' });
+  assert.equal(typeof readPromoRequest({ period: '2026-11-01', count: 0, brief: '' }), 'string');
+  assert.equal(typeof readPromoRequest({ period: '2026-11-01', count: 4, brief: '' }), 'string');
+  assert.equal(typeof readPromoRequest({ period: '2026-11-01', count: 1.5, brief: '' }), 'string');
+  assert.equal(typeof readPromoRequest({ period: 'nope', count: 1, brief: '' }), 'string');
+  assert.equal(typeof readPromoRequest({ period: '2026-11-01', count: 1, brief: 'x'.repeat(301) }), 'string');
+  assert.equal(typeof readPromoRequest(null), 'string');
 });

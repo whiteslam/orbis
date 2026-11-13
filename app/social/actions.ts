@@ -27,7 +27,7 @@ import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, draft
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
 import { routeJson } from '@/lib/ai/router';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { claimSocialAiCredit } from '@/lib/social/ai-credit';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
@@ -275,9 +275,6 @@ export async function removeMediaAction(postId: string): Promise<Result> {
   }
 }
 
-const DAILY_DRAFT_LIMIT = 10;
-// A second Generate within this many seconds is a double click, not a new request.
-const DRAFT_GAP_SECONDS = 20;
 
 type DraftMonthInput = {
   period: string;
@@ -316,26 +313,6 @@ function readDraftRequest(input: DraftMonthInput): DraftRequest | string {
   const platforms = cleanPlatforms(input.platforms);
   if (!DRAFT_TONES.includes(input.tone as DraftTone)) return 'Choose a tone.';
   return { period: input.period, brief, count: input.count, formats, platforms, tone: input.tone as DraftTone, useProfile: input.useProfile === true };
-}
-
-/** Spends one of today's AI drafts; a message when none can be spent. */
-async function claimDraftCredit(userId: string): Promise<string | null> {
-  try {
-    const { data: verdict, error } = await createAdminClient().rpc('consume_social_ai_request', {
-      p_user_id: userId,
-      p_daily_limit: DAILY_DRAFT_LIMIT,
-      p_gap_seconds: DRAFT_GAP_SECONDS,
-    });
-    if (error) {
-      console.error('consume_social_ai_request failed', error);
-      return 'AI drafts aren’t available right now. Try again later.';
-    }
-    if (verdict === 'busy') return 'Already drafting. Give it a moment.';
-    if (verdict !== 'ok') return `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.`;
-    return null;
-  } catch {
-    return 'AI drafts are not available right now. Try again later.';
-  }
 }
 
 /** Saves each draft as a new post, in order; one that fails to save is left out rather than costing the others. */
@@ -378,7 +355,7 @@ export async function draftMonthWithAiAction(input: DraftMonthInput): Promise<Re
     profile = summary.profile;
   }
 
-  const refused = await claimDraftCredit(userId);
+  const refused = await claimSocialAiCredit(userId);
   if (refused) return { success: false, message: refused };
 
   const prompt = buildDraftPrompt({ period, brief, count, formats, platforms, tone, profile });

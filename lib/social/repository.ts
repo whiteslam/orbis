@@ -383,6 +383,18 @@ export async function createMediaUpload(path: string) {
   return { path: data.path, token: data.token };
 }
 
+/** Stores bytes the server made (a generated picture) at a path the server chose, under the user's folder. */
+export async function uploadMediaBytes(path: string, bytes: Uint8Array, contentType: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.storage.from(SOCIAL_BUCKET).upload(path, bytes, { contentType, upsert: false });
+    if (error) console.error('Uploading a generated social image failed', error);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 /** Whether an uploaded file really exists at this path before a post points at it. */
 export async function mediaExists(path: string) {
   const supabase = await createClient();

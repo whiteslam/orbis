@@ -6,7 +6,7 @@
 // Relative imports, so the unit tests can load this module under plain Node.
 import { ORBIS_FACTS } from './orbis-facts.ts';
 import { parseAiDraft, type DraftPost } from './ai-draft.ts';
-import { daysInMonth } from './month.ts';
+import { PERIOD_PATTERN, daysInMonth } from './month.ts';
 import { SOCIAL_CAPS } from './types.ts';
 
 export const PROMO_MAX = 3;
@@ -59,4 +59,25 @@ export function promoImagePrompt(headline: string, imageIdea: string): string {
     'Style: deep dark background #0E0E10 with a soft teal (#42CCA8) and blue (#5BB4E8) glow, smooth gradients, minimal, premium.',
     'No text, no letters or numbers, no faces or people, no logos or brand marks, no phone or app screenshots.',
   ].join(' ');
+}
+
+/** The first day promotion posts may land on: tomorrow in this month (today on its last day), the 1st of a later month, none for a past one. */
+export function promoFirstDay(period: string, today: string): number | null {
+  const thisPeriod = `${today.slice(0, 8)}01`;
+  if (period < thisPeriod) return null;
+  if (period > thisPeriod) return 1;
+  return Math.min(Number(today.slice(8, 10)) + 1, daysInMonth(period));
+}
+
+export type PromoRequest = { period: string; count: number; brief: string };
+
+/** What Suggest posts sends, checked; a message for the person when it can't be used. */
+export function readPromoRequest(input: unknown): PromoRequest | string {
+  if (!input || typeof input !== 'object') return 'Choose how many posts to suggest.';
+  const raw = input as Record<string, unknown>;
+  if (typeof raw.period !== 'string' || !PERIOD_PATTERN.test(raw.period)) return 'That month is invalid.';
+  if (typeof raw.count !== 'number' || !Number.isInteger(raw.count) || raw.count < 1 || raw.count > PROMO_MAX) return `Choose between 1 and ${PROMO_MAX} posts.`;
+  const brief = typeof raw.brief === 'string' ? raw.brief.trim() : '';
+  if (brief.length > PROMO_BRIEF_MAX) return `Keep the focus under ${PROMO_BRIEF_MAX} characters.`;
+  return { period: raw.period, count: raw.count, brief };
 }
