@@ -1,12 +1,12 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { CHUNK, rangeReader, runUpload, type UploadIo, type UploadRow } from './upload.ts';
+import { CHUNK, rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadIo, type UploadRow } from './upload.ts';
 
 const CREATE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
 const SESSION = 'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=abc';
 
-type Call = { url: string; method: string; headers: Record<string, string>; body: unknown; size: number; redirect?: string };
-type Reply = (call: Call) => Response;
+type Call = { url: string; method: string; headers: Record<string, string>; body: unknown; size: number; redirect?: string; signal?: AbortSignal | null };
+type Reply = (call: Call) => Response | Promise<Response>;
 
 const row = (over: Partial<UploadRow> = {}): UploadRow => ({
   uploadUrl: null,
@@ -45,12 +45,14 @@ function fakeIo(file: Uint8Array | null, reply: Reply, clock: () => number = () 
       new Headers(init?.headers).forEach((value, key) => { headers[key] = value; });
       const body = init?.body;
       const size = body instanceof Uint8Array ? body.length : 0;
-      const call = { url: String(input), method: init?.method ?? 'GET', headers, body, size, redirect: init?.redirect };
+      const call = { url: String(input), method: init?.method ?? 'GET', headers, body, size, redirect: init?.redirect, signal: init?.signal };
       calls.push(call);
       return reply(call);
     }) as typeof fetch,
     now: clock,
     async save(patch) { saves.push(patch); },
+    // The deadlines in these tests are tiny numbers, so the time limit is too.
+    timeoutMs: 1,
   };
   return { io, calls, reads, saves };
 }
@@ -243,9 +245,13 @@ test('rangeReader slices a 200 from a server that ignored Range', async () => {
   assert.deepEqual(read, { bytes: file.slice(10, 20), total: 50 });
 });
 
-test('rangeReader says missing for 404 and 400, and total 0 for an empty object', async () => {
-  for (const status of [404, 400]) {
-    const { fetchImpl } = storage(() => new Response('no', { status }));
+test('rangeReader says missing only for a 404 or a 400 that says not found, and total 0 for an empty object', async () => {
+  const notFound = [
+    new Response('no', { status: 404 }),
+    Response.json({ statusCode: '404', error: 'not_found', message: 'Object not found' }, { status: 400 }),
+  ];
+  for (const response of notFound) {
+    const { fetchImpl } = storage(() => response);
     assert.equal(await rangeReader('u', fetchImpl)(0, 0), null);
   }
   const empty = storage(() => new Response(null, { status: 416, headers: { 'content-range': 'bytes */0' } }));
@@ -255,4 +261,60 @@ test('rangeReader says missing for 404 and 400, and total 0 for an empty object'
 test('rangeReader refuses a range other than the one it asked for', async () => {
   const { fetchImpl } = storage(() => new Response(new Uint8Array(3), { status: 206, headers: { 'content-range': 'bytes 0-2/9000' } }));
   await assert.rejects(rangeReader('u', fetchImpl)(10, 12));
+});
+
+test('rangeReader throws, rather than say missing, for any other failure', async () => {
+  const others = [
+    Response.json({ statusCode: '400', error: 'InvalidJWT', message: 'jwt expired' }, { status: 400 }),
+    new Response('busy', { status: 500 }),
+  ];
+  for (const response of others) {
+    const { fetchImpl } = storage(() => response);
+    await assert.rejects(rangeReader('u', fetchImpl)(0, 0));
+  }
+});
+
+// A fetch that only ever ends by being aborted.
+const hanging = (_input: unknown, init?: RequestInit) =>
+  new Promise<Response>((_resolve, reject) => {
+    const signal = init?.signal;
+    if (!signal) return; // no limit: it would hang for ever
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+
+test('every request has a time limit of at most 15 s', () => {
+  assert.ok(REQUEST_TIMEOUT_MS <= 15_000);
+});
+
+test('a YouTube request that never answers is cut off and becomes an error', async () => {
+  const { io, calls } = fakeIo(bytes(100), (call) => hanging(call.url, { signal: call.signal }));
+  io.timeoutMs = 20;
+  const outcome = await runUpload(row(), 'token', Date.now() + 60_000, { ...io, now: Date.now });
+  assert.equal(outcome.kind, 'error');
+  assert.match((outcome as { message: string }).message, /^Couldn’t reach YouTube: /);
+  assert.ok(calls[0].signal, 'the request carried a signal');
+});
+
+test('a storage read that never answers is cut off', async () => {
+  await assert.rejects(rangeReader('u', hanging as unknown as typeof fetch, 20)(0, 0));
+});
+
+test('no chunk starts within one request time limit of the deadline', async () => {
+  const file = bytes(CHUNK * 3);
+  let time = 0;
+  const { io, calls } = fakeIo(file, (call) => {
+    if (call.method === 'POST') return session();
+    time += 6_000;
+    const end = Number(/bytes \d+-(\d+)\//.exec(call.headers['content-range'])![1]);
+    return resume(end);
+  }, () => time);
+  io.timeoutMs = 15_000;
+  // After one chunk it is 6 s in: 6 + 15 passes the 20 s deadline, so no second chunk.
+  assert.deepEqual(await runUpload(row(), 'token', 20_000, io), { kind: 'partial' });
+  assert.equal(calls.filter((call) => call.method === 'PUT').length, 1);
+  // And with too little time to begin with, nothing is sent at all.
+  const late = fakeIo(file, () => session(), () => 10_000);
+  late.io.timeoutMs = 15_000;
+  assert.deepEqual(await runUpload(row(), 'token', 20_000, late.io), { kind: 'partial' });
+  assert.equal(late.calls.length, 0);
 });

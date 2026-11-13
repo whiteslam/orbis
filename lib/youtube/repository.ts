@@ -280,23 +280,42 @@ export async function uploadingRowId(admin: Admin, userId: string): Promise<stri
   return typeof row?.id === 'string' ? row.id : null;
 }
 
-/** When the schedule last posted. A manual post doesn't count. */
+/**
+ * When the schedule last used its daily slot: its latest published row, or its
+ * latest row that failed for good (at the time it failed). Either way the next
+ * row waits for the next posting day. A manual post doesn't count.
+ */
 export async function lastScheduledAt(admin: Admin, userId: string): Promise<string | null> {
-  const { data, error } = await admin
-    .from('youtube_queue')
-    .select('published_at')
-    .eq('user_id', userId)
-    .eq('status', 'published')
-    .eq('posted_by', 'schedule')
-    .not('published_at', 'is', null)
-    .order('published_at', { ascending: false })
-    .limit(1);
-  if (error) {
-    readFailed(error, 'youtube_queue');
-    return null;
+  const [published, failedRow] = await Promise.all([
+    admin
+      .from('youtube_queue')
+      .select('published_at')
+      .eq('user_id', userId)
+      .eq('status', 'published')
+      .eq('posted_by', 'schedule')
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(1),
+    admin
+      .from('youtube_queue')
+      .select('updated_at')
+      .eq('user_id', userId)
+      .eq('status', 'failed')
+      .eq('posted_by', 'schedule')
+      .order('updated_at', { ascending: false })
+      .limit(1),
+  ]);
+  const times: string[] = [];
+  for (const [result, column] of [[published, 'published_at'], [failedRow, 'updated_at']] as const) {
+    if (result.error) {
+      readFailed(result.error, 'youtube_queue');
+      continue;
+    }
+    const value = ((result.data ?? [])[0] as Record<string, unknown> | undefined)?.[column];
+    if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) times.push(value);
   }
-  const row = (data ?? [])[0] as { published_at?: unknown } | undefined;
-  return typeof row?.published_at === 'string' ? row.published_at : null;
+  if (!times.length) return null;
+  return times.reduce((latest, time) => (Date.parse(time) > Date.parse(latest) ? time : latest));
 }
 
 const USER_CHUNK = 100;

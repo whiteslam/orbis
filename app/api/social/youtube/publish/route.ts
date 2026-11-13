@@ -15,7 +15,8 @@ export async function POST(request: Request) {
   const deadline = Date.now() + TIME_BUDGET_MS;
   try {
     const counts = await publishDue(createAdminClient(), now, deadline);
-    if (counts.users === 0) return new Response(null, { status: 204 });
+    // Nothing done and nothing went wrong: no content. A slice that threw is worth reporting.
+    if (counts.users === 0 && counts.errors === 0) return new Response(null, { status: 204 });
     return Response.json(counts);
   } catch (error) {
     console.error('YouTube publish run failed', error);

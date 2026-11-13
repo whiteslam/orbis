@@ -26,20 +26,31 @@ const state = vi.hoisted(() => ({
   uploads: [] as { bytesSent: number; uploadUrl: string | null }[],
   users: [] as string[],
   owner: '11111111-1111-4111-8111-111111111111',
+  takenBy: new Map<string, string | undefined>(),
+  failedScheduledAt: null as string | null,
+  recordThrows: false,
+  now: '',
 }));
 
 vi.mock('./repository.ts', () => ({
   getSchedule: async () => state.schedule,
-  lastScheduledAt: async () => state.lastScheduled,
+  // As the repository does: the later of the last scheduled publish and the last scheduled row that failed for good.
+  lastScheduledAt: async () => [state.lastScheduled, state.failedScheduledAt].filter(Boolean).sort().at(-1) ?? null,
   listQueue: async () => state.queue,
   uploadingRowId: async () => state.uploading,
   takeRow: async (_admin: unknown, user: string, id: string, from: string, postedBy?: string) => {
     state.takes.push({ id, from, postedBy });
     const row = state.rows.get(id) as QueueRowFull | undefined;
+    // Like the SQL: only a row in the expected status is taken, and starting it records who posted it.
+    if (!row || row.status !== from) return null;
+    if (from === 'queued') state.takenBy.set(id, postedBy);
     // Each person's copy of a shared test row sits in their own folder, unless the test placed it elsewhere.
-    return row ? { ...row, videoPath: row.videoPath.replace(state.owner, user) } : null;
+    return { ...row, status: 'uploading', videoPath: row.videoPath.replace(state.owner, user) };
   },
-  release: async (_admin: unknown, id: string, patch: Record<string, unknown>) => { state.releases.push({ id, patch }); },
+  release: async (_admin: unknown, id: string, patch: Record<string, unknown>) => {
+    state.releases.push({ id, patch });
+    if (patch.status === 'failed' && state.takenBy.get(id) === 'schedule') state.failedScheduledAt = state.now;
+  },
   saveUpload: async () => {},
   setHold: async (_admin: unknown, _user: string, iso: string) => { state.holds.push(iso); },
   usersWithWork: async () => state.users,
@@ -48,7 +59,10 @@ vi.mock('./repository.ts', () => ({
 vi.mock('./connection.ts', () => ({
   getYouTubeRefreshToken: async () => state.refreshToken,
   markYouTubeReconnect: async () => { state.marked += 1; },
-  recordYouTubePublish: async () => { state.recorded += 1; },
+  recordYouTubePublish: async () => {
+    if (state.recordThrows) throw new Error('social_connections went away');
+    state.recorded += 1;
+  },
 }));
 
 vi.mock('./google.ts', async () => {
@@ -95,7 +109,7 @@ const queueRow = (over: Partial<QueueRowFull> = {}): QueueRowFull => ({
   privacy: 'public',
   madeForKids: false,
   position: 1,
-  status: 'uploading',
+  status: 'queued',
   bytesSent: 0,
   uploadUrl: null,
   youtubeId: null,
@@ -124,6 +138,10 @@ beforeEach(() => {
   state.outcome = { kind: 'partial' };
   state.uploads = [];
   state.users = [];
+  state.takenBy = new Map();
+  state.failedScheduledAt = null;
+  state.recordThrows = false;
+  state.now = NOW.toISOString();
 });
 
 test('not due and nothing uploading does nothing', async () => {
@@ -145,7 +163,7 @@ test('a due schedule takes the first queued row', async () => {
 test('an uploading row is resumed even when not due', async () => {
   state.schedule.paused = true;
   state.uploading = 'row-1';
-  state.rows.set('row-1', queueRow({ uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
   state.outcome = { kind: 'done', youtubeId: 'yt1', privacy: 'public' };
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'published');
   assert.deepEqual(state.takes, [{ id: 'row-1', from: 'uploading', postedBy: undefined }]);
@@ -238,28 +256,85 @@ test('no refresh token marks reconnect too', async () => {
 
 test('a 401 halfway through keeps the row uploading', async () => {
   state.uploading = 'row-1';
-  state.rows.set('row-1', queueRow({ uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
   state.outcome = { kind: 'reconnect' };
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'reconnect');
   assert.equal(state.marked, 1);
   assert.deepEqual(state.releases[0].patch, {});
 });
 
-test('Google being down puts the row back without using an attempt', async () => {
+test('Google being down uses an attempt, and the last one fails the row', async () => {
   state.queue = [{ id: 'row-1', status: 'queued' }];
-  state.rows.set('row-1', queueRow({ attempts: 1 }));
   state.mint = async () => { throw new TypeError('fetch failed'); };
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  state.rows.set('row-1', queueRow({ attempts: 1 }));
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
   assert.equal(state.marked, 0);
-  const { patch } = state.releases[0];
-  assert.equal(patch.status, 'queued');
-  assert.equal('attempts' in patch, false);
-  assert.equal(typeof patch.error, 'string');
+  assert.deepEqual(state.releases[0].patch, { status: 'queued', attempts: 2, error: 'Google couldn’t be reached to sign in.', upload_url: null, bytes_sent: 0 });
+
+  state.mint = async () => { throw new YouTubeAuthError('Google could not complete the YouTube sign-in. Try again.'); };
+  state.rows.set('row-1', queueRow({ attempts: 2 }));
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'failed');
+  assert.deepEqual(state.releases[1].patch, { status: 'failed', attempts: 3, error: 'Google could not complete the YouTube sign-in. Try again.', upload_url: null, bytes_sent: 0 });
+  // Logged by message only: no error object that could carry a request.
+  assert.ok(errors.mock.calls.length > 0);
+  assert.ok(errors.mock.calls.every((args) => args.every((arg) => typeof arg === 'string')));
+  errors.mockRestore();
+});
+
+test('a video that won’t sign uses an attempt instead of failing at once', async () => {
+  state.queue = [{ id: 'row-1', status: 'queued' }];
+  state.rows.set('row-1', queueRow());
+  state.signed = false;
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
+  assert.deepEqual(state.uploads, []);
+  assert.deepEqual(state.releases[0].patch, { status: 'queued', attempts: 1, error: 'The video file couldn’t be opened for upload.', upload_url: null, bytes_sent: 0 });
+});
+
+test('after the third error, the next slice the same day does nothing', async () => {
+  state.queue = [{ id: 'row-1', status: 'queued' }, { id: 'row-2', status: 'queued' }];
+  state.rows.set('row-1', queueRow({ attempts: 2 }));
+  state.rows.set('row-2', queueRow({ id: 'row-2' }));
+  state.outcome = { kind: 'error', message: 'YouTube said 500: busy' };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'failed');
+  state.queue = [{ id: 'row-2', status: 'queued' }];
+  const tenMinutesOn = new Date(NOW.getTime() + 10 * 60_000);
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: tenMinutesOn }), 'none');
+  assert.deepEqual(state.takes.map((take) => take.id), ['row-1']);
+});
+
+test('Post now on one row while another is uploading works on the chosen row', async () => {
+  state.uploading = 'row-y';
+  state.rows.set('row-y', queueRow({ id: 'row-y', status: 'uploading', uploadUrl: 'https://upload/y', bytesSent: 8 }));
+  state.rows.set('row-x', queueRow({ id: 'row-x' }));
+  assert.equal(await publishSlice(admin, USER, { rowId: 'row-x', postedBy: 'manual', deadline: later(), now: NOW }), 'partial');
+  assert.deepEqual(state.takes, [{ id: 'row-x', from: 'queued', postedBy: 'manual' }]);
+  assert.deepEqual(state.releases.map((one) => one.id), ['row-x']);
+});
+
+test('Post now on a row already uploading resumes it', async () => {
+  state.rows.set('row-x', queueRow({ id: 'row-x', status: 'uploading', uploadUrl: 'https://upload/x', bytesSent: 8 }));
+  state.outcome = { kind: 'done', youtubeId: 'yt-x', privacy: 'public' };
+  assert.equal(await publishSlice(admin, USER, { rowId: 'row-x', postedBy: 'manual', deadline: later(), now: NOW }), 'published');
+  assert.deepEqual(state.takes, [{ id: 'row-x', from: 'queued', postedBy: 'manual' }, { id: 'row-x', from: 'uploading', postedBy: undefined }]);
+  assert.deepEqual(state.uploads, [{ bytesSent: 8, uploadUrl: 'https://upload/x' }]);
+});
+
+test('a published video stays published when recording the time fails', async () => {
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.outcome = { kind: 'done', youtubeId: 'yt1', privacy: 'public' };
+  state.recordThrows = true;
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'published');
+  assert.equal(state.releases[0].patch.status, 'published');
+  errors.mockRestore();
 });
 
 test('a thrown error still releases the lease', async () => {
   state.uploading = 'row-1';
-  state.rows.set('row-1', queueRow({ uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
   state.outcome = 'throw';
   await assert.rejects(publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }));
   assert.deepEqual(state.releases, [{ id: 'row-1', patch: {} }]);
@@ -268,11 +343,11 @@ test('a thrown error still releases the lease', async () => {
 test('one person’s failure doesn’t stop the run for the next', async () => {
   state.users = [USER, '22222222-2222-4222-8222-222222222222'];
   state.uploading = 'row-1';
-  state.rows.set('row-1', queueRow({ uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
   state.outcome = 'throw';
   const counts = await publishDue(admin, NOW, later());
   assert.equal(state.releases.length, 2);
-  assert.deepEqual(counts, { users: 0, published: 0, partial: 0 });
+  assert.deepEqual(counts, { users: 0, published: 0, partial: 0, errors: 2 });
 });
 
 test('publishDue counts what each person’s slice did', async () => {
@@ -281,9 +356,9 @@ test('publishDue counts what each person’s slice did', async () => {
   state.rows.set('row-1', queueRow());
   state.outcome = { kind: 'done', youtubeId: 'yt1', privacy: 'public' };
   const counts = await publishDue(admin, NOW, later());
-  assert.deepEqual(counts, { users: 2, published: 2, partial: 0 });
+  assert.deepEqual(counts, { users: 2, published: 2, partial: 0, errors: 0 });
 });
 
 test('publishDue with nobody to serve does nothing', async () => {
-  assert.deepEqual(await publishDue(admin, NOW, later()), { users: 0, published: 0, partial: 0 });
+  assert.deepEqual(await publishDue(admin, NOW, later()), { users: 0, published: 0, partial: 0, errors: 0 });
 });

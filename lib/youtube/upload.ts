@@ -12,6 +12,13 @@ export const CHUNK = 8 * 1024 * 1024;
 
 const CREATE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
 const ERROR_MAX = 500;
+
+/**
+ * The longest any one storage read or YouTube request may take. No request
+ * starts later than this before the deadline, so a slice ends by deadline +
+ * one timeout, well inside the 75 s lease.
+ */
+export const REQUEST_TIMEOUT_MS = 15_000;
 const PRIVACIES: readonly Privacy[] = ['public', 'unlisted', 'private'];
 
 export type UploadIo = {
@@ -20,6 +27,8 @@ export type UploadIo = {
   fetch: typeof fetch;
   now(): number;
   save(patch: { uploadUrl?: string | null; bytesSent?: number }): Promise<void>;
+  /** Per-request time limit; REQUEST_TIMEOUT_MS unless a test wants it shorter. */
+  timeoutMs?: number;
 };
 
 export type UploadRow = { uploadUrl: string | null; bytesSent: number } & VideoDetails;
@@ -47,7 +56,8 @@ class Unreachable extends Error {}
 
 async function call(io: UploadIo, url: string, init: RequestInit): Promise<Response> {
   try {
-    return await io.fetch(url, init);
+    // An abort (the time limit) lands here too, as a network error.
+    return await io.fetch(url, { ...init, signal: AbortSignal.timeout(io.timeoutMs ?? REQUEST_TIMEOUT_MS) });
   } catch (error) {
     throw new Unreachable(reasonOf(error));
   }
@@ -125,6 +135,10 @@ function put(uploadUrl: string, accessToken: string, contentRange: string, body:
  * cut off loses at most the chunk in flight.
  */
 export async function runUpload(row: UploadRow, accessToken: string, deadline: number, io: UploadIo): Promise<UploadOutcome> {
+  // Nothing new starts unless a full timeout still fits before the deadline. A
+  // chunk's read then ends by the deadline and its PUT by one timeout after it.
+  const timeLeft = () => io.now() + (io.timeoutMs ?? REQUEST_TIMEOUT_MS) < deadline;
+  if (!timeLeft()) return { kind: 'partial' };
   let head;
   try {
     head = await io.readRange(0, 0);
@@ -133,6 +147,7 @@ export async function runUpload(row: UploadRow, accessToken: string, deadline: n
   }
   if (!head || head.total <= 0) return { kind: 'missing' };
   const total = head.total;
+  if (!timeLeft()) return { kind: 'partial' };
 
   try {
     let uploadUrl = row.uploadUrl;
@@ -158,7 +173,7 @@ export async function runUpload(row: UploadRow, accessToken: string, deadline: n
       sent = next;
     }
 
-    while (io.now() < deadline) {
+    while (timeLeft()) {
       if (sent >= total) return failure(`YouTube said 308: it has all ${total} bytes but didn’t finish the upload`);
       const end = Math.min(sent + CHUNK, total) - 1;
       let chunk;
@@ -191,17 +206,29 @@ export async function runUpload(row: UploadRow, accessToken: string, deadline: n
 
 const CONTENT_RANGE = /^bytes (\d+)-(\d+)\/(\d+)$/;
 const UNSATISFIED = /^bytes \*\/(\d+)$/;
+const NOT_FOUND = /not[_ ]?found/i;
 
 /**
  * readRange over a signed storage URL, using a Range request. The size comes
  * from Content-Range. A server that ignores Range and sends the whole object is
- * handled by slicing it. 404 and 400 mean the object is missing; anything that
- * doesn't add up throws rather than hand back the wrong bytes.
+ * handled by slicing it. Only a confirmed missing object reads as null: a 404,
+ * or a 400 whose body says not found (Supabase Storage's way). Anything else
+ * that goes wrong, a time-out included, throws rather than hand back the wrong
+ * bytes, and the publisher counts it as an error.
  */
-export function rangeReader(signedUrl: string, fetchImpl: typeof fetch): UploadIo['readRange'] {
+export function rangeReader(signedUrl: string, fetchImpl: typeof fetch, timeoutMs = REQUEST_TIMEOUT_MS): UploadIo['readRange'] {
   return async (start, endInclusive) => {
-    const response = await fetchImpl(signedUrl, { headers: { Range: `bytes=${start}-${endInclusive}` }, cache: 'no-store' });
-    if (response.status === 404 || response.status === 400) return null;
+    const response = await fetchImpl(signedUrl, {
+      headers: { Range: `bytes=${start}-${endInclusive}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (response.status === 404) return null;
+    if (response.status === 400) {
+      const text = await response.text().catch(() => '');
+      if (NOT_FOUND.test(text)) return null;
+      throw new Error(`storage said 400: ${text.slice(0, 200)}`);
+    }
     const range = response.headers.get('content-range');
     if (response.status === 416) {
       // Asking for byte 0 of an empty object.
