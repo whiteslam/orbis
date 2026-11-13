@@ -10,7 +10,7 @@ import { canCancel, canRetry, isActive, mergeEvents } from '@/lib/shorts/rules';
 import type { JobStatus, ShortEvent, ShortJob } from '@/lib/shorts/types';
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
-  queued: 'Waiting for your PC',
+  queued: 'Waiting for your Shorts PC',
   planning: 'Writing the plan',
   plan_ready: 'Plan ready for you',
   building: 'Building the video',
@@ -43,7 +43,7 @@ function Timeline({ events, working }: Readonly<{ events: ShortEvent[]; working:
             </li>
           );
         })}
-        {working && !steps.length && <li className="is-current"><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /><span>Waiting for your PC to pick it up</span></li>}
+        {working && !steps.length && <li className="is-current"><LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /><span>Waiting for your Shorts PC to pick it up</span></li>}
       </ol>
       {working && lastLog && <p className="sh-log">{lastLog.content}</p>}
       {qa.length > 0 && (
@@ -153,7 +153,7 @@ export function JobCard({ initial, styleName, onChanged, onDeleted }: Readonly<{
           )}
         </div>
       )}
-      {working && <p className="fd-note">You can leave this page: the short keeps going on your PC.</p>}
+      {working && <p className="fd-note">You can leave this page: the short keeps going on your Shorts PC.</p>}
     </article>
   );
 }

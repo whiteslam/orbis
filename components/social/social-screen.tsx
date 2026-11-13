@@ -152,7 +152,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   if (area === 'shorts') return (
     <div className="screen-body field so-screen">
       <span ref={top} hidden />
-      <FieldHead title="Social" subtitle="Faceless shorts, made on your PC" />
+      <FieldHead title="Social" subtitle="Faceless shorts, made on your PC, queued from anywhere" />
       {areaSwitch}
       <ShortsView />
     </div>

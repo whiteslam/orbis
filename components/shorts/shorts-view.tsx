@@ -78,7 +78,7 @@ export function ShortsView() {
   if (screen.name === 'style') {
     const style = styleOf(screen.slug);
     const inFlight = view.jobs.filter((job) => IN_FLIGHT.includes(job.status)).length;
-    const blocked = view.presence === 'none' ? 'Set up the worker on your PC first (see the steps above).' : limitRefusal(inFlight, view.monthUsed);
+    const blocked = view.presence === 'none' ? 'Set up the worker on your Shorts PC first (see the steps above).' : limitRefusal(inFlight, view.monthUsed);
     return (
       <div className="sh-view">
         {back}
@@ -130,7 +130,7 @@ export function ShortsView() {
         <LibraryGrid jobs={done} covers={view.covers} onOpen={(id) => setScreen({ name: 'job', id })} />
       </section>
 
-      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your PC and stored privately in Orbis; nothing is posted for you.</p>
+      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis; nothing is posted for you.</p>
     </div>
   );
 }
