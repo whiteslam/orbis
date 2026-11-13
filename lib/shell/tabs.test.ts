@@ -9,8 +9,14 @@ describe('TABS', () => {
 });
 
 describe('SETTINGS_SECTIONS', () => {
-  it('lists the seven sections in the order the sheet shows them', () => {
-    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['You', 'Connections', 'AI & privacy', 'Notifications', 'Your day', 'Security', 'Your data']);
+  it('lists the eight sections in the order the sheet shows them', () => {
+    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['You', 'Connections', 'AI & privacy', 'Notifications', 'Your day', 'Security', 'What Orbis can see', 'Your data']);
+  });
+
+  it('has the privacy center, right after Security', () => {
+    const at = SETTINGS_SECTIONS.findIndex((section) => section.id === 'privacy');
+    expect(SETTINGS_SECTIONS[at]).toEqual({ id: 'privacy', label: 'What Orbis can see' });
+    expect(SETTINGS_SECTIONS[at - 1].id).toBe('security');
   });
 });
 

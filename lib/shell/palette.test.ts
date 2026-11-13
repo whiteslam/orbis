@@ -10,7 +10,7 @@ describe('appPalette', () => {
   it('lists every tab, both Money views, every Settings section, the Career pages and Ask Orbis', () => {
     expect(items.filter((item) => item.kind === 'tab').map((item) => item.label)).toEqual(['Today', 'Money', 'Health', 'Journal', 'Social', 'Career']);
     expect(items.filter((item) => item.kind === 'view').map((item) => item.label)).toEqual(['Spending', 'Investments']);
-    expect(items.filter((item) => item.kind === 'settings')).toHaveLength(7);
+    expect(items.filter((item) => item.kind === 'settings')).toHaveLength(8);
     expect(items.filter((item) => item.kind === 'career').map((item) => item.go)).toEqual([
       { to: 'href', href: '/active/career#/overview' },
       { to: 'href', href: '/active/career#/pipeline' },
@@ -29,7 +29,7 @@ describe('appPalette', () => {
     const some = appPalette(CAREER_PAGES, ['today', 'journal']);
     expect(some.filter((item) => item.kind === 'tab').map((item) => item.label)).toEqual(['Today', 'Journal']);
     expect(some.filter((item) => item.kind === 'view' || item.kind === 'career')).toEqual([]);
-    expect(some.filter((item) => item.kind === 'settings')).toHaveLength(7);
+    expect(some.filter((item) => item.kind === 'settings')).toHaveLength(8);
     expect(some.find((item) => item.kind === 'action')?.go).toEqual({ to: 'ask' });
   });
 

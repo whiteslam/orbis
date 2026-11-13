@@ -16,6 +16,7 @@
   --st-notifications: var(--sys-red);
   --st-day: var(--sys-amber);
   --st-security: var(--sys-green);
+  --st-privacy: color-mix(in srgb, var(--sys-blue) 60%, var(--sys-green));
   --st-data: var(--sys-tertiary);
   --st-gap: 32px;
   background: var(--sys-bg);
@@ -27,6 +28,7 @@
 .settings-sheet [data-section="notifications"] { --st-tone: var(--st-notifications); }
 .settings-sheet [data-section="day"] { --st-tone: var(--st-day); }
 .settings-sheet [data-section="security"] { --st-tone: var(--st-security); }
+.settings-sheet [data-section="privacy"] { --st-tone: var(--st-privacy); }
 .settings-sheet [data-section="data"] { --st-tone: var(--st-data); }
 
 /* The grabber: drag-to-dismiss starts here (the shared motion runtime). Phone only. */
@@ -410,12 +412,30 @@
 .settings-sheet .pf-security form.fd-source .pin-field { margin-top: 6px; }
 .settings-sheet .pf-security > .fd-msg { margin: 0; border-top: .5px solid var(--sys-separator); border-radius: 0 0 var(--r-card) var(--r-card); }
 
+/* ─── What Orbis can see (privacy-center.tsx): the cells above, plus these rows ─── */
+/* A group header's cell sits close under it, as Heads-ups' does. */
+.settings-sheet .pf-group > .st-sub + :is(.st-cell, .pf-slots, .pf-services) { margin-top: 7px; }
+/* "Coming soon" under a source that can't be turned on yet. */
+.settings-sheet .pv-sources > .fd-line small { display: block; margin-top: 2px; color: var(--sys-secondary); font: var(--t-footnote); }
+.settings-sheet .pv-sources > .fd-line:has(input:disabled) { cursor: default; }
+/* Before a source is turned on or off: what it means, as a short list. */
+.settings-sheet fieldset.st-cell.pv-sheet { min-width: 0; padding: 0; }
+.settings-sheet :is(.pv-points, .pv-steps) { margin: 8px 0 0; padding: 0 0 0 20px; color: var(--sys-secondary); font: var(--t-subhead); }
+.settings-sheet :is(.pv-points, .pv-steps) li + li { margin-top: 4px; }
+.settings-sheet .pv-points b { color: var(--sys-label); font-weight: 600; }
+/* Blocked contacts and words: each item, then the field that adds one. */
+.settings-sheet .st-cell > .fd-source.pv-add { display: block; }
+.settings-sheet .pv-item { overflow-wrap: anywhere; }
+.settings-sheet .pv-try .fd-act { margin-top: 16px; }
+.settings-sheet .pv-result q { color: var(--sys-label); }
+.settings-sheet .pv-more { margin: 4px 0 0 16px; font: var(--t-body); }
+
 /* ─── Motion ───
    A picked section arrives from the right, as a pushed page does; that is
    pushIn() in settings-sheet.tsx (a tap only, never a key). Forms and confirms
    that open in place unfold where they sit. */
 @media (prefers-reduced-motion: no-preference) {
-  .settings-sheet :is(.pf-security form.fd-source, .rt-form, .fd-source fieldset, .fd-source form[aria-label="Delete account"], #settings-you section > .fd-form) { animation: st-open var(--spring-snappy-dur, .3s) var(--spring-snappy, cubic-bezier(.23, 1, .32, 1)) both; }
+  .settings-sheet :is(.pf-security form.fd-source, .rt-form, .fd-source fieldset, .fd-source form[aria-label="Delete account"], #settings-you section > .fd-form, .pv-sheet) { animation: st-open var(--spring-snappy-dur, .3s) var(--spring-snappy, cubic-bezier(.23, 1, .32, 1)) both; }
 }
 @keyframes st-open { from { opacity: 0; transform: translateY(-6px); } }
 

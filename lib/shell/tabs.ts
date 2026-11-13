@@ -6,7 +6,7 @@
 
 export type TabId = 'today' | 'money' | 'health' | 'journal' | 'social' | 'career';
 export type MoneyView = 'spending' | 'investments';
-export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'security' | 'data';
+export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'security' | 'privacy' | 'data';
 
 export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = 
   { id: 'notifications', label: 'Notifications' },
   { id: 'day', label: 'Your day' },
   { id: 'security', label: 'Security' },
+  { id: 'privacy', label: 'What Orbis can see' },
   { id: 'data', label: 'Your data' },
 ];
 

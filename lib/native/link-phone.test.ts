@@ -123,3 +123,20 @@ test('after an unreachable service, a return to the app waits before trying the 
   await m.linkThisPhone(ME, { resume: true });
   assert.equal(core.signOut.mock.calls.length, 1, 'backed off');
 });
+
+test('once the phone answers again and is already linked, the old "couldn’t reach" error and its backoff are cleared', async () => {
+  const m = await load();
+  core.status.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'store_unavailable' }));
+  await m.linkThisPhone(ME);
+  assert.equal(m.getPhoneLink().registerError?.status, 0);
+
+  core.status.mockResolvedValue(status());
+  await m.linkThisPhone(ME, { resume: true });
+  assert.equal(m.getPhoneLink().registerError, null, 'the stale message is gone');
+
+  // The backoff went with it: a later change of account is handled on the next return, not 10 minutes on.
+  core.status.mockResolvedValue(status({ userId: SOMEONE_ELSE }));
+  await m.linkThisPhone(ME, { resume: true });
+  assert.equal(core.signOut.mock.calls.length, 1);
+  assert.equal(fetchMock.mock.calls.length, 1);
+});

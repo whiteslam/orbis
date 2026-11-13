@@ -1,0 +1,100 @@
+// The words and small rules behind Settings → What Orbis can see
+// (components/settings/privacy-center.tsx). Pure and client-safe, so it is tested
+// in Node: the phone's codes (wire names, drop reasons) never reach the screen raw.
+
+import { SOURCES, type Source } from '@/lib/device/sources';
+import type { ActivityEntry, LauncherApp } from './orbis-core';
+
+export const SOURCE_LABELS: Record<Source, string> = {
+  test: 'Test source',
+  notifications: 'Notifications',
+  calendar: 'Calendar',
+  contacts: 'Contacts',
+  calls: 'Calls',
+  health: 'Health',
+  usage: 'App usage',
+  phone_state: 'Battery and connection',
+  location: 'Location',
+};
+
+const WIRE_NAMES: ReadonlySet<string> = new Set(SOURCES);
+
+/** True for the nine wire names only. */
+export function isSource(value: unknown): value is Source {
+  return typeof value === 'string' && WIRE_NAMES.has(value);
+}
+
+// Map, not a Record: an unknown code must never resolve through Object.prototype.
+const REASONS: Map<string, string> = new Map([
+  ['OTHER_PROFILE', 'From a work or private profile'],
+  ['PAUSED', 'Orbis was paused'],
+  ['SOURCE_OFF', 'The source was off'],
+  ['BLOCKED_APP', 'From a blocked app'],
+  ['BLOCKED_CONTACT', 'From a blocked contact'],
+  ['BLOCKED_KEYWORD', 'Had a blocked word'],
+]);
+const OTHER_REASON = 'Left out by a rule';
+
+/** Why an item was dropped, in words; a code this page doesn't know never shows raw. */
+export function reasonWords(reason: string | undefined): string {
+  return (reason && REASONS.get(reason)) || OTHER_REASON;
+}
+
+/** One line of recent activity: never content, only source, decision and why. */
+export function activityWords(entry: ActivityEntry): { source: string; decision: 'Kept' | 'Dropped'; reason: string | null } {
+  const source = isSource(entry.source) ? SOURCE_LABELS[entry.source] : 'Other';
+  if (entry.decision === 'kept') return { source, decision: 'Kept', reason: null };
+  return { source, decision: 'Dropped', reason: reasonWords(entry.reason) };
+}
+
+export type PauseState = { kind: 'off' } | { kind: 'forever' } | { kind: 'until'; at: number };
+
+/** The phone's `pausedUntil` (null, -1 or epoch ms) as of `now`; a pause that has run out is off. */
+export function pauseState(pausedUntil: number | null, now: number): PauseState {
+  if (pausedUntil === null) return { kind: 'off' };
+  if (pausedUntil === -1) return { kind: 'forever' };
+  return pausedUntil > now ? { kind: 'until', at: pausedUntil } : { kind: 'off' };
+}
+
+// The phone refuses a whole setPrivacy call over these (PluginInput.kt), so they are checked first.
+export const MAX_LIST_ITEMS = 500;
+export const MAX_ITEM_CHARS = 200;
+
+/** `list` with `raw` added, trimmed; unchanged when it is blank, already there (any case), too long or the list is full. */
+export function addToList(list: readonly string[], raw: string): string[] {
+  const item = raw.trim();
+  const known = list.some((entry) => entry.toLowerCase() === item.toLowerCase());
+  if (!item || known || item.length > MAX_ITEM_CHARS || list.length >= MAX_LIST_ITEMS) return [...list];
+  return [...list, item];
+}
+
+/** The blocked packages with `packageName` ticked or not; packages for apps not installed stay as they are. */
+export function toggleBlocked(blocked: readonly string[], packageName: string, on: boolean): string[] {
+  if (!on) return blocked.filter((item) => item !== packageName);
+  return blocked.includes(packageName) ? [...blocked] : [...blocked, packageName];
+}
+
+/** Blocked apps first, then the rest, each by name. */
+export function blockedFirst(apps: readonly LauncherApp[], blocked: readonly string[]): LauncherApp[] {
+  const isBlocked = new Set(blocked);
+  return [...apps].sort((a, b) => Number(isBlocked.has(b.packageName)) - Number(isBlocked.has(a.packageName)) || a.label.localeCompare(b.label));
+}
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/** When a phone last synced, in words: "Just now", "5 minutes ago", "Yesterday", "10 days ago". */
+export function lastSeenWords(iso: string | null, now: number): string {
+  const at = iso ? Date.parse(iso) : Number.NaN;
+  if (!Number.isFinite(at)) return 'Not synced yet';
+  const ago = now - at;
+  if (ago < 2 * MINUTE) return 'Just now';
+  if (ago < HOUR) return `${Math.floor(ago / MINUTE)} minutes ago`;
+  if (ago < DAY) {
+    const hours = Math.floor(ago / HOUR);
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  }
+  const days = Math.floor(ago / DAY);
+  return days === 1 ? 'Yesterday' : `${days} days ago`;
+}

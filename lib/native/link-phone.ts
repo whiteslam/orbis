@@ -58,6 +58,13 @@ async function run(userId: string, { resume = false, again = false }: Options): 
     const removed = step === 'register' && status.signedOutReason === 'revoked' && !again;
     setPhoneLink({ removed });
 
+    // The phone answered and already belongs to this person: nothing is failing any
+    // more, so the backoff ends, and an earlier "couldn't reach" (status 0) is out of date.
+    if (step === 'none') {
+      lastFailureAt = null;
+      if (getPhoneLink().registerError?.status === 0) setPhoneLink({ registerError: null });
+    }
+
     const waiting = resume && lastFailureAt !== null && Date.now() - lastFailureAt < RETRY_AFTER_MS;
     // Checked again here: a sign-out may have started while status() was answering.
     if (step !== 'none' && !removed && !waiting && !isSigningOut()) {

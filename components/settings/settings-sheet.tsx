@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, ChevronRight, Clock, HardDrive, Lock, Plug, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
+import { Bell, ChevronRight, Clock, Eye, HardDrive, Lock, Plug, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
 import { AppIntegrations } from '@/components/settings/app-integrations';
@@ -9,6 +9,7 @@ import { HeadsupSettings } from '@/components/settings/headsup-settings';
 import { HomeBriefSetting } from '@/components/settings/home-brief-setting';
 import { HomeCityEditor, Integrations } from '@/components/settings/integrations';
 import { NotificationSettings } from '@/components/settings/notification-settings';
+import { PrivacyCenter } from '@/components/settings/privacy-center';
 import { ProfileEditor } from '@/components/settings/profile-editor';
 import { RoutineSettings } from '@/components/settings/routine-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
@@ -48,7 +49,7 @@ export type SettingsData = {
 const LABEL = Object.fromEntries(SETTINGS_SECTIONS.map((section) => [section.id, section.label])) as Record<SettingsSection, string>;
 
 // Each section's glyph in the index; its colour comes from app/styles/page-settings.css.
-const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, security: Lock, data: HardDrive };
+const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, security: Lock, privacy: Eye, data: HardDrive };
 
 type Hint = { text: string; warn?: boolean };
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -119,7 +120,9 @@ function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; sh
  * desktop it is a large dialog over a veil instead: the sections listed down
  * the left, the chosen one on the right, and Tab kept inside it.
  */
-export function SettingsSheet({ section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: Readonly<{
+export function SettingsSheet({ userId, section, onClose, openHealth, googleNotice, clearGoogleNotice, data, editRoutineId = null }: Readonly<{
+  /** The signed-in person; the privacy center adds this phone back to their account. */
+  userId: string;
   /** A routine to open for editing, when a heads-up asked to adjust it. */
   editRoutineId?: string | null;
   section: SettingsSection;
@@ -256,6 +259,10 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
 
         <Group id="security" shown={shown}>
           <SecuritySettings />
+        </Group>
+
+        <Group id="privacy" shown={shown} note="What Orbis reads on your phone, and what it keeps. Nothing is read until you turn it on.">
+          <PrivacyCenter userId={userId} />
         </Group>
 
         <Group id="data" shown={shown}>

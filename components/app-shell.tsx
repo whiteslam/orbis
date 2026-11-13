@@ -293,6 +293,7 @@ export default function AppShell({ userId, financeSummary, contextNotes, fitness
                 opened it keeps focus to be given back on close. */}
             {settings && <Suspense fallback={null}>
               <SettingsSheet
+                userId={userId}
                 section={settings}
                 onClose={() => { setSettings(null); setIntent(null); }}
                 editRoutineId={intent?.type === 'adjust_routine' ? intent.routineId : null}
