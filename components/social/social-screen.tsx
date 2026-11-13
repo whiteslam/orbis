@@ -261,7 +261,8 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
                 </section>
               ))}
 
-              <SocialInsights />
+              {/* Your own accounts' numbers; Orbis's page isn't connected here. */}
+              {account === 'me' && <SocialInsights />}
 
               <p className="fd-note so-foot">Orbis never posts for you. Plan here, publish in the app, then record where it went out.</p>
             </>

@@ -285,3 +285,11 @@
 .st-card-keep { border-color: transparent; background: var(--fd-btn, var(--brand-teal)); color: var(--fd-btn-ink, var(--brand-on-accent)); }
 .st-notice { color: var(--fd-soft); font-size: 13.5px; }
 .st-notice.error { color: var(--fd-alert); }
+
+/* ─── Insights: posts that went out, as the same cards ─── */
+.so-insights .so-insight-cards { margin-top: 12px; }
+.st-card-brand { display: grid; flex: none; place-items: center; width: 24px; height: 24px; overflow: hidden; border-radius: 50%; }
+.st-card-brand svg, .st-card-brand img { width: 100%; height: 100%; }
+.st-card-blank { align-items: center; justify-content: center; background: var(--fd-chip); color: var(--fd-faint); }
+.st-chip-out { color: var(--fd-accent); }
+a.st-card-open { text-decoration: none; }

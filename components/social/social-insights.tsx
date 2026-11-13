@@ -107,8 +107,8 @@ function PlatformCard({ item, onReconnect }: Readonly<{ item: PlatformInsights; 
             <p className="so-summary">Reach and views need one more permission. {reconnect}</p>
           )}
           {item.recent.length > 0 ? (
-            <ul className="so-insight-posts">
-              {item.recent.map((post) => <RecentPost key={post.id} post={post} />)}
+            <ul className="st-cards so-insight-cards">
+              {item.recent.map((post) => <RecentPost key={post.id} post={post} platform={item.platform} username={item.username} />)}
             </ul>
           ) : (
             <p className="so-summary">No posts on {name} yet.</p>
@@ -119,35 +119,41 @@ function PlatformCard({ item, onReconnect }: Readonly<{ item: PlatformInsights; 
   );
 }
 
-function RecentPost({ post }: Readonly<{ post: InsightPost }>) {
+/** A post as it went out: the same Instagram-style card as a planned post, opening the post itself. */
+function RecentPost({ post, platform, username }: Readonly<{ post: InsightPost; platform: PlatformInsights['platform']; username: string | null }>) {
   // An expired CDN link shows a quiet placeholder, not the browser's broken-image icon.
   const [broken, setBroken] = useState(false);
   const loc = usePersonLocale();
   const date = when(post.timestamp, loc);
+  const who = username ? `@${username}` : NAMES[platform];
   const body = (
     <>
-      <span className="so-thumb so-fmt-post">
+      <span className="st-card-head">
+        <span className="st-card-brand" aria-hidden="true"><BrandMark id={platform} /></span>
+        <span className="st-card-who">{who}</span>
+        {date && <span className="st-card-day">{date}</span>}
+      </span>
+      <span className="st-card-media">
         {post.thumbnail && !broken ? (
           // Meta's CDN URLs are signed and short-lived, so next/image's cache would only hold dead links.
           // eslint-disable-next-line @next/next/no-img-element
           <img src={thumbnailSrc(post.thumbnail)} alt="" loading="lazy" onError={() => setBroken(true)} />
-        ) : <ImageOff size={15} aria-hidden="true" />}
+        ) : <span className="st-card-tint st-card-blank"><ImageOff size={22} aria-hidden="true" /></span>}
       </span>
-      <span className="so-row-text">
-        <strong>{post.text || 'Untitled post'}</strong>
-        <small>
-          {date && <span>{date}</span>}
-          {post.metrics.map((metric) => <span key={metric.key}>{compactCount(metric.value)} {metric.label.toLowerCase()}</span>)}
-        </small>
+      {post.text && <span className="st-card-caption"><b>{who}</b> {post.text}</span>}
+      <span className="st-card-chips">
+        {post.metrics.map((metric) => <span key={metric.key} className="st-chip">{compactCount(metric.value)} {metric.label.toLowerCase()}</span>)}
+        {post.permalink && <span className="st-chip st-chip-out">Open on {NAMES[platform]}<ExternalLink size={11} aria-hidden="true" /></span>}
       </span>
-      {post.permalink && <ExternalLink size={13} aria-hidden="true" className="so-out" />}
     </>
   );
   return (
     <li>
-      {post.permalink
-        ? <a className="so-row" href={post.permalink} target="_blank" rel="noreferrer">{body}</a>
-        : <div className="so-row">{body}</div>}
+      <article className="st-card">
+        {post.permalink
+          ? <a className="st-card-open" href={post.permalink} target="_blank" rel="noreferrer" aria-label={`Open on ${NAMES[platform]}: ${post.text || 'post'}`}>{body}</a>
+          : <div className="st-card-open">{body}</div>}
+      </article>
     </li>
   );
 }
