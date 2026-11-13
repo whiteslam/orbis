@@ -33,8 +33,20 @@ export function deletionStepIsBestEffort(step: DeletionStep) {
 /** Every private bucket that holds files under `${userId}/`. */
 export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory', 'shorts'];
 
-/** `key` is the column each table's rows are paged by: its primary key. */
-export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
+/**
+ * `key` is what each table's rows are paged by: its primary key, or the columns
+ * of a composite one (a table with no single id). `columns` is '*' or, where a
+ * table holds a credential the person must never be sent, the comma-separated
+ * columns to read instead (a table's column grants may also refuse '*').
+ */
+export type ExportTable = { table: string; columns: '*' | string; key: string | readonly string[] };
+
+/** Every devices column except secret_hash (the credential) and push_token. */
+const DEVICE_COLUMNS = 'id,user_id,name,platform,flavour,app_version,created_at,last_seen_at,revoked_at';
+const COMPOSITE_KEYS: Record<string, readonly string[]> = {
+  device_sources: ['device_id', 'source'],
+  activity_ledger: ['device_id', 'day', 'source'],
+};
 
 // One row per person, keyed by user_id; every other table has its own id.
 const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_personas', 'user_locations', 'ai_preferences', 'notification_preferences', 'headsup_preferences', 'career_profiles', 'research_settings', 'user_settings', 'account_roles', 'account_plans']);
@@ -55,7 +67,10 @@ const SINGLE_ROW_TABLES = new Set(['user_personal_profiles', 'user_fitness_perso
  * listed and emptied like the other buckets, and so is research-memory (the
  * Research desk's memory log, written only by its worker). The research tables
  * are deleted outright before storage is emptied (see `deletionSteps`); every
- * one also references auth.users on delete cascade.
+ * one also references auth.users on delete cascade. The phone tables (devices,
+ * device_sources, signals, activity_ledger) cascade the same way; signals.content
+ * is an encrypted envelope that the export route opens, and a device's secret
+ * hash and push token are never read.
  */
 export const EXPORT_TABLES: readonly ExportTable[] = [
   'user_personal_profiles',
@@ -100,7 +115,15 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'research_settings',
   'shorts_jobs',
   'shorts_events',
-].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
+  'devices',
+  'device_sources',
+  'signals',
+  'activity_ledger',
+].map((table): ExportTable => ({
+  table,
+  columns: table === 'devices' ? DEVICE_COLUMNS : '*',
+  key: COMPOSITE_KEYS[table] ?? (SINGLE_ROW_TABLES.has(table) ? 'user_id' : 'id'),
+}));
 
 /** Within this long of any sign-in, the session alone is proof enough. */
 export const DELETION_FRESH_AUTH_SEC = 10 * 60;

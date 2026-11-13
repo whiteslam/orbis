@@ -45,12 +45,30 @@ test('the export leaves out service internals and lists each table once', () => 
     assert.ok(!tables.includes(internal), internal);
   }
   assert.equal(new Set(tables).size, tables.length);
-  for (const entry of EXPORT_TABLES) assert.equal(entry.columns, '*');
+  for (const entry of EXPORT_TABLES) if (entry.table !== 'devices') assert.equal(entry.columns, '*', entry.table);
   // Rows are paged by primary key; the one-row-per-person tables have no id.
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'user_personal_profiles')?.key, 'user_id');
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'transactions')?.key, 'id');
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'career_profiles')?.key, 'user_id');
   assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'career_jobs')?.key, 'id');
+});
+
+test('the export includes phone data, and the device list never names its credential columns', () => {
+  const tables = EXPORT_TABLES.map((entry) => entry.table);
+  for (const table of ['devices', 'device_sources', 'signals', 'activity_ledger']) assert.ok(tables.includes(table), table);
+  const devices = EXPORT_TABLES.find((entry) => entry.table === 'devices');
+  assert.ok(devices && devices.columns !== '*');
+  const columns = devices.columns.split(',').map((column) => column.trim());
+  assert.deepEqual(columns, ['id', 'user_id', 'name', 'platform', 'flavour', 'app_version', 'created_at', 'last_seen_at', 'revoked_at']);
+  assert.ok(!columns.includes('secret_hash') && !columns.includes('push_token'));
+});
+
+test('phone tables are paged by a key that is unique per person', () => {
+  const key = (table: string) => EXPORT_TABLES.find((entry) => entry.table === table)?.key;
+  assert.equal(key('devices'), 'id');
+  assert.equal(key('signals'), 'id');
+  assert.deepEqual(key('device_sources'), ['device_id', 'source']);
+  assert.deepEqual(key('activity_ledger'), ['device_id', 'day', 'source']);
 });
 
 test('deletion needs the word DELETE typed exactly', () => {

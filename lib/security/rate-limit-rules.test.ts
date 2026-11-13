@@ -25,6 +25,10 @@ test('research runs: a dozen an hour at most', () => {
   assert.deepEqual(limitFor('research_run'), { limit: 12, windowSeconds: 3_600 });
   assert.match(rateLimitMessage('research_run'), /try again in an hour/i);
 });
+test('adding a phone: ten an hour', () => {
+  assert.deepEqual(limitFor('device_register'), { limit: 10, windowSeconds: 3_600 });
+  assert.match(rateLimitMessage('device_register'), /try again in an hour/i);
+});
 test('sign-ups: five an hour per address, a global cap behind that', async () => {
   const { anonLimitsFor } = await import('./rate-limit-rules');
   assert.deepEqual(anonLimitsFor('signup'), {

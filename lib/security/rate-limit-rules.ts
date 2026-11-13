@@ -1,7 +1,7 @@
 // How often each costly action may run per person, and what they are told when
 // they reach the limit. Pure so it can be tested without the server.
 
-export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights' | 'career_ai' | 'career_send' | 'career_search' | 'research_run';
+export type RateBucket = 'uploads' | 'parse' | 'sync' | 'password' | 'insights' | 'career_ai' | 'career_send' | 'career_search' | 'research_run' | 'device_register';
 
 export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: number }> = {
   uploads: { limit: 20, windowSeconds: 86_400 },
@@ -25,6 +25,9 @@ export const RATE_LIMITS: Record<RateBucket, { limit: number; windowSeconds: num
   // The monthly run cap in its settings is the real budget; this stops a
   // stuck button from queueing a dozen runs in a minute.
   research_run: { limit: 12, windowSeconds: 3_600 },
+  // Adding a phone mints a credential. Ten an hour is far more than anyone
+  // sets up by hand and stops a script from filling the device list.
+  device_register: { limit: 10, windowSeconds: 3_600 },
 };
 
 export function limitFor(bucket: RateBucket) {
@@ -41,6 +44,7 @@ const MESSAGES: Record<RateBucket, string> = {
   career_send: 'Career has sent a lot in the last hour. Try again in a little while.',
   career_search: 'A search has run several times in the last hour. Try again in an hour.',
   research_run: 'The Research desk has started a lot of runs in the last hour. Try again in an hour.',
+  device_register: 'You’ve added a lot of phones in the last hour. Try again in an hour.',
 };
 
 export function rateLimitMessage(bucket: RateBucket) {

@@ -1,6 +1,7 @@
 import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename, refusalMessage, refusalStatus } from '@/lib/account/deletion-plan';
 import { sensitiveRequester } from '@/lib/account/sensitive-auth';
 import { listUserObjects } from '@/lib/account/storage';
+import { decryptForUser, phoneDataReady } from '@/lib/crypto/user-keys';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPersonSettings } from '@/lib/locale/repository';
 import type { createClient } from '@/lib/supabase/server';
@@ -24,15 +25,41 @@ const FILE_HELP: Record<string, string> = {
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-/** Every row this person can read in one table, paged by its primary key. */
-async function readTable(supabase: Supabase, userId: string, table: string, key: string) {
+/** Every row this person can read in one table, paged by its primary key (or each column of a composite one). */
+async function readTable(supabase: Supabase, userId: string, table: string, columns: string, key: string | readonly string[]) {
   const rows: unknown[] = [];
+  const order = typeof key === 'string' ? [key] : key;
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).order(key, { ascending: true }).range(from, from + PAGE - 1);
+    let query = supabase.from(table).select(columns).eq('user_id', userId);
+    for (const column of order) query = query.order(column, { ascending: true });
+    const { data, error } = await query.range(from, from + PAGE - 1);
     if (error) throw error;
     rows.push(...(data ?? []));
     if (!data || data.length < PAGE) return rows;
   }
+}
+
+/**
+ * Opens each signal's content for the person. Without the server key, or for a
+ * row that can't be opened, the stored ciphertext is exported as it is, and the
+ * returned note says so. Nothing about a signal is logged.
+ */
+function openSignals(rows: unknown[], userId: string): { rows: unknown[]; note: string | null } {
+  if (!phoneDataReady()) {
+    return { rows, note: 'Phone signal content is exported as stored (encrypted) because the server’s phone data key is not set up right now.' };
+  }
+  let unopened = 0;
+  const opened = rows.map((row) => {
+    const signal = row as { id?: unknown; content?: unknown };
+    if (typeof signal.id !== 'string' || typeof signal.content !== 'string') return row;
+    try {
+      return { ...signal, content: decryptForUser(userId, signal.content, signal.id) };
+    } catch {
+      unopened += 1;
+      return row;
+    }
+  });
+  return { rows: opened, note: unopened ? `${unopened} phone signal(s) could not be unlocked and are exported as stored (encrypted).` : null };
 }
 
 /** Reads `{ password? }` from a same-origin JSON request; anything else is refused. */
@@ -64,9 +91,9 @@ export async function POST(request: Request) {
 
   const tables: Record<string, unknown[]> = {};
   const unavailable: string[] = [];
-  const results = await Promise.all(EXPORT_TABLES.map(async ({ table, key }) => {
+  const results = await Promise.all(EXPORT_TABLES.map(async ({ table, columns, key }) => {
     try {
-      return { table, rows: await readTable(supabase, userId, table, key) };
+      return { table, rows: await readTable(supabase, userId, table, columns, key) };
     } catch (error) {
       // A table this session can't read (or that isn't set up yet) is left out
       // and named, rather than failing the whole export.
@@ -77,6 +104,12 @@ export async function POST(request: Request) {
   for (const { table, rows } of results) {
     if (rows) tables[table] = rows;
     else unavailable.push(table);
+  }
+  let phoneDataNote: string | null = null;
+  if (tables.signals) {
+    const opened = openSignals(tables.signals, userId);
+    tables.signals = opened.rows;
+    phoneDataNote = opened.note;
   }
 
   let files: Array<{ bucket: string; about: string; paths: string[] }> | null = null;
@@ -96,6 +129,7 @@ export async function POST(request: Request) {
     account: { id: userId, email: email || null },
     about: 'Everything Orbis holds for your account, as JSON. Stored files are listed by name but not included; each list says where in Orbis to download them. Passwords, app keys and connection tokens are never exported.',
     tables,
+    ...(phoneDataNote ? { phoneDataNote } : {}),
     ...(unavailable.length ? { notIncluded: { tables: unavailable, reason: 'These could not be read just now. Export again later to include them.' } } : {}),
     files: files ?? { error: 'Your stored files could not be listed just now. Export again later to include the list.' },
   };
