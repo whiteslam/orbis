@@ -74,7 +74,7 @@ class CapturePipeline(private val port: StorePort) {
                         i += 2
                     }
                     c.isSurrogate() -> {
-                        out.append('�')
+                        out.append('\uFFFD')
                         i++
                     }
                     else -> {

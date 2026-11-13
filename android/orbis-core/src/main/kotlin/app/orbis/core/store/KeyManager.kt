@@ -15,29 +15,48 @@ import javax.crypto.spec.GCMParameterSpec
  * Holds the database passphrase: 32 random bytes, wrapped by a non-exportable Android Keystore
  * AES-GCM key and kept (base64 of IV + ciphertext) in SharedPreferences.
  *
- * If the passphrase can't be recovered (the Keystore key is gone or changed, or the saved value
- * is missing or damaged), the old database can never be opened again, so it is deleted and a
- * fresh one is started. A fresh, empty store is the safe outcome; it never crash-loops.
+ * Ruling R18: the store is deleted and started fresh only when the key is definitively gone
+ * (Keystore alias missing, key permanently invalidated, a bad GCM tag, or a missing, malformed
+ * or wrong-length saved value; see [KeyRecovery.isKeyGone]). Any other failure is rethrown so
+ * the caller retries later, unless such failures have lasted more than 24 hours.
  */
-internal class KeyManager(context: Context) {
+internal class KeyManager(context: Context, clock: () -> Long = System::currentTimeMillis) {
     private val context = context.applicationContext
     private val prefs = this.context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val recovery = KeyRecovery(PrefsFailureClock(), clock)
 
-    /** The SQLCipher passphrase, as SQLCipher's raw-key form `x'<64 hex>'`. */
+    /**
+     * The SQLCipher passphrase, as SQLCipher's raw-key form `x'<64 hex>'`. The caller owns the
+     * array and should zero it when done. Throws when the keystore fails in a way that may pass.
+     */
     fun passphrase(): ByteArray {
         val saved = prefs.getString(WRAPPED, null)
-        val key = saved?.let { runCatching { unwrap(it) }.getOrNull() }?.takeIf { it.size == KEY_BYTES }
-            ?: run {
-                reset()
-                storeNewKey()
+        val key = if (saved == null) {
+            freshKey()
+        } else {
+            try {
+                unwrap(saved).also { recovery.onSuccess() }
+            } catch (e: Exception) {
+                if (!recovery.shouldReset(e)) throw e
+                freshKey()
             }
-        return rawKey(key)
+        }
+        try {
+            return rawKey(key)
+        } finally {
+            key.fill(0)
+        }
+    }
+
+    private fun freshKey(): ByteArray {
+        reset()
+        return storeNewKey()
     }
 
     /** Deletes the database, the saved passphrase and the Keystore key. */
     fun reset() {
         context.deleteDatabase(OrbisDatabase.NAME)
-        prefs.edit().remove(WRAPPED).commit()
+        prefs.edit().remove(WRAPPED).remove(FIRST_FAILURE).commit()
         runCatching { keyStore().deleteEntry(ALIAS) }
     }
 
@@ -53,13 +72,36 @@ internal class KeyManager(context: Context) {
         return key
     }
 
-    private fun unwrap(saved: String): ByteArray? {
-        val bytes = Base64.decode(saved, Base64.NO_WRAP)
-        if (bytes.size <= IV_BYTES) return null
-        val secret = keyStore().getKey(ALIAS, null) as? SecretKey ?: return null
+    private fun unwrap(saved: String): ByteArray {
+        val bytes = try {
+            Base64.decode(saved, Base64.NO_WRAP)
+        } catch (e: IllegalArgumentException) {
+            throw KeyGoneException("The saved database key is not base64", e)
+        }
+        if (bytes.size <= IV_BYTES) throw KeyGoneException("The saved database key is too short")
+        val secret = keyStore().getKey(ALIAS, null) as? SecretKey
+            ?: throw KeyGoneException("The Keystore key is missing")
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, secret, GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES))
-        return cipher.doFinal(bytes, IV_BYTES, bytes.size - IV_BYTES)
+        val key = cipher.doFinal(bytes, IV_BYTES, bytes.size - IV_BYTES)
+        if (key.size != KEY_BYTES) {
+            key.fill(0)
+            throw KeyGoneException("The saved database key has the wrong length")
+        }
+        return key
+    }
+
+    private inner class PrefsFailureClock : FailureClock {
+        override fun firstFailureAt(): Long? =
+            if (prefs.contains(FIRST_FAILURE)) prefs.getLong(FIRST_FAILURE, 0L) else null
+
+        override fun setFirstFailureAt(at: Long) {
+            prefs.edit().putLong(FIRST_FAILURE, at).commit()
+        }
+
+        override fun clearFirstFailure() {
+            prefs.edit().remove(FIRST_FAILURE).commit()
+        }
     }
 
     private fun wrappingKey(): SecretKey {
@@ -80,6 +122,7 @@ internal class KeyManager(context: Context) {
     internal companion object {
         const val PREFS = "orbis_store_key"
         const val WRAPPED = "wrapped_passphrase"
+        const val FIRST_FAILURE = "first_unwrap_failure_at"
         const val ALIAS = "orbis_store_key"
         private const val KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -89,13 +132,21 @@ internal class KeyManager(context: Context) {
 
         /** SQLCipher's raw-key syntax: the bytes are the key itself, with no slow key derivation. */
         fun rawKey(key: ByteArray): ByteArray {
-            val digits = "0123456789abcdef"
-            val hex = StringBuilder(key.size * 2)
-            for (b in key) {
+            // Built straight into bytes, with no String copy of the key left on the heap.
+            val out = ByteArray(key.size * 2 + 3)
+            out[0] = X
+            out[1] = QUOTE
+            for ((i, b) in key.withIndex()) {
                 val v = b.toInt() and 0xff
-                hex.append(digits[v ushr 4]).append(digits[v and 0x0f])
+                out[2 + i * 2] = HEX[v ushr 4]
+                out[3 + i * 2] = HEX[v and 0x0f]
             }
-            return "x'$hex'".toByteArray(Charsets.US_ASCII)
+            out[out.size - 1] = QUOTE
+            return out
         }
+
+        private val HEX = "0123456789abcdef".toByteArray(Charsets.US_ASCII)
+        private const val X: Byte = 0x78 // x
+        private const val QUOTE: Byte = 0x27 // '
     }
 }

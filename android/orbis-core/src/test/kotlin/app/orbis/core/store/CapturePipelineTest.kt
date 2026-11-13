@@ -156,7 +156,7 @@ class CapturePipelineTest {
         val port = FakePort()
         val pipeline = CapturePipeline(port)
         pipeline.capture(item(text = "a\u0000b\uD800c\uDC00d\uD83D"), settings, now)
-        assertEquals("ab�c�d�", port.signals.single().content)
+        assertEquals("ab\uFFFDc\uFFFDd\uFFFD", port.signals.single().content)
     }
 
     @Test

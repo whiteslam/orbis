@@ -59,7 +59,10 @@ data class LedgerEntry(
 data class Kv(
     @PrimaryKey val key: String,
     val value: String,
-)
+) {
+    // Values include the device credential: never print them.
+    override fun toString(): String = "Kv(key=$key, value=<hidden>)"
+}
 
 /** Sources are stored by their wire name, so renaming an enum constant can't break old rows. */
 class Converters {

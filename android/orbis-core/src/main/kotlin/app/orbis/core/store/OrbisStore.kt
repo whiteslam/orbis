@@ -44,19 +44,28 @@ data class LedgerDay(
  * Android Keystore ([KeyManager]). Settings and the device credential live inside the encrypted
  * database too. Every call is safe from any thread; work runs on [Dispatchers.IO].
  *
- * Prefer [OrbisStore.get] for the one shared instance per process.
+ * Use [OrbisStore.get] for the one shared instance per process.
  */
-class OrbisStore(context: Context) : Closeable {
+class OrbisStore internal constructor(context: Context) : Closeable {
     private val context = context.applicationContext
     private val lock = Any()
     private var opened: OrbisDatabase? = null
+
+    // The open database's passphrase; SupportOpenHelperFactory keeps this array. Zeroed on close.
+    private var passphrase: ByteArray? = null
     private val pipeline = CapturePipeline(Port())
 
     // --- capture ----------------------------------------------------------------------------
 
-    /** Runs [item] through the privacy rules with the saved settings and stores the result. */
-    suspend fun capture(item: CapturedItem, now: Long = System.currentTimeMillis()): Decision =
-        io { pipeline.capture(item, readSettings(db()), now) }
+    /**
+     * Runs [item] through the privacy rules with the saved settings and stores the result. The
+     * settings read and the writes are one transaction, so a source turned off (or a wipe) can't
+     * commit in between and let the item land after its rows were deleted.
+     */
+    suspend fun capture(item: CapturedItem, now: Long = System.currentTimeMillis()): Decision = io {
+        val db = db()
+        db.withTransaction { pipeline.capture(item, readSettings(db), now) }
+    }
 
     // --- settings ---------------------------------------------------------------------------
 
@@ -107,8 +116,8 @@ class OrbisStore(context: Context) : Closeable {
 
     /**
      * Kept, dropped and action counts per local day and source, for the last [maxDays] local
-     * days including today (the server takes at most 90 rows: 9 sources x 10 days). Ordered by
-     * day, then source.
+     * days including today. [maxDays] is capped at [LEDGER_SYNC_DAYS] (ruling R12: the server
+     * takes at most 90 rows, 9 sources x 10 days). Ordered by day, then source.
      */
     suspend fun ledgerDays(
         maxDays: Int = LEDGER_SYNC_DAYS,
@@ -116,6 +125,7 @@ class OrbisStore(context: Context) : Closeable {
         timeZone: TimeZone = TimeZone.getDefault(),
     ): List<LedgerDay> = io {
         require(maxDays >= 1) { "maxDays must be at least 1" }
+        val days = maxDays.coerceAtMost(LEDGER_SYNC_DAYS)
         val cal = Calendar.getInstance(timeZone).apply {
             timeInMillis = now
             set(Calendar.HOUR_OF_DAY, 0)
@@ -125,7 +135,7 @@ class OrbisStore(context: Context) : Closeable {
         }
         cal.add(Calendar.DAY_OF_YEAR, 1)
         val until = cal.timeInMillis // start of tomorrow
-        cal.add(Calendar.DAY_OF_YEAR, -maxDays)
+        cal.add(Calendar.DAY_OF_YEAR, -days)
         val from = cal.timeInMillis
         // Locale.US keeps the digits ASCII whatever the phone's language.
         val format = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { this.timeZone = timeZone }
@@ -206,6 +216,8 @@ class OrbisStore(context: Context) : Closeable {
         synchronized(lock) {
             opened?.close()
             opened = null
+            passphrase?.fill(0)
+            passphrase = null
         }
     }
 
@@ -236,16 +248,29 @@ class OrbisStore(context: Context) : Closeable {
 
     private fun open(): OrbisDatabase {
         val keys = KeyManager(context)
-        val db = OrbisDatabase.build(context, keys.passphrase())
+        val first = keys.passphrase()
+        val db = OrbisDatabase.build(context, first)
         try {
             db.openHelper.writableDatabase
+            passphrase = first
             return db
         } catch (e: Exception) {
+            db.close()
+            first.fill(0)
             if (!isWrongKey(e)) throw e
             // The saved key doesn't open this file: it can never be read. Start fresh.
-            db.close()
             keys.reset()
-            return OrbisDatabase.build(context, keys.passphrase()).also { it.openHelper.writableDatabase }
+            val fresh = keys.passphrase()
+            val again = OrbisDatabase.build(context, fresh)
+            try {
+                again.openHelper.writableDatabase
+            } catch (e2: Exception) {
+                again.close()
+                fresh.fill(0)
+                throw e2
+            }
+            passphrase = fresh
+            return again
         }
     }
 

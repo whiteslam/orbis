@@ -9,6 +9,9 @@ import app.orbis.core.rules.Decision
 import app.orbis.core.rules.DropReason
 import app.orbis.core.rules.PrivacySettings
 import app.orbis.core.rules.Source
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -110,6 +113,39 @@ class OrbisStoreTest {
         // A capture from the now-off source is dropped.
         assertEquals(Decision.Drop(DropReason.SOURCE_OFF), store.capture(item(text = "third")))
         assertEquals(1, store.pendingCount())
+    }
+
+    @Test
+    fun captureRacingASourceOffNeverLeavesItsRows() = runBlocking {
+        // Each capture reads the settings and writes in one transaction, so no capture that saw
+        // the source on can commit after the off deleted the source's rows.
+        repeat(10) { round ->
+            store.setSourceEnabled(Source.TEST, true)
+            val before = (0 until 40).map { i -> async(Dispatchers.IO) { store.capture(item(text = "race $round a$i")) } }
+            val off = async(Dispatchers.IO) { store.setSourceEnabled(Source.TEST, false) }
+            val after = (0 until 40).map { i -> async(Dispatchers.IO) { store.capture(item(text = "race $round b$i")) } }
+            (before + off + after).awaitAll()
+            assertEquals("round $round raw items", 0, store.db().rawItems().count())
+            assertEquals("round $round pending signals", 0, store.pendingCount())
+        }
+    }
+
+    @Test
+    fun malformedSavedKeyStartsAFreshStore() = runBlocking {
+        store.setSourceEnabled(Source.TEST, true)
+        store.capture(item(text = "before"))
+        store.close()
+        context.getSharedPreferences(KeyManager.PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KeyManager.WRAPPED, "not base64 !!").commit()
+
+        store = OrbisStore(context)
+        assertEquals(0, store.pendingCount())
+        assertEquals(PrivacySettings(), store.settings())
+    }
+
+    @Test
+    fun kvToStringHidesTheValue() {
+        assertFalse(Kv("orbis.credential", "secretvalue").toString().contains("secretvalue"))
     }
 
     @Test
@@ -217,6 +253,8 @@ class OrbisStoreTest {
             days,
         )
         assertEquals(1, store.ledgerDays(maxDays = 1, now = today, timeZone = zone).size)
+        // R12: asking for more than 10 days still gives 10 (the day-10 row stays out).
+        assertEquals(days, store.ledgerDays(maxDays = 30, now = today, timeZone = zone))
     }
 
     @Test
