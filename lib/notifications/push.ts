@@ -4,6 +4,7 @@ import webpush from 'web-push';
 import { pushTopic } from '@/lib/notifications/topic';
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { isAllowedPushEndpoint } from '@/lib/notifications/push-endpoint';
+import { fcmConfigured, sendFcm } from '@/lib/notifications/fcm';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -35,11 +36,28 @@ export function pushConfigured() {
   return true;
 }
 
-// Sends to every registered device of the user. Devices the push service reports as gone are removed.
+// Sends to every registered device of the user: browsers through web push, and
+// Android phones that hold an FCM token through FCM. Either channel is optional;
+// a channel that is not set up is skipped. Devices a push service reports as gone
+// are removed (a phone only loses its token, so it stays registered).
 export async function pushToUser(admin: Admin, userId: string, payload: PushPayload) {
-  if (!pushConfigured()) return { sent: 0, failed: 0, devices: 0, error: 'Push keys are not configured on the server.' };
-  const { data: devices, error } = await admin.from('push_subscriptions').select('endpoint,p256dh,auth').eq('user_id', userId);
-  if (error) return { sent: 0, failed: 0, devices: 0, error: 'Registered devices could not be loaded.' };
+  const web = pushConfigured();
+  const fcm = fcmConfigured();
+  if (!web && !fcm) return { sent: 0, failed: 0, devices: 0, error: 'Push keys are not configured on the server.' };
+
+  let subscriptions: { endpoint: string; p256dh: string; auth: string }[] = [];
+  if (web) {
+    const { data, error } = await admin.from('push_subscriptions').select('endpoint,p256dh,auth').eq('user_id', userId);
+    if (error) return { sent: 0, failed: 0, devices: 0, error: 'Registered devices could not be loaded.' };
+    subscriptions = data ?? [];
+  }
+  let phones: { id: string; push_token: string }[] = [];
+  if (fcm) {
+    const { data, error } = await admin.from('devices').select('id,push_token').eq('user_id', userId).not('push_token', 'is', null).is('revoked_at', null);
+    // With web push working, a phone list that fails to load only costs the phones this time.
+    if (error && !web) return { sent: 0, failed: 0, devices: 0, error: 'Registered phones could not be loaded.' };
+    phones = (data ?? []) as { id: string; push_token: string }[];
+  }
 
   let sent = 0;
   let failed = 0;
@@ -65,8 +83,19 @@ export async function pushToUser(admin: Admin, userId: string, payload: PushPayl
       }
     }
   };
-  await inBatches(devices ?? [], PUSH_CONCURRENCY, send);
-  return { sent, failed, devices: devices?.length ?? 0, error: null as string | null };
+  const sendToPhone = async (phone: { id: string; push_token: string }) => {
+    const outcome = await sendFcm(phone.push_token, payload);
+    if (outcome === 'sent') {
+      sent += 1;
+      return;
+    }
+    failed += 1;
+    // Only if the phone still holds this very token: it may have rotated it meanwhile.
+    if (outcome === 'gone') await admin.from('devices').update({ push_token: null }).eq('id', phone.id).eq('user_id', userId).eq('push_token', phone.push_token);
+  };
+  await inBatches(subscriptions, PUSH_CONCURRENCY, send);
+  await inBatches(phones, PUSH_CONCURRENCY, sendToPhone);
+  return { sent, failed, devices: subscriptions.length + phones.length, error: null as string | null };
 }
 
 /** Runs `task` over `items` with at most `limit` in flight at once. */

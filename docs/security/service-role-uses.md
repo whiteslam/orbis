@@ -120,7 +120,7 @@ These name the client's type for a parameter. The caller hands them the client, 
 - `lib/locale/repository.ts`
 - `lib/notifications/context.ts` (changed to `import type` in this review)
 - `lib/notifications/deliver.ts`
-- `lib/notifications/push.ts`
+- `lib/notifications/push.ts`: it also reads `devices.push_token` (not granted to `authenticated`, so only the service role can) for the person it is sending to, and clears the token of that person's own phone when FCM reports it gone. Every query is filtered by that `user_id`.
 - `lib/security/roles.ts`
 
 `lib/notifications/context.ts` reads the person's routines, spending, steps, persona and social plan to word their notification. It is called by the dispatch cron and by "Send a test" (see `app/personal/notification-actions.ts` above).
