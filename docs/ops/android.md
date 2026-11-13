@@ -90,7 +90,7 @@ All four go in Vercel (and `.env.local` if you run the site yourself). `.env.exa
 
 Open `https://<your site>/.well-known/assetlinks.json`. You should see one entry naming your package and every fingerprint. If you see `[]`, `ANDROID_APP_ID` or a fingerprint is missing or mistyped; the file stays empty on purpose rather than publish half of it. Vercel caches it for an hour.
 
-This file is what lets Android open Orbis links in the app and lets passkeys (the fingerprint unlock) work inside it. For in-app passkeys the Supabase passkey RP ID must also be the site's host (for example `orbis-starter.vercel.app`), not a different domain.
+This file is what lets Android open Orbis links in the app and lets passkeys (the fingerprint unlock) work inside it. For in-app passkeys the passkey RP ID (the website name a passkey is tied to) must also be the site's host (for example `orbis-starter.vercel.app`), not a different domain. Orbis has no setting for it in code: sign-in and unlock call Supabase's passkey functions (`registerPasskey` and friends), so the RP ID is set in your Supabase project's Authentication settings, in its passkey section. Check it there.
 
 ## Testing
 

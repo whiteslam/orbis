@@ -129,5 +129,5 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 - [`AUDIT_REPORT.md`](./AUDIT_REPORT.md) — the codebase audit this Phase 1 plan was built from.
 - [`BUILD_ROADMAP.md`](./BUILD_ROADMAP.md) — where the project stands and what's next.
 - [`docs/ops/phase-0-owner-actions.md`](./docs/ops/phase-0-owner-actions.md) — the steps only the owner can do before opening sign-up to other people (migrations, owner role, staging, Google sign-in, Sentry, legal text).
-- [`docs/ops/phase-1-owner-actions.md`](./docs/ops/phase-1-owner-actions.md) � the Android app's owner steps (Play account, Firebase, keys, test phones).
+- [`docs/ops/phase-1-owner-actions.md`](./docs/ops/phase-1-owner-actions.md) — the Android app's owner steps (Play account, Firebase, keys, test phones).
 - [`docs/phase-1-owner-actions.md`](./docs/phase-1-owner-actions.md) — the checklist of steps only the project owner can do (Vercel/Supabase dashboard settings, migrations, legal copy).

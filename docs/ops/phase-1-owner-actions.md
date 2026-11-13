@@ -4,9 +4,16 @@ What only you can do to get the Android app from this branch (`android-shell`) o
 
 **Deploy order matters.** Apply migration `202611120004_devices.sql` (step 5) and set `ORBIS_PHONE_DATA_KEY` (step 4) **before** you merge this branch to production. If the code goes live first, `/api/device/signals` answers 503 or 500, phones keep retrying, and no data is lost, but nothing syncs until both are in place.
 
-1. **Confirm or replace the app id `app.orbis.android`.** It is a placeholder and it is permanent on Play once you upload the first build. Pick the final one now (a reverse web address you control, like `in.yourname.orbis`). It lives in `capacitor.config.ts` (`appId`) and `android/app/build.gradle` (`applicationId` and `namespace`); change all three together and run `npx cap sync android`.
+1. **Confirm or replace the app id `app.orbis.android`.** It is a placeholder and it is permanent on Play once you upload the first build. Pick the final one now (a reverse web address you control, like `in.yourname.orbis`). To change it, edit these together, then run `npx cap sync android`:
+   - `applicationId` in `android/app/build.gradle`;
+   - `appId` in `capacitor.config.ts`;
+   - in `android/app/src/main/res/values/strings.xml`, both `package_name` and `custom_url_scheme` (today both hold `app.orbis.android`).
 
-2. **Create the Google Play developer account.** Decide organisation or personal first (spec section 9). Organisation needs a D-U-N-S number; check whether Orbis's Money and Health features need that. A personal account must run a closed test with about 12 testers for 14 days before going public (step 6).
+   Leave `namespace` in `android/app/build.gradle` alone. It is the name of the Kotlin and Java code (`MainActivity`, the plugin, the generated files), not the app's id on Play, and changing it breaks the build.
+
+   Whatever you choose must also match: `ANDROID_APP_ID` in Vercel (step 4), the Android app you add in Firebase (step 3), and so `/.well-known/assetlinks.json`.
+
+2. **Create the Google Play developer account.** Decide organisation or personal first (spec section 9). An organisation account needs a D-U-N-S number (a free business ID from Dun & Bradstreet that Google uses to verify companies); check whether Orbis's Money and Health features need that. A personal account must run a closed test (a Play trial with a fixed group of testers) with about 12 testers for 14 days before going public (step 6).
 
 3. **Create the Firebase project.**
    - Firebase console: new project, then add an Android app with the app id from step 1.
@@ -17,15 +24,15 @@ What only you can do to get the Android app from this branch (`android-shell`) o
    - `ORBIS_PHONE_DATA_KEY`: `openssl rand -base64 32`. Back it up. Losing it makes stored phone signals unreadable.
    - `FCM_SERVICE_ACCOUNT`: `base64 -w0` of the service-account JSON from step 3.
    - `ANDROID_APP_ID`: the id from step 1.
-   - `ANDROID_CERT_SHA256`: Play App Signing's SHA-256 plus your upload key's, comma-separated. You only get Play's after step 6's first upload, so set your upload key's now and add Play's afterwards. Then open `/.well-known/assetlinks.json` and check it is not `[]`.
+   - `ANDROID_CERT_SHA256`: the fingerprints that identify the app's signatures, comma-separated: Play App Signing's SHA-256 (the key Google re-signs your app with after upload) plus your upload key's (the key you sign each upload with; made in [`android.md`](./android.md), Release signing). You only get Play's after step 6's first upload, so set your upload key's now and add Play's afterwards. Then open `/.well-known/assetlinks.json` and check it is not `[]`.
 
 5. **Apply migration `202611120004_devices.sql`** in the Supabase SQL editor. It is additive and safe to run twice.
 
-6. **Upload to the internal testing track.**
-   - Build with `./gradlew bundlePlayRelease` and upload the `.aab` in Play Console, Testing, Internal testing.
+6. **Upload to the internal testing track** (Play's first, small test group, available within minutes, before closed and public tests).
+   - Build with `./gradlew bundlePlayRelease` and upload the `.aab` (the bundle file Play requires instead of an APK) in Play Console, Testing, Internal testing.
    - If the account is personal, start the closed test now: 12 testers, 14 days. The clock only runs while they stay opted in.
 
-7. **Tell me the test phones** (make, model, Android version). Include at least one Samsung and one Xiaomi or Redmi, and a Pixel if you have one. Phase 1 is not done until these are checked.
+7. **Tell Claude the test phones** (make, model, Android version). Include at least one Samsung and one Xiaomi or Redmi, and a Pixel if you have one. Phase 1 is not done until these are checked.
 
 8. **The 48-hour check on a Samsung and a Xiaomi phone.** Install the `direct` build (`assembleDirectRelease`), sign in, turn the Test source on, and leave the phone alone for two days. Then check:
    - the "Orbis is active" service is still running and its notification is shown (on Android 13 and newer, only if notifications are allowed);
@@ -44,7 +51,7 @@ What only you can do to get the Android app from this branch (`android-shell`) o
 
 ## Decisions you can overturn
 
-Each was made while building so the work could continue. Tell me if you disagree and I will change it.
+Each was made while building so the work could continue. Tell Claude if you disagree and it will change it.
 
 - **P1, the phone's own sign-in.** The phone holds a device credential instead of your web session, so a lost phone can be removed without signing you out everywhere, and a stolen phone never holds your account password or tokens. This replaces the spec's "hand over the session tokens".
 - **P5, `app.orbis.android` is a placeholder.** See step 1.
@@ -53,7 +60,7 @@ Each was made while building so the work could continue. Tell me if you disagree
 - **R17, masking.** Masking also hides codes after the words "verify" or "PIN" (and password, CVV), and joined digit groups like "123 456". Dates and times stay readable. The cost is a little over-masking of ordinary numbers in those texts.
 - **R19, only a 401 signs a phone out.** A 403 (for example from a firewall) makes the phone retry, not wipe itself.
 - **R22, a removed phone is not re-added silently.** After you remove a phone on the web, it shows "removed" and waits for you to tap "Add this phone again".
-- **The default blocklist.** Notifications from these apps are blocked from the start. Review the list (`android/orbis-core/src/main/kotlin/app/orbis/core/rules/DefaultBlocklist.kt`) and tell me what to add or drop; it is ticked for India-first use and is thin on UPI and delivery apps.
+- **The default blocklist.** Notifications from these apps are blocked from the start. Review the list (`android/orbis-core/src/main/kotlin/app/orbis/core/rules/DefaultBlocklist.kt`) and tell Claude what to add or drop; it is ticked for India-first use and is thin on UPI and delivery apps.
   - Authenticators and password managers: `com.google.android.apps.authenticator2`, `com.azure.authenticator`, `com.authy.authy`, `com.x8bit.bitwarden`, `com.onepassword.android`, `com.lastpass.lpandroid`, `com.dashlane`, `com.callpod.android_apps.keeper`.
   - Banks: `com.sbi.lotusintouch`, `com.csam.icici.bank.imobile`, `com.axis.mobile`, `com.msf.kbank.mobile` (old Kotak app), `com.kotak.bank.mobile` (current Kotak app), `com.hdfcbank.android.now`.
 
