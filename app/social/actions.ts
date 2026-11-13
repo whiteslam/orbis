@@ -2,6 +2,8 @@
 
 import { requireUser } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
+import { getRole } from '@/lib/security/roles';
+import { accountAllowed } from '@/lib/social/studio';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
@@ -64,6 +66,8 @@ export async function savePostAction(input: {
   format: string;
   platforms: string[];
   plannedFor: string | null;
+  /** 'me' (default) or, for the owner only, 'orbis'. Only read when creating: an edit never moves a post between accounts. */
+  account?: string;
 }): Promise<Result> {
   const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
@@ -71,11 +75,13 @@ export async function savePostAction(input: {
   if (input?.clientId !== undefined && !isUuid(input.clientId)) return INVALID;
   const clean = cleanPostInput(input);
   if (!clean.ok) return { success: false, message: clean.message };
+  const { account, ...fields } = clean.value;
+  if (!input.id && !accountAllowed(account, await getRole(userId))) return { success: false, message: 'That account isn’t available.' };
 
   try {
     const post = input.id
-      ? await updatePost(userId, input.id, clean.value)
-      : await insertPost(userId, { ...clean.value, id: input.clientId }, 'created');
+      ? await updatePost(userId, input.id, fields)
+      : await insertPost(userId, { ...fields, account, id: input.clientId }, 'created');
     revalidatePath('/active');
     return { success: true, message: input.id ? 'Saved.' : 'Post added.', post };
   } catch (error) {
@@ -149,6 +155,7 @@ export async function duplicatePostAction(id: string): Promise<Result> {
       : null;
     const post = await insertPost(userId, {
       id: copyId,
+      account: original.account,
       period: original.period,
       title: `${original.title} (copy)`.slice(0, 120),
       headline: original.headline,

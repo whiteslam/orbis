@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { cleanHashtags, cleanPlatforms, cleanPostInput, cleanPublish } from './validate.ts';
+import { cleanAccount, cleanHashtags, cleanPlatforms, cleanPostInput, cleanPublish } from './validate.ts';
 
 const input = (over: Record<string, unknown> = {}) => ({
   period: '2026-09-01', title: 'Launch', headline: '', caption: 'Hello', hashtags: [], format: 'post', platforms: ['instagram'], plannedFor: '2026-09-14', ...over,
@@ -54,4 +54,18 @@ test('cleanPublish needs a known place and an https link when one is given', () 
   assert.deepEqual(cleanPublish({ platform: 'myspace' }), { ok: false, message: 'Choose where it went out.' });
   assert.deepEqual(cleanPublish({ platform: 'x', link: 'http://example.com' }), { ok: false, message: 'Paste the full link, starting with https://' });
   assert.deepEqual(cleanPublish({ platform: 'x', link: 'javascript:alert(1)' }), { ok: false, message: 'Paste the full link, starting with https://' });
+});
+
+test('cleanAccount keeps orbis and turns anything else into me', () => {
+  assert.equal(cleanAccount('orbis'), 'orbis');
+  assert.equal(cleanAccount('me'), 'me');
+  assert.equal(cleanAccount(undefined), 'me');
+  assert.equal(cleanAccount('ORBIS'), 'me');
+});
+
+test('cleanPostInput carries the account, me by default', () => {
+  const orbis = cleanPostInput(input({ account: 'orbis' }));
+  assert.ok(orbis.ok && orbis.value.account === 'orbis');
+  const plain = cleanPostInput(input());
+  assert.ok(plain.ok && plain.value.account === 'me');
 });

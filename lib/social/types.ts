@@ -8,8 +8,13 @@ export type SocialFormat = 'post' | 'reel' | 'story';
 export type SocialStatus = 'idea' | 'draft' | 'ready' | 'published';
 export type SocialPlatform = 'instagram' | 'facebook' | 'linkedin' | 'x' | 'threads' | 'youtube' | 'tiktok';
 
+/** Whose page a post is for: the person's own, or (owner only) Orbis's own promotion page. */
+export type SocialAccount = 'me' | 'orbis';
+export const SOCIAL_ACCOUNTS: SocialAccount[] = ['me', 'orbis'];
+
 export type SocialPost = {
   id: string;
+  account: SocialAccount;
   /** 'YYYY-MM-01': the month the post belongs to, dated or not. */
   period: string;
   title: string;
@@ -45,6 +50,7 @@ export type SocialRevision = {
 /** What a new post is made from; the repository fills in the rest. */
 export type NewPost = {
   id?: string;
+  account?: SocialAccount;
   period: string;
   title: string;
   headline: string | null;
