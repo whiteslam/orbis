@@ -85,6 +85,7 @@ class SyncRunner(
         // With nothing pending, still post once so sources, ledger and meta reach the server.
         val batches = SyncPlanner.batches(pending).take(MAX_BATCHES).ifEmpty { listOf(emptyList()) }
 
+        var rejected: Int? = null
         for (batch in batches) {
             val body = SyncPayload.toJson(meta, sources, batch, ledger)
             val status = try {
@@ -95,15 +96,22 @@ class SyncRunner(
             }
             when (SyncOutcome.from(status)) {
                 SyncOutcome.Done -> {
-                    if (SyncOutcome.isDropped(status)) log("sync: server answered $status, dropped ${batch.size} signals")
+                    if (SyncOutcome.isDropped(status)) {
+                        log("sync: server answered $status, dropped ${batch.size} signals")
+                        // A refusal of the signal-less request means sources, ledger and meta did not
+                        // sync, so it is not a successful sync.
+                        if (batch.isEmpty()) rejected = status
+                    }
                     store.markSynced(batch.map { it.id })
                 }
                 SyncOutcome.Revoked -> {
                     log("sync: server answered $status, signing out")
                     store.wipe()
-                    // wipe() clears every saved value, so the reason is written after it.
-                    store.setSignedOutReason(REVOKED)
-                    onRevoked()
+                    // The wipe is done: from here on nothing may turn the run into a retry, or write a
+                    // sync error into the fresh store. wipe() clears every saved value, so the reason is
+                    // written after it.
+                    afterWipe("saving the reason") { store.setSignedOutReason(REVOKED) }
+                    afterWipe("the revoke hook") { onRevoked() }
                     return Result.Success
                 }
                 SyncOutcome.Retry -> {
@@ -113,9 +121,25 @@ class SyncRunner(
             }
         }
 
+        if (rejected != null) {
+            // No retry (the server would refuse it again), but no lastSync either.
+            store.setSyncError("HTTP $rejected")
+            return Result.Success
+        }
         store.setLastSync(now())
         store.setSyncError(null)
         return Result.Success
+    }
+
+    /** Runs a step after a completed wipe. A failure is logged by class name and otherwise ignored. */
+    private suspend fun afterWipe(what: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("sync: $what failed after sign-out (${e.javaClass.simpleName})")
+        }
     }
 
     /** Keeps lastSync, records why, and asks for a retry. The note itself must not turn a retry into a crash. */

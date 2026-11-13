@@ -220,6 +220,45 @@ class SyncRunnerTest {
     }
 
     @Test
+    fun aThrowingHookAfterTheWipeStillEndsInSuccessWithNoSyncError() {
+        val store = FakeStore(signals(2)).apply { credential = cred; syncError = null }
+        val r = runner(store, FakeClient(401), onRevoked = { throw IllegalStateException("hook broke") })
+        assertEquals(SyncRunner.Result.Success, run(r))
+        assertEquals("revoked", store.signedOutReason)
+        assertNull(store.syncError) // nothing is written into the freshly wiped store
+        assertNull(store.lastSync)
+        assertFalse(logs.joinToString(" ").contains("hook broke")) // class name only
+    }
+
+    @Test
+    fun aFailingReasonWriteAfterTheWipeStillCallsTheHookAndSucceeds() {
+        val store = FakeStore(signals(2)).apply { credential = cred; failOn = "setSignedOutReason" }
+        assertEquals(SyncRunner.Result.Success, run(runner(store, FakeClient(401))))
+        assertEquals(1, revokedHooks)
+        assertNull(store.syncError)
+    }
+
+    @Test
+    fun aRefusedSignalLessRequestIsNotASuccessfulSync() {
+        for (status in listOf(400, 413)) {
+            val store = FakeStore().apply { credential = cred; lastSync = 5L }
+            val client = FakeClient(status)
+            assertEquals(SyncRunner.Result.Success, run(runner(store, client))) // no retry loop
+            assertEquals(1, client.bodies.size)
+            assertEquals("HTTP $status", store.syncError)
+            assertEquals(5L, store.lastSync) // not advanced
+        }
+    }
+
+    @Test
+    fun aRefusedBatchWithSignalsStillCountsAsDone() {
+        val store = FakeStore(signals(2)).apply { credential = cred; syncError = "HTTP 503" }
+        assertEquals(SyncRunner.Result.Success, run(runner(store, FakeClient(400))))
+        assertEquals(99_000L, store.lastSync)
+        assertNull(store.syncError)
+    }
+
+    @Test
     fun theLogNeverHoldsTheSecretOrContent() {
         val store = FakeStore(signals(2)).apply { credential = cred }
         run(runner(store, FakeClient(503)))
