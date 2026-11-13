@@ -195,6 +195,18 @@ class OrbisStore internal constructor(context: Context) : Closeable {
 
     suspend fun setLastSync(at: Long) = io { db().kv().put(Kv(LAST_SYNC, at.toString())) }
 
+    /** Why the last sync failed ("HTTP 503", "network", ...), or null when it did not. Short, never content. */
+    suspend fun syncError(): String? = io { db().kv().get(LAST_SYNC_ERROR) }
+
+    /** Saves the reason the last sync failed; null clears it. */
+    suspend fun setSyncError(message: String?) = kvPut(LAST_SYNC_ERROR, message)
+
+    /** The phone's FCM token, or null. The sync sends it every time, which heals a server-side clear. */
+    suspend fun pushToken(): String? = io { db().kv().get(PUSH_TOKEN) }?.takeIf { it.isNotBlank() }
+
+    /** Saves the FCM token; null deletes it. [wipe] clears it, so a new sign-in saves it again. */
+    suspend fun setPushToken(token: String?) = kvPut(PUSH_TOKEN, token)
+
     /** A small saved value, e.g. [SIGNED_OUT_REASON]. Settings and the credential have their own calls. */
     suspend fun kvGet(key: String): String? = io { db().kv().get(checkKey(key)) }
 
@@ -318,6 +330,8 @@ class OrbisStore internal constructor(context: Context) : Closeable {
         /** Saved by the sync worker after a revoke wipes the store. */
         const val SIGNED_OUT_REASON = "signedOutReason"
         const val LAST_SYNC = "lastSync"
+        const val LAST_SYNC_ERROR = "lastSyncError"
+        const val PUSH_TOKEN = "pushToken"
 
         /** Ledger days a sync sends. */
         const val LEDGER_SYNC_DAYS = 10

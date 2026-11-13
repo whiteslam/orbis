@@ -1,3 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pure logic library: declares no permissions or components. -->
-<manifest />
+<!-- Library: declares only INTERNET (the sync client). No other permission, no components. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

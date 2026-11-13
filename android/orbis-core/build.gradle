@@ -28,6 +28,7 @@ ksp {
 
 def roomVersion = '2.8.5'
 def coroutinesVersion = '1.10.2'
+def workVersion = '2.11.0'
 
 dependencies {
     implementation "androidx.room:room-runtime:$roomVersion"
@@ -37,9 +38,12 @@ dependencies {
     implementation 'net.zetetic:sqlcipher-android:4.20.0@aar'
     implementation 'androidx.sqlite:sqlite:2.7.0'
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+    implementation "androidx.work:work-runtime-ktx:$workVersion"
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+    // The JVM's android.jar stubs throw; unit tests need a real org.json (the phone has its own).
+    testImplementation 'org.json:json:20250517'
 
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation 'androidx.test:runner:1.7.0'
