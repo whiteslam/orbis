@@ -7,7 +7,7 @@ class SyncOutcomeTest {
     @Test fun twoHundredIsDone() = assertEquals(SyncOutcome.Done, SyncOutcome.from(200))
     @Test fun otherSuccessCodesAreDone() = assertEquals(SyncOutcome.Done, SyncOutcome.from(204))
     @Test fun fourOhOneIsRevoked() = assertEquals(SyncOutcome.Revoked, SyncOutcome.from(401))
-    @Test fun fourOhThreeIsRevoked() = assertEquals(SyncOutcome.Revoked, SyncOutcome.from(403))
+    @Test fun fourOhThreeIsRetry() = assertEquals(SyncOutcome.Retry, SyncOutcome.from(403))
 
     // A bad batch is dropped, so one bad item cannot wedge the queue.
     @Test fun fourHundredIsDone() = assertEquals(SyncOutcome.Done, SyncOutcome.from(400))

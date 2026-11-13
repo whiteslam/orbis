@@ -181,7 +181,7 @@ class SyncRunnerTest {
 
     @Test
     fun revokedWipesThenWritesTheReasonThenCallsTheHookThenSucceeds() {
-        for (status in listOf(401, 403)) {
+        for (status in listOf(401)) {
             val order = mutableListOf<String>()
             val store = FakeStore(signals(3)).apply { credential = cred }
             val r = runner(store, FakeClient(status), onRevoked = { order += "hook:" + store.signedOutReason })

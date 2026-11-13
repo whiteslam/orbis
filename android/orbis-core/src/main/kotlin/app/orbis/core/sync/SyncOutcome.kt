@@ -14,7 +14,9 @@ sealed class SyncOutcome {
     companion object {
         fun from(httpStatus: Int): SyncOutcome = when (httpStatus) {
             in 200..299 -> Done
-            401, 403 -> Revoked
+            // Only 401: the server answers it for an unknown or revoked phone and never sends 403. A 403 can
+            // come from a firewall or proxy, where wiping the phone would be destructive, so it retries.
+            401 -> Revoked
             // A request the server can never accept (unparseable, or over 256 KB). Dropping the batch
             // means one bad item cannot wedge the queue forever.
             400, 413 -> Done
