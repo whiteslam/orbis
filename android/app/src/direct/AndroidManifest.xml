@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The direct (sideloaded) build only. Permissions the play build must never
+     ask for go here, never in src/main. None yet. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+</manifest>

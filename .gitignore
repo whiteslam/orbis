@@ -18,3 +18,9 @@ tests/e2e/.results/
 
 # Build artifact from tsc --noEmit
 tsconfig.tsbuildinfo
+
+# Android (Capacitor): build outputs, signing keys and Firebase config never go in git
+android/**/build/
+android/app/google-services.json
+*.jks
+*.keystore

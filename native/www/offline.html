@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>Orbis is offline</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0E0E10; color: #F2F2F5; }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        box-sizing: border-box;
+        font: 400 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      main { max-width: 320px; }
+      /* The Orbis mark: a conic-gradient ring with a hole at 45% of its diameter. */
+      .mark {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto 24px;
+        border-radius: 50%;
+        background: conic-gradient(from 200deg, #5bb4e8, #42cca8, #3dc87a, #5bb4e8);
+        -webkit-mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
+        mask: radial-gradient(circle closest-side, transparent 44%, #000 45.5%);
+      }
+      p { margin: 0; color: rgba(242, 242, 245, 0.72); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true"></div>
+      <p>Orbis can't reach the internet. It will reload when you're back online.</p>
+    </main>
+    <script>
+      // Capacitor shows this page at https://localhost/offline.html after the
+      // site failed to load, so the site is the history entry just before this
+      // one. Going back retries it; if it fails again, Capacitor brings this
+      // page back. Every 10 s, and as soon as Android says the network is back.
+      function retry() {
+        if (navigator.onLine && history.length > 1) history.back();
+      }
+      setInterval(retry, 10000);
+      window.addEventListener('online', retry);
+    </script>
+  </body>
+</html>

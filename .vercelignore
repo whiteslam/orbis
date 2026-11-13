@@ -4,3 +4,5 @@
 node_modules/
 .next/
 Excelsheet.pdf
+android/
+native/

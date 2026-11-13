@@ -16,6 +16,8 @@ const eslintConfig = [
       "public/**",
       "Gaurav SKILL tree/**",
       ".worktrees/**",
+      "android/**",
+      "native/**",
     ],
   },
   {
