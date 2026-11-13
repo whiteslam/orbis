@@ -81,3 +81,27 @@ export function subscribePhoneLink(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }
+
+/**
+ * Forgets what the page knew about the old credential. Called whenever the phone's
+ * credential is wiped or replaced (a reset, a new registration, sign-out): the wipe
+ * also drops the push token, so push must be asked for again.
+ */
+export function resetPhoneLink(): void {
+  setPhoneLink({ registerError: null, removed: false, push: 'unknown' });
+}
+
+let signingOut = false;
+
+/**
+ * Set by the sign-out button before the phone signs out, so a return to the app in
+ * those seconds can't register the phone again while the session cookie still works.
+ * Cleared when a signed-in page mounts again, or when the server sign-out didn't happen.
+ */
+export function setSigningOut(on: boolean): void {
+  signingOut = on;
+}
+
+export function isSigningOut(): boolean {
+  return signingOut;
+}

@@ -6,12 +6,16 @@
 // never kept in React state, logged, or put in a URL.
 
 import { OrbisCore, type CoreStatus } from './orbis-core';
-import { getPhoneLink, registerBody, registerFailure, setPhoneLink, shouldResetDevice } from './device-state';
+import { getPhoneLink, isSigningOut, registerBody, registerFailure, resetPhoneLink, setPhoneLink, shouldResetDevice } from './device-state';
 
 const REGISTER_TIMEOUT_MS = 15_000;
-// After a refused registration (409 at ten phones, 429, a network failure) a return
-// to the app tries again only after this long. A fresh page load always tries.
+// After a refused registration (409 at ten phones, 429, a network failure) or a phone
+// service that couldn't be reached, a return to the app tries again only after this
+// long. A fresh page load always tries.
 const RETRY_AFTER_MS = 10 * 60_000;
+const UNREACHABLE = 'Couldn’t reach this phone’s Orbis service. Try again.';
+
+type Options = { resume?: boolean; again?: boolean };
 
 let running: Promise<void> | null = null;
 let lastFailureAt: number | null = null;
@@ -23,35 +27,62 @@ export async function pushPlugin() {
 
 /**
  * Brings the phone's credential in line with `userId`, then registers for push if
- * notifications are already allowed. One run at a time; a second call while one
- * is running shares it.
+ * notifications are already allowed. Never rejects: a failure is recorded in the
+ * phone-link state (lib/native/device-state.ts). Does nothing while signing out.
  *
- * - `resume`: a return to the app. Skips registering for a while after a refusal.
+ * One run at a time. A plain call while one is running shares it; a call with
+ * `again` runs once more after it, so the person's "add this phone again" is never lost.
+ *
+ * - `resume`: a return to the app. Skips registering for a while after a failure.
  * - `again`: the person asked to add this phone after it was removed from the web.
  */
-export function linkThisPhone(userId: string, options: { resume?: boolean; again?: boolean } = {}): Promise<void> {
-  running ??= run(userId, options).finally(() => { running = null; });
-  return running;
+export function linkThisPhone(userId: string, options: Options = {}): Promise<void> {
+  if (running) {
+    if (!options.again) return running;
+    return running.then(() => linkThisPhone(userId, options));
+  }
+  const current = run(userId, options).finally(() => { if (running === current) running = null; });
+  running = current;
+  return current;
 }
 
-async function run(userId: string, { resume = false, again = false }: { resume?: boolean; again?: boolean }): Promise<void> {
-  const status = await OrbisCore.status();
-  const step = shouldResetDevice(status, userId);
+async function run(userId: string, { resume = false, again = false }: Options): Promise<void> {
+  if (isSigningOut()) return;
+  let status: CoreStatus;
+  try {
+    status = await OrbisCore.status();
+    const step = shouldResetDevice(status, userId);
 
-  // Removed from another device: the phone signed itself out. Adding it back is the
-  // person's call (Settings), not something a page load does behind their back.
-  const removed = step === 'register' && status.signedOutReason === 'revoked' && !again;
-  setPhoneLink({ removed });
+    // Removed from another device: the phone signed itself out. Adding it back is the
+    // person's call (Settings), not something a page load does behind their back.
+    const removed = step === 'register' && status.signedOutReason === 'revoked' && !again;
+    setPhoneLink({ removed });
 
-  const waiting = resume && lastFailureAt !== null && Date.now() - lastFailureAt < RETRY_AFTER_MS;
-  if (step !== 'none' && !removed && !waiting) {
-    // Another account's credential (or one with no account): wipe and revoke it first.
-    if (step === 'reset-then-register') await OrbisCore.signOut({ revoke: true });
-    await register(status, userId);
+    const waiting = resume && lastFailureAt !== null && Date.now() - lastFailureAt < RETRY_AFTER_MS;
+    // Checked again here: a sign-out may have started while status() was answering.
+    if (step !== 'none' && !removed && !waiting && !isSigningOut()) {
+      if (step === 'reset-then-register') {
+        // Another account's credential (or one with no account): wipe and revoke it first.
+        // The wipe drops the push token too, so the old push state goes with it.
+        resetPhoneLink();
+        await OrbisCore.signOut({ revoke: true });
+      }
+      await register(status, userId);
+    }
+  } catch {
+    // status() or the reset's signOut rejected (e.g. store_unavailable): settle, don't hang.
+    lastFailureAt = Date.now();
+    const { push } = getPhoneLink();
+    setPhoneLink({ registerError: { status: 0, message: UNREACHABLE }, push: push === 'unknown' ? 'failed' : push });
+    return;
   }
 
-  // A wipe also clears the push token, so push comes after the credential.
-  await startPush(status);
+  // After the credential, since a wipe clears the push token.
+  try {
+    await startPush(status);
+  } catch {
+    setPhoneLink({ push: 'failed' });
+  }
 }
 
 async function register(status: CoreStatus, userId: string): Promise<void> {
@@ -79,7 +110,8 @@ async function register(status: CoreStatus, userId: string): Promise<void> {
     return refused(response.status, null);
   }
   lastFailureAt = null;
-  setPhoneLink({ registerError: null, removed: false });
+  // A new credential: push is asked for again below (register() answers with the current token).
+  resetPhoneLink();
 }
 
 function refused(status: number, body: unknown): void {
@@ -88,14 +120,14 @@ function refused(status: number, body: unknown): void {
 }
 
 /**
- * Asks Firebase for a token when notifications are already allowed; the token
- * arrives through NativeBridge's 'registration' listener. Never called in a build
- * without Firebase: the plugin's register() would crash the app there.
+ * Asks Firebase for a token when notifications are allowed and push isn't already
+ * registered for the current credential; the token arrives through NativeBridge's
+ * 'registration' listener. Never called in a build without Firebase: the plugin's
+ * register() would crash the app there.
  */
 async function startPush(status: CoreStatus): Promise<void> {
   if (!status.pushReady) return setPhoneLink({ push: 'missing' });
-  const { push } = getPhoneLink();
-  if (push === 'registered') return;
+  if (getPhoneLink().push === 'registered') return;
   const plugin = await pushPlugin();
   const { receive } = await plugin.checkPermissions();
   if (receive === 'granted') await plugin.register();

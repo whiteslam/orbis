@@ -4,9 +4,13 @@ import { useRef, type FormEvent } from 'react';
 import { LogOut } from 'lucide-react';
 import { signOut } from '@/app/auth/actions';
 import { isNativeApp, OrbisCore } from '@/lib/native/orbis-core';
+import { resetPhoneLink, setSigningOut } from '@/lib/native/device-state';
 
 // The phone gets this long to wipe itself and tell the server; sign-out never waits longer.
 const PHONE_SIGN_OUT_MS = 6_000;
+// The server sign-out navigates away (or a signed-in page mounting again clears the flag,
+// see NativeBridge). Still here after this long means it didn't happen: let linking run again.
+const SIGN_OUT_GIVE_UP_MS = 20_000;
 
 /** Wipes the phone and revokes its credential; settles within PHONE_SIGN_OUT_MS whatever happens. */
 function signOutPhone(): Promise<void> {
@@ -28,10 +32,15 @@ export function SignOutButton({ variant = 'icon' }: Readonly<{ variant?: 'icon' 
     event.preventDefault();
     if (busy.current) return;
     busy.current = true;
+    // Until the server sign-out lands, a return to the app must not register the phone again.
+    setSigningOut(true);
     const form = event.currentTarget;
     void signOutPhone().finally(() => {
+      // The phone's credential and push token are gone; so is what the page knew about them.
+      resetPhoneLink();
       phoneDone.current = true;
       form.requestSubmit();
+      setTimeout(() => setSigningOut(false), SIGN_OUT_GIVE_UP_MS);
     });
   }
 

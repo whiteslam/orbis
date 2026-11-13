@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { getPhoneLink, registerBody, registerFailure, setPhoneLink, shouldResetDevice, subscribePhoneLink } from './device-state';
+import { getPhoneLink, isSigningOut, registerBody, registerFailure, resetPhoneLink, setPhoneLink, setSigningOut, shouldResetDevice, subscribePhoneLink } from './device-state';
 
 const ME = '7f1c2d3e-0000-4000-8000-000000000001';
 const SOMEONE_ELSE = '7f1c2d3e-0000-4000-8000-000000000002';
@@ -58,4 +58,18 @@ test('the phone link state tells its listeners and returns the same object until
   setPhoneLink({ registerError: null, push: 'missing' });
   assert.equal(calls, 1);
   assert.equal(getPhoneLink().push, 'missing');
+});
+
+test('a wiped or replaced credential resets what the page knew about the old one', () => {
+  setPhoneLink({ registerError: { status: 409, message: 'Too many phones.' }, removed: true, push: 'registered' });
+  resetPhoneLink();
+  assert.deepEqual(getPhoneLink(), { registerError: null, removed: false, push: 'unknown' });
+});
+
+test('signing out is a flag the linking honours until it is cleared', () => {
+  assert.equal(isSigningOut(), false);
+  setSigningOut(true);
+  assert.equal(isSigningOut(), true);
+  setSigningOut(false);
+  assert.equal(isSigningOut(), false);
 });

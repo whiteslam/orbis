@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { isNativeApp, OrbisCore } from '@/lib/native/orbis-core';
-import { setPhoneLink } from '@/lib/native/device-state';
+import { setPhoneLink, setSigningOut } from '@/lib/native/device-state';
 import { linkThisPhone, pushPlugin } from '@/lib/native/link-phone';
 import { safePushPath } from '@/lib/native/push-path';
 
@@ -19,6 +19,8 @@ import { safePushPath } from '@/lib/native/push-path';
 export function NativeBridge({ userId }: Readonly<{ userId: string }>) {
   useEffect(() => {
     if (!isNativeApp()) return;
+    // A signed-in, unlocked page is mounting, so any earlier sign-out has finished.
+    setSigningOut(false);
     let stopped = false;
     let handles: PluginListenerHandle[] = [];
 
