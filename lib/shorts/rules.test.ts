@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { canApprove, canCancel, canRetry, cleanTopic, isActive, limitRefusal, LIMITS, mergeEvents, monthStartIst, readOptions, workerPresence } from './rules';
+import { canApprove, canCancel, canRetry, cleanTopic, isActive, limitRefusal, LIMITS, mergeEvents, monthStartIn, readOptions, workerPresence } from './rules';
 import type { ShortEvent, ShortJob, WorkerState } from './types';
 
 const STYLE = { secondsMin: 25, secondsMax: 45, defaultVoice: 'am_michael' };
@@ -60,10 +60,11 @@ test('the queue limits', () => {
   assert.equal(limitRefusal(2, 29), null);
 });
 
-test('the month starts at midnight in India', () => {
-  assert.equal(monthStartIst(new Date('2026-11-10T08:00:00Z')), '2026-10-31T18:30:00.000Z');
-  // 20:00 UTC on Nov 30 is already Dec 1 in India.
-  assert.equal(monthStartIst(new Date('2026-11-30T20:00:00Z')), '2026-11-30T18:30:00.000Z');
+test('the month starts at midnight in the person\'s own zone', () => {
+  assert.equal(monthStartIn(new Date('2026-11-10T08:00:00Z'), 'Asia/Kolkata'), '2026-10-31T18:30:00.000Z');
+  // 20:00 UTC on Nov 30 is already Dec 1 in India, still Nov 30 in New York.
+  assert.equal(monthStartIn(new Date('2026-11-30T20:00:00Z'), 'Asia/Kolkata'), '2026-11-30T18:30:00.000Z');
+  assert.equal(monthStartIn(new Date('2026-11-30T20:00:00Z'), 'America/New_York'), '2026-11-01T04:00:00.000Z');
 });
 
 test('events merge by seq, once each, in order', () => {
