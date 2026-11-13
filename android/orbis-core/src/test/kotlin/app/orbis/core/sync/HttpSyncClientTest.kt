@@ -19,10 +19,11 @@ import kotlin.concurrent.thread
  */
 class HttpSyncClientTest {
     private lateinit var server: ServerSocket
-    private var status = 200
-    private var challenge = false
-    private var lastRequestHead = ""
-    private var lastBody = ""
+    // Written by the test thread and read by the server thread, or the other way round.
+    @Volatile private var status = 200
+    @Volatile private var challenge = false
+    @Volatile private var lastRequestHead = ""
+    @Volatile private var lastBody = ""
 
     @Before
     fun start() {
@@ -77,7 +78,7 @@ class HttpSyncClientTest {
         assertEquals(401, post())
     }
 
-    // With a challenge header, the JDK refuses to retry a streamed POST and throws HttpRetryException.
+    // A 401 that does carry a challenge header (the real server's does not).
     @Test
     fun a401WithAChallengeHeaderStillReachesTheCallerAs401() {
         status = 401
@@ -112,8 +113,8 @@ class HttpSyncClientTest {
         assertEquals("{\"hello\":\"caf\u00E9\"}", lastBody)
     }
 
-    // The JDK stub does not throw from responseCode (checked: with and without a WWW-Authenticate header
-    // the tests above pass even without this handling), so the exception paths are driven directly.
+    // The JDK stub does not throw from responseCode (checked: the tests above pass even without the
+    // handling, with or without a WWW-Authenticate header), so the exception paths are driven directly.
     @Test
     fun anHttpRetryExceptionYieldsItsStatus() {
         val read = { throw java.net.HttpRetryException("cannot retry due to server authentication, in streaming mode", 401) }
@@ -121,23 +122,24 @@ class HttpSyncClientTest {
     }
 
     @Test
-    fun anAuthChallengeIoExceptionFallsBackToAskingAgain() {
+    fun anAuthChallengeIoExceptionMeans401WithoutAskingAgain() {
         var calls = 0
         val status = HttpSyncClient.statusFrom {
-            if (calls++ == 0) throw java.io.IOException("No authentication challenges found") else 401
+            calls++
+            throw java.io.IOException("No authentication challenges found")
         }
         assertEquals(401, status)
-        assertEquals(2, calls)
+        assertEquals(1, calls)
     }
 
     @Test
-    fun theFallbackItselfMayThrowAnHttpRetryException() {
-        var calls = 0
-        val status = HttpSyncClient.statusFrom {
-            if (calls++ == 0) throw java.io.IOException("No authentication challenges found")
-            else throw java.net.HttpRetryException("streaming", 401)
+    fun aProxyAuthChallengeIsStillANetworkError() {
+        try {
+            HttpSyncClient.statusFrom { throw java.io.IOException("No proxy authentication challenges found") }
+            org.junit.Assert.fail("expected an IOException")
+        } catch (e: java.io.IOException) {
+            assertEquals("No proxy authentication challenges found", e.message)
         }
-        assertEquals(401, status)
     }
 
     @Test

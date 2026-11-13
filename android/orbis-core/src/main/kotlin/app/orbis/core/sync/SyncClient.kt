@@ -53,23 +53,25 @@ class HttpSyncClient : SyncClient {
     private fun statusOf(conn: HttpURLConnection): Int = statusFrom { conn.responseCode }
 
     companion object {
-        /** The status [read] returns, or the one an auth-related exception carries. See [statusOf]. */
+        /** The status [read] returns, or the 401 an auth-related exception stands for. See [statusOf]. */
         internal fun statusFrom(read: () -> Int): Int = try {
             read()
         } catch (e: HttpRetryException) {
             e.responseCode()
         } catch (e: IOException) {
-            if (!isAuthChallenge(e)) throw e
-            // The status is usually cached after that failure, so asking again returns it.
-            try {
-                read()
-            } catch (again: HttpRetryException) {
-                again.responseCode()
-            }
+            // The JDK raises "No authentication challenges found" only while handling a 401 reply that
+            // has no WWW-Authenticate header, which is how the server answers an unknown or revoked
+            // phone. Asking again could throw the same thing, so the status is simply 401. The proxy
+            // variant ("No proxy authentication challenges found", a 407) is a different problem and
+            // stays an ordinary network error.
+            if (isAuthChallenge(e)) 401 else throw e
         }
 
-        private fun isAuthChallenge(e: IOException): Boolean =
-            e.message?.contains("authentication challenge", ignoreCase = true) == true
+        private fun isAuthChallenge(e: IOException): Boolean {
+            val message = e.message ?: return false
+            return message.contains("authentication challenge", ignoreCase = true) &&
+                !message.contains("proxy", ignoreCase = true)
+        }
 
         const val PATH = "/api/device/signals"
         const val TIMEOUT_MS = 15_000
