@@ -8,6 +8,9 @@ import { SocialInsights } from '@/components/social/social-insights';
 import { Composer } from '@/components/social/studio/composer';
 import { LiveColumn } from '@/components/social/studio/live-column';
 import { PostCard } from '@/components/social/studio/post-card';
+import { PromoSuggest } from '@/components/social/studio/promo-suggest';
+import { setPostStatusAction } from '@/app/social/actions';
+import { retryPromoImageAction } from '@/app/social/promo-actions';
 import { ShortsView } from '@/components/shorts/shorts-view';
 import { useShortsData } from '@/components/shorts/use-shorts-data';
 import { loadSocialMonthAction } from '@/app/social/actions';
@@ -79,6 +82,8 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
   const [account, setAccount] = useState<SocialAccount>('me');
   const [openJob, setOpenJob] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
   const [isLoading, startLoading] = useTransition();
+  const [busyPost, setBusyPost] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const shorts = useShortsData();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : `${screen.name}-${area}`);
   const today = todayIn(timeZone);
@@ -136,6 +141,31 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
   function openShorts(jobId?: string) {
     setOpenJob((current) => ({ id: jobId ?? null, key: current.key + 1 }));
     chooseArea('shorts');
+  }
+
+  /** Keep or a new picture, on one Orbis AI post: one at a time, the result said above the cards. */
+  async function onPromoCard(post: SocialPost, run: 'keep' | 'image') {
+    setBusyPost(post.id);
+    setNotice(null);
+    const result = run === 'keep'
+      ? await safeAction(setPostStatusAction)(post.id, 'ready')
+      : await safeAction(retryPromoImageAction)(post.id);
+    if (result.success && result.post) upsert(result.post);
+    setNotice({ text: result.message, error: !result.success });
+    setBusyPost(null);
+  }
+
+  function promoActions(post: SocialPost) {
+    if (post.account !== 'orbis' || post.source !== 'ai' || post.status === 'published') return undefined;
+    const busy = busyPost === post.id;
+    return (
+      <>
+        {!post.mediaPath && <p className="st-card-note">Image couldn’t be made. Try another image.</p>}
+        {post.status !== 'ready' && <button type="button" className="st-pill st-card-btn st-card-keep" disabled={busy} onClick={() => void onPromoCard(post, 'keep')}>Keep</button>}
+        <button type="button" className="st-pill st-card-btn" disabled={busy} onClick={() => void onPromoCard(post, 'image')}>{busy ? 'Working…' : 'Try another image'}</button>
+        <button type="button" className="st-pill st-card-btn" disabled={busy} onClick={() => openPost(post)}>Edit</button>
+      </>
+    );
   }
 
   function chooseAccount(next: SocialAccount) {
@@ -197,7 +227,12 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
                 </div>
               )}
 
-              <Composer account={account} period={period} onAdded={(post) => upsert(post)} />
+              <Composer
+                account={account}
+                period={period}
+                onAdded={(post) => upsert(post)}
+                extra={isOwner && account === 'orbis' ? <PromoSuggest period={period} onSuggested={(posts) => posts.forEach(upsert)} /> : undefined}
+              />
 
               <div className="st-month">
                 <button type="button" className="so-round" onClick={() => load(shiftMonth(period, -1))} disabled={isLoading} aria-label="Previous month"><ChevronLeft size={18} strokeWidth={2.2} aria-hidden="true" /></button>
@@ -211,6 +246,8 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
                 <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
               )}
 
+              {notice && <output className={`st-notice${notice.error ? ' error' : ''}`}>{notice.text}</output>}
+
               {ready && !shown.length && !isLoading && <p className="st-empty">Nothing here yet. Write your first post above.</p>}
 
               {ready && shown.map(([key, label]) => (
@@ -218,7 +255,7 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
                   <h2 className="so-h">{label} <span className="so-count">{groups[key].length}</span></h2>
                   <ul className="st-cards">
                     {groups[key].map((post) => (
-                      <li key={post.id}><PostCard post={post} accountName={accountName} onOpen={openPost} /></li>
+                      <li key={post.id}><PostCard post={post} accountName={accountName} onOpen={openPost} actions={promoActions(post)} /></li>
                     ))}
                   </ul>
                 </section>
