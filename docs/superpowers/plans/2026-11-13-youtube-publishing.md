@@ -23,6 +23,7 @@
 - Copy follows the app's voice: plain English, short sentences, curly apostrophes (’) in UI text, as in `components/shorts/*`.
 - Every new service-role import gets a row in `docs/security/service-role-uses.md` and a path in `ADMIN_CLIENT_ALLOWLIST` (`lib/security/admin-usage.test.ts`), kept sorted.
 - Unit tests live under `lib/**` or `workers/shorts-studio/src/**`; vitest only runs those globs.
+- `lib/youtube/types.ts`, `details.ts` and `schedule.ts` use **relative imports only** (no `@/`), with `import type` for types. The home-PC import script (Task 7) loads them with plain Node, which doesn't know the `@/` alias or extensionless paths. So `details.ts` may have only `import type` lines and no value imports. The worker imports it as `../../../lib/youtube/details.ts`, as `src/db.ts` already does for `lib/shorts`.
 - Finish every task with `pnpm typecheck`, `pnpm lint` and `pnpm test` all green.
 
 ### Rulings (where this plan goes beyond the spec)
@@ -100,6 +101,11 @@
     - Indexes: `(user_id, status, position)` and `(user_id, published_at desc)`.
     - A unique partial index on `(user_id, job_id) where job_id is not null and status in ('queued','uploading','published')`, so one short can't be queued twice.
   - RLS on all three: `enable row level security`; `revoke all … from public, anon, authenticated`; `grant select to authenticated` with a policy `(select auth.uid()) = user_id`; full grants to `service_role`. Writes go through server actions using the service role (same model as `shorts_jobs`).
+  - Two SQL functions, `security invoker`, `set search_path = ''`. `revoke execute … from public, anon, authenticated` and `grant execute … to service_role`. They keep the lease (R3) and reordering atomic, and Task 4 calls them through `admin.rpc`.
+    - `public.youtube_take_row(p_user uuid, p_id uuid, p_from text, p_posted_by text, p_lease_seconds integer) returns setof public.youtube_queue`. One `update … where id = p_id and user_id = p_user and status = p_from and (lease_until is null or lease_until < now()) returning *`. It sets:
+      - `lease_until = now() + make_interval(secs => p_lease_seconds)`;
+      - when `p_from = 'queued'`: also `status = 'uploading'`, `posted_by = p_posted_by` and `upload_started_at = coalesce(upload_started_at, now())`.
+    - `public.youtube_move(p_user uuid, p_id uuid, p_dir integer) returns void`. It swaps `position` with the nearest `queued` row of the same user in direction `p_dir` (−1 = earlier). At either end it does nothing, and it ignores `p_dir` outside ±1.
 - Schedule file: copy the shape of `supabase/cron/headsups_schedule.sql`, with job name `orbis-youtube`, schedule `*/10 * * * *`, URL `https://orbis-starter.vercel.app/api/social/youtube/publish` and `timeout_milliseconds := 55000`.
 
 - [ ] **Step 1: Write `lib/youtube/sql-harness.ts`.** Use the same stubs as `lib/device/sql-harness.ts`, plus:
@@ -117,6 +123,9 @@
   - `deleting the shorts job sets job_id null and keeps the queue row`;
   - `days must be a non-empty subset of 1–7` (`'{0}'` and `'{}'` throw);
   - `the migration runs twice without error` (call `loadMigration` for the YouTube file again).
+  - `youtube_take_row moves queued to uploading, sets posted_by and a lease; a second take while the lease is live returns no row; after the lease passes it returns the row` (Review Focus 2). Simulate the passed lease by updating `lease_until` into the past.
+  - `youtube_move swaps with the neighbour and does nothing at the ends or for another user's row`.
+  - `authenticated cannot execute youtube_take_row or youtube_move`.
 - [ ] **Step 3: Run** `pnpm vitest run lib/youtube/schema.test.ts`. It should fail because the migration file doesn't exist yet.
 - [ ] **Step 4: Write the migration.** Make it idempotent like its neighbours: `if not exists`, `drop … if exists` before policies and triggers, and swap the platform check by `drop constraint if exists social_connections_platform_check` then `add`. Check the real constraint name with PGlite (`select conname from pg_constraint where conrelid='public.social_connections'::regclass`). Open the file with a comment in the style of the Shorts migration, naming the spec. Then write `supabase/cron/youtube_schedule.sql`.
 - [ ] **Step 5: Run** `pnpm vitest run lib/youtube/schema.test.ts`. Expected: PASS.
@@ -342,11 +351,7 @@ Behaviour that `runUpload` and `publishSlice` must follow. These are the spec's 
     - `401 returns reconnect`;
     - `500 returns error with the message cut to 500`;
     - `308 without a Range header restarts from 0`.
-  - `repository.test.ts` (PGlite with a minimal admin shim, or test the SQL of `takeRow` directly):
-    - `takeRow on a row whose lease is live returns null` (Review Focus 2);
-    - `takeRow moves queued to uploading and sets posted_by once`;
-    - `moveQueued swaps with the neighbour and is a no-op at the ends`;
-    - `retryFailed puts the row first with attempts 0`.
+  - The lease and the reordering are already tested at the SQL level in Task 1. `takeRow` and `moveQueued` are thin `admin.rpc('youtube_take_row' | 'youtube_move', …)` calls with a lease of 75 s. Skip `repository.test.ts` unless you add logic beyond those calls.
   - `publish.test.ts`. Fake the repository and Google modules with `vi.mock`:
     - `not due and nothing uploading does nothing`;
     - `an uploading row is resumed even when not due` (R4);
