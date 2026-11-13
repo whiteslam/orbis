@@ -74,8 +74,6 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
 
   return (
     <div className="sh-view">
-      <WorkerStrip presence={view.presence} worker={view.worker} />
-
       {open.length > 0 && (
         <section className="sh-section" aria-label="On the go">
           <h2 className="sh-h">On the go <span className="so-count">{open.length}</span></h2>
@@ -100,6 +98,9 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
         <h2 className="sh-h">Pick a style</h2>
         <StyleBoard styles={view.styles} onPick={(slug) => setScreen({ name: 'style', slug })} />
       </section>
+
+      {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}
+      {(view.presence === 'none' || view.presence === 'offline' || view.presence === 'setup') && <WorkerStrip presence={view.presence} worker={view.worker} />}
 
       <section className="sh-section" aria-label="Your shorts">
         <h2 className="sh-h">Your shorts <span className="so-count">{done.length}</span></h2>
