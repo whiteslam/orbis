@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'com.google.devtools.ksp'
 
 android {
     namespace = "app.orbis.core"
@@ -20,6 +21,27 @@ kotlin {
     }
 }
 
+ksp {
+    // Room writes each schema version here, for future migrations and their tests.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+def roomVersion = '2.8.5'
+def coroutinesVersion = '1.10.2'
+
 dependencies {
+    implementation "androidx.room:room-runtime:$roomVersion"
+    implementation "androidx.room:room-ktx:$roomVersion"
+    ksp "androidx.room:room-compiler:$roomVersion"
+    // Versions as in net.zetetic:sqlcipher-android's README.
+    implementation 'net.zetetic:sqlcipher-android:4.20.0@aar'
+    implementation 'androidx.sqlite:sqlite:2.7.0'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 }
