@@ -57,7 +57,7 @@ If a file stops importing the client, remove it from both places; the test says 
 - **switched to RLS**: the content reads now use the person's session. The file stays listed because something else in it still needs the service role.
 - **needs owner decision**: a request-path read of user content that the person's session can't do today. Switching would need a migration (grants or a Storage policy) or a wider refactor. The row says why.
 
-Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th file, `lib/notifications/context.ts`, used its value import only as a type; it is now `import type` and off the list.
+Counts: 47 files. 41 ok, 2 switched to RLS, 4 need an owner decision. A 45th file, `lib/notifications/context.ts`, used its value import only as a type; it is now `import type` and off the list.
 
 ## Files
 
@@ -70,6 +70,7 @@ Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th fil
 | `app/api/headsups/scan/route.ts` | Cron (`cronAuthorized`) that runs the heads-up checks for everyone with a preferences row. | each person on the scan | yes: the records the checks look at (money, routines, steps, plans), to raise their own heads-ups | ok |
 | `app/api/notifications/dispatch/route.ts` | Cron (`cronAuthorized`) that sends each person's due notification slots. It reads all enabled `notification_preferences`. | each person with notifications on | yes, through `lib/notifications/context.ts` (see below), for their own notification | ok |
 | `app/api/research/weekly/route.ts` | Cron (`cronAuthorized`) that queues weekly research and settles past runs. Uses `auth.admin.getUserById` to check Research-desk access by email. | Research-desk users (owner-only today) | research runs and settings only, no personal records | ok |
+| `app/api/social/youtube/publish/route.ts` | YouTube publish (cron): reads every person's due queue and uploads their videos from the `shorts` bucket; CRON_SECRET only. The work is in `lib/youtube/publish.ts`, which is handed this client. | each person with a connected YouTube and a waiting video, one at a time | yes: their queued video file and its details, sent to their own channel | ok |
 | `app/auth/callback/route.ts` | New-account guard: `auth.admin.deleteUser`, falling back to a ban, when sign-up isn't allowed. | the account just created | no | ok |
 | `app/career/actions.ts` | "Search now" runs the cron's `ingestUser` for the signed-in person. It writes service-role bookkeeping (source cursors, last run, `career_mail`) and reads the Gmail token. | the signed-in person | yes: their job-alert mail, read from Gmail with their token, on a request path | needs owner decision: the content comes from Gmail rather than another person's rows, but the request path holds a service-role client. Splitting ingest into session-scoped reads and service-role bookkeeping is a refactor, and `career_mail` and the cursor columns have no `authenticated` write grant. Recommend keeping it. |
 | `app/headsups/actions.ts` | "Clear all" deletes heads-ups. People have only `update (status, snoozed_until)`. Everything else in the file uses the session. | the signed-in person | no (delete only) | ok |
@@ -123,6 +124,8 @@ These name the client's type for a parameter. The caller hands them the client, 
 - `lib/notifications/deliver.ts`
 - `lib/notifications/push.ts`: it also reads `devices.push_token` (not granted to `authenticated`, so only the service role can) for the person it is sending to, and clears the token of that person's own phone when FCM reports it gone. Every query is filtered by that `user_id`.
 - `lib/security/roles.ts`
+- `lib/youtube/publish.ts`: YouTube publish (cron): reads every person's due queue and uploads their videos from the `shorts` bucket; CRON_SECRET only. Handed the client by the publish route (and later by Post now).
+- `lib/youtube/repository.ts`: YouTube queue, settings and presets: writes keyed to the signed-in person or, from the cron, the row's owner.
 
 `lib/notifications/context.ts` reads the person's routines, spending, steps, persona and social plan to word their notification. It is called by the dispatch cron and by "Send a test" (see `app/personal/notification-actions.ts` above).
 

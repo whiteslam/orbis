@@ -25,6 +25,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/api/headsups/scan/route.ts',
   'app/api/notifications/dispatch/route.ts',
   'app/api/research/weekly/route.ts',
+  'app/api/social/youtube/publish/route.ts',
   'app/auth/callback/route.ts',
   'app/career/actions.ts',
   'app/headsups/actions.ts',
