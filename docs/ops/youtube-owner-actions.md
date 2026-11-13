@@ -1,16 +1,18 @@
 # YouTube publishing owner actions
 
-What only you can do to move YouTube posting from the PC publisher (`yt.py` and its timer) into Orbis. The code is written and tested; nothing here happens automatically. Do the steps in this order. The PC timer keeps running until step 10, so no day is skipped. From step 7 the Orbis schedule is live too, so **you pause Orbis's schedule first (step 5) and switch it back on only after the PC timer is off (step 11)**. Without that, both would post at 18:00 and the same short could go out twice.
+What only you can do to move YouTube posting from the PC publisher (`yt.py` and its timer) into Orbis. The code is written and tested; nothing here happens automatically. Do the steps in this order. The PC timer keeps running until step 9, so no day is skipped while you set up. From step 7 the Orbis schedule is live too, so **you pause Orbis's schedule first (step 5) and switch it back on only after the PC timer is off (step 11)**. Without that, both would post at 18:00 and the same short could go out twice.
 
 Design: `docs/superpowers/specs/2026-11-13-youtube-publishing-design.md`.
 
-**Deploy order matters.** Apply the migration (step 1) **before** the code goes live (step 4). If the code goes live first, the YouTube panel and the publish route fail until the tables exist.
+**Deploying the code before the migration is safe.** Until step 1 is done, the YouTube panel says posting isn’t set up yet, Connect YouTube asks for the migration, and the publish route does nothing. Nothing breaks and nothing posts; YouTube just shows as not set up.
 
 1. **Apply the migration.** In the Supabase SQL editor, paste and run `supabase/migrations/202611130002_youtube.sql`. It is additive and safe to run twice.
 
-2. **Check the redirect address on the Google web client.**
+2. **Check the Google web client and its consent screen.**
    - Google Cloud console, project `orbis-512912`, APIs & Services, Credentials, the same web client Gmail uses.
    - Under Authorized redirect URIs, make sure `https://orbis-starter.vercel.app/auth/youtube/callback` is there. Add it if not, and save.
+   - Then the OAuth consent screen (Google Auth Platform), **Data access**: Add or remove scopes, and add both YouTube scopes, `https://www.googleapis.com/auth/youtube.upload` and `https://www.googleapis.com/auth/youtube.readonly`. Save. (You may need step 3 first for them to appear in the list; you can also paste them in by hand.)
+   - Google hasn’t verified Orbis for these scopes, so when you connect (step 5) Google may show a **“Google hasn’t verified this app”** screen. That is expected for your own app: choose **Advanced**, then **Go to … (unsafe)** (with the app’s name), and carry on. If the app’s publishing status is Testing, the Google account that owns the channel must be listed under Test users (Audience).
    - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` must be set where Orbis is deployed (Vercel). They already are, because Gmail uses them. YouTube uses the same two values, so there is nothing new to add.
 
 3. **Enable the YouTube Data API v3.** In the same project `orbis-512912`: APIs & Services, Library, search "YouTube Data API v3", Enable. Without it, Connect works but every upload is refused.
@@ -55,17 +57,17 @@ Design: `docs/superpowers/specs/2026-11-13-youtube-publishing-design.md`.
    3. Open YouTube Studio and confirm the video is on the channel, private, with the right title.
    4. Delete that video in YouTube Studio.
 
-   If it fails, Posted shows the error. Fix that before step 9 Posting stays paused and the PC timer is still your fallback.
+   If it fails, Posted shows the error. Fix that before step 9. Posting stays paused and the PC timer is still your fallback.
 
-9. **Take out of the Orbis queue anything the PC has posted since the import.** The PC timer kept posting after step 6. In Social, Shorts, YouTube, look at the queue and Remove each short that already went out from the PC. Check the PC publisher’s `published.json` (or YouTube Studio) against the Orbis queue if you aren’t sure. Do this right before step 10, so none are missed.
-
-10. **Turn off the PC timer.** On the home PC:
+9. **Turn off the PC timer.** Orbis posting is still paused, so for now nothing posts from either side. On the home PC:
 
    ```bash
    systemctl --user disable --now yt-publish.timer
    ```
 
    `yt.py` and its files stay on disk as a fallback. If Orbis posting ever breaks, `systemctl --user enable --now yt-publish.timer` brings it back (pause posting in Orbis first, so a day doesn’t get two posts).
+
+10. **Take out of the Orbis queue anything the PC has posted since the import.** The PC timer kept posting from step 6 until you turned it off in step 9. With the timer off, that list can’t grow any more. In Social, Shorts, YouTube, look at the queue and Remove each short that already went out from the PC. Check the PC publisher’s `published.json` (or YouTube Studio) against the Orbis queue if you aren’t sure.
 
 11. **Switch Orbis posting on.** In Social, Shorts, YouTube, Schedule, switch **Pause posting** off and tap **Save**. The schedule now posts one short a day at the time you set.
 
