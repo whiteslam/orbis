@@ -205,7 +205,7 @@
 .cp-fill-offer, .cp-fill-accepted { --cp-fill: var(--brand-gradient); }
 .cp-fill-closed { --cp-fill: color-mix(in srgb, var(--fd-ink) 18%, transparent); --cp-on-fill: var(--fd-ink); }
 
-.cp-empty { max-width: 620px; margin: 24px 0; padding: 32px; border: var(--cp-card-edge); border-radius: 16px; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--cp-shadow); }
+.cp-empty { max-width: 620px; margin: 24px auto; padding: 32px; text-align: center; border: var(--cp-card-edge); border-radius: 16px; background: var(--cp-card); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: var(--cp-shadow); }
 .cp-empty h2 { margin: 0; color: var(--fd-ink); font-size: 24px; font-weight: 600; letter-spacing: -.025em; text-wrap: balance; }
 .cp-empty p { margin: 10px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.6; }
 .cp-empty-act { margin-top: 18px; }

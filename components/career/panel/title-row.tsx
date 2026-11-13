@@ -87,6 +87,7 @@ const KEYS: Record<PanelPage, (home: CareerHome, loc: PersonLocale) => Key[]> = 
   interviews: interviewKeys,
   offers: offerKeys,
   insights: insightKeys,
+  skills: () => [],
   setup: setupKeys,
 };
 

@@ -21,6 +21,7 @@ import '../styles/glass-dark.css';
 import '../styles/headsups.css';
 import '../styles/career.css';
 import '../styles/career-panel.css';
+import '../styles/career-skills.css';
 import '../styles/research.css';
 import '../styles/motion.css';
 import '../styles/brand-app.css';
@@ -34,6 +35,7 @@ import '../styles/page-today.css';
 import '../styles/page-money.css';
 import '../styles/page-health.css';
 import '../styles/page-social.css';
+import '../styles/page-shorts.css';
 import '../styles/page-career.css';
 import '../styles/page-settings.css';
 

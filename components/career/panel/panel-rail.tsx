@@ -142,6 +142,7 @@ const PRIMARY: Record<PanelPage, readonly string[]> = {
   pipeline: ['search', 'queue'],
   interviews: ['search'],
   offers: ['search'],
+  skills: [],
   setup: [],
 };
 

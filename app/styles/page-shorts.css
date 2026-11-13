@@ -1,0 +1,164 @@
+/* ─── Social → Shorts: faceless shorts made on the owner's PC ────────────
+   components/shorts/. The worker strip, then what's on the go, the board
+   of styles as picture cards, and the library of finished 9:16 tiles. A
+   short opens to its live timeline, its plan editor or its player. Uses
+   Social's accent (--so-accent) and the field tokens, so it follows the
+   theme. Loaded after page-social.css. */
+
+.so-area { margin: 4px 0 2px; }
+
+.sh-view { display: flex; flex-direction: column; gap: 26px; margin-top: 18px; min-width: 0; }
+.sh-h { margin: 0 0 12px; color: var(--fd-ink); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.2; }
+.sh-section { min-width: 0; }
+.sh-empty, .sh-loading { margin: 0; color: var(--fd-soft); font-size: 14px; line-height: 1.55; }
+.sh-loading { display: inline-flex; align-items: center; gap: 8px; }
+.sh-optional { margin-left: 6px; color: var(--fd-faint); font-weight: 500; }
+.sh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+.sh-actions .fd-link { min-height: 40px; font-size: 13px; }
+a.so-action { text-decoration: none; }
+.sh-back { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 40px; padding: 0 4px 0 0; border: 0; background: none; color: var(--fd-soft); font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer; }
+.sh-back:hover { color: var(--fd-ink); }
+.sh-view code { padding: 1px 5px; border-radius: 6px; background: var(--fd-chip); font-size: .92em; overflow-wrap: anywhere; }
+
+/* The worker strip: one line with a status dot, and the setup steps when it isn't there. */
+.sh-worker { padding: 14px 16px; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.sh-worker-line { display: flex; align-items: flex-start; gap: 10px; margin: 0; color: var(--fd-ink); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.sh-worker-line i { flex: none; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--fd-faint); }
+.sh-worker.is-idle i { background: var(--fd-accent); }
+.sh-worker.is-busy i { background: var(--so-accent); animation: sh-pulse 1.6s ease-in-out infinite; }
+.sh-worker.is-paused i, .sh-worker.is-setup i { background: var(--brand-gold); }
+.sh-worker.is-offline i { background: var(--fd-alert); }
+.sh-worker-note { margin: 8px 0 0 19px; color: var(--fd-soft); font-size: 12.5px; line-height: 1.5; white-space: pre-line; }
+.sh-setup { margin: 10px 0 0 19px; color: var(--fd-soft); font-size: 13px; line-height: 1.55; }
+.sh-setup summary { min-height: 32px; color: var(--so-accent); font-weight: 650; cursor: pointer; }
+.sh-setup ol { margin: 6px 0 0; padding-left: 18px; }
+.sh-setup li + li { margin-top: 4px; }
+@keyframes sh-pulse { 50% { opacity: .35; } }
+
+/* On the go: one row per short with its status. */
+.sh-open { margin: 0; padding: 0; list-style: none; }
+.sh-open li + li { border-top: 1px solid var(--fd-rule); }
+.sh-open-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 8px 0; border: 0; background: none; color: var(--fd-faint); font: inherit; text-align: left; cursor: pointer; }
+.sh-open-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.sh-open-text b { overflow: hidden; color: var(--fd-ink); font-size: 14.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.sh-open-text span { color: var(--fd-faint); font-size: 12px; }
+
+.sh-status { flex: none; padding: 4px 10px; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font-size: 11.5px; font-weight: 650; white-space: nowrap; }
+.sh-status.is-plan_ready { background: var(--so-accent-wash); box-shadow: none; color: var(--fd-ink); }
+.sh-status.is-planning, .sh-status.is-building { color: var(--so-accent); }
+.sh-status.is-done { background: var(--fd-wash); box-shadow: none; color: var(--fd-accent); }
+.sh-status.is-failed { background: var(--fd-alert-wash); box-shadow: none; color: var(--fd-alert); }
+
+/* The board: style sheets as picture cards, two to a row on a phone. */
+.sh-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.sh-style { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; overflow: hidden; border: 0; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+.sh-style:hover { box-shadow: inset 0 0 0 1px var(--so-accent); transform: translateY(-2px); }
+.sh-style:focus-visible, .sh-tile:focus-visible, .sh-open-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-sheet { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--fd-rule); }
+.sh-sheet.is-large { aspect-ratio: auto; max-height: 520px; object-fit: contain; border-radius: var(--r-xl); }
+.sh-sheet.is-empty { display: grid; place-items: center; color: var(--fd-faint); }
+.sh-style-body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; }
+.sh-style-name { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--fd-ink); font-size: 14.5px; font-weight: 750; letter-spacing: -.01em; }
+.sh-style-for { color: var(--fd-soft); font-size: 12.5px; line-height: 1.35; }
+.sh-style-len { color: var(--fd-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.sh-badge { flex: none; padding: 2px 7px; border-radius: var(--r-pill); background: var(--fd-wash); color: var(--fd-accent); font-size: 10.5px; font-weight: 750; }
+.sh-badge.is-3d { background: var(--so-accent-wash); color: var(--so-accent); }
+
+/* A style up close, then its intake. */
+.sh-detail { display: flex; flex-direction: column; gap: 14px; }
+.sh-detail-tag { margin: 0; color: var(--fd-ink); font-size: 15.5px; line-height: 1.5; }
+.sh-facts { display: grid; gap: 8px; margin: 12px 0 0; }
+.sh-facts div { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
+.sh-facts dt { color: var(--fd-faint); font-weight: 600; }
+.sh-facts dd { margin: 0; color: var(--fd-ink); }
+.sh-intake { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.sh-intake textarea, .sh-plan textarea, .sh-ask textarea { min-height: 72px; padding: 10px 12px; line-height: 1.5; resize: vertical; }
+.sh-intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+/* A short: its head, live timeline, plan or player. */
+.sh-job { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sh-job-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px 12px; }
+.sh-job-meta { grid-column: 1 / -1; margin: 0; color: var(--fd-faint); font-size: 12px; font-weight: 600; }
+.sh-job-title { margin: 0; color: var(--fd-ink); font-size: 22px; font-weight: 750; letter-spacing: -.025em; line-height: 1.2; overflow-wrap: anywhere; }
+.sh-feedback { margin: 8px 0 0; color: var(--fd-soft); font-size: 13px; font-style: italic; }
+.sh-timeline { margin-top: 14px; }
+.sh-timeline ol { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sh-timeline li { display: flex; align-items: center; gap: 9px; color: var(--fd-soft); font-size: 14px; }
+.sh-timeline li.is-done svg { color: var(--fd-accent); }
+.sh-timeline li.is-current { color: var(--fd-ink); font-weight: 650; }
+.sh-timeline li.is-current svg { color: var(--so-accent); }
+.sh-log { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--r-md); background: var(--fd-chip); color: var(--fd-soft); font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.sh-qa { margin-top: 12px; color: var(--fd-soft); font-size: 13px; }
+.sh-qa summary { min-height: 32px; color: var(--fd-ink); font-weight: 650; cursor: pointer; }
+.sh-qa ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.5; }
+.sh-contact { display: block; width: 100%; margin-top: 8px; border-radius: var(--r-md); }
+
+/* The plan editor: one numbered block per cut. */
+.sh-plan { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.sh-pace { margin: 0; color: var(--fd-faint); font-size: 12.5px; }
+.sh-pace.is-off { color: var(--brand-gold); }
+.sh-lines { display: flex; flex-direction: column; margin: 4px 0 0; padding: 0; list-style: none; }
+.sh-line { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; padding: 14px 0; border-top: 1px solid var(--fd-rule); }
+.sh-line:first-child { border-top: 0; }
+.sh-line-n { display: grid; place-items: center; width: 24px; height: 24px; margin-top: 18px; border-radius: 50%; background: var(--fd-chip); color: var(--fd-soft); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sh-line.has-error .sh-line-n { background: var(--fd-alert-wash); color: var(--fd-alert); }
+.sh-line-fields { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sh-line-fields .fd-field input, .sh-line-fields .fd-field textarea { margin-top: 5px; }
+.sh-line-error { margin: 0; color: var(--fd-alert); font-size: 12px; }
+.sh-line-tools { display: flex; flex-direction: column; gap: 4px; padding-top: 18px; }
+.sh-icon { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fd-faint); cursor: pointer; }
+.sh-icon:hover:not(:disabled) { background: var(--fd-chip); color: var(--fd-ink); }
+.sh-icon:disabled { opacity: .35; cursor: default; }
+.sh-shot-label { display: inline-flex; align-items: center; gap: 5px; }
+/* The captions as they'll appear: white on ink, the keyword in yellow. */
+.sh-caps { display: flex; flex-wrap: wrap; gap: 6px; }
+.sh-cap { padding: 3px 8px; border-radius: 6px; background: #1a1a1e; color: #fff; font-size: 11.5px; font-weight: 900; letter-spacing: .02em; }
+.sh-cap .is-key { color: #ffd43b; }
+.sh-sources { color: var(--fd-soft); font-size: 13px; }
+.sh-sources summary { min-height: 32px; font-weight: 650; cursor: pointer; }
+.sh-sources ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.5; }
+
+/* A finished short: the player beside what to post with it. */
+.sh-result { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
+.sh-player { width: min(100%, 340px); align-self: center; overflow: hidden; border-radius: 22px; background: #000; aspect-ratio: 9 / 16; }
+.sh-player video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.sh-player-wait { display: grid; place-items: center; height: 100%; color: #fff; }
+.sh-result-side { min-width: 0; }
+.sh-result-side .sh-actions { margin-top: 0; }
+.sh-post { display: grid; gap: 14px; margin: 18px 0 0; }
+.sh-post dt { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--fd-faint); font-size: 12px; font-weight: 650; }
+.sh-post dd { margin: 4px 0 0; color: var(--fd-ink); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.sh-post-text { white-space: pre-line; }
+.sh-copy { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 10px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); color: var(--fd-soft); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.sh-delete { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; color: var(--fd-soft); font-size: 13px; }
+.sh-delete .fd-link { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; font-size: 13px; }
+
+/* The library: finished shorts as 9:16 tiles. */
+.sh-library { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sh-tile { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; border: 0; border-radius: var(--r-lg); background: #111; aspect-ratio: 9 / 16; cursor: pointer; }
+.sh-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sh-tile-blank { display: grid; place-items: center; height: 100%; color: rgba(255,255,255,.7); }
+.sh-tile-title { position: absolute; inset: auto 0 0; padding: 26px 8px 8px; background: linear-gradient(transparent, rgba(0,0,0,.78)); color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1.3; text-align: left; }
+.sh-tile-len { position: absolute; top: 6px; right: 6px; padding: 2px 6px; border-radius: var(--r-pill); background: rgba(0,0,0,.6); color: #fff; font-size: 10.5px; font-weight: 700; }
+
+@media (max-width: 380px) {
+  .sh-intake-grid { grid-template-columns: minmax(0, 1fr); }
+  .sh-library { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-style { transition: none; }
+  .sh-style:hover { transform: none; }
+  .sh-worker.is-busy i { animation: none; }
+}
+
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop] .sh-board { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .stage[data-desktop] .sh-library { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .stage[data-desktop] .sh-detail { flex-direction: row; align-items: flex-start; gap: 28px; }
+  .stage[data-desktop] .sh-detail .sh-sheet.is-large { width: 58%; }
+  .stage[data-desktop] .sh-intake-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stage[data-desktop] .sh-result { flex-direction: row; align-items: flex-start; gap: 32px; }
+  .stage[data-desktop] .sh-player { flex: none; align-self: flex-start; }
+  .stage[data-desktop] .sh-result-side { flex: 1; }
+}

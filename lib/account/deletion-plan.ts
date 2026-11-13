@@ -31,7 +31,7 @@ export function deletionStepIsBestEffort(step: DeletionStep) {
 }
 
 /** Every private bucket that holds files under `${userId}/`. */
-export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory'];
+export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory', 'shorts'];
 
 /** `key` is the column each table's rows are paged by: its primary key. */
 export type ExportTable = { table: string; columns: '*'; key: 'id' | 'user_id' };
@@ -98,6 +98,8 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   'research_events',
   'research_settlements',
   'research_settings',
+  'shorts_jobs',
+  'shorts_events',
 ].map((table) => ({ table, columns: '*' as const, key: SINGLE_ROW_TABLES.has(table) ? 'user_id' as const : 'id' as const }));
 
 /** Within this long of any sign-in, the session alone is proof enough. */

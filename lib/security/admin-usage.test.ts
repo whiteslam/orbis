@@ -33,6 +33,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/invest/ai-actions.ts',
   'app/personal/notification-actions.ts',
   'app/research/actions.ts',
+  'app/shorts/actions.ts',
   'app/social/actions.ts',
   'app/waitlist/actions.ts',
   'lib/account/delete.ts',

@@ -40,6 +40,7 @@ import {
   type TruthRemoval,
   type WatchedCompany,
 } from '@/lib/career/types';
+import { validateSkillTree, type SkillTree } from '@/lib/career/skill-tree';
 
 // The Career tables (supabase/migrations/202610270001_career.sql). Owner reads
 // and writes go through the person's own session, so row-level security keeps
@@ -327,6 +328,35 @@ export async function saveProfile(userId: string, profile: CareerProfile, db?: C
 
 export async function saveSpec(userId: string, spec: CareerSpec, db?: CareerDb) {
   await writeProfileRow(userId, { spec }, db);
+}
+
+// ─── Skill tree ───────────────────────────────────────────────────────────
+
+/** The skill_tree column (202611100002) not applied yet: Postgres's "undefined column", or PostgREST's. */
+function isMissingColumn(error: { code?: string }) {
+  return error.code === '42703' || isMissingTable(error);
+}
+
+/** The owner's uploaded skill tree and profile together, or nulls. A database without the column reads as no tree. */
+export async function getSkillTreeRow(userId: string, db?: CareerDb): Promise<{ tree: SkillTree | null; profile: CareerProfile | null; ready: boolean }> {
+  const client = await dbOr(db);
+  const { data, error } = await client.from('career_profiles').select('profile,skill_tree').eq('user_id', userId).maybeSingle();
+  if (error) {
+    if (isMissingColumn(error)) return { tree: null, profile: null, ready: false };
+    throw failed(error, LOAD_MESSAGE);
+  }
+  const row = (data ?? {}) as Row;
+  return { tree: validateSkillTree(row.skill_tree), profile: readProfile(row.profile), ready: true };
+}
+
+/** Saves the tree and the profile it was applied to, in one write. Callers read getSkillTreeRow first, which says when the column is missing. */
+export async function saveSkillTree(userId: string, tree: SkillTree, profile: CareerProfile, db?: CareerDb) {
+  await writeProfileRow(userId, { skill_tree: tree, profile }, db);
+}
+
+/** Takes the tree off the profile. Facts it added stay: they're in the profile now, the owner's to keep or delete. */
+export async function clearSkillTree(userId: string, db?: CareerDb) {
+  await writeProfileRow(userId, { skill_tree: null }, db);
 }
 
 /** Merges `patch` over the saved settings (themselves over the defaults) and returns what was saved. */

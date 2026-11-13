@@ -14,6 +14,7 @@ const eslintConfig = [
       "tests/e2e/.report/**",
       "tests/e2e/.results/**",
       "public/**",
+      "Gaurav SKILL tree/**",
       ".worktrees/**",
     ],
   },
