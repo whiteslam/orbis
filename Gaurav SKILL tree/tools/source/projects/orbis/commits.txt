@@ -1,0 +1,171 @@
+orbis:182e0869|2026-10-31|Blend: the old design with the new font, motion, Settings and sidebar
+orbis:92cda112|2026-10-31|Journal moods: Fluent 3D faces in place of the device's emoji
+orbis:4282077e|2026-10-31|Keep Orbis's wallpaper, give Career the app's sidebar, full-screen Ask on phones
+orbis:87109b6a|2026-10-31|Keep the front door's gradient; test the Apple design contract
+orbis:9fb8d691|2026-10-31|Apple design pass on every screen
+orbis:7b81622e|2026-10-31|Apple-style motion: springs, gliding selection, sheets that follow the finger
+orbis:b8ac4ad5|2026-10-31|Apple design foundation: system font, Apple palette, plain ground, quiet motion
+orbis:057ace23|2026-10-31|Ask Orbis: show what it reads, what it inferred, and what to ask next
+orbis:95ac0f32|2026-10-29|Document /api/v1: signing in, reads, actions and errors
+orbis:a54f558a|2026-10-29|Add /api/v1: the app's actions and reads behind a bearer token
+orbis:ca7c078d|2026-10-29|Wire up the Social chat box and drop the placeholder analytics
+orbis:6bb9c1b2|2026-10-29|WIP: AI chat box and analytics snapshot on the Social tab
+orbis:d0b78ce5|2026-10-27|Add the guide for continuing both builds on another PC, and the bank-statement import design
+orbis:b501ce5d|2026-10-27|Mark where the desktop layout build stands and where to pick it up
+orbis:97c0620e|2026-10-27|Draw the desktop frame, header, palette, docked Ask and Settings dialog behind a switch
+orbis:f2f4687e|2026-10-27|Mark the Research desk plan's progress and where to resume
+orbis:ae8e37b6|2026-10-27|Add the Research desk panel page, and keep the desk dormant until its worker is set up
+orbis:1b8c5126|2026-10-27|Let worker jobs run side by side and merge the memory log instead of overwriting it
+orbis:05227ec8|2026-10-27|Run a research job end to end, cancel it mid-run, and the private repo's workflow
+orbis:2e2ffae6|2026-10-27|Count each run's tokens and cost, cap them, and settle calls from the memory log
+orbis:8ec00c39|2026-10-27|Set TradingAgents up for Indian stocks with an Indian news vendor
+orbis:a454c157|2026-10-27|Start the research worker: Supabase writer and logs that hold no data
+orbis:a69abd45|2026-10-27|Show the Research desk in Money > Investments with the live run view
+orbis:0fd3ecd3|2026-10-27|Add the Research desk's server actions, repository and run timeline
+orbis:ba093679|2026-10-27|Share one palette dialog between the app and the Career panel
+orbis:cd3dd3b6|2026-10-27|Queue research runs and start the private worker with workflow_dispatch
+orbis:31e58971|2026-10-27|Add the desktop breakpoint, app links and palette list as tested logic
+orbis:8710ceed|2026-10-27|Map broker symbols to Indian tickers and gate the desk to the owner
+orbis:6314ff3d|2026-10-27|Add the Research desk tables and how their rows are read
+orbis:944f35cf|2026-10-27|Plan the Research desk build in five phases
+orbis:032b382f|2026-10-27|Plan the desktop web layout, task by task
+orbis:30b5bb83|2026-10-27|Design the desktop web layout for the whole app
+orbis:4e031c98|2026-10-27|Record the owner's Research desk decisions: owner only, Actions, Sonnet + Haiku
+orbis:e04a5f8b|2026-10-27|Make the notifications cron script safe to run twice
+orbis:0f7ff13d|2026-10-27|Stop outsiders steering where Career's Send goes
+orbis:16c4afc7|2026-10-27|Plan the Research desk: TradingAgents for Money, for the owner's review
+orbis:6b1cb5b5|2026-10-27|Close the gaps between the Career screens and the real actions
+orbis:8e11de2c|2026-10-27|Build the Career web panel at /active/career
+orbis:e14988ab|2026-10-27|Implement the Career actions and Send: Gmail, Recruitee and link applies
+orbis:2d3132f2|2026-10-27|Build the Career tab: matches, approval queue, tracker, insights and setup
+orbis:a54d7a12|2026-10-27|Wire the Career pipeline: AI calls, daily search, drafting and the Gmail watcher
+orbis:834dc39b|2026-10-27|Fix the contract between the Career screens and their server actions
+orbis:868a5432|2026-10-27|Add tailored resumes: truth check, ATS check, PDF and DOCX output
+orbis:57018c2b|2026-10-27|Add career profile, spec and matching: skills, requirements, scores
+orbis:ea075153|2026-10-27|Add career job sources and job-alert email parsing
+orbis:33a2a4fa|2026-10-27|Add career mail reading, stage rules, predictions, offers and interview prep
+orbis:d1aa6ed5|2026-10-27|Lay the Career foundation: tables, tab, web panel route and repository
+orbis:f14aec9b|2026-10-27|Lift the AI budget cap and the no-training rule for personal data
+orbis:f700e9ac|2026-10-27|Design the Career tab and web panel: job search, tailored applications, tracking
+orbis:ba9d8ce1|2026-10-17|Clear the SonarCloud findings: pinned CI actions, native elements, simpler code
+orbis:c78c4292|2026-10-12|Redesign the waitlist hero with a black-hole backdrop and a Log in button
+orbis:83c78227|2026-10-12|Drop the calendar selection outline and the journal form card
+orbis:45f076d8|2026-10-12|Fix review findings: DM Sans on public pages, see-through logo hole, manifest colours
+orbis:feb48076|2026-10-12|Guard text contrast in the brand palette and darken the light accents
+orbis:1423470b|2026-10-12|Regenerate app icons and the share image from the brand ring
+orbis:a73bb841|2026-10-12|Move hard-coded colours onto the brand tokens
+orbis:d4808474|2026-10-12|Apply the brand gradient to buttons and chat bubbles
+orbis:7c4caa24|2026-10-12|Restyle the bottom nav to the brand spec
+orbis:2a0f0840|2026-10-12|Round and border cards to the brand spec
+orbis:ea42547b|2026-10-12|Draw the Orbis logo as a gradient ring
+orbis:77acba2e|2026-10-12|Switch the app to DM Sans
+orbis:d5db26c6|2026-10-12|Add the Orbis brand palette and make dark the default
+orbis:f3c13290|2026-10-12|Add the Orbis rebrand implementation plan
+orbis:1d6f419e|2026-10-12|Add the Orbis visual rebrand design spec
+orbis:3213efbc|2026-10-12|Condense the Orbis brand prompt
+orbis:3cd0f7e3|2026-10-12|Add Orbis brand prompt as the design source of truth
+orbis:43275174|2026-10-02|Stop the brief passing verdicts on routines it has not heard about
+orbis:ade6bd55|2026-10-02|Update next-env.d.ts route types path
+orbis:a498ad51|2026-10-02|Add News, mail Got it, investment categories and Ask about this
+orbis:81fe6a61|2026-10-01|Stop Instagram and Threads refusing to connect on an https site
+orbis:6fa0fa96|2026-10-01|Show what happened when connecting Instagram or Threads
+orbis:6d35e9be|2026-10-01|Add Claude Haiku and Jev to the AI router, inside a monthly budget
+orbis:a0a1086d|2026-09-30|ai
+orbis:b14beb6d|2026-09-30|Heads-ups: fixes from the final review
+orbis:b97a57ae|2026-09-30|Document heads-ups
+orbis:7984915c|2026-09-30|Heads-ups: Settings switches and an end-to-end test
+orbis:1f024cec|2026-09-30|Heads-ups: each prepared step opens its screen ready to go
+orbis:aff8bc1f|2026-09-30|Heads-ups: the Today card, its route and actions
+orbis:023ba071|2026-09-30|Heads-ups: the daily scan, AI wording and urgent pushes
+orbis:ce6a0dfc|2026-09-30|Heads-ups: scan decisions and push rules
+orbis:0b8adec8|2026-09-30|Heads-ups: the wording prompt and its output check
+orbis:3b607131|2026-09-30|Heads-ups: routine and health checks
+orbis:7017878f|2026-09-30|Heads-ups: types, date helpers and the money checks
+orbis:c36a32f9|2026-09-30|Heads-ups: tables, grants, cron job and export
+orbis:2eb25640|2026-09-30|Add the heads-ups implementation plan; refine the spec from planning
+orbis:95677a3d|2026-09-30|Add the proactive heads-ups design spec (phase 1: Money, Routines & health)
+orbis:2c5c7e72|2026-09-30|iPhone layout: keep env() top inset for Field screens; pin the post bar to the nav
+orbis:1a8367a8|2026-09-30|iPhone layout: derive nav clearance from safe-area insets in one place
+orbis:13206112|2026-09-29|App lock: renew the unlock on the first activity after a page load
+orbis:be0b2e60|2026-09-29|Update stale tab names in copy; make the Activity widget's date honest
+orbis:30963f97|2026-09-29|Ask Orbis: own Escape handler, correct the notes/voice comment and hint
+orbis:d1037d24|2026-09-29|Tabs routing: close a prototype-chain hole, fix bare #money, hashchange docs
+orbis:8af7109c|2026-09-29|Glass fix wave: settings sheet positioning, dark tokens, reduced transparency, focus
+orbis:9c3c78c7|2026-09-29|Fix: Spending has manual entries only, not Gmail alerts
+orbis:3a4f4afd|2026-09-29|Bring the README and roadmap in line with the five-tab layout
+orbis:246a9a0a|2026-09-29|Glass: activity and spending widgets on Today
+orbis:7296258b|2026-09-29|Glass fix round 1: card the last flat grouped sections on Money and Health
+orbis:d8743fde|2026-09-29|Glass: frosted cards, segmented controls and sheets on every screen
+orbis:2622cfd1|2026-09-29|Glass: Figtree, frosted chrome and a soft wallpaper behind every screen
+orbis:e36ef78f|2026-09-29|Add a setup checklist to Today
+orbis:144a9dcb|2026-09-29|Point every Profile → … instruction at Settings
+orbis:94a8f38f|2026-09-29|Make Ask Orbis one assistant: type or talk, on every screen
+orbis:5d35fb2d|2026-09-29|Five tabs: Today, Money, Health, Journal, Social
+orbis:1d71a7b7|2026-09-29|Fix Read-only badge layout: keep it inside <strong>, name gets its own span
+orbis:5b19f55e|2026-09-29|Add the Settings sheet, opened from an avatar on every screen
+orbis:4bfa7c01|2026-09-29|Add the tab, settings-section and URL routing rules as a tested module
+orbis:bcc39577|2026-09-29|Split globals.css into app/styles along its sections
+orbis:1a6911fe|2026-09-29|Group components by feature: today, money, journal, settings, assistant
+orbis:03e9d0e5|2026-09-29|Split the app shell into one file per screen
+orbis:3b975d35|2026-09-29|Add the Glass look to the reorganisation spec and plan (stage 5)
+orbis:b499a702|2026-09-29|Add the app reorganisation implementation plan; refine the spec from planning
+orbis:242dd563|2026-09-29|Add the app reorganisation design spec
+orbis:8a5080ba|2026-09-29|Talk to Orbis: ask by voice in any Indian language
+orbis:6d5f0741|2026-09-28|Add the project audit report and dashboard
+orbis:f3373166|2026-09-28|Keep what you write: edit history, archive, voice notes, Ask Orbis and grouped reminders
+orbis:64dadb72|2026-09-28|Apply the hardening migration after deploy, not before
+orbis:b66b2ac0|2026-09-28|Fix Gmail sign-in redirect, push setup hang, AI-off copy and stale e2e checks
+orbis:046e24c8|2026-09-28|Limit password re-entry to five tries in fifteen minutes
+orbis:01c57cf6|2026-09-28|Rewrite the README and environment docs for Phase 1
+orbis:db65f934|2026-09-28|Installable app: service worker on every load, offline page, cached shell, richer manifest
+orbis:6b358601|2026-09-28|Ask before any AI feature runs, and let people turn AI off
+orbis:4db87839|2026-09-28|Honest surface: error boundaries, friendly errors, one sign-in gate, no owner content, dead code removed
+orbis:3db1a877|2026-09-28|Require fresh sign-in or password to export data
+orbis:f58c8f23|2026-09-28|Let people export their data, clear social history and delete their account
+orbis:ca42fdef|2026-09-28|Fix review finding: drop CoinGecko from the Privacy Policy's processor list
+orbis:680a142e|2026-09-28|Add the public site: landing, privacy, terms, support, delete-account, robots, sitemap and share previews
+orbis:b462a1b6|2026-09-28|Claim each staged upload once and charge indexing a parse credit
+orbis:4ae991ed|2026-09-28|Rate-limit uploads, parsing and sync; upload large files straight to storage
+orbis:54f1d5a2|2026-09-28|Harden auth and data: re-auth for password change, push endpoint allowlist, Zerodha state, router allowlists
+orbis:48170d18|2026-09-28|Make Home fast: one render per open, brief asked once, tabs load on demand
+orbis:f9f9a89e|2026-09-28|Add a nonce-based Content Security Policy and security headers
+orbis:657437fe|2026-09-28|Make tests, lint and CI work: vitest everywhere, ESLint flat config, pinned versions
+orbis:a4915cf7|2026-09-28|Point the Phase 1 plan at the audit copy in docs/audit
+orbis:553d08cb|2026-09-28|Add the audit, the productization roadmap and the Phase 1 plan
+orbis:cb1567a8|2026-09-28|Fix review findings in the social planner
+orbis:9a80d549|2026-09-28|Add the social planner to the build roadmap
+orbis:730e6636|2026-09-28|Add one morning social reminder to the daily notification
+orbis:0845211e|2026-09-28|Show today's planned social posts as a quiet row on Home
+orbis:de7227e8|2026-09-28|Add the Social tab: month calendar, list and grid, post view, AI drafts
+orbis:98d20738|2026-09-28|Draft a month of social posts with AI through the router
+orbis:67cc2d8a|2026-09-28|Add social planner server actions with input validation
+orbis:693f7d62|2026-09-28|Add the social planner migration and repository
+orbis:414c43cb|2026-09-28|Add social planner types and month helpers
+orbis:d1d240ee|2026-09-28|Add the social planner implementation plan
+orbis:d991077d|2026-09-25|Finish the Atlas screens and redesign the Home brief
+orbis:de75fa77|2026-09-24|Add daily notification delivery, AI registry and lock screen polish
+orbis:aeaea362|2026-09-24|Add health document library with AI plan builder; fix issues from QA audit
+orbis:f0c63843|2026-09-24|Add AI router core design spec (free-only multi-provider)
+orbis:aa930f9a|2026-09-24|Harden the mobile PWA shell: viewport, safe areas, keyboard, touch
+orbis:ec2663eb|2026-09-24|Fix PDF uploads, add device PIN unlock, and profile/Groww updates
+orbis:8fa06bd3|2026-09-24|Add passkeys, server-enforced app lock, PWA branding and new dashboards
+orbis:9222e05b|2026-09-24|Add daily AI notifications design spec
+orbis:20b2c669|2026-09-24|Support text PDF health uploads
+orbis:b98597b7|2026-09-24|Explain common sign-in failures
+orbis:757fa469|2026-09-24|Add personal profile editor and AI context
+orbis:f02770c1|2026-09-24|Add private fitness persona to workbook coaching
+orbis:e69cd881|2026-09-24|Document live Vercel deployment setup
+orbis:724c8b4a|2026-09-24|Track content-free AI generation outcomes
+orbis:081d7e61|2026-09-24|Record successful GitHub publication
+orbis:9e6cac47|2026-09-24|Exclude local environment files from Vercel uploads
+orbis:d416e54f|2026-09-24|Require evidence-backed workbook advice
+orbis:a1b31534|2026-09-24|Update pending account authorization status
+orbis:77c80771|2026-09-24|Validate investment precision and confirm removal
+orbis:083a0428|2026-09-24|Add private manual investment holdings
+orbis:4635d03e|2026-09-24|Pass saved context availability to workbook advisor
+orbis:769ed62d|2026-09-24|Add consent-based context to workbook advice
+orbis:94625cfc|2026-09-24|Bound workbook advice payload processing
+orbis:453e61da|2026-09-24|Document release and account setup blockers
+orbis:61a541fe|2026-09-24|Add data-grounded daily home brief
+orbis:cbd45af2|2026-09-24|Add private goals habits and Orbis memory
+orbis:bc2df775|2026-09-24|Build Orbis personal finance and workbook advisor MVP

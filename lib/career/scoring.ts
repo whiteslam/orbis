@@ -62,3 +62,35 @@ export async function scoreJob(
   await setJobMatch(userId, job.id, { score: match.score, match, excluded: match.excluded }, client);
   return match.score;
 }
+
+/**
+ * Rescores jobs against a changed profile with what is already stored: the
+ * prefilter and the deterministic match, no AI. A job with no stored
+ * requirements is scored on role fit, as scoreJob would before extraction.
+ * Returns how many were saved.
+ */
+export async function rescoreStored(
+  client: CareerDb,
+  userId: string,
+  jobs: readonly CareerJob[],
+  profile: CareerProfile,
+  spec: CareerSpec,
+  settings: CareerSettings,
+  today: string = careerToday(),
+): Promise<number> {
+  let saved = 0;
+  for (let start = 0; start < jobs.length; start += 10) {
+    const batch = jobs.slice(start, start + 10);
+    const results = await Promise.allSettled(batch.map((job) => {
+      const gate = prefilter(job, spec, settings);
+      if (!gate.pass) return setJobMatch(userId, job.id, { score: 0, match: null, excluded: gate.reason ?? 'Not your role' }, client);
+      const match = scoreMatch({ profile, spec, job, requirements: job.requirements, today, synonyms: settings.synonyms });
+      return setJobMatch(userId, job.id, { score: match.score, match, excluded: match.excluded }, client);
+    }));
+    for (const result of results) {
+      if (result.status === 'fulfilled') saved += 1;
+      else console.error('Rescoring a job after a profile change failed', result.reason);
+    }
+  }
+  return saved;
+}

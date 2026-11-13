@@ -1,0 +1,155 @@
+744da23d|2026-11-03|V4 My Tasks (Gaurav, 3 Nov 2026): Foundations > AI as the Trello card, and clearer client task screens
+80d84e56|2026-10-31|Screens fit every device, AI Layer switched off, and the Dominate Calls sheet redesigned (owner, 31 Oct 2026)
+1b070ee1|2026-10-30|One AI Agents card on the team's board too: the orange push card opens the card's pop-up, with the push in a strip at its top (Gaurav, 30 Oct 2026)
+3bcc9e10|2026-10-30|AI Agents card on V4 only, fully built and pushed as one card that opens as a pop-up; V1 to V3 untouched; AI Agents Onboarding table keeps unsaved work (Gaurav, 30 Oct 2026)
+83935b31|2026-10-30|Playbooks and SOPs: the "Your bootcamp checklist" box is hidden (Gaurav, 30 Oct 2026)
+fe10ecf2|2026-10-30|Gaurav's in-progress work (30 Oct 2026): V4 short task names, Add additional task, Dominate Calls, Employee Hub menu gap
+37520271|2026-10-30|Leave Management on the Team pages (Gaurav, 30 Oct 2026)
+24793b1e|2026-10-29|V4's Leads Hub steps are the real Leads Hub checklist (Gaurav, 29 Oct 2026; V1, V2 and V3 untouched): the eight placeholder steps on LEADS HUB ACCOUNT SETUP (p1-12~0 to ~7, "Review your Leads Hub overview" and so on), which the Leads Hub team did not recognise, became the ten every Trello-era client follows: set-up video, log in, Launchpad, the training series, ivy@webuildtrades.com as Google My Business admin, import contacts, job management software (logins go on the Account page, never typed in), the usage costs, the 30-minute call with Ivy (her calendar inside the step), and CRN plus proof of address. The steps live in lib/tasks/leadsHubV4Tasks.json with the real Loom videos and links; scripts/v4-leads-hub-checklist.mjs put them on the V4 template, Test Company Inc and the two GRV test boards in the shared database (dry run by default, V4 boards only, proves V3 unchanged, refreshes steps in place keeping ticks). Only fields live's older task schema already knows. The usage costs are the Leads Hub usage-costs picture (public/task-examples): a step that is not an upload now shows its `examples` as pictures under the instructions, and Edit Client Tasks has a Pictures box on every step. An email in a step's instructions stands out with a Copy button (only this step holds one). Test: leadsHubV4Tasks.
+7ef0eb9b|2026-10-29|pushhhhhhhhh
+00cb1351|2026-10-28|V4 drops the old team checklists (Gaurav, 28 Oct 2026; V1, V2 and V3 untouched): in the shared database, V4's PHASE 1: PAID LAUNCH lost its five "ACCOUNT MANAGER: …" lines, DOMINATE PACKAGE its [ACCOUNT MANAGER] MONTHLY CALL CHECKLIST ("dgdg" included) and CLIENT SUPPORT CARD its CALL LOG blank; the new version does that work in the department checklists, on the Strategy call page and in Recording Centre. The cards stay. Edit Client Tasks now hides "Other / staff checklists" on a new-layout template that holds no team checklist item, and shows it again if one is added; classic templates keep it. Test: templateWorkspaceNewLayout.
+339d5bf0|2026-10-28|Preview on Other / staff checklists (Gaurav, 28 Oct 2026): each card there has a Preview button that opens it read-only in the client board pop-up's frame, with "Client sees" and "Team sees", one line on what kind of card it is (information card, team checklist, client tick-boxes, or a mix) and the My Board column it sits in. Built from the pop-up's own parts (ModalDialog, CardDescription, groupCardTasks), not the pop-up itself, which saves a tick on click and reads and marks the card's messages; every tick-box here is disabled. The template page now loads each card's description and column. Test: templateCardPreview.
+bc019dc5|2026-10-28|Template editor wears the client's My Tasks look (Gaurav, 28 Oct 2026): Edit Client Tasks draws the tab strip, the Monthly tasks box, the teal sub-tabs, the pale list with a teal top line and the white task card as components/tasks/ClientTaskWorkspace.tsx does, with Edit content and Remove in a slim bar above the card. Counts sit in grey bubbles (how many items a tab holds, not work waiting); each row's round marker is its number, so the order still shows while dragging; the grey line under a row says Required step or Optional, and which Paid Ads item or Additional Tasks phase it is. Organic's list keeps its Website heading. Editing, dragging, adding, removing and saving are unchanged. Tests: templateWorkspace, templateWorkspaceNewLayout read the new markup.
+1fd72a2f|2026-10-28|Template editor, one list per tab like the client's My Tasks (Gaurav, 28 Oct 2026): on a new-layout template (V4) Edit Client Tasks lists Paid Ads (Landing Page, Google Ads, Meta Ads) and Organic (Website, Social Media, Blog Posts) as one checklist each, in that order, with Organic under one Website heading and no sub-tabs, as the client has read them since 27 Oct. Foundations and Optimisation keep their sub-tabs; a V3 template keeps today's editor. Test: templateWorkspaceNewLayout (organic and paid lists, order, sub-tabs kept elsewhere).
+739b655d|2026-10-28|New clients get the V4 template once it is published (Gaurav, 28 Oct 2026): findLiveTemplate prefers "Dominate Board Template V4" when its board reads "Client task template V4: published", then V3, then V1. A V4 client is treated like a V3 one (no card due dates, the Plan tab switched on, the template's task videos and phases, the push cards topped up on the template's own task page). Live's older code only knows the V3 and V1 names, so live keeps giving V3 until this code is deployed. scripts/create-v4-template.mjs gains --publish / --unpublish; V4 was published in the shared database the same day, after checking it matched V3 task for task apart from Google Ads. scripts/reset-test-client.mjs brought up to date: it copies the template IN USE (cloneChecklist flags, no due dates, deep links re-pointed), clears the history added since August (tickets, Ava's chats, runs and memory notes, plan answers, website builder work, designs, notifications and more), unticks the team checklists and keeps logins, onboarding answers and recordings. Test Company Inc was reset onto V4 with it. Test: templatePersistence (V4 when published, V3 while a draft or removed).
+300617a0|2026-10-27|Staff Tasks page, tidied (owner, 27 Oct 2026): additional task cards are board-sized and grouped Foundations, Paid Ads, Organic, then the rest; every team's checklist has its phase buttons, with Hide completed on their row, the checklist note as a small (i) on hover at the end of the header, and "View only" a small caption above the box. A task with no linked SOP now shows the library's write-up for it on its own, only where a heading or title is the task at 95% or better (lib/sop-library/autoSop.ts, read on load, never stored): the steps, tidied of labels and unwritten placeholders, a "How to do this" pill and a small Source tag opening the SOP. Linking another SOP stays under one fold.
+6a6c935f|2026-10-27|Phase 2 is website live by day 70, not 60 (owner, 27 Oct 2026: 30 days after Phase 1's day 40). Client Stage's header, its traffic light (green to 70, amber to 80, red after) and every Phase 2 task's deadline read the new number.
+5fbd4940|2026-10-27|New layout, one list per tab (owner, 27 Oct 2026): the client's Paid Ads tab lists Landing Page, Google Ads and Meta Ads down the left instead of sub-tabs, and Organic lists Social Media and Blog Posts under one Website heading. The team's Client progress reads the same: one "Organic · Website" group, and a Paid Ads row that is always there, its tasks marked "Not shared yet" until pushed.
+f165ba6c|2026-10-26|Template picker: taller cards, only relevant templates under More templates, clearer heading and shorter notes caption
+fc5264fc|2026-10-26|Improve staff mobile experience
+3a6eb7bb|2026-10-24|Speed pass on the Clients tab and two client-app screens: the department counts for the whole book now load in parallel groups instead of four calls in a row, the owners, staff and department reads start as soon as the small id list is back instead of queueing behind the whole book, the ServiceM8 connect check pauses on a hidden tab and stops after ten minutes, and images in task review, task examples, machine designs, brand logos and the template gallery load as they scroll into view (gaurav, 24 Oct 2026)
+cdc470ba|2026-10-23|push
+be2e0a13|2026-10-23|Additional tasks in the client's order (Gaurav, 23 Oct 2026): the staff dropdown and the team's board lanes run Foundations, Paid Ads, Organic, then Other, and the website's tasks in the order the work is done (homepage design, website content, draft, final build, domain, email notifications, social, blogs). "Review your website content" now reads Organic / Phase 2 instead of Other. Display only, nothing on a board moves. An old link to an additional task opens it where it is now instead of "We couldn't find that page"
+534f3f15|2026-10-22|Give feedback: drag files onto the attachment tray, or click it to choose (owner, 22 Oct 2026), the same as both ticket forms. The tray lights up and says "Drop to attach" while a file is dragged over the form, the whole form takes the drop, and pasting a screenshot still works
+cc34bd9c|2026-10-22|Create A Ticket on the Client Hub: drag files onto the attachment tray, or click it to choose (owner, 22 Oct 2026), the same as the team's Raise a ticket for a client. The tray lights up and says "Drop to attach" while a file is dragged over the form, and the whole form takes the drop
+41be5695|2026-10-22|Raise a ticket for a client: drag files onto the attachment box, or click it to choose (owner, 22 Oct 2026). The box lights up while a file is dragged over the form, and the whole form takes the drop so a file let go just off the box never opens in the browser and loses what was typed
+304ad59f|2026-10-21|Get set up reads cleanly end to end (21 Oct 2026): one "Welcome" instead of five, the "answers below" note only on Your details where the answers are, "press" / "Mark as read" instead of "tap", the ring says it counts details, the sitemap card is named as part of Your details, reads are "read" not "watched", the kickoff step names the client's Business Development Partner so they pick the right calendar, "call" not "meeting", All set no longer says "will be unlocked" to a client whose hub is open, "Client Hub" not "Customer Hub", and "Tell us" instead of "Tell your team"
+1a7b35a7|2026-10-21|Bell: read notifications can be read again, Unread / Read switch like Trello (21 Oct 2026)
+3e300f75|2026-10-16|Quote form handover, two-step and vault fixes (16 Oct 2026)
+202a867d|2026-10-15|fix delivery team checklist data mapping etc
+8689b4f4|2026-10-15|Quote form link is the team's to give; team Client progress reads like a new-template client's My Tasks (15 Oct 2026)
+7bfc5ba3|2026-10-15|My Tasks: show what the client told us in the old Plan above an empty task form (Essex Heating, 15 Oct 2026)
+350a66d5|2026-10-14|Tagging A.I.V.A: typing @a, @ai, @ava, @aiva or @a.i in any ticket, card or thread box puts A.I.V.A first in the suggestions (the team's menu offers her too, the client's still only where ticket chat is on); picking her writes @A.I.V.A, and the old @Ava keeps working (owner, 14 Oct 2026)
+99e036bf|2026-10-14|Last Ava wording in the Command Hub becomes A.I.V.A: the admin access-map note, the Recordings filter, the author name saved on her SOP edits, her audit-trail name, the name on her emailed client updates, and the line in her ticket instructions that says she was asked with the tag (Rocket.Chat wording and stored data left for later) (owner, 14 Oct 2026)
+1c40c8b9|2026-10-14|Ava is A.I.V.A everywhere clients and the team see her: buttons, tabs, ticket threads, admin and AI Setup screens, notices, and her own instructions; typing @A.I.V.A, @AIVA or the old @Ava in a ticket finds her in the tag menu and triggers her, drawn as one tag (owner, 14 Oct 2026)
+b8b3a754|2026-10-14|Team's Client progress counts the blog review while the client has not unlocked monthly content, so it agrees with the client's own count (Test Company Inc read 8/40 on both sides, was 7/39 on the team's); an Additional Tasks card with no tasks no longer shows a 0/0 row (owner, 14 Oct 2026)
+548f724a|2026-10-14|Templates has a "Dominate Board Template V4" for the new My Tasks layout: a copy of V3 as it stands plus the Google Ads task, DRAFT, never copied onto a client (owner, 14 Oct 2026)
+58fe1b95|2026-10-13|New My Tasks for new clients (Foundations, Monthly Calls, My Results, A.I.V.A, Paid Ads, Organic, Optimisation); Home lists the client's next steps one by one with their place in the section (3/8); "Ask A.I.V.A" for every client; the team's board reads the same words (owner, 14 Oct 2026)
+ae139da1|2026-10-12|minor fixxes
+c272b2f1|2026-10-10|Checklist fix & email and some inor fixes
+1b661193|2026-10-09|add the blog and social tab in phase 2
+daf4facb|2026-10-08|new Security for the passwords
+7c1a0e70|2026-10-07|Phone boards, card window, Ava dock and client map follow the phone design; Access Control's By permission follows the new design (Gaurav, 7 Oct 2026): Access Control > By permission is one card per permission (People with Take it away / Put it back inline, Roles and Departments as on/off switches, same save rules). On a phone, My Tasks and the Client Stage board show one column per screen, snap on swipe, and carry back / forward arrows in each column header; My Tasks' search and Request help share one row; the My Tasks card window is a grey page with white cards, a "Step 2 of 5" line and pill tabs; the Client Stage key hides its sentence and holds the book notice behind an "i"; the Ava dock hides Open full screen, opens History as the client side's slide-over, and has quick prompts and a one-line note; the Client Map's top bar wraps into three rows, its filters are a slide-over, and its pills and colour key no longer overlap. Wider screens keep their existing look.
+ed3107e0|2026-10-06|Client Hub on a phone follows the new mobile design, phone widths only (Gaurav, 6 Oct 2026): the top bar shows the logo on Home and a back arrow plus the page name elsewhere (the repeated page titles are hidden on a phone), Home is the deep-teal build card, three lead tiles, four quick buttons and Needs you, and the Board / Tasks switch, task phase tabs, monthly box and onboarding buttons are aligned. Library, Calendar, Calls and Recordings, Account, Support and Tickets, Feedback (list and detail), the ticket page, the social post review pop-up and Ask Ava (history button, shorter welcome, chips above a one-row message box) were restyled to the design, with no orange on phone buttons or the notification count. Wider screens keep their existing look, and every figure shown is still the client's own data.
+12897018|2026-10-03|Take out the three leftover writes to the stored monthly-unlock column (go-live, phase move, automatic phase advance): the database change is not run, so each was a pointless extra write, and the go-live test caught it (3 Oct 2026). The unlock is read live from the phase, the go-live date and the Phase 3 card.
+4c139e77|2026-10-03|The client's review inside their Additional Task has one way to answer, each card's Review popup: no per-card Approve tick and no "Approve ticked" bar there. Monthly Tasks keeps both (Gaurav, 3 Oct 2026).
+06f58fa6|2026-10-03|The team's client page tab reads Social Media, not Organic Social: the same words the client and Content Generation use (Gaurav, 3 Oct 2026).
+ef3a48cd|2026-10-03|Monthly tasks before Phase 3: Social Media and Blogs both show the same "begins in Phase 3" page, with a button to the Additional Task holding their first posts or articles, instead of jumping into Additional Tasks (Gaurav, 3 Oct 2026).
+00e5b665|2026-10-03|Before Phase 3, posts and blogs go to Additional Tasks, with no database change and no grey lock (Gaurav, 3 Oct 2026)
+774e2048|2026-10-03|Monthly tasks: no lock, only a note before Phase 3 (Gaurav, 3 Oct 2026)
+699f4296|2026-10-03|Monthly content unlock: a shared month only holds an unlock already stamped. On its own it is a locked client's first batch, shared as their Additional Task, so the client record's switch no longer reads such a client as unlocked (3 Oct 2026).
+5f9a7244|2026-10-02|Send to board never reaches the client by itself, and an empty month card is off the client's board (Gaurav, 2 Oct 2026)
+a0744d34|2026-10-02|Monthly content unlock, part 5: four review findings fixed. The first batch is posts and blogs only (Meta ads were being swept into one list for every locked client); Meta ads and logos keep the month notice they always had (only a locked client's posts task gets the task notice); the Monthly content switch reads every signal, counts a month already in Monthly Tasks as holding the unlock, and refuses OFF over any of them (it could re-lock a backfilled client, and flapped on a Phase 3 card unlock); an empty first batch still hides the month calendar. The years runs were made FOR are kept when filing into the batch, so a copy already in another year is moved, never doubled.
+78d1adc2|2026-10-02|Monthly content unlock, part 4: the screens. Before a client's monthly content unlocks, their posts and blogs are ONE running list (the first batch, lib/content-gen/firstBatch: AI Studio runs file into it, Content Generation and the team's client page show it with no month calendar), sent into the board's own review task as before; the client sees that task under Additional Tasks (Social media / Blog posts tabs), approves the items inside it like the Meta ads task, the Monthly tasks box reads "Unlocks in Phase 3", Phase 2 has no Blogs / Socials rows, the monthly page sends them to the task, and the bell is the task's own. Home, My Board, the staff copies and the change stamp read the same unlock. Unlocked, every screen is as it was.
+813d30c4|2026-10-02|Monthly content unlock, part 3: the pure gate. isMonthlyContentTask, hiddenFromClient, groupCardTasks, additionalTasks, clientTaskRows and phase2Progress take { monthlyUnlocked } (default true, exactly as before); locked, a pushed posts or blogs review is an ordinary Additional Task and the Blogs / Socials rows are not counted. Additional Tasks' tab order gains Social media and Blog posts.
+7bc2918b|2026-10-02|Monthly content unlock, part 2: the server read (lib/db/monthlyContentUnlock: fails open to today, stamps the first unlock once), the stamp from a Phase 3 move (Client Stage drag and the delivery-advance cron) and from go-live, and the Monthly content switch on the client record, which cannot be turned off while a live signal holds.
+0b54bf1b|2026-10-02|Monthly content unlocks at Phase 3 or website live (Gaurav, 2 Oct 2026), part 1: the pure rule (lib/board/monthlyUnlock) and the migration that adds clients.monthly_content_unlocked_at with a backfill for every client already past that point. NOT YET APPLIED, runbook row 43; until it runs the app behaves as today.
+9defaf4f|2026-10-02|Client Library: the folder counts are asked for alongside the listing instead of after it, and a failed count no longer empties the Library
+3a3d2e94|2026-10-02|Task uploads: a photo goes to the Library's Images folder and a video to Videos, and each upload shows as a small preview with an X to remove it
+6f47303d|2026-10-01|Logos go inside one "Review your logo" task in Phase 1, not a new card
+833e1331|2026-10-01|Meta ads go inside the board's own "Approve your Meta ads" task, not a new card per month
+c8534bef|2026-10-01|The push panel on a content task no longer carries the long Send to board explanation; the button to the client's content stays
+729ec463|2026-10-01|A month of posts or blogs is one orange task card on both boards
+ec659263|2026-10-01|Social posts and blogs are reviewed in Monthly Tasks again; their board task stays the team's
+0cfcd537|2026-10-01|Social posts and blogs go inside the board's own review task, not a new card per month
+f5b79fb4|2026-10-01|Content Generation's website Send / Take back no longer trips a hydration mismatch
+21b88439|2026-09-30|manjor fixes both
+f51ad805|2026-09-30|manjor fixes both side meta ads
+462b1e27|2026-09-30|Blog & social popups: clients can edit an article's heading in place and rename posts, a Loom link rides with a review, the editor keeps its toolbar pinned; client ticket desk and team call bar tidied, breadcrumb shows just the page name
+de9dae1f|2026-09-29|manjor fixes both side blog & social
+637957c5|2026-09-28|Phase 2 count matches the client's board; staff see that only the client can tick card steps
+2fa427ea|2026-09-28|Add Files: pick the folder first, then the files; client uploads can reuse Library photos
+af2f19a7|2026-09-28|Blogs & Organic Social redesign: month strip, item list, article editor, post preview and calendar
+5c07ac68|2026-09-28|Client pages: iPads get the website layout, phones stay on the app layout
+60dbc5c2|2026-09-25|Staff QA fixes: staff ticket wording, overdue shown to clients, phone overflow, tab titles
+1a997a1f|2026-09-25|home page of client ui fixxes
+2f707f1f|2026-09-23|home page of client data matching
+fb0fb5a8|2026-09-23|home page of client data matching
+d4f2d109|2026-09-23|Next 16.3.5 rewrites its own block in AGENTS.md
+be2d257f|2026-09-23|A task with no phase inherits Onboarding's deadline, and the SOP filters lose the browser's arrow
+9d29e13b|2026-09-22|Employee Hub uses its full width, My Day returns, and a deleted SOP goes to a bin
+3e95bb5f|2026-09-22|Cheklist updates SOP
+f6ad42fe|2026-09-21|Cheklist
+ea3efa01|2026-09-17|The client Tasks tab becomes the department checklist
+84f55020|2026-09-17|client side ui fixxes
+7287ba29|2026-09-16|Employee Hub: one page shell, Ask Ava's rail, Dan's Team and SOPs
+801d61af|2026-09-16|Blend the topbar's panels and avatars into the V2 design
+65945ada|2026-09-16|Park My Day and give the Employee Hub a Team directory
+22a7dc81|2026-09-15|ui redesigned
+1d950275|2026-09-15|The client's support screen is the team's desk, and both forms open in Dan's popup
+b7e1c689|2026-09-15|The three rail panels are rebuilt as Dan's, so the column reads as one thing
+12e090a3|2026-09-15|The Daily Brief is built to Dan's panel, not styled to look like it
+703bf9e2|2026-09-15|One button per row, one tile colour, three tags — Dan's restraint, not ours
+5e467994|2026-09-15|Dan's heading, and the brief stops shouting
+3c4fc77a|2026-09-15|My Day is parked back to the five sections Dan's design has
+53ae94db|2026-09-15|Five ways of writing "view more" become one
+87fb712b|2026-09-15|The duplicated row buttons collapse into one shared vocabulary
+dcedafa8|2026-09-15|Five hard-coded colours take their tokens, and the last odd card takes its shape
+383e8913|2026-09-15|Every My Day card takes Dan's 14px corners and drops its resting shadow
+3a05f46a|2026-09-15|Ava's read becomes the dark teal band Dan draws it as
+49a51ab8|2026-09-15|Dan's card kit, built once, reusing what the app already had
+61e45d0d|2026-09-15|Who is signed in sits at the head of the rail, name over department
+9dc93c70|2026-09-15|The header's three controls take Dan's shapes: boxed bell, mint square, caret field
+9725133a|2026-09-15|Dan's white breadcrumb header replaces the dark topbar
+da0448ff|2026-09-15|The rail takes Dan's spacing, and its active row is marked in cyan
+00737075|2026-09-15|Client Map and Project Tracker come off the topbar and back into the rail
+c29e1d17|2026-09-15|My Day returns to the rail and the phone tabs, under Dan's Today heading
+52c9143d|2026-09-15|The employee rail's rows move to one module, so the header can read the same list
+028ccfe4|2026-09-15|The Employee Hub rebuild gets a design and a plan before any code
+4f086934|2026-09-12|An iPad turned sideways gets the Client Hub's website, not the phone layout
+202f526c|2026-09-12|Park the rest of the job-tag feature, and keep one SOP version badge
+0bea2180|2026-09-12|A checklist item can carry a job tag, and only the people who hold it can tick it
+7c7a4470|2026-09-11|A client's checklist takes its phases from the template, and the task headings leave both screens
+3e873c14|2026-09-10|The ⓘ dot leaves the delivery checklist rows, with a note on how to bring it back
+4f2e6b26|2026-09-10|The delivery checklist becomes a four-level tree, authored in one Templates card
+2e60575c|2026-09-10|The customer's Home is rebuilt in panels, and the speed test moves to their Website page
+1b1e1875|2026-09-08|Editing a SOP gets the whole width of the screen
+6a345c1d|2026-09-08|The CEO Vault is written in the same editor as everything else
+9e91682f|2026-09-08|A header slot sits in its own box, not loose among its siblings
+0a914883|2026-09-08|A vault SOP opens the document, and the document carries its file
+50268952|2026-09-07|The employee side writes SOPs the same way leadership does
+978c2b16|2026-09-07|A SOP can be split into named document tabs
+b00d6bab|2026-09-04|Add download-as-PDF and share-link buttons to the SOP Library
+3b23d5a1|2026-09-03|Strip leftover HTML from SOP headings before they show as Contents tabs
+9fcd5ab2|2026-09-03|Let SOP edit access be granted to a whole department, not just one person at a time
+3f675135|2026-09-02|Redesign the New SOP editor and SOP Library header
+9d34df95|2026-09-01|Follow linked documents recursively, not just one level from the master
+7518f99b|2026-09-01|Drop the AI clean-up step from the Google Doc import
+2781e782|2026-09-01|Add a Document Tabs panel to every SOP page, and declutter the Details rail
+72b3c0eb|2026-09-01|Show real loading feedback while a Google Doc import is in flight
+abe87b07|2026-09-01|chore: remove the CSV import feature it was replaced by
+4430e94f|2026-09-01|feat: replace Import CSV with Import from Google Doc on the SOP Library page
+6768ea54|2026-09-01|fix: catch a network failure in the Google Doc import fetch
+5016f89d|2026-09-01|feat: add the Import from Google Doc modal
+3a898a56|2026-09-01|feat: add /api/playbooks/import-google-doc route
+5fae9f85|2026-09-01|feat: orchestrate the Google Doc import pipeline (fetch, follow links, AI merge)
+e12f96ec|2026-09-01|feat: build the Google Doc merge/clean-up prompt
+9479e763|2026-09-01|fix: tighten googleDocIdFromUrl host check to exact match
+b7577103|2026-09-01|feat: extract linked Google Doc ids from a fetched SOP doc
+4b2ca592|2026-09-01|Add implementation plan for Google Doc SOP import feature
+9494d5ad|2026-09-01|Add design spec for Google Doc SOP import feature
+197376dc|2026-08-24|Revert the Ava launcher pop-up card back to a direct chat open
+eef2babd|2026-08-22|My Day: one morning card, a folded inbox, and mail that finds every inbox
+3e670e55|2026-08-22|Ava's read: the note about losing its card chrome moves out of the JSX
+ab13f157|2026-08-22|My Day work in progress: Ava asks in the dock, and rails replace Shape of Day
+c7f4fcf0|2026-08-21|My Day: plainer card titles, and feedback above the desk
+bb95ee3c|2026-08-21|the emplyee hub front page ui
+ee2bc4e6|2026-08-20|Design: Mail - a queue of the work mail that needs you
+a7c6c24a|2026-08-20|Read the app's own queue
+fc00c3ac|2026-08-20|The app's own status, as a shape we can test
+8e22beef|2026-08-20|Tickets and messages follow the same rule: yours, not your department's
+708462ad|2026-08-20|The brief is what was handed to you, and it says who handed it over
+533452d8|2026-08-20|Open the card you clicked, not the board it lives on
+c23d0fff|2026-08-20|It is a daily brief - people log in in the afternoon too
+370b199f|2026-08-19|The brief can see the work you have open, not just the work that is dated
+46a8f981|2026-08-19|The unknown-status test stops using a status we now know

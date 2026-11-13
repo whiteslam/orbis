@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { jobDetailAction } from '@/app/career/actions';
 import { NoticeLine, SafeLink } from '@/components/career/bits';
@@ -11,6 +11,7 @@ import { DraftEditor } from '@/components/career/sheet/draft-editor';
 import { DraftStart } from '@/components/career/sheet/draft-start';
 import { FitLead } from '@/components/career/fit-review-view';
 import { MatchSummary } from '@/components/career/sheet/match-summary';
+import { SkillTreeProof } from '@/components/career/skill-tree-view';
 import { OfferSection } from '@/components/career/sheet/offer-section';
 import { OwnerMoves } from '@/components/career/sheet/owner-moves';
 import { PrepPack } from '@/components/career/sheet/prep-pack';
@@ -83,11 +84,14 @@ export function ApplicationDetailView({ detail, context, onDetail }: Readonly<{ 
   const [sentNote, setSentNote] = useState<string | null>(null);
   const { application, job } = detail;
   const setJob = (next: CareerJob) => onDetail({ ...detail, job: next });
+  // What the job asks for, for the skill tree's proof under the match.
+  const jobSkills = useMemo(() => (job.match?.lines ?? []).map((line) => line.requirement.skill), [job.match]);
 
   return (
     <div className="cr-detail">
       <FitLead job={job} languages={context.profile?.languages ?? []} />
       <MatchSummary job={job} threshold={context.threshold} prediction={application?.prediction ?? null} />
+      <SkillTreeProof skills={jobSkills} />
       {sentNote && <NoticeLine notice={{ text: sentNote, ok: true }} onDismiss={() => setSentNote(null)} />}
       {application ? (
         <ApplicationSections detail={detail} application={application} context={context} original={original} handOff={handOff} setHandOff={setHandOff} onSent={setSentNote} onDetail={onDetail} />

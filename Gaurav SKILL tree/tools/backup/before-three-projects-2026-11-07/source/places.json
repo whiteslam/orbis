@@ -1,0 +1,162 @@
+{
+ "frontendarch": {
+  "x": 420,
+  "y": 430,
+  "parent": "frontend"
+ },
+ "ssr": {
+  "x": 560,
+  "y": 300,
+  "parent": "frontend"
+ },
+ "designsystems": {
+  "x": 430,
+  "y": 180,
+  "parent": "ssr"
+ },
+ "designtocode": {
+  "x": 665,
+  "y": 180,
+  "parent": "frontend"
+ },
+ "crossdevice": {
+  "x": 700,
+  "y": 322,
+  "parent": "frontend"
+ },
+ "interactive": {
+  "x": 300,
+  "y": 190,
+  "parent": "richtext"
+ },
+ "richtext": {
+  "x": 270,
+  "y": 340,
+  "parent": "frontendarch"
+ },
+ "apidesign": {
+  "x": 950,
+  "y": 240,
+  "parent": "validation"
+ },
+ "businesslogic": {
+  "x": 800,
+  "y": 380,
+  "parent": "backend"
+ },
+ "integration": {
+  "x": 800,
+  "y": 240,
+  "parent": "businesslogic"
+ },
+ "scheduling": {
+  "x": 800,
+  "y": 95,
+  "parent": "integration"
+ },
+ "validation": {
+  "x": 950,
+  "y": 380,
+  "parent": "backend"
+ },
+ "automation": {
+  "x": 950,
+  "y": 95,
+  "parent": "apidesign"
+ },
+ "dbdesign": {
+  "x": 280,
+  "y": 560,
+  "parent": "databases"
+ },
+ "dataaccess": {
+  "x": 440,
+  "y": 620,
+  "parent": "databases"
+ },
+ "schemamigrations": {
+  "x": 140,
+  "y": 680,
+  "parent": "databases"
+ },
+ "dbsecurity": {
+  "x": 180,
+  "y": 980,
+  "parent": "databases"
+ },
+ "indexing": {
+  "x": 120,
+  "y": 850,
+  "parent": "databases"
+ },
+ "datamigration": {
+  "x": 470,
+  "y": 900,
+  "parent": "databases"
+ },
+ "aiintegration": {
+  "x": 1215,
+  "y": 365,
+  "parent": "ai"
+ },
+ "prompts": {
+  "x": 1135,
+  "y": 205,
+  "parent": "ai"
+ },
+ "aidev": {
+  "x": 1050,
+  "y": 350,
+  "parent": "ai"
+ },
+ "authz": {
+  "x": 1440,
+  "y": 318,
+  "parent": "quality"
+ },
+ "testautomation": {
+  "x": 1310,
+  "y": 340,
+  "parent": "quality"
+ },
+ "debugging": {
+  "x": 1585,
+  "y": 350,
+  "parent": "quality"
+ },
+ "performance": {
+  "x": 1360,
+  "y": 165,
+  "parent": "testautomation"
+ },
+ "appsec": {
+  "x": 1520,
+  "y": 165,
+  "parent": "authz"
+ },
+ "fullstack": {
+  "x": 1570,
+  "y": 610,
+  "parent": "practices"
+ },
+ "versioncontrol": {
+  "x": 1730,
+  "y": 570,
+  "parent": "practices"
+ },
+ "techdocs": {
+  "x": 1870,
+  "y": 680,
+  "parent": "practices"
+ },
+ "compat": {
+  "x": 1885,
+  "y": 845,
+  "parent": "practices"
+ },
+ "requirements": {
+  "x": 1740,
+  "y": 950,
+  "parent": "practices"
+ }
+}

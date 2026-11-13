@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Gaurav's skill tree</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/fonts/grenze-gotisch-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+<svg id="tree" role="group" aria-label="Skill tree. Tab through the stones and press Enter to read about each skill."></svg>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<header class="hud-title">
+  <h1>Gaurav's skill tree</h1>
+  <p id="progress-text"></p>
+  <div class="xp" aria-hidden="true"><span id="xp-fill"></span></div>
+</header>
+
+<button id="cv-open" class="stone-btn cv-btn" type="button">My CV list</button>
+
+<section class="timeline" aria-label="Replay how the tree grew">
+  <button id="play" class="stone-btn" type="button">Replay the climb</button>
+  <input id="scrub" type="range" min="0" max="1000" value="1000" aria-label="Move through time">
+  <output id="date" for="scrub"></output>
+</section>
+
+<div class="zoom" role="group" aria-label="Zoom">
+  <button id="zoom-in" class="stone-btn" type="button" aria-label="Zoom in">+</button>
+  <button id="zoom-out" class="stone-btn" type="button" aria-label="Zoom out">&minus;</button>
+  <button id="zoom-fit" class="stone-btn" type="button">Fit</button>
+</div>
+
+<div id="unlock" class="unlock" role="status" aria-live="polite" hidden></div>
+
+<aside id="panel" class="panel" aria-hidden="true" tabindex="-1" aria-label="Skill details">
+  <button id="panel-close" class="panel-close" type="button" aria-label="Close">&times;</button>
+  <div id="panel-body"></div>
+</aside>
+
+<script src="/data.js"></script>
+<script src="/scene.js"></script>
+<script src="/tree.js"></script>
+</body>
+</html>

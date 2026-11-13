@@ -67,7 +67,7 @@ button.cr-pipe-closed:focus-visible { outline: 2px solid var(--fd-accent); outli
 .cr-screen .cr-lead .cr-panel-link { gap: 5px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
 .cr-screen .cr-lead .cr-setup-link, .cr-screen .cr-lead .cr-back { color: var(--fd-soft); }
 .cr-screen .cr-lead .cr-setup-link:hover, .cr-screen .cr-lead .cr-back:hover { color: var(--fd-ink); }
-.cr-screen .fd-tabs.glass-seg.cr-seg { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 4px; }
+.cr-screen .fd-tabs.glass-seg.cr-seg { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 16px 0 4px; }
 .cr-screen .fd-tabs.glass-seg.cr-seg button { gap: 6px; font-size: 13.5px; min-height: 40px; }
 .cr-setup-title { margin-top: 18px; }
 
@@ -367,3 +367,8 @@ button.cr-pipe-closed:focus-visible { outline: 2px solid var(--fd-accent); outli
 .cp-page-insights .cr-build { max-width: 760px; margin-bottom: 30px; }
 .cr-screen .so-actions.cr-actions .so-action { width: auto; flex: 0 0 auto; }
 .stage[data-desktop] .cr-screen .so-actions.cr-actions { display: flex; max-width: none; }
+
+/* Four views on the switch (Today, Jobs, Applications, Skills): a little tighter on narrow phones. */
+@media (max-width: 400px) {
+  .cr-screen .fd-tabs.glass-seg.cr-seg button { gap: 3px; font-size: 12px; }
+}
