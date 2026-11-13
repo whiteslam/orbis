@@ -22,5 +22,9 @@ tsconfig.tsbuildinfo
 # Android (Capacitor): build outputs, signing keys and Firebase config never go in git
 android/**/build/
 android/app/google-services.json
+**/google-services.json
+keystore.properties
+*.p12
+*service-account*.json
 *.jks
 *.keystore
