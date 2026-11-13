@@ -5,12 +5,15 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.orbis.core.service.CoreController
 import app.orbis.core.store.OrbisStore
 
 /** Sends the outbox, sources, ledger and meta to the server. See [SyncRunner] for the rules. */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val context = applicationContext
+        // A revoke happens only in here; make sure it stops the service (see CoreController.install).
+        CoreController.install()
         val runner = SyncRunner(
             store = OrbisSyncStore(OrbisStore.get(context)),
             client = HttpSyncClient(),

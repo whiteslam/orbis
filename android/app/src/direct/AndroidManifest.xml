@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The direct (sideloaded) build only. Permissions the play build must never
-     ask for go here, never in src/main. None yet. -->
+     ask for go here, never in src/main. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Lets the owner exempt Orbis from battery optimisation with one prompt (CoreController.openBatterySettings). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>

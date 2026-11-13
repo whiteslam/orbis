@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Library: declares only INTERNET (the sync client). No other permission, no components. -->
+<!-- Library: INTERNET (the sync client), plus what the foreground service and its boot restart need.
+     No forbidden permission; the direct-only battery one lives in app/src/direct. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application>
+        <service
+            android:name="app.orbis.core.service.CoreService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Personal assistant that applies the user's privacy rules to the phone data they chose to share" />
+        </service>
+
+        <!-- Not exported: the system's BOOT_COMPLETED and MY_PACKAGE_REPLACED broadcasts reach it anyway
+             (the sender is the system), and no other app can trigger it. -->
+        <receiver
+            android:name="app.orbis.core.service.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>
