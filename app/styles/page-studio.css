@@ -86,6 +86,7 @@
   border-radius: 22px;
   background: var(--fd-card);
 }
+.st-composer-form { display: flex; flex-direction: column; gap: 10px; }
 .st-composer-text {
   width: 100%;
   min-height: 72px;

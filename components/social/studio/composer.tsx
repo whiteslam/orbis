@@ -86,8 +86,10 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
 
   const togglePlatform = (platform: SocialPlatform) => setPlatforms((current) => (current.includes(platform) ? current.filter((item) => item !== platform) : [...current, platform]));
 
+  // The extra row (Orbis's Suggest) sits outside the form, so Enter in it never adds the caption as a post.
   return (
-    <form className="st-composer" onSubmit={(event) => { event.preventDefault(); add(); }} aria-busy={isSaving || undefined}>
+    <div className="st-composer">
+    <form className="st-composer-form" onSubmit={(event) => { event.preventDefault(); add(); }} aria-busy={isSaving || undefined}>
       <label htmlFor={`${id}-caption`} className="sr-only">Caption</label>
       <textarea
         id={`${id}-caption`}
@@ -139,8 +141,9 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
         <button type="submit" className="st-add" disabled={!canAdd}><Plus size={17} aria-hidden="true" />{isSaving ? 'Adding…' : 'Add'}</button>
       </div>
 
-      {extra}
       {message && <output className={`st-composer-msg${message.error ? ' error' : ''}`}>{message.text}</output>}
     </form>
+    {extra}
+    </div>
   );
 }

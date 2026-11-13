@@ -21,6 +21,10 @@ type Result = { success: boolean; message: string; post?: SocialPost; posts?: So
 
 const SIGN_IN = { success: false, message: 'Sign in again to do this.' } as const;
 const NOT_YOURS = { success: false, message: 'That account isn’t available.' } as const;
+/** The page allows 60 s per request; Suggest stops making pictures in time to answer within it. */
+const ACTION_BUDGET_MS = 50_000;
+/** Saving and attaching a picture after it is made. */
+const SAVE_MARGIN_MS = 3_000;
 const NO_MODEL_MESSAGE = 'No AI model is available right now. Try again later or write the post yourself.';
 
 /** The signed-in owner's id, or the refusal for anyone else. Checked before any AI credit is spent. */
@@ -35,12 +39,13 @@ async function ownerOnly(): Promise<{ userId: string } | Result> {
  * file that was stored but could not be attached is removed again, so the
  * post never points at a missing picture.
  */
-async function addImage(userId: string, post: SocialPost, imageIdea: string): Promise<SocialPost | null> {
+async function addImage(userId: string, post: SocialPost, imageIdea: string, budgetMs: number): Promise<SocialPost | null> {
   const image = await generatePromoImage(promoImagePrompt(post.headline || post.title, imageIdea), {
     geminiKey: process.env.GEMINI_API_KEY?.trim(),
     geminiModel: process.env.GEMINI_IMAGE_MODEL?.trim(),
     openRouterKey: process.env.OPENROUTER_API_KEY?.trim(),
     openRouterModel: process.env.OPENROUTER_IMAGE_MODEL?.trim(),
+    budgetMs: budgetMs - SAVE_MARGIN_MS,
   });
   if (!image) return null;
   const path = `${userId}/${post.id}/${randomUUID()}.${image.mimeType === 'image/png' ? 'png' : 'jpg'}`;
@@ -60,6 +65,7 @@ async function addImage(userId: string, post: SocialPost, imageIdea: string): Pr
  * on the Orbis account; nothing is posted.
  */
 export async function suggestPromoPostsAction(input: { period: string; count: number; brief: string }): Promise<Result> {
+  const deadline = Date.now() + ACTION_BUDGET_MS;
   const gate = await ownerOnly();
   if (!('userId' in gate)) return gate;
   const { userId } = gate;
@@ -84,11 +90,12 @@ export async function suggestPromoPostsAction(input: { period: string; count: nu
     user: prompt.user,
     maxTokens: draftMaxTokens(request.count),
     temperature: 0.7,
-    timeoutMs: 30_000,
-    accept: (text) => parsePromoReply(text, request).length > 0,
+    // The router may take up to 1.5x this in all; the rest of the budget is for pictures.
+    timeoutMs: 20_000,
+    accept: (text) => parsePromoReply(text, { ...request, firstDay }).length > 0,
   });
   if (!result) return { success: false, message: NO_MODEL_MESSAGE };
-  const drafts = parsePromoReply(result.text, request);
+  const drafts = parsePromoReply(result.text, { ...request, firstDay });
   if (!drafts.length) return { success: false, message: 'The AI reply could not be used. Try again.' };
 
   // One after another, not in parallel: the image model has tight rate limits.
@@ -102,7 +109,7 @@ export async function suggestPromoPostsAction(input: { period: string; count: nu
       if (error instanceof SocialError && !posts.length) return { success: false, message: error.message };
       continue;
     }
-    const withImage = await addImage(userId, post, imageIdea);
+    const withImage = await addImage(userId, post, imageIdea, deadline - Date.now());
     if (!withImage) missingImages += 1;
     posts.push(withImage ?? post);
   }
@@ -126,7 +133,7 @@ export async function retryPromoImageAction(postId: string): Promise<Result> {
     if (blocked) return { success: false, message: blocked === 'off' ? AI_OFF_MESSAGE : NO_MODEL_MESSAGE };
     const refused = await claimSocialAiCredit(userId);
     if (refused) return { success: false, message: refused };
-    const post = await addImage(userId, before, before.headline || before.title);
+    const post = await addImage(userId, before, before.headline || before.title, ACTION_BUDGET_MS - 5_000);
     if (!post) return { success: false, message: 'Image couldn’t be made. Try again later.' };
     if (before.mediaPath && before.mediaPath !== post.mediaPath) await removeMediaFiles([before.mediaPath]);
     revalidatePath('/active');

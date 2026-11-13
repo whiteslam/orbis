@@ -15,7 +15,7 @@ import { ShortsView } from '@/components/shorts/shorts-view';
 import { useShortsData } from '@/components/shorts/use-shorts-data';
 import { loadSocialMonthAction } from '@/app/social/actions';
 import { PERIOD_PATTERN, todayIn, monthName, periodOfDate, shiftMonth } from '@/lib/social/month';
-import { groupPosts, postsFor, type PostGroups } from '@/lib/social/studio';
+import { groupPosts, openShortsAt, postsFor, type OpenShort, type PostGroups } from '@/lib/social/studio';
 import type { SocialAccount, SocialFormat, SocialPost } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
@@ -80,7 +80,7 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [area, setArea] = useState<Area>('posts');
   const [account, setAccount] = useState<SocialAccount>('me');
-  const [openJob, setOpenJob] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
+  const [openJob, setOpenJob] = useState<OpenShort>({ id: null, key: 0 });
   const [isLoading, startLoading] = useTransition();
   const [busyPost, setBusyPost] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
@@ -137,9 +137,9 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
   }
 
-  /** From the live column: the Shorts tab, on one short when asked. */
+  /** The Shorts tab, on one short when the live column asks, else its home. */
   function openShorts(jobId?: string) {
-    setOpenJob((current) => ({ id: jobId ?? null, key: current.key + 1 }));
+    setOpenJob((current) => openShortsAt(current, jobId ?? null));
     chooseArea('shorts');
   }
 
@@ -201,7 +201,7 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
 
       <div className="st-tabs" role="tablist" aria-label="Social area">
         {AREAS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={area === id} onClick={() => chooseArea(id)}>{label}</button>
+          <button key={id} type="button" role="tab" aria-selected={area === id} onClick={() => (id === 'shorts' ? openShorts() : chooseArea(id))}>{label}</button>
         ))}
       </div>
 

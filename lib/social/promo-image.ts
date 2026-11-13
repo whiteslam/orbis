@@ -9,7 +9,10 @@ export const DEFAULT_IMAGE_MODEL = 'gemini-3.1-flash-image';
 export const DEFAULT_OPENROUTER_IMAGE_MODEL = 'google/gemini-3.1-flash-image';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
-const TIMEOUT_MS = 60_000;
+/** One image call never waits longer than this, and is not started with less than MIN_CALL_MS left. */
+const MAX_CALL_MS = 25_000;
+const MIN_CALL_MS = 8_000;
+const DEFAULT_BUDGET_MS = 40_000;
 const MIME = new Set(['image/png', 'image/jpeg']);
 
 export type PromoImage = { bytes: Uint8Array; mimeType: 'image/png' | 'image/jpeg' };
@@ -57,22 +60,30 @@ export function readOpenRouterImage(json: unknown): PromoImage | null {
   return null;
 }
 
+/** How long one image call may take with `remainingMs` of the budget left, or null when it shouldn't start. */
+export function callTimeout(remainingMs: number): number | null {
+  return remainingMs < MIN_CALL_MS ? null : Math.min(remainingMs, MAX_CALL_MS);
+}
+
 export type ImageOptions = {
   geminiKey?: string;
   geminiModel?: string;
   openRouterKey?: string;
   openRouterModel?: string;
   fetchImpl?: typeof fetch;
+  /** The whole time both providers together may take (the action's page has a 60 s limit). */
+  budgetMs?: number;
+  now?: () => number;
 };
 
 /** One JSON POST; the parsed reply, or null on any failure (logged without secrets). */
-async function post(label: string, url: string, headers: Record<string, string>, body: unknown, fetchImpl: typeof fetch): Promise<unknown> {
+async function post(label: string, url: string, headers: Record<string, string>, body: unknown, fetchImpl: typeof fetch, timeoutMs: number): Promise<unknown> {
   try {
     const response = await fetchImpl(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) {
       console.error(`${label} image request failed`, response.status);
@@ -88,14 +99,20 @@ async function post(label: string, url: string, headers: Record<string, string>,
 /** Gemini first when it has a key, then OpenRouter; null when neither gives a picture. */
 export async function generatePromoImage(prompt: string, options: ImageOptions): Promise<PromoImage | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
+  const now = options.now ?? Date.now;
+  const deadline = now() + (options.budgetMs ?? DEFAULT_BUDGET_MS);
   if (options.geminiKey) {
+    const timeout = callTimeout(deadline - now());
+    if (timeout === null) return null;
     const model = options.geminiModel || DEFAULT_IMAGE_MODEL;
-    const image = readGeminiImage(await post('Gemini', `${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, { 'x-goog-api-key': options.geminiKey }, geminiImageRequest(prompt), fetchImpl));
+    const image = readGeminiImage(await post('Gemini', `${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, { 'x-goog-api-key': options.geminiKey }, geminiImageRequest(prompt), fetchImpl, timeout));
     if (image) return image;
   }
   if (options.openRouterKey) {
+    const timeout = callTimeout(deadline - now());
+    if (timeout === null) return null;
     const model = options.openRouterModel || DEFAULT_OPENROUTER_IMAGE_MODEL;
-    const image = readOpenRouterImage(await post('OpenRouter', OPENROUTER_ENDPOINT, { authorization: `Bearer ${options.openRouterKey}`, 'x-title': 'Orbis' }, openRouterImageRequest(prompt, model), fetchImpl));
+    const image = readOpenRouterImage(await post('OpenRouter', OPENROUTER_ENDPOINT, { authorization: `Bearer ${options.openRouterKey}`, 'x-title': 'Orbis' }, openRouterImageRequest(prompt, model), fetchImpl, timeout));
     if (image) return image;
   }
   return null;

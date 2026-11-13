@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { accountAllowed, groupPosts, postsFor, titleFromCaption } from './studio.ts';
+import { accountAllowed, groupPosts, openShortsAt, postsFor, titleFromCaption } from './studio.ts';
 import type { SocialPost } from './types.ts';
 
 const p = (over: Partial<SocialPost> = {}): SocialPost => ({
@@ -57,4 +57,11 @@ test('postsFor keeps one account', () => {
   const posts = [p({ id: 'm' }), p({ id: 'o', account: 'orbis' })];
   assert.deepEqual(postsFor(posts, 'me').map((x) => x.id), ['m']);
   assert.deepEqual(postsFor(posts, 'orbis').map((x) => x.id), ['o']);
+});
+
+test('the Shorts tab opens the short asked for once, then its home again', () => {
+  const fromLive = openShortsAt({ id: null, key: 0 }, 'job-1');
+  assert.deepEqual(fromLive, { id: 'job-1', key: 1 });
+  const fromTab = openShortsAt(fromLive, null);
+  assert.deepEqual(fromTab, { id: null, key: 2 });
 });

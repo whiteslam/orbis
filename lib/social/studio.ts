@@ -44,3 +44,12 @@ export function groupPosts(posts: SocialPost[], today: string): PostGroups {
 }
 
 export const postsFor = (posts: SocialPost[], account: SocialAccount) => posts.filter((post) => post.account === account);
+
+export type OpenShort = { id: string | null; key: number };
+
+/**
+ * Where the Shorts tab opens: one short when the live column asks (`jobId`),
+ * else its home. A new key remounts the tab on that screen, so an earlier
+ * short is never reopened by a plain tab click.
+ */
+export const openShortsAt = (current: OpenShort, jobId: string | null): OpenShort => ({ id: jobId, key: current.key + 1 });

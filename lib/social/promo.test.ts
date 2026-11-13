@@ -28,7 +28,7 @@ test('the prompt asks for days from firstDay to the month end', () => {
 
 test('parsePromoReply keeps at most count posts, each with an image idea', () => {
   const reply = JSON.stringify({ posts: [1, 2, 3, 4].map((n) => ({ title: `T${n}`, headline: 'H', caption: 'C', hashtags: ['orbis'], format: 'post', day: 20, imageIdea: 'a glowing ring' })) });
-  const out = parsePromoReply(reply, { period: '2026-11-01', count: 3 });
+  const out = parsePromoReply(reply, { period: '2026-11-01', count: 3, firstDay: 1 });
   assert.equal(out.length, 3);
   assert.equal(out[0].imageIdea, 'a glowing ring');
   assert.equal(out[0].plannedFor, '2026-11-20');
@@ -37,13 +37,13 @@ test('parsePromoReply keeps at most count posts, each with an image idea', () =>
 
 test('a post with no image idea gets one from its headline, then its title', () => {
   const reply = JSON.stringify({ posts: [{ title: 'T', headline: 'Calm money', caption: 'C' }, { title: 'Only title', caption: 'C' }] });
-  const out = parsePromoReply(reply, { period: '2026-11-01', count: 2 });
+  const out = parsePromoReply(reply, { period: '2026-11-01', count: 2, firstDay: 1 });
   assert.equal(out[0].imageIdea, 'Calm money');
   assert.equal(out[1].imageIdea, 'Only title');
 });
 
 test('parsePromoReply never throws on junk', () => {
-  assert.deepEqual(parsePromoReply('not json', { period: '2026-11-01', count: 3 }), []);
+  assert.deepEqual(parsePromoReply('not json', { period: '2026-11-01', count: 3, firstDay: 1 }), []);
 });
 
 test('PROMO_MAX is 3', () => assert.equal(PROMO_MAX, 3));
@@ -69,4 +69,14 @@ test('readPromoRequest checks count, brief and month', () => {
   assert.equal(typeof readPromoRequest({ period: 'nope', count: 1, brief: '' }), 'string');
   assert.equal(typeof readPromoRequest({ period: '2026-11-01', count: 1, brief: 'x'.repeat(301) }), 'string');
   assert.equal(typeof readPromoRequest(null), 'string');
+});
+
+test('a promo day before firstDay is moved up to it, so new posts never land in the past', () => {
+  const reply = JSON.stringify({ posts: [{ title: 'A', caption: 'C', day: 3 }, { title: 'B', caption: 'C', day: 25 }, { title: 'C', caption: 'C' }] });
+  const out = parsePromoReply(reply, { period: '2026-11-01', count: 3, firstDay: 14 });
+  assert.deepEqual(out.map((post) => post.plannedFor), ['2026-11-14', '2026-11-25', null]);
+});
+
+test('no fact claims every connection is read-only (Gmail can send mail now)', () => {
+  for (const fact of ORBIS_FACTS) assert.ok(!/every connection is read-only/i.test(fact), fact);
 });

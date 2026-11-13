@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { DEFAULT_IMAGE_MODEL, DEFAULT_OPENROUTER_IMAGE_MODEL, generatePromoImage, geminiImageRequest, openRouterImageRequest, readGeminiImage, readOpenRouterImage } from './promo-image.ts';
+import { DEFAULT_IMAGE_MODEL, DEFAULT_OPENROUTER_IMAGE_MODEL, callTimeout, generatePromoImage, geminiImageRequest, openRouterImageRequest, readGeminiImage, readOpenRouterImage } from './promo-image.ts';
 
 const png = (text = 'png') => ({ candidates: [{ content: { parts: [{ text: 'x' }, { inlineData: { mimeType: 'image/png', data: Buffer.from(text).toString('base64') } }] } }] });
 
@@ -100,3 +100,29 @@ test('without a Gemini key OpenRouter is asked straight away', async () => {
 });
 
 test('the OpenRouter default is the same current flash image model', () => assert.equal(DEFAULT_OPENROUTER_IMAGE_MODEL, 'google/gemini-3.1-flash-image'));
+
+test('callTimeout gives a call at most 25 s, and none when under 8 s remain', () => {
+  assert.equal(callTimeout(60_000), 25_000);
+  assert.equal(callTimeout(12_000), 12_000);
+  assert.equal(callTimeout(7_999), null);
+});
+
+test('with a small budget a failed Gemini call leaves no time for OpenRouter', async () => {
+  const calls: string[] = [];
+  let clock = 0;
+  const out = await generatePromoImage('p', {
+    geminiKey: 'g',
+    openRouterKey: 'o',
+    budgetMs: 20_000,
+    now: () => clock,
+    fetchImpl: async (input) => { calls.push(String(input)); clock += 15_000; return new Response('quota', { status: 429 }); },
+  });
+  assert.equal(out, null);
+  assert.equal(calls.length, 1);
+});
+
+test('with no budget left nothing is called', async () => {
+  let called = false;
+  assert.equal(await generatePromoImage('p', { geminiKey: 'g', budgetMs: 5_000, fetchImpl: async () => { called = true; return new Response('{}'); } }), null);
+  assert.equal(called, false);
+});

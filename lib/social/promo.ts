@@ -32,8 +32,8 @@ export function buildPromoPrompt(input: { period: string; firstDay: number; coun
   return { system, user: lines.join('\n\n') };
 }
 
-/** The model's reply as at most `count` clean posts, each with an idea for its picture. Never throws. */
-export function parsePromoReply(reply: string, options: { period: string; count: number }): PromoDraft[] {
+/** The model's reply as at most `count` clean posts, each with an idea for its picture, none dated before `firstDay`. Never throws. */
+export function parsePromoReply(reply: string, options: { period: string; count: number; firstDay: number }): PromoDraft[] {
   const drafts = parseAiDraft(reply, { period: options.period, count: options.count, formats: ['post'] });
   if (!drafts.length) return [];
   let ideas: unknown[] = [];
@@ -47,7 +47,10 @@ export function parsePromoReply(reply: string, options: { period: string; count:
   return drafts.map((draft, index) => {
     const raw = (ideas[index] as { imageIdea?: unknown } | undefined)?.imageIdea;
     const idea = typeof raw === 'string' ? raw.trim().slice(0, IMAGE_IDEA_MAX) : '';
-    return { ...draft, imageIdea: idea || draft.headline || draft.title.slice(0, SOCIAL_CAPS.headline) };
+    // A day before firstDay (the model ignoring the rule) moves up to it, so a new post never lands in the past.
+    const earliest = `${options.period.slice(0, 8)}${String(options.firstDay).padStart(2, '0')}`;
+    const plannedFor = draft.plannedFor && draft.plannedFor < earliest ? earliest : draft.plannedFor;
+    return { ...draft, plannedFor, imageIdea: idea || draft.headline || draft.title.slice(0, SOCIAL_CAPS.headline) };
   });
 }
 
