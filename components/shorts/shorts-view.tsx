@@ -7,6 +7,7 @@ import { JobCard, StatusChip } from '@/components/shorts/job-card';
 import { LibraryGrid } from '@/components/shorts/library';
 import { StyleBoard, StyleDetail } from '@/components/shorts/style-board';
 import { WorkerStrip } from '@/components/shorts/worker-strip';
+import { YouTubePanel } from '@/components/shorts/youtube-panel';
 import type { ShortsData } from '@/components/shorts/use-shorts-data';
 import { IN_FLIGHT, LIMITS, limitRefusal } from '@/lib/shorts/rules';
 
@@ -45,7 +46,10 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
       <div className="sh-view">
         {back}
         {job
-          ? <JobCard key={job.id} initial={job} styleName={styleOf(job.style)?.name ?? job.style} onChanged={upsert} onDeleted={() => { drop(job.id); setScreen({ name: 'home' }); }} />
+          ? <JobCard
+              key={job.id} initial={job} styleName={styleOf(job.style)?.name ?? job.style} youtube={view.youtube[job.id] ?? null}
+              onChanged={upsert} onDeleted={() => { drop(job.id); setScreen({ name: 'home' }); }} onQueued={() => void load()}
+            />
           : <p className="fd-msg bad">That short isn’t there any more.</p>}
       </div>
     );
@@ -102,12 +106,17 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
       {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}
       {(view.presence === 'none' || view.presence === 'offline' || view.presence === 'setup') && <WorkerStrip presence={view.presence} worker={view.worker} />}
 
+      <section className="sh-section" aria-labelledby="sh-youtube-h">
+        <h2 id="sh-youtube-h" className="sh-h">YouTube</h2>
+        <YouTubePanel onChanged={() => void load()} />
+      </section>
+
       <section className="sh-section" aria-label="Your shorts">
         <h2 className="sh-h">Your shorts <span className="so-count">{done.length}</span></h2>
         <LibraryGrid jobs={done} covers={view.covers} onOpen={(id) => setScreen({ name: 'job', id })} />
       </section>
 
-      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis; nothing is posted for you.</p>
+      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis. Nothing is posted until you add it to your YouTube queue.</p>
     </div>
   );
 }

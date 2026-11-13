@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CircleCheck, LoaderCircle, RotateCcw, Square } from 'lucide-react';
 import { cancelJobAction, deleteShortAction, loadJobAction, retryJobAction } from '@/app/shorts/actions';
 import { PlanEditor } from '@/components/shorts/plan-editor';
-import { ShortResult } from '@/components/shorts/library';
+import { ShortResult, type YouTubeState } from '@/components/shorts/library';
 import { safeAction } from '@/lib/client/safe-action';
 import { canCancel, canRetry, isActive, mergeEvents } from '@/lib/shorts/rules';
 import type { JobStatus, ShortEvent, ShortJob } from '@/lib/shorts/types';
@@ -61,7 +61,15 @@ function Timeline({ events, working }: Readonly<{ events: ShortEvent[]; working:
  * plan editor when the plan is ready, the player when it's done, and Retry
  * or Delete when it stopped.
  */
-export function JobCard({ initial, styleName, onChanged, onDeleted }: Readonly<{ initial: ShortJob; styleName: string; onChanged: (job: ShortJob) => void; onDeleted: () => void }>) {
+export function JobCard({ initial, styleName, youtube = null, onChanged, onDeleted, onQueued }: Readonly<{
+  initial: ShortJob;
+  styleName: string;
+  /** Where a finished short stands on YouTube. */
+  youtube?: YouTubeState | null;
+  onChanged: (job: ShortJob) => void;
+  onDeleted: () => void;
+  onQueued?: () => void;
+}>) {
   const [job, setJob] = useState(initial);
   const [events, setEvents] = useState<ShortEvent[]>([]);
   const [busy, setBusy] = useState(false);
@@ -134,7 +142,7 @@ export function JobCard({ initial, styleName, onChanged, onDeleted }: Readonly<{
       {job.status === 'plan_ready' && job.plan && <PlanEditor key={`${job.id}-${job.attempt}-${job.plan.title}`} job={{ ...job, plan: job.plan }} onChanged={changed} />}
       {job.status === 'plan_ready' && !job.plan && <p className="fd-msg bad">The plan couldn’t be read. Discard this short and start again.</p>}
 
-      {job.status === 'done' && <ShortResult job={job} onDeleted={onDeleted} />}
+      {job.status === 'done' && <ShortResult job={job} youtube={youtube} onDeleted={onDeleted} onQueued={onQueued} />}
 
       {(working || canRetry(job) || job.status === 'cancelled') && (
         <div className="sh-actions">
