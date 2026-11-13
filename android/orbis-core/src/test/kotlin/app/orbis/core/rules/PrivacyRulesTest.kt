@@ -167,4 +167,14 @@ class PrivacyRulesTest {
         Source.values().forEach { assertEquals(it, Source.fromWire(it.wire)) }
         assertEquals(null, Source.fromWire("sms"))
     }
+
+    @Test fun blankBlockedContactNeverMatches() {
+        val s = on(Source.NOTIFICATIONS, base = PrivacySettings(blockedContacts = setOf("", "   ")))
+        assertTrue(decide(item(contacts = listOf("", "  ", "Mum")), s) is Decision.Keep)
+    }
+
+    @Test fun defaultBlocklistHasKotakCurrentApp() {
+        assertTrue("com.kotak.bank.mobile" in DefaultBlocklist.PACKAGES)
+        assertTrue("com.msf.kbank.mobile" in DefaultBlocklist.PACKAGES)
+    }
 }

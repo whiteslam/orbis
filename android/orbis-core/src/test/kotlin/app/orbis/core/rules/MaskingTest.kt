@@ -1,6 +1,7 @@
 package app.orbis.core.rules
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class MaskingTest {
@@ -46,4 +47,65 @@ class MaskingTest {
     @Test fun plainTextIsUnchanged() = check("See you at lunch", "See you at lunch")
 
     @Test fun emptyTextIsUnchanged() = check("", "")
+
+    @Test fun splitCodeWithHyphenIsOneToken() =
+        check("Your WhatsApp code: 123-456", "Your WhatsApp code: [code]")
+
+    @Test fun splitCodeWithSpaceIsOneToken() =
+        check("123 456 is your Instagram code", "[code] is your Instagram code")
+
+    @Test fun pinCodeDoesNotLeakTheNumber() {
+        val out = Masking.mask("Your PIN code is 1234")
+        assertFalse(out, out.contains("1234"))
+    }
+
+    @Test fun pinNumberDoesNotLeakTheNumber() {
+        val out = Masking.mask("Your PIN number is 1234")
+        assertFalse(out, out.contains("1234"))
+    }
+
+    @Test fun verifyWordTriggersCodeMasking() =
+        check("Use 482913 to verify your account", "Use [code] to verify your account")
+
+    @Test fun dateAndTimeStayUnchanged() {
+        check("on 12-11-2026 14:30", "on 12-11-2026 14:30")
+        check("2026-11-12 18:45", "2026-11-12 18:45")
+    }
+
+    @Test fun datesAreNotJoinedToNumbersAroundThem() {
+        check("on 12-11-26 98765 43210", "on 12-11-26 ••••3210")
+        check("Ref 431298765012 12-11-26", "Ref ••••5012 12-11-26")
+    }
+
+    @Test fun datesStayInCodeContext() =
+        check("Your code 482913 expires 12-11-2026 14:30", "Your code [code] expires 12-11-2026 14:30")
+
+    @Test fun maskingTwiceChangesNothing() {
+        val samples = listOf(
+            "Your OTP for login is 482913. Do not share.",
+            "Your verification code is 1234",
+            "Rs.1,250.00 debited from A/c XX1234 on 12-11-26. UPI Ref 431298765012.",
+            "Card 4111 1111 1111 1111 used",
+            "Call me on 98765 43210",
+            "Call 98765-43210 now",
+            "password: hunter2",
+            "My PIN is 4321 ok",
+            "Your PIN code is 1234",
+            "Your PIN number is 1234",
+            "Your WhatsApp code: 123-456",
+            "123 456 is your Instagram code",
+            "Use 482913 to verify your account",
+            "Your code is 98765 43210",
+            "Order 1234 shipped",
+            "Meeting at 10:30 on 12/11/2026",
+            "on 12-11-2026 14:30",
+            "2026-11-12 18:45",
+            "₹1,00,000 credited",
+            "Shipping 2 items today",
+            "barcode 123456",
+            "See you at lunch",
+            "",
+        )
+        for (x in samples) assertEquals(x, Masking.mask(x), Masking.mask(Masking.mask(x)))
+    }
 }

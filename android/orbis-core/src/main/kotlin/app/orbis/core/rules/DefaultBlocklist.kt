@@ -20,6 +20,7 @@ object DefaultBlocklist {
         "com.csam.icici.bank.imobile",
         "com.axis.mobile",
         "com.msf.kbank.mobile",
+        "com.kotak.bank.mobile",
         "com.hdfcbank.android.now",
     )
 }

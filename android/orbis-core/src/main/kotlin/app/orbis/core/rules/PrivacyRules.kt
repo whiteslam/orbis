@@ -16,11 +16,10 @@ object PrivacyRules {
         val pkg = item.packageName
         if (pkg != null && pkg in settings.blockedPackages) return Decision.Drop(DropReason.BLOCKED_APP)
 
-        if (settings.blockedContacts.isNotEmpty()) {
-            val blocked = settings.blockedContacts.map(::contactKey).toSet()
-            if (item.contacts.any { contactKey(it) in blocked }) {
-                return Decision.Drop(DropReason.BLOCKED_CONTACT)
-            }
+        // An empty key (a blank contact) never matches, like the blank-keyword guard below.
+        val blocked = settings.blockedContacts.map(::contactKey).filter { it.isNotEmpty() }.toSet()
+        if (blocked.isNotEmpty() && item.contacts.any { contactKey(it).let { k -> k.isNotEmpty() && k in blocked } }) {
+            return Decision.Drop(DropReason.BLOCKED_CONTACT)
         }
 
         for (raw in settings.blockedKeywords) {
