@@ -8,6 +8,9 @@ export type SocialFormat = 'post' | 'reel' | 'story';
 export type SocialStatus = 'idea' | 'draft' | 'ready' | 'published';
 export type SocialPlatform = 'instagram' | 'facebook' | 'linkedin' | 'x' | 'threads' | 'youtube' | 'tiktok';
 
+/** The private Storage bucket for post pictures and videos (the repository's SOCIAL_BUCKET). */
+export const SOCIAL_BUCKET_NAME = 'social-media';
+
 /** Whose page a post is for: the person's own, or (owner only) Orbis's own promotion page. */
 export type SocialAccount = 'me' | 'orbis';
 export const SOCIAL_ACCOUNTS: SocialAccount[] = ['me', 'orbis'];

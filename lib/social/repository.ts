@@ -2,10 +2,11 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import { editUnreadies, readyProblem } from '@/lib/social/month';
+import { SOCIAL_BUCKET_NAME } from '@/lib/social/types';
 import type { NewPost, PostPatch, SocialFormat, SocialPlatform, SocialPost, SocialRevision, SocialStatus } from '@/lib/social/types';
 import { isMissingTable } from '@/lib/supabase/errors';
 
-export const SOCIAL_BUCKET = 'social-media';
+export const SOCIAL_BUCKET = SOCIAL_BUCKET_NAME;
 const LEGACY_COLUMNS = 'id,period,title,headline,caption,hashtags,format,platforms,planned_for,status,media_path,media_type,published_at,published_platform,published_link,source,position,updated_at';
 /** With the account column; before its migration runs, reads fall back to LEGACY_COLUMNS and every post is 'me'. */
 const COLUMNS = `${LEGACY_COLUMNS},account`;

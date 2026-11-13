@@ -1,0 +1,77 @@
+/* ─── Social Studio ──────────────────────────────────────────────────────
+   components/social/studio/. Design 03 "Studio split": a composer and the
+   posts as Instagram-style cards on the left, a live Shorts column on the
+   right. Theme tokens only (--fd-*), so the light theme follows. Loaded
+   after page-shorts.css. */
+
+/* ─── The post card ─── */
+.st-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.st-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--fd-rule);
+  border-radius: 18px;
+  background: var(--fd-card);
+}
+.st-card-open {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.st-card-open:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: -2px; border-radius: 18px; }
+.st-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 10px 12px; font-size: 12.5px; }
+.st-card-avatar { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--brand-gradient); }
+.st-card-who { min-width: 0; overflow: hidden; color: var(--fd-ink); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.st-card-day { margin-left: auto; flex: none; color: var(--fd-faint); }
+.st-card-media { position: relative; display: block; aspect-ratio: 1 / 1; overflow: hidden; background: var(--fd-chip); }
+.st-card-media img, .st-card-media video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.st-card-tint {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+  color: #141416;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.st-card-caption {
+  display: -webkit-box;
+  margin: 10px 12px 0;
+  overflow: hidden;
+  color: var(--fd-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.st-card-caption b { color: var(--fd-ink); }
+.st-card-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; }
+.st-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--fd-chip);
+  color: var(--fd-soft);
+  font-size: 12px;
+  font-weight: 650;
+}
+.st-chip-ai { color: var(--fd-accent); }
+.st-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding: 0 12px 12px; }
+.st-card-note { width: 100%; margin: 0; color: var(--brand-gold); font-size: 12px; line-height: 1.4; }
