@@ -74,6 +74,20 @@ class OrbisStore internal constructor(context: Context) : Closeable {
 
     suspend fun saveSettings(settings: PrivacySettings) = io { writeSettings(db(), settings) }
 
+    /**
+     * Read-modify-write of the settings in one transaction, so a concurrent [setSourceEnabled],
+     * [pause] or capture can't interleave and be lost. [change] must be quick and pure: it runs
+     * inside the transaction. Returns what was saved.
+     */
+    suspend fun updateSettings(change: (PrivacySettings) -> PrivacySettings): PrivacySettings = io {
+        val db = db()
+        db.withTransaction {
+            val next = change(readSettings(db))
+            writeSettings(db, next)
+            next
+        }
+    }
+
     /** Turns a source on or off. Turning it off deletes its raw items and pending signals. */
     suspend fun setSourceEnabled(source: Source, on: Boolean): PrivacySettings = io {
         val db = db()

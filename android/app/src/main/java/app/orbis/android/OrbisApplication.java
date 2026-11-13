@@ -3,6 +3,7 @@ package app.orbis.android;
 import android.app.Application;
 import androidx.core.app.NotificationChannelCompat;
 import androidx.core.app.NotificationManagerCompat;
+import app.orbis.core.service.CoreController;
 
 public class OrbisApplication extends Application {
 
@@ -18,5 +19,7 @@ public class OrbisApplication extends Application {
                 .setName("Orbis")
                 .build()
         );
+        // A revoke found by the sync worker stops the foreground service in any process that runs it.
+        CoreController.INSTANCE.install();
     }
 }

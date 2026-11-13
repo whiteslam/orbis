@@ -12,19 +12,10 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 
-/** The wire names, exactly as the phone sends them and as the SQL checks them. */
-export const SOURCES = [
-  'test',
-  'notifications',
-  'calendar',
-  'contacts',
-  'calls',
-  'health',
-  'usage',
-  'phone_state',
-  'location',
-] as const;
-export type Source = (typeof SOURCES)[number];
+import { SOURCES, type Source } from './sources';
+
+// The wire names live in a crypto-free module so client code can import them too.
+export { SOURCES, type Source } from './sources';
 
 export const MAX_SIGNALS = 100;
 export const MAX_CONTENT_CHARS = 4000;

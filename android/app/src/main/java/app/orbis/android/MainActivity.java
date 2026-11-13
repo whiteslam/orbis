@@ -10,6 +10,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Local plugins must be registered before the bridge is created in super.onCreate.
+        registerPlugin(OrbisCorePlugin.class);
         super.onCreate(savedInstanceState);
         // Passkeys on the site work in the app only for origins that list this
         // app in their assetlinks.json (get_login_creds).

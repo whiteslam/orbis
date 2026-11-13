@@ -32,6 +32,15 @@
         </provider>
     </application>
 
+    <!-- OrbisCore.listApps: apps with a launcher icon, for the blocked-apps picker. Only these are
+         visible to Orbis; it never asks to see every installed package. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

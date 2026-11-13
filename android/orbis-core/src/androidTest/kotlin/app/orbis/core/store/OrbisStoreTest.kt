@@ -216,6 +216,29 @@ class OrbisStoreTest {
     }
 
     @Test
+    fun updateSettingsChangesOnlyWhatTheTransformChangesAndRacesNoToggle() = runBlocking {
+        store.setSourceEnabled(Source.TEST, true)
+        store.pause(1_000L)
+        val saved = store.updateSettings { it.copy(blockedKeywords = listOf("secret")) }
+        assertEquals(setOf(Source.TEST), saved.enabled)
+        assertEquals(1_000L, saved.pausedUntil)
+        assertEquals(listOf("secret"), saved.blockedKeywords)
+        reopen()
+        assertEquals(saved, store.settings())
+        // Concurrent list edits and source toggles: every toggle survives.
+        val sources = listOf(Source.CALENDAR, Source.CONTACTS, Source.CALLS, Source.HEALTH, Source.USAGE)
+        sources.mapIndexed { i, source ->
+            listOf(
+                async(Dispatchers.IO) { store.setSourceEnabled(source, true) },
+                async(Dispatchers.IO) { store.updateSettings { it.copy(blockedPackages = it.blockedPackages + "p$i") } },
+            )
+        }.flatten().awaitAll()
+        val after = store.settings()
+        assertTrue(after.enabled.containsAll(sources))
+        assertTrue(after.blockedPackages.containsAll(List(sources.size) { "p$it" }))
+    }
+
+    @Test
     fun outboxDrainsOldestFirstAndMarkSyncedRemoves() = runBlocking {
         store.setSourceEnabled(Source.TEST, true)
         for (i in 1..5) store.capture(item(text = "item $i"), now = now + i)

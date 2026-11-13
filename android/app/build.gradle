@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+// The OrbisCore plugin is Kotlin (same Kotlin as orbis-core).
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "app.orbis.android"
@@ -42,6 +44,13 @@ android {
     }
 }
 
+// capacitor.build.gradle compiles Java for 21; Kotlin must target the same JVM.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -56,6 +65,7 @@ dependencies {
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
     implementation project(':capacitor-android')
     implementation project(':orbis-core')
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
