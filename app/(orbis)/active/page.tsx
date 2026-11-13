@@ -12,6 +12,7 @@ import { getLatestAiResult } from '@/lib/ai/results';
 import { getAiPreferences } from '@/lib/ai/preferences';
 import { getRoutinesSummary } from '@/lib/routines/repository';
 import { getSocialConnections } from '@/lib/social/connections';
+import { getRole } from '@/lib/security/roles';
 import { metaConfigured } from '@/lib/social/meta';
 import { listMonth } from '@/lib/social/repository';
 import { periodOfDate } from '@/lib/social/month';
@@ -54,7 +55,7 @@ export default async function Page() {
   }
 
   const socialPeriod = periodOfDate(localDate(new Date(), settings.timeZone));
-  const [financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections] = await Promise.all([
+  const [financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections, role] = await Promise.all([
     getFinanceSummary(userId),
     getContextNotes(userId),
     getFitnessPersona(userId),
@@ -73,11 +74,12 @@ export default async function Page() {
     getRoutinesSummary(userId),
     listMonth(userId, socialPeriod),
     getSocialConnections(userId),
+    getRole(userId),
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
       <PersonSettingsProvider value={settings}>
-        <AppShell financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } }} />
+        <AppShell financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } }} socialIsOwner={role === 'owner'} />
       </PersonSettingsProvider>
     </AppLockGuard>
   );

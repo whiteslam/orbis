@@ -34,7 +34,6 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/personal/notification-actions.ts',
   'app/research/actions.ts',
   'app/shorts/actions.ts',
-  'app/social/actions.ts',
   'app/waitlist/actions.ts',
   'lib/account/delete.ts',
   'lib/ai/consent-store.ts',
@@ -61,6 +60,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'lib/providers/status.ts',
   'lib/security/pin-store.ts',
   'lib/security/rate-limit.ts',
+  'lib/social/ai-credit.ts',
   'lib/social/connections.ts',
   'lib/storage/signed-upload.ts',
 ];

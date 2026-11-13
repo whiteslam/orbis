@@ -4,6 +4,7 @@ import { editUnreadies, todayIn, monthGrid, monthName, monthSummary, overLimit, 
 import type { SocialPost } from './types.ts';
 
 const post = (over: Partial<SocialPost> = {}): SocialPost => ({
+  account: 'me',
   id: 'p1', period: '2026-09-01', title: 'Launch', headline: null, caption: 'Hello', hashtags: [], format: 'post',
   platforms: ['instagram'], plannedFor: '2026-09-14', status: 'draft', mediaPath: null, mediaType: null, mediaUrl: null,
   published: null, source: 'manual', position: 0, updatedAt: '2026-09-01T00:00:00Z', ...over,

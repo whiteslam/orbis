@@ -6,7 +6,6 @@ import { FieldLabel, FieldSubHead } from '@/components/field/field';
 import { StatusChip } from '@/components/social/status-chip';
 import { dayLabel } from '@/components/social/social-list';
 import {
-  attachMediaAction,
   deletePostAction,
   duplicatePostAction,
   loadPostHistoryAction,
@@ -15,7 +14,6 @@ import {
   removeMediaAction,
   savePostAction,
   setPostStatusAction,
-  signMediaUploadAction,
 } from '@/app/social/actions';
 import { daysInMonth, monthName, postedLength, readyProblem } from '@/lib/social/month';
 import {
@@ -31,7 +29,7 @@ import {
   type SocialPost,
   type SocialRevision,
 } from '@/lib/social/types';
-import { createClient } from '@/lib/supabase/client';
+import { uploadPostMedia } from '@/components/social/upload-media';
 import { safeAction } from '@/lib/client/safe-action';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { formatWhen } from '@/lib/locale/dates';
@@ -465,18 +463,8 @@ export function PostDrawer({ period, post, initialDate, initialFormat = 'post', 
   const upload = (file: File) => run('media', async () => {
     const current = await persist();
     if (!current) return;
-    const signed = await safeAction(signMediaUploadAction)(current.id, { name: file.name, type: file.type, size: file.size });
-    if (!signed.success || !signed.path || !signed.token) {
-      setMessage({ text: signed.message, error: true });
-      return;
-    }
-    const { error } = await createClient().storage.from('social-media').uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type });
-    if (error) {
-      setMessage({ text: 'The upload did not finish. Check your connection and try again.', error: true });
-      return;
-    }
-    const result = await safeAction(attachMediaAction)(current.id, signed.path, file.type.startsWith('video/') ? 'video' : 'image');
-    if (result.success && result.post) accept(result.post, result.message);
+    const result = await uploadPostMedia(current.id, file);
+    if (result.success) accept(result.post, result.message);
     else setMessage({ text: result.message, error: true });
   });
 

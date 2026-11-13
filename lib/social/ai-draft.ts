@@ -68,7 +68,7 @@ export function buildDraftPrompt(input: {
   return { system, user: lines.join('\n\n') };
 }
 
-export type DraftPost = Omit<CleanPost, 'platforms'>;
+export type DraftPost = Omit<CleanPost, 'platforms' | 'account'>;
 
 const text = (value: unknown, cap: number) => (typeof value === 'string' ? value.trim().slice(0, cap) : '');
 
