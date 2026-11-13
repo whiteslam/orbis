@@ -15,9 +15,10 @@ import {
   approvePatch, countInFlight, countSince, deleteJob, getJob, getWorker, insertJob, listEvents, listJobs, listStyles, MOVED_ON, ShortsError,
   signPaths, updateJob, type ShortsDb,
 } from '@/lib/shorts/repository';
-import { canApprove, canCancel, canDelete, canRetry, cleanTopic, IN_FLIGHT, LIMITS, limitRefusal, monthStartIst, oneLine, readOptions, workerPresence } from '@/lib/shorts/rules';
+import { canApprove, canCancel, canDelete, canRetry, cleanTopic, IN_FLIGHT, LIMITS, limitRefusal, monthStartIn, oneLine, readOptions, workerPresence } from '@/lib/shorts/rules';
 import type { JobStatus, ShortJob } from '@/lib/shorts/types';
 import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/view';
+import { getPersonSettings } from '@/lib/locale/repository';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
 const INVALID = { success: false as const, message: 'That request isn’t valid. Reload and try again.' };
@@ -57,7 +58,7 @@ export async function loadShortsViewAction(): Promise<Result<ShortsView>> {
       getWorker(me.db, me.userId),
       listStyles(me.db),
       listJobs(me.db, me.userId),
-      countSince(me.db, me.userId, monthStartIst(new Date())),
+      countSince(me.db, me.userId, monthStartIn(new Date(), (await getPersonSettings(me.userId)).timeZone)),
     ]);
     const admin = createAdminClient();
     const coverPaths = jobs.flatMap((job) => (job.delivery?.files.cover ? [job.delivery.files.cover] : []));
@@ -100,7 +101,7 @@ export async function queueShortAction(input: unknown): Promise<Result<ShortJob>
       getWorker(me.db, me.userId),
       listStyles(me.db),
       countInFlight(me.db, me.userId),
-      countSince(me.db, me.userId, monthStartIst(new Date())),
+      countSince(me.db, me.userId, monthStartIn(new Date(), (await getPersonSettings(me.userId)).timeZone)),
     ]);
     // Only a person whose own PC worker has checked in can queue: nobody else's would ever run.
     if (!worker) return fail('Set up the Shorts worker on your PC first.');
