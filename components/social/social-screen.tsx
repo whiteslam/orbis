@@ -1,35 +1,35 @@
 'use client';
 
-import { useEffect, useState, useTransition, type CSSProperties } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { useEffect, useState, useTransition } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FieldHead, useScrollTop } from '@/components/field/field';
-import { SocialCalendar } from '@/components/social/social-calendar';
-import { SocialGrid, SocialList, dayLabel, type SocialSort } from '@/components/social/social-list';
 import { PostDrawer } from '@/components/social/post-drawer';
-import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
+import { Composer } from '@/components/social/studio/composer';
+import { LiveColumn } from '@/components/social/studio/live-column';
+import { PostCard } from '@/components/social/studio/post-card';
 import { ShortsView } from '@/components/shorts/shorts-view';
 import { useShortsData } from '@/components/shorts/use-shorts-data';
 import { loadSocialMonthAction } from '@/app/social/actions';
-import { PERIOD_PATTERN, todayIn, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
-import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, type SocialFormat, type SocialPost, type SocialStatus } from '@/lib/social/types';
+import { PERIOD_PATTERN, todayIn, monthName, periodOfDate, shiftMonth } from '@/lib/social/month';
+import { groupPosts, postsFor, type PostGroups } from '@/lib/social/studio';
+import type { SocialAccount, SocialFormat, SocialPost } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
 import type { SocialConnectNotice } from '@/lib/social/connect-notice';
 import { usePersonLocale } from '@/components/locale/person-locale';
 
-type View = 'list' | 'grid';
-type Area = 'planner' | 'shorts';
-type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat } | { name: 'ai' };
+type Area = 'posts' | 'shorts';
+type Screen = { name: 'main' } | { name: 'post'; post: SocialPost | null; date: string | null; format: SocialFormat };
 
-const VIEWS: Array<[View, string]> = [['list', 'List'], ['grid', 'Grid']];
-/** The pipeline, in the order a post moves through it. */
-const STAGES: SocialStatus[] = ['idea', 'draft', 'ready', 'published'];
 const HASH_PREFIX = '#social/';
 const SHORTS_HASH = '#social/shorts';
-const AREAS: Array<[Area, string]> = [['planner', 'Planner'], ['shorts', 'Shorts']];
+const AREAS: Array<[Area, string]> = [['posts', 'Posts'], ['shorts', 'Shorts']];
+const ACCOUNT_KEY = 'orbis.social.account';
 /** The banner class for each connect result; 'info' takes the plain banner. */
 const NOTICE_TONE_CLASS: Record<SocialConnectNotice['tone'], string> = { success: 'success', error: 'error', info: '' };
+/** The month's groups, in the order the page shows them. */
+const GROUPS: Array<[keyof PostGroups, string]> = [['comingUp', 'Coming up'], ['noDate', 'No date'], ['pastNotPosted', 'Past, not posted'], ['posted', 'Posted']];
 
 /** '#social/2026-09' → '2026-09-01', or null. */
 function periodFromHash() {
@@ -39,31 +39,52 @@ function periodFromHash() {
   return PERIOD_PATTERN.test(period) ? period : null;
 }
 
+function readSavedAccount(): SocialAccount {
+  try {
+    return window.localStorage.getItem(ACCOUNT_KEY) === 'orbis' ? 'orbis' : 'me';
+  } catch {
+    return 'me';
+  }
+}
+
+function saveAccount(account: SocialAccount) {
+  try {
+    window.localStorage.setItem(ACCOUNT_KEY, account);
+  } catch {
+    // A remembered tab is a convenience only.
+  }
+}
+
 /**
- * The Social tab: one month of the user's own posts.
+ * The Social tab, design 03 "Studio split": on the left a write-and-attach
+ * composer and the month's posts as Instagram-style cards; on the right what
+ * the Shorts PC is doing. Shorts is the second tab, in the same frame.
  *
  * The server hands over the current month; other months load on demand. The
- * month lives in the URL hash, so a reload stays where it was.
+ * month (or #social/shorts) lives in the URL hash, so a reload stays put.
  */
-export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
-  const { timeZone, locale } = usePersonLocale();
+export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearConnectNotice }: Readonly<{
+  initial: SocialMonth & { period: string };
+  isOwner: boolean;
+  /** How the person's own posts are signed on the cards. */
+  ownName: string;
+  connectNotice?: SocialConnectNotice | null;
+  clearConnectNotice?: () => void;
+}>) {
+  const { timeZone } = usePersonLocale();
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
-  const [view, setView] = useState<View>('list');
-  const [sort, setSort] = useState<SocialSort>('status');
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
-  const [area, setArea] = useState<Area>('planner');
-  const [selected, setSelected] = useState<string | null>(() => todayIn(timeZone));
-  const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  const [area, setArea] = useState<Area>('posts');
+  const [account, setAccount] = useState<SocialAccount>('me');
+  const [openJob, setOpenJob] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
   const [isLoading, startLoading] = useTransition();
   const shorts = useShortsData();
-  const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
+  const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : `${screen.name}-${area}`);
   const today = todayIn(timeZone);
 
   function load(next: string) {
     setPeriod(next);
-    setNotice(null);
-    setSelected(next === periodOfDate(today) ? today : null);
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${HASH_PREFIX}${next.slice(0, 7)}`);
     startLoading(async () => {
       const result = await safeAction(loadSocialMonthAction, (message) => ({ success: false, message, posts: [], databaseReady: true, loadError: true }))(next);
@@ -71,16 +92,17 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
     });
   }
 
-  // A reload onto #social/shorts opens Shorts. Read after mount: the server has no hash.
+  // A reload onto #social/shorts opens Shorts; the owner's last account comes back. Read after mount: the server has neither.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (window.location.hash.startsWith(SHORTS_HASH)) setArea('shorts');
-  }, []);
+    if (isOwner) setAccount(readSavedAccount());
+  }, [isOwner]);
 
   // A reload onto #social/2026-11 opens that month rather than this one.
   useEffect(() => {
     const fromHash = periodFromHash();
-    // Only on first mount: later months are chosen with the switcher.
+    // Only on first mount: later months are chosen with the month bar.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (fromHash && fromHash !== initial.period) load(fromHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,7 +124,24 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   }
   const removePost = (id: string) => setMonth((current) => ({ ...current, posts: current.posts.filter((item) => item.id !== id) }));
   const openPost = (post: SocialPost) => setScreen({ name: 'post', post, date: null, format: post.format });
-  const newPost = (date: string | null, format: SocialFormat = 'post') => setScreen({ name: 'post', post: null, date, format });
+
+  /** Posts or Shorts; the hash follows, so a reload stays on the same one. */
+  function chooseArea(next: Area) {
+    setArea(next);
+    const hash = next === 'shorts' ? SHORTS_HASH : `${HASH_PREFIX}${period.slice(0, 7)}`;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
+  }
+
+  /** From the live column: the Shorts tab, on one short when asked. */
+  function openShorts(jobId?: string) {
+    setOpenJob((current) => ({ id: jobId ?? null, key: current.key + 1 }));
+    chooseArea('shorts');
+  }
+
+  function chooseAccount(next: SocialAccount) {
+    setAccount(next);
+    saveAccount(next);
+  }
 
   if (screen.name === 'post') return (
     <div className="screen-body field">
@@ -119,59 +158,22 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
     </div>
   );
 
-  if (screen.name === 'ai') return (
-    <div className="screen-body field">
-      <span ref={top} hidden />
-      <AiDraftDialog
-        period={period}
-        hasProfile={hasProfile}
-        onClose={() => setScreen({ name: 'main' })}
-        onDrafted={(posts, message) => {
-          posts.forEach(upsert);
-          setNotice({ text: message, error: false });
-          setView('list');
-          setScreen({ name: 'main' });
-        }}
-      />
-    </div>
-  );
-
-  /** Planner or Shorts; the hash follows, so a reload stays on the same one. */
-  function chooseArea(next: Area) {
-    setArea(next);
-    const hash = next === 'shorts' ? SHORTS_HASH : `${HASH_PREFIX}${period.slice(0, 7)}`;
-    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
-  }
-
-  const areaSwitch = (
-    <div className="so-mini so-area" role="radiogroup" aria-label="Social area">
-      {AREAS.map(([id, label]) => (
-        <button key={id} type="button" role="radio" aria-checked={area === id} onClick={() => chooseArea(id)}>{label}</button>
-      ))}
-    </div>
-  );
-
-  if (area === 'shorts') return (
-    <div className="screen-body field so-screen">
-      <span ref={top} hidden />
-      <FieldHead title="Social" subtitle="Faceless shorts, made on your PC, queued from anywhere" />
-      {areaSwitch}
-      <ShortsView data={shorts} />
-    </div>
-  );
-
-  const posts = [...month.posts].sort((left, right) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999') || left.position - right.position);
   const ready = month.databaseReady && !month.loadError;
+  const groups = groupPosts(postsFor(month.posts, account), today);
+  const shown = GROUPS.filter(([key]) => groups[key].length > 0);
+  const accountName = account === 'orbis' ? 'Orbis' : ownName;
   const isThisMonth = period === periodOfDate(today);
-  // The one post to act on next: the first not yet out, from today on.
-  const nextUp = posts.find((post) => post.status !== 'published' && post.plannedFor !== null && post.plannedFor >= today) ?? null;
-  const counts = Object.fromEntries(STAGES.map((stage) => [stage, posts.filter((post) => post.status === stage).length])) as Record<SocialStatus, number>;
 
   return (
-    <div className="screen-body field so-screen">
+    <div className="screen-body field so-screen st-screen">
       <span ref={top} hidden />
-      <FieldHead title="Social" subtitle="Your own posts, planned for the month" />
-      {areaSwitch}
+      <FieldHead title="Social" />
+
+      <div className="st-tabs" role="tablist" aria-label="Social area">
+        {AREAS.map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={area === id} onClick={() => chooseArea(id)}>{label}</button>
+        ))}
+      </div>
 
       {connectNotice && (
         <output className={`finance-notice ${NOTICE_TONE_CLASS[connectNotice.tone]}`}>
@@ -180,113 +182,55 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
         </output>
       )}
 
-      {/* The lead: the month, how far along it is, the next post due, and the one way to add. */}
-      <header className="so-lead">
-        <div className="so-lead-month">
-          <div className="so-month-nav">
-            <button type="button" className="so-round" onClick={() => load(shiftMonth(period, -1))} disabled={isLoading} aria-label="Previous month"><ChevronLeft size={18} strokeWidth={2.2} aria-hidden="true" /></button>
-            <h2 className="so-month-name" aria-live="polite">{monthName(period)}</h2>
-            <button type="button" className="so-round" onClick={() => load(shiftMonth(period, 1))} disabled={isLoading} aria-label="Next month"><ChevronRight size={18} strokeWidth={2.2} aria-hidden="true" /></button>
-            {!isThisMonth && <button type="button" className="fd-link so-today-link" onClick={() => load(periodOfDate(today))} disabled={isLoading}>This month</button>}
-          </div>
-          {ready && (
-            <p className="so-lead-line">
-              {isLoading ? 'Loading the month…' : monthSummary(posts)}
-              {!isLoading && nextUp && (
-                <>
-                  <span className="so-lead-sep" aria-hidden="true" />
-                  <button type="button" className="so-next" onClick={() => openPost(nextUp)}>
-                    Next up: <b>{nextUp.title}</b>, {nextUp.plannedFor === today ? 'today' : dayLabel(nextUp.plannedFor ?? today, locale)}
-                  </button>
-                </>
+      <div className="st-frame">
+        <LiveColumn data={shorts} onOpenShorts={openShorts} />
+
+        <div className="st-main">
+          {area === 'shorts' ? (
+            <ShortsView key={openJob.key} data={shorts} openJobId={openJob.id} />
+          ) : (
+            <>
+              {isOwner && (
+                <div className="st-accounts" role="radiogroup" aria-label="Account">
+                  <button type="button" role="radio" aria-checked={account === 'me'} onClick={() => chooseAccount('me')}>Me</button>
+                  <button type="button" role="radio" aria-checked={account === 'orbis'} onClick={() => chooseAccount('orbis')}>Orbis</button>
+                </div>
               )}
-            </p>
+
+              <Composer account={account} period={period} onAdded={(post) => upsert(post)} />
+
+              <div className="st-month">
+                <button type="button" className="so-round" onClick={() => load(shiftMonth(period, -1))} disabled={isLoading} aria-label="Previous month"><ChevronLeft size={18} strokeWidth={2.2} aria-hidden="true" /></button>
+                <h2 className="st-month-name" aria-live="polite">{monthName(period)}</h2>
+                <button type="button" className="so-round" onClick={() => load(shiftMonth(period, 1))} disabled={isLoading} aria-label="Next month"><ChevronRight size={18} strokeWidth={2.2} aria-hidden="true" /></button>
+                {!isThisMonth && <button type="button" className="fd-link" onClick={() => load(periodOfDate(today))} disabled={isLoading}>This month</button>}
+              </div>
+
+              {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
+              {month.databaseReady && month.loadError && !isLoading && (
+                <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
+              )}
+
+              {ready && !shown.length && !isLoading && <p className="st-empty">Nothing here yet. Write your first post above.</p>}
+
+              {ready && shown.map(([key, label]) => (
+                <section key={key} className="st-group" aria-label={label} aria-busy={isLoading || undefined}>
+                  <h2 className="so-h">{label} <span className="so-count">{groups[key].length}</span></h2>
+                  <ul className="st-cards">
+                    {groups[key].map((post) => (
+                      <li key={post.id}><PostCard post={post} accountName={accountName} onOpen={openPost} /></li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+
+              <SocialInsights />
+
+              <p className="fd-note so-foot">Orbis never posts for you. Plan here, publish in the app, then record where it went out.</p>
+            </>
           )}
         </div>
-
-        {/* The two ways to add a post: one button, and the AI as a quieter second. */}
-        {ready && (
-          <div className="so-actions">
-            <details className="so-new">
-              <summary className="so-action primary">
-                <Plus size={17} strokeWidth={2.4} aria-hidden="true" />
-                <span>New post</span>
-              </summary>
-              <div className="so-new-menu">
-                {SOCIAL_FORMATS.map((format) => (
-                  <button key={format.id} type="button" onClick={() => newPost(selected && periodOfDate(selected) === period ? selected : null, format.id)}>{format.label}</button>
-                ))}
-              </div>
-            </details>
-            <button type="button" className="so-action" onClick={() => setScreen({ name: 'ai' })}>
-              <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
-              <span>Draft with AI</span>
-            </button>
-          </div>
-        )}
-      </header>
-
-      {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
-      {month.databaseReady && month.loadError && !isLoading && (
-        <p className="so-problem">This month could not be loaded. <button type="button" className="fd-link" onClick={() => load(period)}>Try again</button></p>
-      )}
-
-      {ready && (
-        <>
-          {notice && <output className={`so-message${notice.error ? ' error' : ''}`}>{notice.text}</output>}
-
-          {/* The planner: the page's signature. Always shown, so an empty month
-              still has days to tap and add to. */}
-          <SocialCalendar period={period} posts={posts} today={today} selected={selected} loading={isLoading} onSelect={setSelected} onOpen={openPost} onNew={(date) => newPost(date)} />
-
-          {!posts.length && !isLoading ? (
-            <section className="so-empty">
-              <h2 className="so-h">Nothing planned for {monthName(period).split(' ')[0]}.</h2>
-              <p>Pick a day in the planner to add a post to it, or tell Orbis what the month is about and it will draft a few for you to edit. Everything here is private to you.</p>
-              <div className="so-empty-act">
-                <button type="button" className="fd-link" onClick={() => setScreen({ name: 'ai' })}>Draft a month with AI</button>
-              </div>
-            </section>
-          ) : (
-            <section className="so-pipeline" aria-label="Posts this month" aria-busy={isLoading || undefined}>
-              {/* One header line: the heading and count on the left; the order and the view on the right. */}
-              <div className="so-posts-head">
-                <h2 className="so-h">Posts <span className="so-count">{posts.length}</span></h2>
-                <div className="so-posts-tools">
-                  {view === 'list' && (
-                    <select className="so-sort-pick" aria-label="Sort by" value={sort} onChange={(event) => setSort(event.currentTarget.value as SocialSort)}>
-                      <option value="status">By stage</option>
-                      <option value="date">By date</option>
-                      <option value="format">By format</option>
-                    </select>
-                  )}
-                  <div className="so-mini" role="radiogroup" aria-label="View">
-                    {VIEWS.map(([id, label]) => (
-                      <button key={id} type="button" role="radio" aria-checked={view === id} onClick={() => setView(id)}>{label}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* The pipeline at a glance: each stage's share of the month, always in words too. */}
-              <ol className="so-stages" aria-label="Posts by stage">
-                {STAGES.map((stage) => (
-                  <li key={stage} className={`so-stage so-stage-${stage}`} style={{ '--so-n': counts[stage] } as CSSProperties} data-empty={counts[stage] === 0 || undefined}>
-                    <i aria-hidden="true" />
-                    <b>{counts[stage]}</b> {SOCIAL_STATUS_LABEL[stage]}
-                  </li>
-                ))}
-              </ol>
-
-              {view === 'list' ? <SocialList posts={posts} onOpen={openPost} sort={sort} /> : <SocialGrid posts={posts} onOpen={openPost} />}
-            </section>
-          )}
-        </>
-      )}
-
-      <SocialInsights />
-
-      <p className="fd-note so-foot">Orbis never posts for you. Plan here, publish in the app, then record where it went out.</p>
+      </div>
     </div>
   );
 }

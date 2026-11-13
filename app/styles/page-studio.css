@@ -223,3 +223,42 @@
   .st-live-line { display: flex; }
   .st-live-full { display: none; }
 }
+
+/* ─── The frame: tabs, then the main column and the live column ─── */
+.st-tabs { display: inline-flex; align-self: flex-start; gap: 2px; margin: 4px 0 18px; padding: 4px; border-radius: 999px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.st-tabs button, .st-accounts button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--fd-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.st-tabs button[aria-selected="true"], .st-accounts button[aria-checked="true"] { background: var(--fd-ink); color: var(--sys-bg, #0e0e10); }
+.st-tabs button:focus-visible, .st-accounts button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.stage[data-tab="social"] .so-screen.st-screen > .st-tabs { justify-self: start; }
+
+.st-frame { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+.st-main { display: flex; flex: 999 1 560px; flex-direction: column; gap: 18px; min-width: 0; order: 1; }
+.st-frame > .st-side { flex: 1 1 300px; order: 2; }
+.st-accounts { display: inline-flex; align-self: flex-start; gap: 2px; padding: 4px; border-radius: 999px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.st-month { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.st-month-name { margin: 0 4px; color: var(--fd-ink); font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+.st-group { display: flex; flex-direction: column; gap: 12px; }
+.st-empty { margin: 0; color: var(--fd-soft); font-size: 14.5px; }
+.st-screen .so-insights { margin-top: 8px; }
+
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop][data-tab="social"] .st-frame { gap: 32px; }
+  .stage[data-desktop][data-tab="social"] .st-frame > .st-side { position: sticky; top: 16px; flex: 0 1 340px; }
+}
+
+/* Phone: one column; the live column is one line above the content. */
+@media (max-width: 720px) {
+  .st-frame { gap: 14px; }
+  .st-frame > .st-side { flex-basis: 100%; order: 0; }
+}
