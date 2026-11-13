@@ -35,6 +35,9 @@ import org.json.JSONObject
  *
  * - Every method first checks that the WebView is on the configured server's origin; anything else
  *   (example.com after a link, the offline page) is refused with `not_orbis_origin`.
+ * - On a WebView without WEB_MESSAGE_LISTENER, Capacitor falls back to a JavaScript interface that
+ *   every frame can reach, third-party iframes included, so every method is refused with
+ *   `unsupported_webview` there.
  * - The work runs on [Dispatchers.IO] in a scope that ends with the activity.
  * - A failure rejects with a short code ([PluginInput]); exception messages never reach the page,
  *   and logs carry only the method and the exception class.
@@ -243,6 +246,7 @@ class OrbisCorePlugin : Plugin() {
     private fun handle(call: PluginCall, block: suspend () -> JSObject?) {
         scope.launch {
             try {
+                if (!webViewSafe) throw Rejection(PluginInput.UNSUPPORTED_WEBVIEW)
                 if (!fromOrbis()) throw Rejection(PluginInput.NOT_ORBIS_ORIGIN)
                 val result = block()
                 if (result == null) call.resolve() else call.resolve(result)
@@ -250,11 +254,24 @@ class OrbisCorePlugin : Plugin() {
                 throw e
             } catch (e: Rejection) {
                 if (e.code == PluginInput.NOT_ORBIS_ORIGIN) Log.w(TAG, "${call.methodName}: refused, not the Orbis origin")
+                if (e.code == PluginInput.UNSUPPORTED_WEBVIEW) Log.w(TAG, "${call.methodName}: refused, WebView too old")
                 call.reject(e.code, e.code)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Errors too (e.g. UnsatisfiedLinkError when SQLCipher's native library can't load):
+                // the call is rejected with a code instead of taking the app down. Class name only.
                 Log.w(TAG, "${call.methodName} failed: ${e.javaClass.name}")
                 call.reject(PluginInput.FAILED, PluginInput.FAILED)
             }
+        }
+    }
+
+    /** Whether this WebView talks to plugins through WebMessageListener (origin-scoped), not the open fallback. */
+    private val webViewSafe: Boolean by lazy {
+        try {
+            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
+        } catch (e: Exception) {
+            Log.w(TAG, "WebView feature check failed: ${e.javaClass.name}")
+            false
         }
     }
 

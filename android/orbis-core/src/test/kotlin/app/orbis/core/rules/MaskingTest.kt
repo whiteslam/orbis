@@ -23,6 +23,14 @@ class MaskingTest {
     @Test fun cardNumberWithSpacesIsMasked() =
         check("Card 4111 1111 1111 1111 used", "Card ••••1111 used")
 
+    @Test fun cardNumberBeforeAColonIsMaskedWhole() =
+        check("Card 4111 1111 1111 1111: declined", "Card ••••1111: declined")
+
+    @Test fun aGroupBeforeATimeIsNotJoined() {
+        check("on 12-11-2026 14:30", "on 12-11-2026 14:30")
+        check("Call 98765 43210 14:30", "Call ••••3210 14:30")
+    }
+
     @Test fun phoneNumberWithSpaceIsMasked() =
         check("Call me on 98765 43210", "Call me on ••••3210")
 
@@ -86,6 +94,8 @@ class MaskingTest {
             "Your verification code is 1234",
             "Rs.1,250.00 debited from A/c XX1234 on 12-11-26. UPI Ref 431298765012.",
             "Card 4111 1111 1111 1111 used",
+            "Card 4111 1111 1111 1111: declined",
+            "Call 98765 43210 14:30",
             "Call me on 98765 43210",
             "Call 98765-43210 now",
             "password: hunter2",

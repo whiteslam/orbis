@@ -20,7 +20,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -81,17 +80,25 @@ object CoreController {
         }
     }
 
-    /** Fire-and-forget [reconcile] for receivers and callbacks; [onDone] runs when it has finished. */
-    fun reconcileAsync(context: Context, onDone: () -> Unit = {}) {
+    /**
+     * Fire-and-forget [reconcile] for receivers and callbacks; [onDone] runs when it has finished, or
+     * after [timeoutMs] if that comes first (null: no limit). A receiver holding goAsync passes
+     * [BROADCAST_LIMIT_MS] so its finish() always runs inside Android's broadcast limit; the reconcile
+     * itself carries on (it is idempotent, and the next app open reconciles again).
+     */
+    fun reconcileAsync(context: Context, timeoutMs: Long? = null, onDone: () -> Unit = {}) {
         val app = context.applicationContext
-        scope.launch {
-            try {
-                reconcile(app)
-            } finally {
-                onDone()
-            }
-        }
+        launchBounded(
+            scope,
+            timeoutMs,
+            work = { reconcile(app) },
+            onTimeout = { Log.w(TAG, "reconcile still running after ${timeoutMs}ms, releasing the caller") },
+            onDone = onDone,
+        )
     }
+
+    /** How long a broadcast receiver waits for [reconcileAsync]: under Android's 10 s receiver limit. */
+    const val BROADCAST_LIMIT_MS = 8_000L
 
     /** True when Android may still restrict Orbis in the background (battery optimisation is on for it). */
     fun batteryOptimized(context: Context): Boolean {

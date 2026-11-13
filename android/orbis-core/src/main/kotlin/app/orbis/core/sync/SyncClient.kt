@@ -20,7 +20,15 @@ fun interface SyncClient {
     suspend fun post(credential: DeviceCredential, body: String): SyncReply
 }
 
-/** [SyncClient] over [HttpURLConnection], with 15 s timeouts. */
+/**
+ * [SyncClient] over [HttpURLConnection], with 15 s timeouts.
+ *
+ * The WebView's cookies may ride along: Capacitor's cookie handler is installed process-wide
+ * (CookieHandler.setDefault), and HttpURLConnection has no per-request way around it (swapping the
+ * global handler around a request isn't thread-safe). The server ignores them on this route: proxy.ts
+ * passes `/api/device/signals` through before its session refresh (lib/device/session-free.ts), so a
+ * background sync never rotates the person's session, and the route reads only the device credential.
+ */
 class HttpSyncClient : SyncClient {
     override suspend fun post(credential: DeviceCredential, body: String): SyncReply = withContext(Dispatchers.IO) {
         val url = URL(credential.serverUrl.trimEnd('/') + PATH)

@@ -93,7 +93,7 @@ class OrbisStoreTest {
     }
 
     @Test
-    fun turningASourceOffDeletesItsItemsButKeepsTheLedger() = runBlocking {
+    fun turningASourceOffDeletesItsItemsAndItsLedger() = runBlocking {
         store.setSourceEnabled(Source.TEST, true)
         store.setSourceEnabled(Source.NOTIFICATIONS, true)
         store.capture(item(text = "first"))
@@ -108,7 +108,10 @@ class OrbisStoreTest {
         assertEquals(listOf(Source.NOTIFICATIONS), left.map { it.source })
         assertEquals(1, store.db().rawItems().count())
         assertEquals(Source.NOTIFICATIONS, store.db().rawItems().newest(10).single().source)
-        assertEquals(3, store.recentActivity(10).size)
+        // Its local ledger goes too (the server's copy is deleted at the same time; a kept local
+        // ledger would be sent again on the next sync). Other sources' rows stay.
+        assertEquals(listOf(Source.NOTIFICATIONS), store.recentActivity(10).map { it.source })
+        assertTrue(store.ledgerDays().none { it.source == Source.TEST })
 
         // A capture from the now-off source is dropped.
         assertEquals(Decision.Drop(DropReason.SOURCE_OFF), store.capture(item(text = "third")))
@@ -182,6 +185,35 @@ class OrbisStoreTest {
         reopen()
         assertEquals("revoked", store.kvGet(OrbisStore.SIGNED_OUT_REASON))
         assertNull(store.credential())
+    }
+
+    @Test
+    fun wipeIfWipesOnlyTheCredentialItWasGiven() = runBlocking {
+        val old = DeviceCredential("7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0001", "o".repeat(43), "user-1", "https://example.test")
+        val fresh = DeviceCredential("7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0002", "n".repeat(43), "user-1", "https://example.test")
+        store.setSourceEnabled(Source.TEST, true)
+        store.capture(item(text = "kept one"))
+        store.saveCredential(fresh)
+
+        // A 401 for the old credential, after the new one was saved: nothing is wiped.
+        assertFalse(store.wipeIf(old))
+        assertFalse(store.wipeIf(fresh.copy(secret = "x".repeat(43))))
+        assertEquals(fresh, store.credential())
+        assertEquals(1, store.pendingCount())
+        assertTrue(Source.TEST in store.settings().enabled)
+
+        // For the saved one: every table is emptied, as wipe() does.
+        store.setLastSync(now)
+        assertTrue(store.wipeIf(fresh))
+        assertEquals(mapOf("raw_item" to 0, "pending_signal" to 0, "ledger_entry" to 0, "kv" to 0), tableCounts())
+        assertNull(store.credential())
+        assertNull(store.lastSync())
+        assertEquals(PrivacySettings(), store.settings())
+
+        // With no credential saved, nothing to compare: no wipe.
+        store.kvPut(OrbisStore.SIGNED_OUT_REASON, "revoked")
+        assertFalse(store.wipeIf(fresh))
+        assertEquals("revoked", store.kvGet(OrbisStore.SIGNED_OUT_REASON))
     }
 
     @Test

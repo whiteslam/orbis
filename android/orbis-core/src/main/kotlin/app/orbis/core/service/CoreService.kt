@@ -37,7 +37,16 @@ class CoreService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startInForeground(buildNotification(this, text = null))
+        try {
+            startInForeground(buildNotification(this, text = null))
+        } catch (e: Exception) {
+            // Android refused the foreground start (e.g. ForegroundServiceStartNotAllowedException from
+            // the background on 12+, or a SecurityException). Don't crash the app: stop, and don't ask to
+            // be restarted. The next reconcile (the app opening, a boot) tries again. Class name only.
+            Log.w(TAG, "startForeground refused: ${e.javaClass.name}")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         scope.launch { refresh() }
         return START_STICKY
     }

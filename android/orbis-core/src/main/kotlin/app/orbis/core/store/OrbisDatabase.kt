@@ -7,7 +7,10 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
-/** The SQLCipher-encrypted Room database behind [OrbisStore]. */
+/**
+ * The SQLCipher-encrypted Room database behind [OrbisStore]. A new table must also be emptied in
+ * [OrbisStore.wipeIf], which deletes row by row (clearAllTables can't run inside its transaction).
+ */
 @Database(
     entities = [RawItem::class, PendingSignal::class, LedgerEntry::class, Kv::class],
     version = 1,

@@ -18,9 +18,14 @@ interface SyncStore {
     suspend fun markSynced(ids: Collection<String>)
     suspend fun ledgerDays(): List<LedgerDay>
     suspend fun pushToken(): String?
-    suspend fun wipe()
 
-    /** Saves `signedOutReason`. Called after [wipe], which clears it. */
+    /**
+     * Wipes the store only while its credential is still [credential] (deviceId and secret), as one
+     * transaction. Returns whether it wiped.
+     */
+    suspend fun wipeIf(credential: DeviceCredential): Boolean
+
+    /** Saves `signedOutReason`. Called after [wipeIf], which clears it. */
     suspend fun setSignedOutReason(reason: String)
     suspend fun setLastSync(at: Long)
 
@@ -37,7 +42,7 @@ class OrbisSyncStore(private val store: OrbisStore) : SyncStore {
     override suspend fun markSynced(ids: Collection<String>) = store.markSynced(ids)
     override suspend fun ledgerDays() = store.ledgerDays()
     override suspend fun pushToken() = store.pushToken()
-    override suspend fun wipe() = store.wipe()
+    override suspend fun wipeIf(credential: DeviceCredential) = store.wipeIf(credential)
     override suspend fun setSignedOutReason(reason: String) = store.kvPut(OrbisStore.SIGNED_OUT_REASON, reason)
     override suspend fun setLastSync(at: Long) = store.setLastSync(at)
     override suspend fun setSyncError(message: String?) = store.setSyncError(message)
@@ -106,10 +111,16 @@ class SyncRunner(
                     store.markSynced(batch.map { it.id })
                 }
                 SyncOutcome.Revoked -> {
-                    log("sync: server answered $status, signing out")
-                    store.wipe()
+                    // Only the credential this request carried is signed out. If a new one was saved
+                    // while it was out (the person signed in again), the 401 is about the old one: keep
+                    // the new credential, and write no reason or error into it.
+                    if (!store.wipeIf(credential)) {
+                        log("sync: server answered $status for a credential that has since changed, keeping the new one")
+                        return Result.Success
+                    }
+                    log("sync: server answered $status, signed out")
                     // The wipe is done: from here on nothing may turn the run into a retry, or write a
-                    // sync error into the fresh store. wipe() clears every saved value, so the reason is
+                    // sync error into the fresh store. The wipe clears every saved value, so the reason is
                     // written after it.
                     afterWipe("saving the reason") { store.setSignedOutReason(REVOKED) }
                     afterWipe("the revoke hook") { onRevoked() }

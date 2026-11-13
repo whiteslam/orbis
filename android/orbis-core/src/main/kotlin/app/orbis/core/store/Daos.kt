@@ -17,6 +17,9 @@ interface RawItemDao {
     @Query("DELETE FROM raw_item WHERE capturedAt < :cutoff")
     suspend fun deleteCapturedBefore(cutoff: Long)
 
+    @Query("DELETE FROM raw_item")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM raw_item")
     suspend fun count(): Int
 
@@ -38,6 +41,9 @@ interface PendingSignalDao {
 
     @Query("DELETE FROM pending_signal WHERE source = :source")
     suspend fun deleteBySource(source: Source)
+
+    @Query("DELETE FROM pending_signal")
+    suspend fun deleteAll()
 
     /** Keeps only the [keep] newest signals. */
     @Query(
@@ -63,6 +69,12 @@ interface LedgerDao {
 
     @Query("DELETE FROM ledger_entry WHERE at < :cutoff")
     suspend fun deleteBefore(cutoff: Long)
+
+    @Query("DELETE FROM ledger_entry WHERE source = :source")
+    suspend fun deleteBySource(source: Source)
+
+    @Query("DELETE FROM ledger_entry")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -75,4 +87,7 @@ interface KvDao {
 
     @Query("DELETE FROM kv WHERE `key` = :key")
     suspend fun delete(key: String)
+
+    @Query("DELETE FROM kv")
+    suspend fun deleteAll()
 }

@@ -44,6 +44,30 @@ class PluginInputTest {
     }
 
     @Test
+    fun sameOriginLooksOnlyAtSchemeAndAuthority() {
+        // Characters java.net.URI refuses in a path or query don't make the page foreign.
+        assertTrue(PluginInput.sameOrigin("https://orbis-starter.vercel.app/search?q=a|b{c}", server))
+        assertTrue(PluginInput.sameOrigin("https://orbis-starter.vercel.app/a b/%zz^`", server))
+        assertTrue(PluginInput.sameOrigin("https://orbis-starter.vercel.app?q=1", server))
+        assertTrue(PluginInput.sameOrigin("https://orbis-starter.vercel.app#top", server))
+        assertTrue(PluginInput.sameOrigin("HTTPS://orbis-starter.vercel.app.:443/x", server))
+        assertTrue(PluginInput.sameOrigin("https://orbis-starter.vercel.app:/x", server))
+        assertTrue(PluginInput.sameOrigin("http://10.0.2.2:3000/active", "http://10.0.2.2:3000"))
+        assertTrue(PluginInput.sameOrigin("http://[::1]:3000/", "http://[::1]:3000"))
+
+        assertFalse(PluginInput.sameOrigin("https://orbis-starter.vercel.app?@evil.com", "https://evil.com"))
+        assertFalse(PluginInput.sameOrigin("https://evil.com\\@orbis-starter.vercel.app/", server))
+        assertFalse(PluginInput.sameOrigin("https://evil.com#@orbis-starter.vercel.app/", server))
+        assertFalse(PluginInput.sameOrigin("https://orbis-starter.vercel.app:99999/", server))
+        assertFalse(PluginInput.sameOrigin("https://orbis-starter.vercel.app:44a/", server))
+        assertFalse(PluginInput.sameOrigin("https:///orbis-starter.vercel.app/", server))
+        assertFalse(PluginInput.sameOrigin("https:orbis-starter.vercel.app", server))
+        assertFalse(PluginInput.sameOrigin("javascript://orbis-starter.vercel.app/%0aalert(1)", server))
+        assertFalse(PluginInput.sameOrigin("https://orbis starter.vercel.app/", server))
+        assertFalse(PluginInput.sameOrigin("http://10.0.2.2:3001/", "http://10.0.2.2:3000"))
+    }
+
+    @Test
     fun credentialShape() {
         val id = "0b6f5c1e-2f43-4a51-9d1e-6c1f3e2a9b70"
         val secret = "A".repeat(42) + "_"

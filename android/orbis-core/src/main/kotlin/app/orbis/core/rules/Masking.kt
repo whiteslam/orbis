@@ -6,7 +6,9 @@ object Masking {
 
     // Dates (dd-mm-yy, dd-mm-yyyy, yyyy-mm-dd, with - or /) and times (10:30, 10:30:15) are
     // matched first by rules 2 and 3 and left as they are. A digit group is never joined
-    // across or into a date, and never joined when it is followed by ":" (a time).
+    // across or into a date, and never joined when it starts a time (followed by ":" and two
+    // digits). A plain ":" after it ("Card 4111 1111 1111 1111: declined") is punctuation.
+    private const val NOT_A_TIME = """(?!\d|:\d{2})"""
     private const val DATE = """(?:\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})(?!\d)"""
     private const val TIME = """\d{1,2}:\d{2}(?::\d{2})?"""
     private const val KEEP = """(?<keep>$DATE|$TIME)"""
@@ -29,7 +31,7 @@ object Masking {
     private const val CODE_END = """(?!\w|[.,:/-]\d)"""
     private val CODE_NUMBER = Regex(
         """$KEEP|""" +
-            """(?<split>$CODE_START\d{2,4}(?:$JOINED_GROUP\d{2,4}(?![\d:]))+$CODE_END)|""" +
+            """(?<split>$CODE_START\d{2,4}(?:$JOINED_GROUP\d{2,4}$NOT_A_TIME)+$CODE_END)|""" +
             """(?<single>$CODE_START\d{4,8}$CODE_END)""",
     )
     private const val MIN_CODE_DIGITS = 4
@@ -37,7 +39,7 @@ object Masking {
 
     // 3. A run of digits, with single spaces or hyphens between groups. It starts and ends on
     // a digit, so trailing punctuation stays. Only runs of 9 or more digits are masked.
-    private val DIGIT_RUN = Regex("""$KEEP|(?<run>\d+(?:$JOINED_GROUP\d+(?![\d:]))*)""")
+    private val DIGIT_RUN = Regex("""$KEEP|(?<run>\d+(?:$JOINED_GROUP\d+$NOT_A_TIME)*)""")
     private const val MIN_LONG_DIGITS = 9
     private const val DOTS = "••••"
 

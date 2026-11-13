@@ -88,7 +88,11 @@ class OrbisStore internal constructor(context: Context) : Closeable {
         }
     }
 
-    /** Turns a source on or off. Turning it off deletes its raw items and pending signals. */
+    /**
+     * Turns a source on or off. Turning it off deletes its raw items, pending signals and local
+     * ledger rows: the server's copy of its counts is deleted at the same time, and a ledger kept
+     * here would be sent again (up to [LEDGER_SYNC_DAYS] days of it) on the next sync.
+     */
     suspend fun setSourceEnabled(source: Source, on: Boolean): PrivacySettings = io {
         val db = db()
         db.withTransaction {
@@ -98,6 +102,7 @@ class OrbisStore internal constructor(context: Context) : Closeable {
             if (!on) {
                 db.rawItems().deleteBySource(source)
                 db.signals().deleteBySource(source)
+                db.ledger().deleteBySource(source)
             }
             next
         }
@@ -184,14 +189,7 @@ class OrbisStore internal constructor(context: Context) : Closeable {
 
     // --- credential and small values --------------------------------------------------------
 
-    suspend fun credential(): DeviceCredential? = io {
-        db().kv().get(KEY_CREDENTIAL)?.let { raw ->
-            runCatching {
-                val o = JSONObject(raw)
-                DeviceCredential(o.getString("deviceId"), o.getString("secret"), o.getString("userId"), o.getString("serverUrl"))
-            }.getOrNull()
-        }
-    }
+    suspend fun credential(): DeviceCredential? = io { readCredential(db()) }
 
     suspend fun saveCredential(credential: DeviceCredential) = io {
         val o = JSONObject()
@@ -237,6 +235,27 @@ class OrbisStore internal constructor(context: Context) : Closeable {
      * defaults. A caller that wants to keep a value (e.g. `signedOutReason`) writes it afterwards.
      */
     suspend fun wipe() = io { db().clearAllTables() }
+
+    /**
+     * [wipe], but only while the saved credential is still [expected] (same deviceId and secret).
+     * The check and the deletes are one transaction, so a credential saved meanwhile (a new sign-in
+     * that raced a 401 for the old one) is never wiped. Returns whether it wiped.
+     */
+    suspend fun wipeIf(expected: DeviceCredential): Boolean = io {
+        val db = db()
+        db.withTransaction {
+            val saved = readCredential(db)
+            if (saved == null || saved.deviceId != expected.deviceId || saved.secret != expected.secret) {
+                return@withTransaction false
+            }
+            // Every table, as clearAllTables would (it can't run inside a transaction).
+            db.rawItems().deleteAll()
+            db.signals().deleteAll()
+            db.ledger().deleteAll()
+            db.kv().deleteAll()
+            true
+        }
+    }
 
     override fun close() {
         synchronized(lock) {
@@ -303,6 +322,14 @@ class OrbisStore internal constructor(context: Context) : Closeable {
     private fun isWrongKey(e: Throwable): Boolean =
         generateSequence(e) { it.cause }.take(10).any {
             it is SQLiteNotADatabaseException || it is SQLiteDatabaseCorruptException
+        }
+
+    private suspend fun readCredential(db: OrbisDatabase): DeviceCredential? =
+        db.kv().get(KEY_CREDENTIAL)?.let { raw ->
+            runCatching {
+                val o = JSONObject(raw)
+                DeviceCredential(o.getString("deviceId"), o.getString("secret"), o.getString("userId"), o.getString("serverUrl"))
+            }.getOrNull()
         }
 
     private suspend fun readSettings(db: OrbisDatabase): PrivacySettings =

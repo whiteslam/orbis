@@ -6,7 +6,13 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Tells the server this phone is signing out (`POST /api/device/revoke` with its own credential). */
+/**
+ * Tells the server this phone is signing out (`POST /api/device/revoke` with its own credential).
+ *
+ * As with [HttpSyncClient], the WebView's cookies may ride along (Capacitor's cookie handler is
+ * process-wide). The server ignores them: with an `Authorization: Device` header, proxy.ts skips its
+ * session refresh for this route (lib/device/session-free.ts) and the route uses only the credential.
+ */
 object DeviceRevoke {
     const val PATH = "/api/device/revoke"
     const val TIMEOUT_MS = 5_000

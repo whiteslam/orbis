@@ -2,7 +2,6 @@ package app.orbis.android
 
 import app.orbis.core.rules.PAUSED_FOREVER
 import app.orbis.core.rules.PrivacyRules
-import java.net.URI
 import java.util.Locale
 
 /** A plugin call refused with a short [code]; the page sees the code, never an exception message. */
@@ -14,6 +13,9 @@ class Rejection(val code: String) : Exception(code)
  */
 object PluginInput {
     const val NOT_ORBIS_ORIGIN = "not_orbis_origin"
+
+    /** The WebView lacks WEB_MESSAGE_LISTENER, so the bridge would be open to any frame: every call is refused. */
+    const val UNSUPPORTED_WEBVIEW = "unsupported_webview"
     const val STORE_UNAVAILABLE = "store_unavailable"
     const val FAILED = "failed"
     const val INVALID_CREDENTIAL = "invalid_credential"
@@ -48,19 +50,42 @@ object PluginInput {
         return a == b
     }
 
+    private val SCHEME = Regex("^([A-Za-z][A-Za-z0-9+.-]*)://")
+    private val HOST_NAME = Regex("^[a-z0-9-]+(?:\\.[a-z0-9-]+)*$")
+    private val IPV6_HOST = Regex("^\\[[0-9a-f:.]+]$")
+    private val PORT = Regex("^[0-9]{1,5}$")
+
+    /**
+     * Scheme, host and effective port of an http(s) URL, read from `scheme://authority` only: the
+     * authority ends at the first `/`, `?`, `#` or `\`, and the path, query and fragment are never
+     * parsed (java.net.URI refuses characters such as `|` or `{` that a WebView URL can carry, which
+     * would make Orbis's own page look foreign). An authority with user info (`@`), an odd host or a
+     * bad port is refused. Null when it isn't such a URL.
+     */
     private fun origin(url: String?): Triple<String, String, Int>? {
         if (url.isNullOrBlank()) return null
-        return try {
-            val uri = URI(url)
-            val scheme = uri.scheme?.lowercase(Locale.ROOT) ?: return null
-            if (scheme != "https" && scheme != "http") return null
-            val host = uri.host?.lowercase(Locale.ROOT)?.trimEnd('.') ?: return null
-            if (host.isEmpty()) return null
-            val port = if (uri.port != -1) uri.port else if (scheme == "https") 443 else 80
-            Triple(scheme, host, port)
-        } catch (_: Exception) {
-            null
+        val match = SCHEME.find(url) ?: return null
+        val scheme = match.groupValues[1].lowercase(Locale.ROOT)
+        if (scheme != "https" && scheme != "http") return null
+        val rest = url.substring(match.range.last + 1)
+        val end = rest.indexOfFirst { it == '/' || it == '?' || it == '#' || it == '\\' }
+        val authority = (if (end == -1) rest else rest.substring(0, end)).lowercase(Locale.ROOT)
+        if (authority.isEmpty() || '@' in authority) return null
+
+        val hostEnd = if (authority.startsWith("[")) authority.indexOf(']') + 1 else authority.indexOf(':').let { if (it == -1) authority.length else it }
+        if (hostEnd <= 0) return null
+        val host = authority.substring(0, hostEnd).let { if (it.startsWith("[")) it else it.trimEnd('.') }
+        if (!HOST_NAME.matches(host) && !IPV6_HOST.matches(host)) return null
+
+        val afterHost = authority.substring(hostEnd)
+        if (afterHost.isNotEmpty() && !afterHost.startsWith(":")) return null
+        val portText = afterHost.removePrefix(":")
+        val port = when {
+            portText.isEmpty() -> if (scheme == "https") 443 else 80
+            PORT.matches(portText) -> portText.toInt().takeIf { it in 1..65535 } ?: return null
+            else -> return null
         }
+        return Triple(scheme, host, port)
     }
 
     /** `deviceId` and `userId` are UUIDs; the secret is 43 base64url characters (32 bytes). */

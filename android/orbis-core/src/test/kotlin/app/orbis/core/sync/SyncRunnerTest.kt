@@ -44,7 +44,13 @@ class SyncRunnerTest {
         }
         override suspend fun ledgerDays(): List<LedgerDay> { hit("ledgerDays"); return ledger }
         override suspend fun pushToken(): String? { hit("pushToken"); return token }
-        override suspend fun wipe() { hit("wipe"); pending = emptyList(); lastSync = null; syncError = null; signedOutReason = null; credential = null }
+        override suspend fun wipeIf(expected: DeviceCredential): Boolean {
+            hit("wipeIf")
+            val saved = credential
+            if (saved == null || saved.deviceId != expected.deviceId || saved.secret != expected.secret) return false
+            pending = emptyList(); lastSync = null; syncError = null; signedOutReason = null; credential = null
+            return true
+        }
         override suspend fun setSignedOutReason(reason: String) { hit("setSignedOutReason"); signedOutReason = reason }
         override suspend fun setLastSync(at: Long) { hit("setLastSync"); lastSync = at }
         override suspend fun setSyncError(message: String?) { hit("setSyncError"); syncError = message }
@@ -217,13 +223,47 @@ class SyncRunnerTest {
             val r = runner(store, FakeClient(status), onRevoked = { order += "hook:" + store.signedOutReason })
             assertEquals(SyncRunner.Result.Success, run(r))
             val tail = store.calls.takeLast(2)
-            assertEquals(listOf("wipe", "setSignedOutReason"), tail)
+            assertEquals(listOf("wipeIf", "setSignedOutReason"), tail)
             assertEquals("revoked", store.signedOutReason) // written after the wipe, which clears it
             assertEquals(listOf("hook:revoked"), order) // hook runs after the reason is stored
             assertNull(store.credential)
             assertTrue(store.pending.isEmpty())
             assertNull(store.lastSync)
         }
+    }
+
+    @Test
+    fun aStale401ForACredentialReplacedMeanwhileWipesNothing() {
+        // The person signed in again while this request was out: the 401 is about the old credential.
+        val fresh = DeviceCredential("dev-2", "n3w-secret-value", "user-1", "https://orbis.example")
+        val store = FakeStore(signals(3)).apply { credential = cred; lastSync = 5L }
+        val client = SyncClient { _, _ ->
+            store.credential = fresh
+            SyncReply(401, null)
+        }
+        assertEquals(SyncRunner.Result.Success, run(runner(store, client)))
+        assertEquals(fresh, store.credential)
+        assertEquals(3, store.pending.size)
+        assertNull(store.signedOutReason)
+        assertNull(store.syncError)
+        assertEquals(5L, store.lastSync)
+        assertEquals(0, revokedHooks)
+        assertFalse("setSignedOutReason" in store.calls)
+        assertFalse("setSyncError" in store.calls)
+        assertFalse(logs.joinToString(" ").contains("n3w-secret-value"))
+    }
+
+    @Test
+    fun aStale401WithTheSameDeviceButANewSecretWipesNothing() {
+        val store = FakeStore(signals(1)).apply { credential = cred }
+        val client = SyncClient { _, _ ->
+            store.credential = cred.copy(secret = "another-secret")
+            SyncReply(401, null)
+        }
+        assertEquals(SyncRunner.Result.Success, run(runner(store, client)))
+        assertEquals("another-secret", store.credential?.secret)
+        assertNull(store.signedOutReason)
+        assertEquals(0, revokedHooks)
     }
 
     @Test
@@ -244,7 +284,7 @@ class SyncRunnerTest {
 
     @Test
     fun aFailingWipeIsARetryAndNeverCallsTheHook() {
-        val store = FakeStore(signals(1)).apply { credential = cred; failOn = "wipe" }
+        val store = FakeStore(signals(1)).apply { credential = cred; failOn = "wipeIf" }
         assertEquals(SyncRunner.Result.Retry, run(runner(store, FakeClient(401))))
         assertEquals(0, revokedHooks)
     }
