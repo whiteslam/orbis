@@ -18,6 +18,7 @@ import { StageStrip } from '@/components/career/attention';
 import { STAGE_GROUPS, groupOf, isOpen, type StageGroupId } from '@/lib/career/status';
 import type { ApplicationStatus, SourceId } from '@/lib/career/types';
 import type { CareerHome, OwnerMove } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 type View = 'board' | 'list';
 const VIEWS: ReadonlyArray<readonly [View, string]> = [['list', 'List'], ['board', 'Board']];
@@ -58,6 +59,7 @@ function ConfirmMove({ confirm, onPick, onCancel }: Readonly<{ confirm: Confirm;
 /** One application as a row: what it is, where it stands, its odds, its latest news, and its menu. */
 function PipelineRow({ card, handlers }: Readonly<{ card: BoardCard; handlers: CardHandlers }>) {
   const prediction = card.application.prediction;
+  const loc = usePersonLocale();
   const chance = prediction && isOpen(card.status) ? rangeText(prediction.replyRange) : null;
   return (
     <li className="cp-row">
@@ -68,7 +70,7 @@ function PipelineRow({ card, handlers }: Readonly<{ card: BoardCard; handlers: C
       <span className="cp-row-stage"><StatusChip status={card.status} /></span>
       <span className="cp-row-num" title="Match score"><b>{card.job.score ?? '–'}</b><small>match</small></span>
       <span className="cp-row-num" title="Reply chance">{chance ? <><b>{chance}</b><small>reply chance{prediction?.early ? ', early' : ''}</small></> : <small>{isOpen(card.status) ? 'Reply chance once more are out' : ''}</small>}</span>
-      <span className="cp-row-latest">{card.latest ? <><span>{card.latest.summary}</span><time dateTime={card.latest.at}>{dayMonth(card.latest.at)}</time></> : <span className="none">No news yet</span>}</span>
+      <span className="cp-row-latest">{card.latest ? <><span>{card.latest.summary}</span><time dateTime={card.latest.at}>{dayMonth(card.latest.at, loc)}</time></> : <span className="none">No news yet</span>}</span>
       <span className="cp-row-menu"><MoveMenu title={`${card.job.title}, ${card.job.company}`} loadMoves={() => handlers.loadMoves(card)} onMove={(move) => handlers.onMove(card, move)} onOpen={() => handlers.onOpen(card)} /></span>
     </li>
   );

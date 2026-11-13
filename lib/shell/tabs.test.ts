@@ -40,6 +40,10 @@ describe('openingFromUrl', () => {
     expect(openingFromUrl('#today', 'career')).toEqual({ tab: 'career' });
   });
 
+  it('opens Settings → Security from ?tab=security, where onboarding sends anyone who asks to review their PIN', () => {
+    expect(openingFromUrl('', 'security')).toEqual({ tab: 'today', settings: 'security' });
+  });
+
   it('ignores anything it does not know', () => {
     expect(openingFromUrl('', null)).toBeNull();
     expect(openingFromUrl('#nope', null)).toBeNull();

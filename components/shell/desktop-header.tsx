@@ -2,12 +2,12 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { Bell, Search } from 'lucide-react';
-import { OrbisMark } from '@/components/brand/orbis-mark';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Headsups } from '@/components/today/headsups';
-import { istParts } from '@/lib/focus/types';
+import { formatWhen, localParts } from '@/lib/locale/dates';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import { greeting } from '@/lib/shell/desktop';
 
@@ -51,14 +51,14 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
   onHeadsup: (action: HeadsupAction) => void;
 }>) {
   const mod = useModKey();
+  const loc = usePersonLocale();
   const now = new Date();
-  const today = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const today = formatWhen(now, loc, 'dayLong');
   return (
     <header className="dk-header">
-      {/* The hour and the date are India's on both sides, but either can turn between them. */}
+      {/* The hour and the date are in the person's own zone on both server and client, but either can turn between the two renders. */}
       <div className="dk-hello">
-        <OrbisMark size={34} />
-        <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(istParts(now).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
+        <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(localParts(now, loc.timeZone).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
       </div>
       <button type="button" className="dk-search" onClick={onSearch} aria-keyshortcuts="Control+K Meta+K">
         <Search size={17} aria-hidden="true" />

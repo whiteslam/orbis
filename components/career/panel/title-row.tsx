@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react';
 import { attentionItems, attentionLead } from '@/components/career/attention';
 import { countRange, moneyShort } from '@/components/career/format';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import { PAGE_META, allApplications, hrefFor, navOf, openCount, percent, relativeTime, untilText, weekDelta, type PanelPage } from '@/components/career/panel/panel-data';
 import { hadReply } from '@/lib/career/status';
 import type { CareerHome } from '@/lib/career/view';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 type Key = { id: string; value: string; label: string; badge?: { text: string; tone: 'up' | 'down' | 'flat' } | null };
 
@@ -27,12 +30,12 @@ function pipelineKeys(home: CareerHome): Key[] {
   ];
 }
 
-function jobsKeys(home: CareerHome): Key[] {
+function jobsKeys(home: CareerHome, loc: PersonLocale): Key[] {
   const last = home.state.lastIngestAt;
   return [
     { id: 'matches', value: String(home.counts.forYou), label: 'New above your bar' },
     { id: 'queue', value: String(home.counts.queue), label: 'Drafts ready to send' },
-    { id: 'search', value: last ? relativeTime(last) : 'Not yet', label: 'Last search' },
+    { id: 'search', value: last ? relativeTime(last, loc) : 'Not yet', label: 'Last search' },
   ];
 }
 
@@ -77,7 +80,7 @@ function setupKeys(home: CareerHome): Key[] {
   ];
 }
 
-const KEYS: Record<PanelPage, (home: CareerHome) => Key[]> = {
+const KEYS: Record<PanelPage, (home: CareerHome, loc: PersonLocale) => Key[]> = {
   overview: overviewKeys,
   pipeline: pipelineKeys,
   jobs: jobsKeys,
@@ -89,8 +92,8 @@ const KEYS: Record<PanelPage, (home: CareerHome) => Key[]> = {
 };
 
 /** What needs the owner, as the panel's Home counts it (unmatched replies live behind the header's inbox). */
-export function panelAttention(home: CareerHome) {
-  return attentionItems(home).filter((item) => item.kind !== 'unmatched');
+export function panelAttention(home: CareerHome, loc: PersonLocale) {
+  return attentionItems(home, loc).filter((item) => item.kind !== 'unmatched');
 }
 
 const SUB_LABEL: Partial<Record<PanelPage, string>> = { pipeline: 'All applications', jobs: 'Matches' };
@@ -128,10 +131,11 @@ function SubNav({ page, home }: Readonly<{ page: PanelPage; home: CareerHome | n
  */
 export function TitleRow({ page, home, actions }: Readonly<{ page: PanelPage; home: CareerHome | null; actions?: ReactNode }>) {
   const [context, title] = PAGE_META[page].title;
-  const keys = home?.state.profile ? KEYS[page](home) : [];
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const loc = usePersonLocale();
+  const keys = home?.state.profile ? KEYS[page](home, loc) : [];
+  const today = formatWhen(new Date(), loc, 'dayLong');
   const leadsWithNeeds = page === 'overview' && home?.state.profile && home.state.spec;
-  const big = leadsWithNeeds ? attentionLead(panelAttention(home).length) : title;
+  const big = leadsWithNeeds ? attentionLead(panelAttention(home, loc).length) : title;
   return (
     <div className="cp-titlerow">
       <div className="cp-title-main">

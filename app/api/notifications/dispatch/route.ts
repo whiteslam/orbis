@@ -3,6 +3,8 @@ import { admittedUserIds } from '@/lib/security/admission';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deliverSlot } from '@/lib/notifications/deliver';
 import { dueSlots, SLOT_IDS, type SlotPreferences } from '@/lib/notifications/schedule';
+import { getPersonZonesAdmin } from '@/lib/locale/repository';
+import { zoneForPerson } from '@/lib/locale/person';
 
 export const maxDuration = 60;
 
@@ -21,11 +23,13 @@ export async function POST(request: Request) {
   // Anyone signed in can turn their own reminders on; only admitted accounts are sent them.
   const admitted = await admittedUserIds(admin, (rows ?? []).map((row) => String(row.user_id)));
   const people = (rows ?? []).filter((row) => admitted.has(String(row.user_id)));
+  // The person's own zone (user_settings) wins; the zone saved here only when that can't be read.
+  const zones = await getPersonZonesAdmin(admin, people.map((row) => String(row.user_id)));
   const counts = { users: people.length, sent: 0, skipped: 0, duplicate: 0, failed: 0, deferred: 0 };
   for (const row of people) {
     const prefs: SlotPreferences = {
       enabled: row.enabled,
-      timezone: row.timezone,
+      timezone: zoneForPerson(zones?.get(String(row.user_id)), row.timezone),
       slots: Object.fromEntries(SLOT_IDS.map((slot) => [slot, { enabled: row[`${slot}_enabled`], time: String(row[`${slot}_time`] ?? '') }])) as SlotPreferences['slots'],
     };
     const due = dueSlots(prefs, now);

@@ -3,10 +3,13 @@
  *
  * Security-specific Buy/Sell calls for anyone but the owner very likely count
  * as research-analyst or adviser activity under SEBI rules, so the desk is
- * owner-only (the spec's decision 1). ORBIS_RESEARCH_DESK_EMAILS lists who may
- * use it, and unlike ORBIS_ALLOWED_EMAILS an empty list means nobody: a
- * forgotten variable shuts the desk instead of opening it to everyone.
+ * owner-only (the spec's decision 1). The 'owner' role (public.account_roles)
+ * opens it. ORBIS_RESEARCH_DESK_EMAILS stays as a fallback for an owner whose
+ * role is not granted yet, and unlike ORBIS_ALLOWED_EMAILS an empty list means
+ * nobody: a forgotten variable shuts the desk instead of opening it to everyone.
  */
+
+import type { Role } from '@/lib/security/role';
 
 export function researchDeskEmails(): string[] {
   return (process.env.ORBIS_RESEARCH_DESK_EMAILS ?? '')
@@ -15,7 +18,8 @@ export function researchDeskEmails(): string[] {
     .filter(Boolean);
 }
 
-export function researchDeskAllowed(email: string | null | undefined): boolean {
+export function researchDeskAllowed(role: Role, email: string | null | undefined): boolean {
+  if (role === 'owner') return true;
   const address = email?.trim().toLowerCase();
   return Boolean(address) && researchDeskEmails().includes(address as string);
 }
@@ -26,6 +30,6 @@ export function researchDeskAllowed(email: string | null | undefined): boolean {
  * Research desk table is queried, so a deployment without the migration or
  * the worker is unaffected.
  */
-export function researchDeskAvailable(email: string | null | undefined, workerConfigured: boolean): boolean {
-  return workerConfigured && researchDeskAllowed(email);
+export function researchDeskAvailable(role: Role, email: string | null | undefined, workerConfigured: boolean): boolean {
+  return workerConfigured && researchDeskAllowed(role, email);
 }

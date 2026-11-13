@@ -5,10 +5,13 @@ import { ArrowDown, ArrowUp, ChevronLeft, X } from 'lucide-react';
 import { OrbisMark } from '@/components/brand/orbis-mark';
 import { SettingsButton } from '@/components/shell/settings-context';
 import type { Focus, FocusTarget, QuietRow } from '@/lib/focus/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
 
 /** Screen title with today's date above it, or a caller-supplied line instead. */
 export function FieldHead({ title, subtitle }: Readonly<{ title: string; subtitle?: string }>) {
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const loc = usePersonLocale();
+  const today = formatWhen(new Date(), loc, 'dayLong');
   return (
     <header className="fd-head">
       <div className="fd-head-row">

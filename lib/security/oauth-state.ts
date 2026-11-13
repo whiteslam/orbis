@@ -17,12 +17,16 @@ const USER_ID = /^[A-Za-z0-9-]{1,80}$/;
 // A flow name, optionally scoped (social:instagram), so one flow's state can't finish another.
 const PURPOSE = /^[a-z]{1,20}(:[a-z]{1,20})?$/;
 
-/** The HMAC key, derived so it never equals a key used for anything else. */
-function stateSecret() {
+/** An HMAC key derived for one purpose, so it never equals a key used for anything else. */
+export function deriveSecret(label: string) {
   const lockSecret = process.env.APP_LOCK_SECRET?.trim();
   const base = lockSecret && lockSecret.length >= 32 ? lockSecret : process.env.SUPABASE_SECRET_KEY?.trim();
   if (!base) throw new Error('OAuth state signing is not configured. Set APP_LOCK_SECRET or SUPABASE_SECRET_KEY.');
-  return createHmac('sha256', base).update('orbis-oauth-state-v1').digest('base64url');
+  return createHmac('sha256', base).update(label).digest('base64url');
+}
+
+function stateSecret() {
+  return deriveSecret('orbis-oauth-state-v1');
 }
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);

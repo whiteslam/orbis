@@ -89,9 +89,9 @@ test('a missing bucket is recognised so it can be skipped', () => {
 });
 
 test('the export file is named for the day it was made, in India', () => {
-  assert.equal(exportFilename(new Date('2026-09-28T06:00:00Z')), 'orbis-export-2026-09-28.json');
+  assert.equal(exportFilename('Asia/Kolkata', new Date('2026-09-28T06:00:00Z')), 'orbis-export-2026-09-28.json');
   // 20:00 UTC is already the next morning in India.
-  assert.equal(exportFilename(new Date('2026-09-28T20:00:00Z')), 'orbis-export-2026-09-29.json');
+  assert.equal(exportFilename('Asia/Kolkata', new Date('2026-09-28T20:00:00Z')), 'orbis-export-2026-09-29.json');
 });
 
 test('a refused export or deletion says what to do, and a signed-out export is a 401', () => {
@@ -109,6 +109,18 @@ test('the export includes heads-ups and their settings', () => {
   const byTable = new Map(EXPORT_TABLES.map((entry) => [entry.table, entry]));
   assert.equal(byTable.get('headsups')?.key, 'id');
   assert.equal(byTable.get('headsup_preferences')?.key, 'user_id');
+});
+
+test('the export includes the settings, keyed by person', () => {
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'user_settings')?.key, 'user_id');
+});
+
+test('the export includes the person\'s role, keyed by person', () => {
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'account_roles')?.key, 'user_id');
+});
+
+test("the export includes the person's plan, keyed by person", () => {
+  assert.equal(EXPORT_TABLES.find((entry) => entry.table === 'account_plans')?.key, 'user_id');
 });
 
 test('the export includes the Research desk, its settings keyed by person', () => {

@@ -23,9 +23,9 @@ type PlanLike = {
 };
 
 /** Picks the day in the plan's week that matches today, in the user's timezone. */
-export function trainingForToday(plan: PlanLike | null, now = new Date()): BriefTraining {
+export function trainingForToday(plan: PlanLike | null, timeZone: string, now = new Date()): BriefTraining {
   if (!plan) return { state: 'off', planTitle: '', today: null };
-  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' }).format(now).toLowerCase();
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone }).format(now).toLowerCase();
   const match = plan.workout.week.find((day) => day.day.trim().toLowerCase().startsWith(weekday.slice(0, 3)));
   return {
     state: 'ok',

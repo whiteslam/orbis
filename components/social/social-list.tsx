@@ -3,9 +3,11 @@
 import { Film, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { StatusChip } from '@/components/social/status-chip';
 import { SOCIAL_STATUS_LABEL, formatLabel, platformLabel, type SocialPost, type SocialStatus } from '@/lib/social/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
-export function dayLabel(date: string) {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+/** A planned day ('YYYY-MM-DD'): a calendar day, so it's labelled in UTC to stay that day. */
+export function dayLabel(date: string, locale: string) {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 /** The picture or video when there is one, otherwise the format's tint and icon. */
@@ -20,10 +22,11 @@ export function PostThumb({ post }: Readonly<{ post: SocialPost }>) {
 }
 
 function PostMeta({ post, withDate }: Readonly<{ post: SocialPost; withDate: boolean }>) {
+  const { locale } = usePersonLocale();
   return (
     <>
       <span>{formatLabel(post.format)}</span>
-      {withDate && <span>{post.plannedFor ? dayLabel(post.plannedFor) : 'No date'}</span>}
+      {withDate && <span>{post.plannedFor ? dayLabel(post.plannedFor, locale) : 'No date'}</span>}
       {post.status === 'published' && post.published && <span>Went out on {platformLabel(post.published.platform)}</span>}
       {post.source === 'ai' && <span className="so-ai"><Sparkles size={10} aria-hidden="true" />AI draft</span>}
     </>
@@ -64,7 +67,7 @@ function mondayOf(date: string) {
 type Group = { key: string; label: string; hint?: string; posts: SocialPost[] };
 
 /** The rows split into the sort's natural groups: stages, weeks, or formats. */
-function groupPosts(posts: SocialPost[], sort: SocialSort): Group[] {
+function groupPosts(posts: SocialPost[], sort: SocialSort, locale: string): Group[] {
   const groups = new Map<string, Group>();
   for (const post of posts) {
     let key: string;
@@ -72,7 +75,7 @@ function groupPosts(posts: SocialPost[], sort: SocialSort): Group[] {
     let hint: string | undefined;
     if (sort === 'status') { key = post.status; label = SOCIAL_STATUS_LABEL[post.status]; hint = STAGE_HINT[post.status]; }
     else if (sort === 'format') { key = post.format; label = formatLabel(post.format); }
-    else if (post.plannedFor) { key = mondayOf(post.plannedFor); label = `Week of ${dayLabel(key)}`; }
+    else if (post.plannedFor) { key = mondayOf(post.plannedFor); label = `Week of ${dayLabel(key, locale)}`; }
     else { key = 'none'; label = 'No date yet'; }
     const group = groups.get(key) ?? { key, label, hint, posts: [] };
     group.posts.push(post);
@@ -83,6 +86,7 @@ function groupPosts(posts: SocialPost[], sort: SocialSort): Group[] {
 
 /** Rows in the chosen order, grouped under plain labels. Undated posts sort last by date. The order is picked in the section's header. */
 export function SocialList({ posts, onOpen, sort = 'date' }: Readonly<{ posts: SocialPost[]; onOpen: (post: SocialPost) => void; sort?: SocialSort }>) {
+  const { locale } = usePersonLocale();
   const byDate = (left: SocialPost, right: SocialPost) => (left.plannedFor ?? '9999').localeCompare(right.plannedFor ?? '9999');
   const sorted = [...posts].sort((left, right) => {
     if (sort === 'status') return STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || byDate(left, right);
@@ -91,7 +95,7 @@ export function SocialList({ posts, onOpen, sort = 'date' }: Readonly<{ posts: S
   });
   return (
     <div className="so-rows" data-sort={sort}>
-      {groupPosts(sorted, sort).map((group) => (
+      {groupPosts(sorted, sort, locale).map((group) => (
         <div className="so-rows-group" key={group.key}>
           <h3 className="so-group-label">{group.label} <span>{group.posts.length}</span>{group.hint && <small>{group.hint}</small>}</h3>
           {group.posts.map((post) => <PostRow key={post.id} post={post} onOpen={onOpen} withDate />)}

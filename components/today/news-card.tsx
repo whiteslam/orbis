@@ -5,6 +5,9 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, LoaderCircle, Newspaper, Spar
 import { openAsk } from '@/lib/ask/about';
 import { DESKTOP_LAYOUT } from '@/lib/shell/desktop';
 import type { NewsArticle, NewsDigest, Outlook } from '@/lib/news/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; digest: NewsDigest };
 
@@ -20,11 +23,11 @@ const OUTLOOK: Record<Outlook, { icon: typeof ArrowUpRight; label: string }> = {
   mixed: { icon: ArrowRight, label: 'mixed' },
 };
 
-function ago(iso: string) {
+function ago(iso: string, loc: PersonLocale) {
   const minutes = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
   if (minutes < 60) return `${Math.max(minutes, 1)} min ago`;
   const hours = Math.round(minutes / 60);
-  return hours < 24 ? `${hours} h ago` : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+  return hours < 24 ? `${hours} h ago` : formatWhen(iso, loc, 'day');
 }
 
 /**
@@ -52,6 +55,7 @@ function NewsPhoto({ article }: Readonly<{ article: NewsArticle }>) {
 }
 
 function Headline({ article, line, lead }: Readonly<{ article: NewsArticle; line?: string; lead?: boolean }>) {
+  const loc = usePersonLocale();
   const ask = () => openAsk(
     { kind: 'news', title: article.title, detail: [line, article.description, `Source: ${article.source}`].filter(Boolean).join(' '), url: article.url },
     'What does this mean, and could it affect my money or investments?',
@@ -62,7 +66,7 @@ function Headline({ article, line, lead }: Readonly<{ article: NewsArticle; line
         {DESKTOP_LAYOUT && <NewsPhoto article={article} />}
         <span className="fd-news-title">{article.title}</span>
         {line && <span className="fd-news-line">{line}</span>}
-        <span className="fd-news-meta" suppressHydrationWarning>{article.source} · {ago(article.publishedAt)}</span>
+        <span className="fd-news-meta" suppressHydrationWarning>{article.source} · {ago(article.publishedAt, loc)}</span>
       </a>
       <button className="fd-ask icon" type="button" onClick={ask} aria-label={`Ask Orbis about: ${article.title}`} title="Ask Orbis about this">
         <Sparkles size={14} strokeWidth={2.2} aria-hidden="true" />
@@ -77,6 +81,7 @@ function Headline({ article, line, lead }: Readonly<{ article: NewsArticle; line
  * the one-line reasons and the sector reading are a model's, and say so.
  */
 export function NewsCard() {
+  const loc = usePersonLocale();
   const [state, setState] = useState<State>(() => (lastDigest && Date.now() - lastDigest.at < CLIENT_TTL_MS ? { status: 'ready', digest: lastDigest.digest } : { status: 'loading' }));
 
   useEffect(() => {
@@ -118,7 +123,7 @@ export function NewsCard() {
     <section className="fd-quiet fd-news td-news" aria-labelledby="news-title">
       <div className="td-news-head">
         <h2 id="news-title">News</h2>
-        <p suppressHydrationWarning>India and the world, updated {ago(digest.fetchedAt)}</p>
+        <p suppressHydrationWarning>India and the world, updated {ago(digest.fetchedAt, loc)}</p>
       </div>
 
       {picked.map(({ article, line }, index) => <Headline key={article.id} article={article} line={line} lead={index === 0} />)}

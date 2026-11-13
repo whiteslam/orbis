@@ -9,6 +9,7 @@ import { MoveMenu } from '@/components/career/panel/move-menu';
 import { isOpen, STAGE_GROUPS } from '@/lib/career/status';
 import type { ApplicationStatus, CareerEvent } from '@/lib/career/types';
 import type { ApplicationCard, OwnerMove, Result } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 export type Lane = { id: string; label: string; statuses: readonly ApplicationStatus[]; zone: boolean };
 
@@ -42,6 +43,7 @@ export type CardHandlers = {
 /** One application on the board, in its stage's colour, with its menu for everything a drag can do. */
 function PipelineCard({ card, handlers, moving, flash }: Readonly<{ card: BoardCard; handlers: CardHandlers; moving: boolean; flash: boolean }>) {
   const { job, application, latest } = card;
+  const loc = usePersonLocale();
   const lane = laneOf(card.status);
   const chance = application.prediction && isOpen(card.status) ? rangeText(application.prediction.replyRange) : null;
   const titleId = `cp-card-${application.id}`;
@@ -68,7 +70,7 @@ function PipelineCard({ card, handlers, moving, flash }: Readonly<{ card: BoardC
           <p>{chance ? <><b>{chance}</b><small>reply chance{application.prediction?.early ? ', early' : ''}</small></> : <small>{job.location ?? (job.remote ? 'Remote' : 'Location not given')}</small>}</p>
         </div>
         {latest && (
-          <p className="cp-kcard-last"><span>{latest.summary}</span><time dateTime={latest.at}>{dayMonth(latest.at)}</time></p>
+          <p className="cp-kcard-last"><span>{latest.summary}</span><time dateTime={latest.at}>{dayMonth(latest.at, loc)}</time></p>
         )}
       </article>
     </li>

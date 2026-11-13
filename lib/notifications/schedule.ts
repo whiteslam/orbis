@@ -1,5 +1,8 @@
 // Pure scheduling rules for daily notifications (no Next.js imports, unit tested with node:test).
 
+// Relative, so the unit tests can load this module under plain Node.
+import { DEFAULT_PERSON_LOCALE } from '../locale/person.ts';
+
 export const SLOT_IDS = ['morning', 'lunch', 'evening', 'night'] as const;
 export type Slot = (typeof SLOT_IDS)[number];
 
@@ -32,7 +35,7 @@ export function dueSlots(prefs: SlotPreferences, now: Date): { date: string; slo
   try {
     clock = localClock(now, prefs.timezone);
   } catch {
-    clock = localClock(now, 'Asia/Kolkata');
+    clock = localClock(now, DEFAULT_PERSON_LOCALE.timeZone);
   }
   if (!prefs.enabled) return { date: clock.date, slots: [] };
   const slots = SLOT_IDS.filter((slot) => {

@@ -2,16 +2,18 @@ import { CalendarClock, Link2, Video } from 'lucide-react';
 import { MeetingLink } from '@/components/career/bits';
 import { dayTime } from '@/components/career/format';
 import type { CareerProfile, InterviewPrep } from '@/lib/career/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** The interview prep pack: when and how, what they'll likely test with the stories to tell, what to ask, and the gaps to frame honestly. */
 export function PrepPack({ prep, profile }: Readonly<{ prep: InterviewPrep; profile: CareerProfile | null }>) {
   const facts = new Map((profile?.facts ?? []).map((fact) => [fact.id, fact.text]));
   const { logistics } = prep;
+  const loc = usePersonLocale();
   return (
     <section className="cr-block cr-prep" aria-labelledby="cr-prep-title">
       <h2 className="fd-label" id="cr-prep-title">Interview prep</h2>
       <ul className="cr-logistics">
-        <li><CalendarClock size={14} aria-hidden="true" /><span>{logistics.at ? dayTime(logistics.at) : 'Time not given yet'}</span></li>
+        <li><CalendarClock size={14} aria-hidden="true" /><span>{logistics.at ? dayTime(logistics.at, loc) : 'Time not given yet'}</span></li>
         {logistics.format && <li><Video size={14} aria-hidden="true" /><span>{logistics.format}</span></li>}
         {logistics.link && <li><Link2 size={14} aria-hidden="true" /><MeetingLink url={logistics.link} /></li>}
       </ul>

@@ -6,6 +6,7 @@
 import type { SocialPlatform, SocialPost } from './types.ts';
 // Relative, so the unit tests can load this module under plain Node.
 import { CAPTION_LIMIT } from './types.ts';
+import { localDate } from '../locale/dates.ts';
 
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -16,11 +17,9 @@ const parts = (period: string) => ({ year: Number(period.slice(0, 4)), month: Nu
 export const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-01$/;
 export const DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
-/** Today as 'YYYY-MM-DD' in India, where the month and "today" are counted. */
-export function indiaToday(now = new Date()) {
-  const pieces = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
-  const get = (type: string) => pieces.find((part) => part.type === type)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
+/** Today as 'YYYY-MM-DD' in the person's zone, where the month and "today" are counted. */
+export function todayIn(timeZone: string, now = new Date()): string {
+  return localDate(now, timeZone);
 }
 
 /** '2026-09-01' */

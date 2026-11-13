@@ -8,6 +8,7 @@ import type { StepsSummary } from '../health/types.ts';
 import type { PortfolioAnalysis } from '../invest/analysis.ts';
 
 const NOW = new Date('2026-09-24T14:30:00Z'); // 8pm IST on the 24th
+const IST = 'Asia/Kolkata';
 
 const finance = (overrides: Partial<FinanceSummary> = {}): FinanceSummary => ({
   databaseReady: true,
@@ -48,7 +49,7 @@ const analysis = (overrides: Partial<PortfolioAnalysis> = {}): PortfolioAnalysis
 // ── Finance ──────────────────────────────────────────────────────────────────
 
 test('finance leads with the month once there is spending to report', () => {
-  const focus = composeFinanceFocus({ summary: finance({ month: month() }), now: NOW });
+  const focus = composeFinanceFocus({ summary: finance({ month: month() }), now: NOW, timeZone: IST });
   assert.equal(focus.id, 'month-so-far');
   assert.match(focus.headline, /₹24,000 spent so far/);
   assert.match(focus.body, /a day/);
@@ -57,11 +58,11 @@ test('finance leads with the month once there is spending to report', () => {
 });
 
 test('finance rows report a daily average only when there is a month to divide', () => {
-  const withMonth = composeFinanceRows({ summary: finance({ month: month(), monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }), now: NOW });
+  const withMonth = composeFinanceRows({ summary: finance({ month: month(), monthlyExpenses: [{ currency: 'INR', amount: 24_000 }] }), now: NOW, timeZone: IST });
   assert.equal(withMonth.find((row) => row.label === 'Daily average')?.value, '₹1,000');
   assert.equal(withMonth.find((row) => row.label === 'Largest category')?.value, 'Food · ₹9,000');
 
-  const without = composeFinanceRows({ summary: finance(), now: NOW });
+  const without = composeFinanceRows({ summary: finance(), now: NOW, timeZone: IST });
   assert.equal(without.find((row) => row.label === 'Daily average')?.empty, true);
 });
 
@@ -69,18 +70,18 @@ test('finance rows report a daily average only when there is a month to divide',
 
 test('health reads the step trend before asking for another upload', () => {
   const focus = composeHealthFocus({
-    steps: steps({ average30: 6_400, previous30: 8_000, latest: { date: '2026-09-23', steps: 5_100 } }), documentCount: 0, planCount: 0, libraryState: 'ready',
+    steps: steps({ average30: 6_400, previous30: 8_000, latest: { date: '2026-09-23', steps: 5_100 } }), documentCount: 0, planCount: 0, libraryState: 'ready', timeZone: IST,
   });
   assert.equal(focus.id, 'steps-falling');
   assert.match(focus.headline, /down 20%/);
 });
 
 test('health rows distinguish missing step data from a zero day', () => {
-  const rows = composeHealthRows({ steps: steps(), documentCount: 0, planCount: 0 });
+  const rows = composeHealthRows({ steps: steps(), documentCount: 0, planCount: 0, timeZone: IST });
   assert.equal(rows.find((row) => row.label === 'Steps today')?.value, 'Not imported');
   assert.equal(rows.find((row) => row.label === '30 days vs before')?.empty, true);
 
-  const filled = composeHealthRows({ steps: steps({ latest: { date: '2026-09-24', steps: 0 }, average30: 9_000, previous30: 8_000 }), documentCount: 1, planCount: 1 });
+  const filled = composeHealthRows({ steps: steps({ latest: { date: '2026-09-24', steps: 0 }, average30: 9_000, previous30: 8_000 }), documentCount: 1, planCount: 1, timeZone: IST });
   assert.equal(filled.find((row) => row.label === 'Steps today')?.value, '0');
   assert.equal(filled.find((row) => row.label === '30 days vs before')?.value, '+13%');
 });
@@ -88,11 +89,11 @@ test('health rows distinguish missing step data from a zero day', () => {
 // ── Invest ───────────────────────────────────────────────────────────────────
 
 test('invest holds the loading line until the accounts have answered', () => {
-  const focus = composeInvestFocus({ analysis: analysis(), loaded: false, failures: [], connected: true });
+  const focus = composeInvestFocus({ analysis: analysis(), loaded: false, failures: [], connected: true, timeZone: IST });
   assert.equal(focus.id, 'loading');
 
   // Nothing linked yet reads as a setup step, not as an empty portfolio.
-  const fresh = composeInvestFocus({ analysis: analysis(), loaded: true, failures: [], connected: false });
+  const fresh = composeInvestFocus({ analysis: analysis(), loaded: true, failures: [], connected: false, timeZone: IST });
   assert.equal(fresh.id, 'not-connected');
 });
 
@@ -102,6 +103,7 @@ test('invest names the account that failed rather than blaming the portfolio', (
     loaded: true,
     connected: true,
     failures: [{ name: 'Groww', message: 'Groww is not responding.' }],
+    timeZone: IST,
   });
   assert.equal(focus.id, 'account-error');
   assert.match(focus.headline, /Groww could not be reached/);
@@ -114,7 +116,7 @@ test('invest warns about concentration before reporting the gain', () => {
       total: 500_000, invested: 400_000, livePnl: 50_000, liveInvested: 250_000, effectiveHoldings: 1.8,
       largest: { name: 'HDFC Bank', share: 0.6 },
     }),
-    loaded: true, failures: [], connected: true,
+    loaded: true, failures: [], connected: true, timeZone: IST,
   });
   assert.equal(focus.id, 'concentration');
   assert.match(focus.headline, /HDFC Bank is 60%/);
@@ -127,7 +129,7 @@ test('invest says plainly when the total is only what the holdings cost', () => 
       positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 100_000, invested: 100_000, live: false, dayChangePercent: null }],
       total: 100_000, invested: 100_000, byClass: [{ assetClass: 'Gold & silver', value: 100_000, share: 1 }], largest: { name: 'GOLDBEES', share: 1 },
     }),
-    loaded: true, failures: [], connected: true,
+    loaded: true, failures: [], connected: true, timeZone: IST,
   });
   // A single holding is concentrated by definition, so that rule speaks first.
   assert.equal(focus.id, 'concentration');
@@ -137,7 +139,7 @@ test('invest says plainly when the total is only what the holdings cost', () => 
       positions: [{ key: 'a', name: 'GOLDBEES', broker: 'groww', assetClass: 'Gold & silver', value: 60_000, invested: 60_000, live: false, dayChangePercent: null }],
       total: 200_000, invested: 200_000, byClass: [{ assetClass: 'Gold & silver', value: 60_000, share: 0.3 }], largest: { name: 'GOLDBEES', share: 0.3 },
     }),
-    loaded: true, failures: [], connected: true,
+    loaded: true, failures: [], connected: true, timeZone: IST,
   });
   assert.equal(spread.id, 'cost-basis');
   assert.match(spread.body, /No live price came back/);

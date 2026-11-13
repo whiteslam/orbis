@@ -3,9 +3,12 @@
 import { useState, type ReactNode } from 'react';
 import { CalendarClock, ChevronRight, HandCoins, Inbox, MessageCircleQuestion, MessageSquareReply, Reply, Send } from 'lucide-react';
 import { dayMonth, dayTime } from '@/components/career/format';
-import { allApplications, istDay, relativeTime } from '@/components/career/panel/panel-data';
+import { allApplications, relativeTime } from '@/components/career/panel/panel-data';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import { STAGE_GROUPS, type StageGroupId } from '@/lib/career/status';
 import type { ApplicationCard, CareerHome } from '@/lib/career/view';
+import { localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 /**
  * What needs the owner now, shared by the tab's Today and the panel's Home.
@@ -32,16 +35,16 @@ const DAY_MS = 86_400_000;
 const REPLY_STATES = new Set(['replied', 'assessment']);
 
 /** Every item that needs the owner, the most pressing first. */
-export function attentionItems(home: CareerHome, now: Date = new Date()): Attention[] {
+export function attentionItems(home: CareerHome, loc: PersonLocale, now: Date = new Date()): Attention[] {
   const cards = allApplications(home);
   const byApp = new Map(cards.map((card) => [card.application.id, card]));
   const lastEvent = new Map<string, string>();
   for (const event of home.recent) if (event.applicationId && !lastEvent.has(event.applicationId)) lastEvent.set(event.applicationId, event.at);
   const ago = (card: ApplicationCard) => {
     const at = lastEvent.get(card.application.id) ?? card.application.lastEventAt;
-    return at ? relativeTime(at, now) : null;
+    return at ? relativeTime(at, loc, now) : null;
   };
-  const today = istDay(now);
+  const today = localDate(now, loc.timeZone);
   const out: Attention[] = [];
 
   for (const card of cards) {
@@ -59,9 +62,9 @@ export function attentionItems(home: CareerHome, now: Date = new Date()): Attent
     kind: 'interview',
     title: `Interview with ${item.job.company}`,
     next: item.application.prep ? 'Your prep pack is ready. Read it the day before.' : 'Open it to see the details and prepare.',
-    when: item.at ? dayTime(item.at) : 'Time not confirmed yet',
+    when: item.at ? dayTime(item.at, loc) : 'Time not confirmed yet',
     jobId: item.job.id,
-    tickable: Boolean(item.at && istDay(item.at) === today),
+    tickable: Boolean(item.at && localDate(item.at, loc.timeZone) === today),
   });
   out.push(...soon.map(interviewItem));
 
@@ -72,7 +75,7 @@ export function attentionItems(home: CareerHome, now: Date = new Date()): Attent
     const card = byApp.get(event.applicationId);
     if (!card || asked.has(card.application.id)) continue;
     asked.add(card.application.id);
-    out.push({ id: `question-${event.id}`, kind: 'question', title: `${card.job.company} asked you a question`, next: event.summary || 'Read it and answer when you can.', when: relativeTime(event.at, now), jobId: card.job.id, tickable: false });
+    out.push({ id: `question-${event.id}`, kind: 'question', title: `${card.job.company} asked you a question`, next: event.summary || 'Read it and answer when you can.', when: relativeTime(event.at, loc, now), jobId: card.job.id, tickable: false });
   }
 
   for (const card of cards) {
@@ -99,7 +102,7 @@ export function attentionItems(home: CareerHome, now: Date = new Date()): Attent
       id: `follow-${card.application.id}`,
       kind: 'follow_up',
       title: `Time to follow up with ${card.job.company}`,
-      next: card.application.followUpDraft ? 'A short follow-up is drafted. Review and send it.' : `No reply since ${dayMonth(sent)}. That's normal; a short nudge often helps.`,
+      next: card.application.followUpDraft ? 'A short follow-up is drafted. Review and send it.' : `No reply since ${dayMonth(sent, loc)}. That's normal; a short nudge often helps.`,
       when: 'Due today',
       jobId: card.job.id,
       tickable: true,
@@ -133,7 +136,8 @@ const KIND_ICON: Record<AttentionKind, typeof Send> = {
 
 /** Today's ticks: the owner's own notes for the day, kept in this browser only. */
 export function useDayTicks(now: Date = new Date()) {
-  const key = `orbis-career-today-${istDay(now)}`;
+  const { timeZone } = usePersonLocale();
+  const key = `orbis-career-today-${localDate(now, timeZone)}`;
   const [ticks, setTicks] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];

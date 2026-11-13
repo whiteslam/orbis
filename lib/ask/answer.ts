@@ -5,18 +5,27 @@ import { askPayload, askSystem } from '@/lib/ask/prompt';
 import { keepCitations, type AskSource, type Citation } from '@/lib/ask/select';
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
+import { dailyLimit } from '@/lib/ai/limits';
 import { needsReasoning } from '@/lib/ai/jev';
 import { routeJson } from '@/lib/ai/router';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { TalkTurn } from '@/lib/voice/talk';
 import type { AskAbout } from '@/lib/ask/about';
 
-export const DAILY_ASK_LIMIT = 20;
 const MAX_INPUT_BYTES = 60_000;
 
 export const NO_MODEL_MESSAGE = 'No private AI model is available right now, so your records stayed put. Try again later.';
 
-export type AskResult = { success: boolean; message: string; answer?: string; citations?: Citation[] };
+export type AskResult = {
+  success: boolean;
+  message: string;
+  answer?: string;
+  citations?: Citation[];
+  /** What the answer concluded beyond the records, said apart from what was read. */
+  inferred?: string[];
+  /** Questions worth asking next, to check the answer before acting on it. */
+  followUps?: string[];
+};
 
 /**
  * Consent first, then whether a model that may see personal data can run at
@@ -36,9 +45,11 @@ export async function askBlockedMessage(userId: string): Promise<string | null> 
  */
 export async function claimAskCredit(userId: string): Promise<string | null> {
   try {
-    const { data: allowed, error } = await createAdminClient().rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: DAILY_ASK_LIMIT });
+    const admin = createAdminClient();
+    const limit = await dailyLimit(admin, userId, 'ask_orbis');
+    const { data: allowed, error } = await admin.rpc('consume_ask_orbis_request', { p_user_id: userId, p_daily_limit: limit });
     if (error) return 'Ask Orbis is not set up yet. Apply the Ask Orbis migration in Supabase.';
-    if (!allowed) return `You have asked ${DAILY_ASK_LIMIT} questions today. Try again tomorrow.`;
+    if (!allowed) return `You have asked ${limit} questions today. Try again tomorrow.`;
     return null;
   } catch {
     return 'Ask Orbis is not available right now. Try again later.';
@@ -94,17 +105,30 @@ export async function answerFromRecords(input: {
 
   const parsed = readAnswer(result.text);
   if (!parsed) return { success: false, message: 'Orbis couldn’t form an answer. Try rewording the question.' };
-  return { success: true, message: '', answer: parsed.answer, citations: keepCitations(parsed.citations, context.citations) };
+  return { success: true, message: '', answer: parsed.answer, citations: keepCitations(parsed.citations, context.citations), inferred: parsed.inferred, followUps: parsed.followUps };
+}
+
+/** Up to `max` distinct non-empty strings from a model's list, each capped. */
+function shortList(value: unknown, max: number, cap: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const text = item.replace(/\s+/g, ' ').trim().slice(0, cap);
+    if (text && !out.includes(text)) out.push(text);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 /** The answer and its claimed citations, or null when the reply has no answer in it. */
-function readAnswer(text: string): { answer: string; citations: unknown } | null {
-  let parsed: { answer?: unknown; citations?: unknown };
+function readAnswer(text: string): { answer: string; citations: unknown; inferred: string[]; followUps: string[] } | null {
+  let parsed: { answer?: unknown; citations?: unknown; inferred?: unknown; followUps?: unknown };
   try {
     parsed = JSON.parse(text);
   } catch {
     return null;
   }
   const answer = typeof parsed?.answer === 'string' ? parsed.answer.trim().slice(0, 1200) : '';
-  return answer ? { answer, citations: parsed.citations } : null;
+  return answer ? { answer, citations: parsed.citations, inferred: shortList(parsed.inferred, 2, 240), followUps: shortList(parsed.followUps, 3, 90) } : null;
 }

@@ -6,6 +6,7 @@ import { Bell, BellOff, LoaderCircle, Send, Smartphone } from 'lucide-react';
 import { saveNotificationPreferencesAction, sendTestNotificationAction, subscribePushAction, unsubscribePushAction } from '@/app/personal/notification-actions';
 import { NOTIFICATION_SLOTS, type NotificationPreferences, type NotificationSettings as Settings } from '@/lib/notifications/preferences';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 type DeviceState = 'checking' | 'unsupported' | 'ios-install' | 'blocked' | 'off' | 'on';
 
@@ -36,14 +37,28 @@ function otherDevicesNote(count: number) {
   return ` On for ${count} other device${plural}.`;
 }
 
+/** The parts of the preferences this form edits. The zone is the person's own (Settings → You), never edited here. */
+function editable(prefs: NotificationPreferences) {
+  return JSON.stringify({ enabled: prefs.enabled, slots: prefs.slots });
+}
+
+/**
+ * Times are kept in the person's own zone. The form starts again when that
+ * zone changes (Settings → You saved a new one), so it never holds an old one.
+ */
 export function NotificationSettings({ settings }: Readonly<{ settings: Settings }>) {
+  const { timeZone } = usePersonLocale();
+  return <NotificationForm key={timeZone} settings={settings} timeZone={timeZone} />;
+}
+
+function NotificationForm({ settings, timeZone }: Readonly<{ settings: Settings; timeZone: string }>) {
   const router = useRouter();
   const [prefs, setPrefs] = useState<NotificationPreferences>(settings.preferences);
   const [device, setDevice] = useState<DeviceState>('checking');
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
-  const dirty = JSON.stringify(prefs) !== JSON.stringify(settings.preferences);
+  const dirty = editable(prefs) !== editable(settings.preferences);
 
   useEffect(() => {
     (async () => {
@@ -132,7 +147,7 @@ export function NotificationSettings({ settings }: Readonly<{ settings: Settings
           );
         })}
       </div>
-      <p className="fd-note tight">Times are in {prefs.timezone.replace('_', ' ')}.</p>
+      <p className="fd-note tight">Times are in {timeZone.replaceAll('_', ' ')}. Change it in Settings → You.</p>
       {dirty && <div className="fd-act"><button type="button" onClick={() => run(() => safeAction(saveNotificationPreferencesAction)(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button></div>}
 
       <div className="pf-device">

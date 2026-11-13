@@ -30,6 +30,8 @@ import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import type { HeadsupAction } from '@/lib/headsups/types';
 import { hashFor, openingFromUrl, TABS, type MoneyView, type SettingsSection, type TabId } from '@/lib/shell/tabs';
+import { shownTab, visibleTabs } from '@/lib/shell/modules';
+import { usePersonSettings } from '@/components/locale/person-locale';
 import type { FocusTarget } from '@/lib/focus/types';
 import { socialConnectNotice, type SocialConnectNotice } from '@/lib/social/connect-notice';
 import { openAskPanel } from '@/lib/ask/about';
@@ -54,7 +56,12 @@ const STALE_AFTER_HIDDEN_MS = 60_000;
 
 export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabId>('today');
+  // The tab asked for (a tap, a link, a card), and the one shown: Today stands
+  // in for a module this person switched off (Settings → You).
+  const [asked, setTab] = useState<TabId>('today');
+  const { modules } = usePersonSettings();
+  const tabs = useMemo(() => visibleTabs(modules), [modules]);
+  const tab = shownTab(asked, modules);
   const [money, setMoney] = useState<MoneyView>('spending');
   const [gmailNotice, setGmailNotice] = useState<string | null>(null);
   // Career's "Allow sending" returns to the Career tab with its own result; Today keeps its own notices.
@@ -218,14 +225,20 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
     // Until the tab read from the URL is applied, this still sees 'today'; writing
     // now would erase the hash (and Social's own month after it, #social/2026-11).
     if (pendingTab.current) {
-      if (tab !== pendingTab.current) return;
+      if (asked !== pendingTab.current) return;
       pendingTab.current = null;
+    }
+    // A link to a switched-off module's tab lands on Today, and the URL says so.
+    if (asked !== tab) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTab(tab);
+      return;
     }
     // Social keeps its month in the hash itself; leave that alone while it is open.
     if (tab === 'social' && window.location.hash.startsWith('#social/')) return;
     const hash = hashFor(tab, money);
     if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
-  }, [tab, money]);
+  }, [asked, tab, money]);
 
   const screen = useMemo(() => {
     if (tab === 'today') return (
@@ -271,7 +284,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
           <Wallpaper />
           <SettingsProvider value={settingsAccess}>
             {/* Desktop only: hidden by app/styles/desktop.css below the breakpoint, and everywhere unless data-desktop is set. */}
-            <DesktopRail tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />
+            <DesktopRail tabs={tabs} tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />
             <DesktopHeader name={personalProfile.profile?.preferredName ?? null} onSearch={() => setPalette(true)} onHeadsup={openHeadsup} />
             {screen}
             {/* Its own boundary, like the palette's: on first open only the sheet
@@ -290,7 +303,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
             </Suspense>}
             <TalkToOrbis />
             <nav className="bottom-nav">
-              {TABS.map(({ id, label }) => {
+              {TABS.filter(({ id }) => tabs.includes(id)).map(({ id, label }) => {
                 const Icon = TAB_ICONS[id];
                 return (
                   <button key={id} onClick={() => goTab(id)} className={tab === id ? 'active' : ''} aria-label={label}>
@@ -303,7 +316,7 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 the palette waits. Without it React hides the whole app behind the
                 nearest boundary up the tree, which also drops focus from whatever
                 opened it, so Escape had nowhere to give it back to. */}
-            {palette && <Suspense fallback={null}><AppPalette onGo={goPalette} onClose={closePalette} /></Suspense>}
+            {palette && <Suspense fallback={null}><AppPalette tabs={tabs} onGo={goPalette} onClose={closePalette} /></Suspense>}
           </SettingsProvider>
         </div>
       </div>

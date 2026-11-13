@@ -38,6 +38,7 @@ import {
 } from '@/lib/career/repository';
 import { careerToday, rescoreStored, scoreJob } from '@/lib/career/scoring';
 import { applySkillTree, validateSkillTree, type SkillTree, type SkillTreeImport } from '@/lib/career/skill-tree';
+import { getPersonSettings } from '@/lib/locale/repository';
 import { buildPasteKit, resumeFileName } from '@/lib/career/send-plan';
 import { applyRecipient } from '@/lib/career/recipient';
 import { markApplied, offerTargetFor, sendApplication, sendFollowUp, sendOfferReply } from '@/lib/career/send';
@@ -61,7 +62,6 @@ import type {
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
 const INVALID = { success: false as const, message: 'That request isn’t valid. Reload and try again.' };
 const SET_UP_FIRST = 'Add your resume and say what you’re looking for in Career → Setup first.';
-const TIME_ZONE = 'Asia/Kolkata';
 /** A manual search or a draft must finish inside the page's 60 s maxDuration. */
 const ACTION_BUDGET_MS = 50_000;
 const FILE_URL_SECONDS = 60 * 60;
@@ -188,9 +188,9 @@ async function detailForApplication(me: Session, applicationId: string): Promise
 /** Everything the tab and the panel's Overview need in one read. */
 export async function loadCareerAction(): Promise<Result<CareerHome>> {
   return signedIn('Career couldn’t be loaded. Try again in a little while.', async ({ userId, client }) => {
-    const state = await getCareerState(userId);
+    const [state, { timeZone }] = await Promise.all([getCareerState(userId), getPersonSettings(userId)]);
     const now = new Date();
-    const empty = { state, applications: [], jobs: [], events: [], unmatched: [], hotMatches: [], forYouCount: 0, now, timeZone: TIME_ZONE };
+    const empty = { state, applications: [], jobs: [], events: [], unmatched: [], hotMatches: [], forYouCount: 0, now, timeZone };
     if (!state.ready) return ok(composeHome(empty));
     const threshold = state.settings.threshold;
     const [applications, events, unmatched, forYouCount, matches] = await Promise.all([
@@ -896,9 +896,10 @@ export async function adviseOfferAction(offerId: string): Promise<Result<OfferAd
     if (!isProfiled(row)) return fail(SET_UP_FIRST);
     const refused = await gateAndLimit(me.userId, 'career_ai', true);
     if (refused) return fail(refused);
-    const today = careerToday();
+    const { timeZone } = await getPersonSettings(me.userId);
+    const today = careerToday(new Date(), timeZone);
     const [insights, competing] = await Promise.all([
-      loadInsights(me.client, me.userId, today).catch((error: unknown) => {
+      loadInsights(me.client, me.userId, today, timeZone).catch((error: unknown) => {
         console.error('Salary pulse for offer advice failed', error);
         return null;
       }),
@@ -952,7 +953,8 @@ export async function runSearchNowAction(): Promise<Result<{ found: number; scor
 
 export async function insightsAction(): Promise<Result<CareerInsights>> {
   return signedIn('Insights couldn’t be loaded. Try again in a little while.', async ({ userId, client }) => {
-    const insights = await loadInsights(client, userId, careerToday());
+    const { timeZone } = await getPersonSettings(userId);
+    const insights = await loadInsights(client, userId, careerToday(new Date(), timeZone), timeZone);
     return insights ? ok(insights) : fail(SET_UP_FIRST);
   });
 }

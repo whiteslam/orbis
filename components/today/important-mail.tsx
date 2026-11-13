@@ -5,6 +5,9 @@ import { Check, ChevronRight, LoaderCircle, Mail } from 'lucide-react';
 import type { ImportantMailResult } from '@/lib/gmail/types';
 import { acknowledgeMailAction } from '@/app/home/mail-actions';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen, localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; result: ImportantMailResult };
 
@@ -19,12 +22,9 @@ function remember(result: ImportantMailResult) {
   lastResult = { at: lastResult?.at ?? Date.now(), result };
 }
 
-function when(iso: string) {
-  const date = new Date(iso);
-  const sameDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
-  return sameDay.format(date) === sameDay.format(new Date())
-    ? new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).format(date)
-    : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(date);
+function when(iso: string, loc: PersonLocale) {
+  const sameDay = localDate(iso, loc.timeZone) === localDate(new Date(), loc.timeZone);
+  return formatWhen(iso, loc, sameDay ? 'time' : 'day');
 }
 
 /**
@@ -37,6 +37,7 @@ export function ImportantMail() {
   const [state, setState] = useState<State>(() => (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS ? { status: 'ready', result: lastResult.result } : { status: 'loading' }));
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loc = usePersonLocale();
 
   // Gone from the list at once; the server only has to remember it. A failure
   // puts it back, so a mail is never hidden without the acknowledgement saved.
@@ -108,7 +109,7 @@ export function ImportantMail() {
       {shown.map((message) => (
         <div key={message.id} className={`fd-mail-row${message.unread ? ' unread' : ''}`}>
           <a className="fd-mail-open" href={message.url} target="_blank" rel="noopener noreferrer">
-            <span className="fd-mail-top"><b>{message.from}</b><time dateTime={message.receivedAt} suppressHydrationWarning>{when(message.receivedAt)}</time></span>
+            <span className="fd-mail-top"><b>{message.from}</b><time dateTime={message.receivedAt} suppressHydrationWarning>{when(message.receivedAt, loc)}</time></span>
             <span className="fd-mail-subject">{message.subject}</span>
             {message.snippet && <span className="fd-mail-snippet">{message.snippet}</span>}
           </a>

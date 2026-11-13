@@ -15,6 +15,8 @@ import type { HealthPlanRecord, WorkoutDay } from '@/lib/health-docs/types';
 import type { SavedWorkbookAdvice } from '@/lib/ai/saved';
 import type { FitnessPersonaSummary } from '@/lib/personal/repository';
 import type { HeadsupAction } from '@/lib/headsups/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localParts } from '@/lib/locale/dates';
 
 const StepsCard = dynamic(() => import('@/components/health/steps-card').then((m) => m.StepsCard), { loading: PartLoading });
 const PlanBuilder = dynamic(() => import('@/components/health/plan-builder').then((m) => m.PlanBuilder), { loading: PartLoading });
@@ -22,15 +24,18 @@ const HealthLibrary = dynamic(() => import('@/components/health/health-library')
 const WorkbookAsk = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAsk), { loading: PartLoading });
 const WorkbookAdviceView = dynamic(() => import('@/components/health/workbook-advisor').then((m) => m.WorkbookAdviceView), { loading: PartLoading });
 
+// Plan days are English names ("Monday"), so they match on these, Monday first like localParts.
+const WEEKDAY_PREFIX = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
 /**
  * The session the running plan sets for today, or null when no plan is running
  * or its week has no entry for this weekday. A plan's days are named
- * ("Monday"), so today is matched by name, in India time like the rest of the app.
+ * ("Monday"), so today is matched by name, in the person's own zone.
  */
-function todaysWorkout(plans: HealthPlanRecord[]): { plan: HealthPlanRecord; day: WorkoutDay } | null {
+function todaysWorkout(plans: HealthPlanRecord[], timeZone: string): { plan: HealthPlanRecord; day: WorkoutDay } | null {
   const plan = plans.find((record) => !planWeek(record).done);
   if (!plan) return null;
-  const weekday = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' }).slice(0, 3).toLowerCase();
+  const weekday = WEEKDAY_PREFIX[localParts(new Date(), timeZone).weekday];
   const day = plan.plan.workout.week.find((item) => item.day.trim().toLowerCase().startsWith(weekday));
   return day ? { plan, day } : null;
 }
@@ -81,6 +86,7 @@ function documentsTileLabel(count: number) {
 
 /** The first few documents as rows, then a row into the Documents view. */
 function DocumentTiles({ documents, onOpen }: Readonly<{ documents: LibraryState['documents']; onOpen: () => void }>) {
+  const { timeZone } = usePersonLocale();
   return (
     <section className="hl-sec">
       <h2 className="hl-h">Documents</h2>
@@ -90,7 +96,7 @@ function DocumentTiles({ documents, onOpen }: Readonly<{ documents: LibraryState
             <span className={`hl-doc-tile ${document.kind}`} aria-hidden="true">{document.kind === 'pdf' ? <FileText size={16} strokeWidth={1.8} /> : <FileSpreadsheet size={16} strokeWidth={1.8} />}</span>
             <span className="hl-docrow-text">
               <strong>{document.fileName}</strong>
-              <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt)}`}</small>
+              <small>{document.kind === 'pdf' ? 'PDF' : 'Excel'} · {document.alwaysInclude ? 'read in every plan' : `added ${documentAdded(document.createdAt, timeZone)}`}</small>
             </span>
           </button>
         ))}
@@ -131,6 +137,7 @@ function CoachingSection({ fitnessPersona, coaching, onToggle }: Readonly<{ fitn
 }
 
 export function HealthScreen({ intent = null, stepsSummary, healthLibrary, savedContextCount, hasSavedFitnessPersona, fitnessPersona, hasSavedPersonalProfile, savedWorkbookAdvice }: Readonly<{ intent?: HeadsupAction | null; stepsSummary: StepsSummary; healthLibrary: LibraryState; savedContextCount: number; hasSavedFitnessPersona: boolean; fitnessPersona: FitnessPersonaSummary; hasSavedPersonalProfile: boolean; savedWorkbookAdvice: SavedWorkbookAdvice | null }>) {
+  const { timeZone } = usePersonLocale();
   // A heads-up about a finished plan opens that plan; the steps one lands on main, where steps come first.
   const [view, setView] = useState<HealthView>(() => intent?.type === 'open_health_plan' ? { name: 'plans', planId: intent.planId } : { name: 'main' });
   // Advice lives here rather than in the Ask view, so a fresh answer survives
@@ -139,7 +146,7 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
   const top = useScrollTop(view.name === 'plans' ? `plans-${view.planId ?? ''}` : view.name);
   const main = () => setView({ name: 'main' });
   const { documents, plans } = healthLibrary;
-  const today = todaysWorkout(plans);
+  const today = todaysWorkout(plans, timeZone);
   // Coaching style is set once and rarely touched, so it stays one row until opened.
   const [coaching, setCoaching] = useState(false);
 
@@ -208,7 +215,7 @@ export function HealthScreen({ intent = null, stepsSummary, healthLibrary, saved
               <section className="hl-sec">
                 <h2 className="hl-h">Advice</h2>
                 <button className="fd-line" type="button" onClick={() => setView({ name: 'advice' })}>
-                  <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt)}` : ''}</small></span>
+                  <span className="fd-two">{splitSummary(advice.advice.summary).headline}<small>{advice.title ?? 'Saved advice'}{advice.savedAt ? ` · saved ${savedWhen(advice.savedAt, timeZone)}` : ''}</small></span>
                   <b className="fd-yes">Read</b>
                 </button>
               </section>

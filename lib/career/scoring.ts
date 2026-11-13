@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { localClock } from '@/lib/notifications/schedule';
+import { localDate } from '@/lib/locale/dates';
+import { getPersonSettingsAdmin } from '@/lib/locale/repository';
 import { extractRequirements, type AiOptions } from '@/lib/career/ai';
 import { scoreMatch } from '@/lib/career/match';
 import { prefilter } from '@/lib/career/prefilter';
@@ -9,8 +10,18 @@ import { REQUIREMENTS_VERSION } from '@/lib/career/requirements';
 import type { CareerJob, CareerProfile, CareerSettings, CareerSpec, Requirements } from '@/lib/career/types';
 
 /** The owner's calendar day, which is what "current role" and "years" are counted to. */
-export function careerToday(now = new Date(), timeZone = 'Asia/Kolkata'): string {
-  return localClock(now, timeZone).date;
+export function careerToday(now: Date, timeZone: string): string {
+  return localDate(now, timeZone);
+}
+
+/** The owner's own zone, read through whichever client the caller holds (session or service role). */
+export async function careerZone(client: CareerDb, userId: string): Promise<string> {
+  return (await getPersonSettingsAdmin(client, userId)).timeZone;
+}
+
+/** careerToday in the owner's own zone. */
+export async function careerTodayFor(client: CareerDb, userId: string, now = new Date()): Promise<string> {
+  return careerToday(now, await careerZone(client, userId));
 }
 
 /** Whether a job's stored requirements are missing or from an older prompt. */
@@ -58,7 +69,7 @@ export async function scoreJob(
     return 0;
   }
   const requirements = await ensureRequirements(client, userId, job, options);
-  const match = scoreMatch({ profile, spec, job, requirements, today: options.today ?? careerToday(), synonyms: settings.synonyms });
+  const match = scoreMatch({ profile, spec, job, requirements, today: options.today ?? (await careerTodayFor(client, userId)), synonyms: settings.synonyms });
   await setJobMatch(userId, job.id, { score: match.score, match, excluded: match.excluded }, client);
   return match.score;
 }
@@ -76,15 +87,16 @@ export async function rescoreStored(
   profile: CareerProfile,
   spec: CareerSpec,
   settings: CareerSettings,
-  today: string = careerToday(),
+  today?: string,
 ): Promise<number> {
+  const day = today ?? await careerTodayFor(client, userId);
   let saved = 0;
   for (let start = 0; start < jobs.length; start += 10) {
     const batch = jobs.slice(start, start + 10);
     const results = await Promise.allSettled(batch.map((job) => {
       const gate = prefilter(job, spec, settings);
       if (!gate.pass) return setJobMatch(userId, job.id, { score: 0, match: null, excluded: gate.reason ?? 'Not your role' }, client);
-      const match = scoreMatch({ profile, spec, job, requirements: job.requirements, today, synonyms: settings.synonyms });
+      const match = scoreMatch({ profile, spec, job, requirements: job.requirements, today: day, synonyms: settings.synonyms });
       return setJobMatch(userId, job.id, { score: match.score, match, excluded: match.excluded }, client);
     }));
     for (const result of results) {

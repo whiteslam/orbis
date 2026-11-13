@@ -7,6 +7,7 @@ import { BusyIcon, NoticeLine } from '@/components/career/bits';
 import { monthYear } from '@/components/career/format';
 import { useRun } from '@/components/career/use-run';
 import type { CareerContact, CareerFact, CareerProfile, CareerRole, CareerSkill } from '@/lib/career/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** 'f_' + 8 base36 characters, the shape the profile's ids take. */
 function newFactId() {
@@ -65,10 +66,11 @@ function FactList({ facts, roleId, onFacts }: Readonly<{ facts: CareerFact[]; ro
 
 function RoleEditor({ role, facts, onRole, onFacts }: Readonly<{ role: CareerRole; facts: CareerFact[]; onRole: (role: CareerRole) => void; onFacts: (update: (facts: CareerFact[]) => CareerFact[]) => void }>) {
   const count = facts.filter((fact) => fact.roleId === role.id).length;
+  const { locale } = usePersonLocale();
   return (
     <details className="cr-role">
       <summary>
-        <span><b>{role.title || 'Untitled role'}</b><small>{role.employer}, {monthYear(role.start)} – {monthYear(role.end)}</small></span>
+        <span><b>{role.title || 'Untitled role'}</b><small>{role.employer}, {monthYear(role.start, locale)} – {monthYear(role.end, locale)}</small></span>
         <em>{count} {count === 1 ? 'fact' : 'facts'}<ChevronDown size={14} aria-hidden="true" /></em>
       </summary>
       <div className="fd-grid">

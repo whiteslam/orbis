@@ -1,18 +1,16 @@
 import { readFileSync } from 'node:fs';
+import { e2eEnv } from './env-files';
 import path from 'node:path';
 
-// Reads .env.local without printing it. Used only by test setup/teardown.
+// Reads .env.local, then .env.test.local (staging) over it, without printing either.
+// Used only by test setup/teardown.
 export function loadEnv(): Record<string, string> {
-  const file = path.join(__dirname, '..', '..', '..', '.env.local');
-  const env: Record<string, string> = {};
-  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line);
-    if (match) env[match[1]] = match[2].replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
-  }
-  return { ...env, ...process.env } as Record<string, string>;
+  return e2eEnv();
 }
 
-export const AUTH_DIR = path.join(__dirname, '..', '.auth');
+// E2E_AUTH_DIR lets runs that overlap keep their own users: each run deletes
+// its users and this folder when it ends, which would sign out the others.
+export const AUTH_DIR = process.env.E2E_AUTH_DIR ?? path.join(__dirname, '..', '.auth');
 export const USERS_FILE = path.join(AUTH_DIR, 'users.json');
 // Device PIN for test users (not a weak pattern, so the PIN rules accept it).
 export const TEST_PIN = '583921';
@@ -58,6 +56,21 @@ export function supabaseAdmin() {
     async deleteRows(table: string, filter: string) {
       const response = await fetch(`${url}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers });
       if (!response.ok) throw new Error(`Could not clear ${table}: ${response.status}`);
+    },
+    // Reads rows matching a PostgREST query (e.g. `select=entry_date&user_id=eq.<id>`).
+    async selectRows<T = Record<string, unknown>>(table: string, query: string): Promise<T[]> {
+      const response = await fetch(`${url}/rest/v1/${table}?${query}`, { headers });
+      if (!response.ok) throw new Error(`Could not read ${table}: ${response.status}`);
+      return await response.json() as T[];
+    },
+    // Inserts a row, or replaces the one with the same primary key.
+    async upsertRow(table: string, row: Record<string, unknown>) {
+      const response = await fetch(`${url}/rest/v1/${table}`, { method: 'POST', headers: { ...headers, prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(row) });
+      if (!response.ok) {
+        // The PostgREST error code rides along, so a caller can tell a missing table from a real failure.
+        const body = await response.json().catch(() => ({})) as { code?: string; message?: string };
+        throw Object.assign(new Error(`Could not write ${table}: ${response.status} ${body.code ?? ''} ${body.message ?? ''}`.trim()), { code: body.code });
+      }
     },
     // Signs in as a test user with the public key: what a browser holding that user's session could do.
     async userToken(email: string, password: string) {

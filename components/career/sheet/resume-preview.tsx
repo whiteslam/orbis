@@ -1,5 +1,6 @@
 import { monthYear } from '@/components/career/format';
 import type { CareerFact, CareerProfile, CitedText, TailoredDraft } from '@/lib/career/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const squash = (text: string) => text.toLowerCase().replaceAll(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
@@ -45,6 +46,7 @@ export function ResumePreview({ draft, profile }: Readonly<{ draft: TailoredDraf
   const projects = new Map((profile?.projects ?? []).map((project) => [project.id, project]));
   const skillLabel = new Map((profile?.skills ?? []).map((skill) => [skill.name, skill.label]));
   const lines = countLines(draft);
+  const { locale } = usePersonLocale();
   const changed = lines.filter((line) => reworded(line, facts)).length;
 
   return (
@@ -69,7 +71,7 @@ export function ResumePreview({ draft, profile }: Readonly<{ draft: TailoredDraf
               {role && (
                 <p className="cr-resume-role-head">
                   <span><b>{role.title}</b>, {role.employer}</span>
-                  <small>{monthYear(role.start)} – {monthYear(role.end)}</small>
+                  <small>{monthYear(role.start, locale)} – {monthYear(role.end, locale)}</small>
                 </p>
               )}
               <ul className="cr-resume-lines">{entry.bullets.map((line) => <Bullet key={line.text} line={line} facts={facts} />)}</ul>

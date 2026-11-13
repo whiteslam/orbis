@@ -7,13 +7,14 @@ import { BrandMark } from '@/components/settings/brand-mark';
 import { useSettings } from '@/components/shell/settings-context';
 import { safeAction } from '@/lib/client/safe-action';
 import { compactCount, thumbnailSrc, type InsightPost, type PlatformInsights } from '@/lib/social/insights-shape';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const NAMES = { instagram: 'Instagram', threads: 'Threads' } as const;
-const DAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
-
-const when = (timestamp: string | null) => {
+const when = (timestamp: string | null, loc: PersonLocale) => {
   const date = timestamp ? new Date(timestamp) : null;
-  return date && !Number.isNaN(date.getTime()) ? DAY.format(date) : null;
+  return date && !Number.isNaN(date.getTime()) ? formatWhen(date, loc, 'day') : null;
 };
 
 /**
@@ -121,7 +122,8 @@ function PlatformCard({ item, onReconnect }: Readonly<{ item: PlatformInsights; 
 function RecentPost({ post }: Readonly<{ post: InsightPost }>) {
   // An expired CDN link shows a quiet placeholder, not the browser's broken-image icon.
   const [broken, setBroken] = useState(false);
-  const date = when(post.timestamp);
+  const loc = usePersonLocale();
+  const date = when(post.timestamp, loc);
   const body = (
     <>
       <span className="so-thumb so-fmt-post">

@@ -38,3 +38,18 @@ test('the app may show https pictures (news photos), never http ones; the public
   const publicImg = buildCsp({ nonce: 'n', supabaseUrl: 'https://proj.supabase.co', isDev: false, scope: 'public' }).split(';').map((part) => part.trim()).find((part) => part.startsWith('img-src ')) ?? '';
   assert.equal(publicImg, "img-src 'self' data:");
 });
+
+test('the error-reporting host is allowed to receive reports only when a browser DSN is set', () => {
+  assert.doesNotMatch(csp, /sentry/);
+  const withDsn = buildCsp({ nonce: 'n', supabaseUrl: 'https://proj.supabase.co', isDev: false, sentryDsn: 'https://key@o1.ingest.us.sentry.io/2' });
+  const connect = withDsn.split(';').map((part) => part.trim()).find((part) => part.startsWith('connect-src ')) ?? '';
+  assert.match(connect, / https:\/\/o1\.ingest\.us\.sentry\.io$/);
+  assert.doesNotMatch(connect, /key@/);
+  const bad = buildCsp({ nonce: 'n', supabaseUrl: 'https://proj.supabase.co', isDev: false, sentryDsn: 'garbage' });
+  assert.doesNotMatch(bad, /sentry|garbage/);
+});
+
+test('the public pages never name the error-reporting host', () => {
+  const publicCsp = buildCsp({ nonce: 'n', supabaseUrl: 'https://proj.supabase.co', isDev: false, scope: 'public', sentryDsn: 'https://key@o1.ingest.us.sentry.io/2' });
+  assert.doesNotMatch(publicCsp, /sentry/);
+});

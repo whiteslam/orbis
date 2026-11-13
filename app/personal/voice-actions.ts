@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { localDate } from '@/lib/locale/dates';
+import { getPersonSettings } from '@/lib/locale/repository';
 import { requireUser } from '@/lib/auth/session';
 import { deleteVoiceNote, saveVoiceNote, voiceNoteUrl } from '@/lib/voice/repository';
 import { VOICE_MAX_BYTES, VOICE_MAX_SECONDS, voiceMime } from '@/lib/voice/types';
@@ -9,10 +11,11 @@ const authed = async () => (await requireUser())?.userId ?? null;
 
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id);
 
-function validDate(value: unknown): value is string {
+/** A real day, today or earlier in the person's own zone. */
+function validDate(value: unknown, timeZone: string): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  const today = localDate(new Date(), timeZone);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value && value <= today && value >= '2000-01-01';
 }
 
@@ -24,7 +27,7 @@ export async function uploadVoiceNoteAction(form: FormData) {
   const date = form.get('date');
   const file = form.get('file');
   const duration = Math.round(Number(form.get('duration')));
-  if (!validDate(date)) return { success: false, message: 'Choose a valid day (today or earlier).' };
+  if (!validDate(date, (await getPersonSettings(userId)).timeZone)) return { success: false, message: 'Choose a valid day (today or earlier).' };
   if (!(file instanceof Blob) || !file.size) return { success: false, message: 'Nothing was recorded. Try again.' };
   const mime = voiceMime(file.type);
   if (!mime) return { success: false, message: 'This browser recorded in a format Orbis can’t keep.' };

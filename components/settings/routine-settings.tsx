@@ -5,6 +5,8 @@ import { Archive, Clock, Plus } from 'lucide-react';
 import { archiveRoutineAction, deleteRoutineAction, saveRoutineAction } from '@/app/routines/actions';
 import { clockLabel, DAY_LABELS, ROUTINE_KINDS, type Routine, type RoutineKind, type RoutinesSummary } from '@/lib/routines/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days: EVERY_DAY, flexible: false };
@@ -17,6 +19,7 @@ const blank = { title: '', kind: 'workout' as RoutineKind, atTime: '19:00', days
  * calendar with its own opinions about your week.
  */
 export function RoutineSettings({ summary, editId = null }: Readonly<{ summary: RoutinesSummary; editId?: string | null }>) {
+  const loc = usePersonLocale();
   // A heads-up about a slipping routine opens it straight into editing.
   const target = editId ? summary.routines.find((routine) => routine.id === editId) : undefined;
   const [draft, setDraft] = useState(() => target ? { title: target.title, kind: target.kind, atTime: target.atTime, days: target.days, flexible: target.flexible } : blank);
@@ -143,7 +146,7 @@ export function RoutineSettings({ summary, editId = null }: Readonly<{ summary: 
                 <div className="rt-row" key={routine.id}>
                   <span className="fd-two rt-row-open">
                     {routine.title}
-                    <small>{when(routine)}{routine.archivedAt ? ` · archived ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(routine.archivedAt))}` : ''}</small>
+                    <small>{when(routine)}{routine.archivedAt ? ` · archived ${formatWhen(routine.archivedAt, loc, 'day')}` : ''}</small>
                   </span>
                   <button type="button" className="fd-link" disabled={isPending} onClick={() => run(() => safeAction(archiveRoutineAction)(routine.id, false))}>Restore</button>
                   <button

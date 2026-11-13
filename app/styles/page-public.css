@@ -17,37 +17,12 @@
 .wl-hero .wl-trust { gap: 10px 22px; }
 .wl-hero .wl-trust li { color: var(--wl-lede); font-size: 13px; }
 
-/* Below the hero: what Orbis does as rows on the ground. The number is a
-   faint gutter, the title and its sentence share a line on wide screens. */
-.wl-body { padding-top: 24px; }
-.wl-body > .wl-what { display: block; margin-top: 0; }
-.wl-what .wl-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); column-gap: 8px; padding: 20px 0; border-top: 1px solid var(--fd-rule); }
-.wl-what .wl-row:last-child { border-bottom: 1px solid var(--fd-rule); }
-.wl-what .wl-num { grid-row: 1 / span 2; margin: 3px 0 0; color: var(--fd-faint); font-size: 13px; font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.wl-what .wl-row h2 { min-width: 0; font-size: 17px; font-weight: 700; letter-spacing: -.015em; overflow-wrap: break-word; }
-.wl-what .wl-row p { margin-top: 6px; font-size: 14px; }
-.wl-body > .wl-note { margin-top: 36px; }
-.wl-note h2 { font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
-.wl-note p { font-size: 14px; }
-.wl-footer a:focus-visible, .wl-note a:focus-visible, .wl-text-button:focus-visible, .wl-submit:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 4px; }
+.wl-footer a:focus-visible, .wl-private a:focus-visible, .wl-text-button:focus-visible, .wl-submit:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 3px; border-radius: 4px; }
 .wl-submit:focus-visible { border-radius: var(--r-pill); }
 
-@media (min-width: 900px) {
-  /* Rows on the left, the privacy promise beside them: the width gets used
-     and nothing sits in a box. */
-  .wl-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 72px; align-items: start; padding-top: 40px; }
-  .wl-body > * { max-width: none; }
-  .wl-what .wl-row { grid-template-columns: 3rem minmax(0, 12rem) minmax(0, 1fr); column-gap: 20px; align-items: baseline; padding: 24px 0; }
-  .wl-what .wl-num { grid-row: auto; margin: 0; }
-  .wl-what .wl-row p { margin: 0; }
-  .wl-body > .wl-note { margin-top: 0; padding-top: 22px; }
-}
-
 @media (max-width: 767px) {
-  /* The hole sits under the copy; give it a clear band so the trust row never
-     lands on the bright disc. */
-  .wl-hero { padding-bottom: clamp(340px, 92vw, 440px); }
-  .wl-body { padding-top: 8px; }
+  /* The eclipse hangs above the copy now, so nothing needs reserving below it. */
+  .wl-hero { padding-bottom: 56px; }
 }
 
 /* Loading: the ring breathes while the page arrives. */

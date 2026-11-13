@@ -13,7 +13,7 @@ import {
   listJobsNeedingRequirements, listUnscoredJobs, releaseCareerRun, saveProfile, setLastIngest, setResumeFile, setSourceCursors,
   upsertJobs, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
-import { careerToday, needsRequirements, readableJob, scoreJob } from '@/lib/career/scoring';
+import { careerTodayFor, needsRequirements, readableJob, scoreJob } from '@/lib/career/scoring';
 import { sourcesDue, type SourceQuery } from '@/lib/career/sources';
 import type { CareerJob, CareerProfile, CareerSpec, NormalizedJob, SourceId } from '@/lib/career/types';
 import { admittedUserIds } from '@/lib/security/admission';
@@ -83,7 +83,7 @@ async function scoringQueue(client: CareerDb, userId: string): Promise<CareerJob
 /** Scores what the queue holds: the quick ones first, then the ones that need a model, a few at a time. */
 async function scoreQueued(client: CareerDb, userId: string, row: Profiled, deadline: number): Promise<number> {
   const queue = await scoringQueue(client, userId);
-  const today = careerToday();
+  const today = await careerTodayFor(client, userId);
   const score = (job: CareerJob) => scoreJob(client, userId, job, row.profile, row.spec, row.settings, {
     today, timeoutMs: Math.min(AI_SCORE_MS, deadline - Date.now() - 2_000),
   });

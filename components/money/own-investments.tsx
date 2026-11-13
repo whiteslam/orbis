@@ -1,8 +1,9 @@
 'use client';
 
 import { QuietList } from '@/components/field/field';
-import { money } from '@/lib/finance/money';
 import type { OwnInvestments } from '@/lib/finance/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatMoney } from '@/lib/locale/money';
 
 /**
  * FDs, RDs, SIPs and the rest you recorded yourself under Spending → Add
@@ -10,6 +11,8 @@ import type { OwnInvestments } from '@/lib/finance/types';
  * they are counted towards what you hold.
  */
 export function OwnInvestmentsList({ own }: Readonly<{ own: OwnInvestments }>) {
+  const { locale } = usePersonLocale();
+  const money = (amount: number, currency: string) => formatMoney(amount, currency, locale);
   if (own.categories.length === 0) {
     return (
       <section className="fd-quiet">

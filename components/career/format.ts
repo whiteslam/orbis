@@ -6,6 +6,8 @@
 import { quantities } from '@/lib/career/truth';
 import type { ApplicationStatus, ApplyRoute, CareerJob, Prediction, SalaryPeriod, SourceId } from '@/lib/career/types';
 import type { CareerHome } from '@/lib/career/view';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const DAY_MS = 86_400_000;
 
@@ -91,22 +93,24 @@ export function freshness(job: Pick<CareerJob, 'postedAt' | 'foundAt'>, now: Dat
   return { text: `${verb} ${Math.floor(days / 7)} weeks ago`, stale };
 }
 
-/** "27 Oct", in India time. */
-export function dayMonth(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+/** "27 Oct", in the person's own zone. */
+export function dayMonth(iso: string, loc: PersonLocale): string {
+  // A bare 'YYYY-MM-DD' is a calendar day already; reading it in a zone west of UTC would show the day before.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return formatWhen(`${iso}T00:00:00Z`, { ...loc, timeZone: 'UTC' }, 'day');
+  return formatWhen(iso, loc, 'day');
 }
 
-/** "Tue 28 Oct, 3:00 pm", in India time. */
-export function dayTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+/** "Tue, 28 Oct, 3:00 pm", in the person's own zone. */
+export function dayTime(iso: string, loc: PersonLocale): string {
+  return formatWhen(iso, loc, 'weekdayDayTime');
 }
 
-/** "Mar 2021", from 'YYYY-MM'. */
-export function monthYear(yearMonth: string | null): string {
+/** "Mar 2021", from 'YYYY-MM'. A calendar month, so no zone applies. */
+export function monthYear(yearMonth: string | null, locale: string): string {
   if (!yearMonth) return 'now';
   const [year, month] = yearMonth.split('-');
   if (!month) return year;
-  return new Date(Date.UTC(Number(year), Number(month) - 1, 1)).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return new Date(Date.UTC(Number(year), Number(month) - 1, 1)).toLocaleDateString(locale, { month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 // ─── Chances ─────────────────────────────────────────────────────────────
@@ -227,14 +231,14 @@ export function routeText(route: ApplyRoute, canSend: boolean): { title: string;
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /** The one line that matters most right now, for the tab's header. */
-export function homeHeadline(home: CareerHome, now: Date = new Date()): string {
+export function homeHeadline(home: CareerHome, loc: PersonLocale, now: Date = new Date()): string {
   const soon = home.upcoming.find((item) => item.at && Date.parse(item.at) - now.getTime() < DAY_MS && Date.parse(item.at) > now.getTime());
-  if (soon?.at) return `Interview with ${soon.job.company} at ${dayTime(soon.at)}.`;
+  if (soon?.at) return `Interview with ${soon.job.company} at ${dayTime(soon.at, loc)}.`;
   if (home.counts.offers > 0) return `${plural(home.counts.offers, 'offer is', 'offers are')} waiting for your answer.`;
   if (home.counts.queue > 0) return `${plural(home.counts.queue, 'application is', 'applications are')} ready for your Send.`;
   if (home.followUps.length > 0) return `${plural(home.followUps.length, 'follow-up is', 'follow-ups are')} due today.`;
   if (home.counts.forYou > 0) return `${plural(home.counts.forYou, 'new match', 'new matches')} above your bar.`;
-  if (home.state.lastIngestAt) return `Nothing new above your bar since ${dayMonth(home.state.lastIngestAt)}. Orbis keeps looking.`;
+  if (home.state.lastIngestAt) return `Nothing new above your bar since ${dayMonth(home.state.lastIngestAt, loc)}. Orbis keeps looking.`;
   return 'Orbis runs your first search once your resume and spec are in.';
 }
 

@@ -1,3 +1,4 @@
+import { sentryIngestOrigin } from '@/lib/observability/dsn';
 import { withoutTrailingSlashes } from '@/lib/site';
 
 // The Content-Security-Policy, built per request so scripts can carry a nonce.
@@ -11,7 +12,9 @@ import { withoutTrailingSlashes } from '@/lib/site';
 // does this thing connect to?" for anyone who opened the response headers: the
 // Supabase project, Google, Zerodha. The public pages neither need those origins
 // nor should mention them, so they get a policy that is both tighter and quieter.
-export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app' }: { nonce: string; supabaseUrl: string; isDev: boolean; scope?: 'app' | 'public' }) {
+// sentryDsn is the browser DSN (NEXT_PUBLIC_SENTRY_DSN). Its ingest origin joins the app's
+// connect-src only when it is set; the public pages never name it.
+export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app', sentryDsn }: { nonce: string; supabaseUrl: string; isDev: boolean; scope?: 'app' | 'public'; sentryDsn?: string }) {
   const script = `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`;
   const shared = [
     "default-src 'self'",
@@ -40,6 +43,7 @@ export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app' }: { nonce: 
 
   const supabase = withoutTrailingSlashes(supabaseUrl);
   const realtime = supabase.replace(/^https:/, 'wss:');
+  const sentry = sentryIngestOrigin(sentryDsn);
   return [
     ...shared,
     // https: is for the news photos on Today (lib/news, NewsData's image_url):
@@ -48,7 +52,7 @@ export function buildCsp({ nonce, supabaseUrl, isDev, scope = 'app' }: { nonce: 
     // viewer's IP when the picture loads. Scripts, frames and fetches stay pinned.
     `img-src 'self' blob: data: ${supabase} https:`,
     `media-src 'self' blob: ${supabase}`,
-    `connect-src 'self' ${supabase} ${realtime}`,
+    `connect-src 'self' ${supabase} ${realtime}${sentry ? ` ${sentry}` : ''}`,
     "worker-src 'self' blob:",
     "form-action 'self' https://accounts.google.com https://kite.zerodha.com",
     ...tail,

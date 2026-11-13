@@ -10,10 +10,13 @@ import { BROKERS, type BrokerId, type BrokerMeta } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
-function when(value: string | null) {
+function when(value: string | null, loc: PersonLocale) {
   if (!value) return null;
-  return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
+  return formatWhen(value, loc, 'mediumTime');
 }
 
 function Status({ state, children }: Readonly<{ state: 'on' | 'off' | 'warn'; children: React.ReactNode }>) {
@@ -96,11 +99,12 @@ function BrokerApp({ meta, connections, openForm, setOpenForm, isPending, run }:
   isPending: boolean;
   run: RunAction;
 }>) {
+  const loc = usePersonLocale();
   const linked = connections.brokers[meta.id] ?? null;
   const setup = connections.brokerSetupMessages[meta.id];
   const expired = linked?.status === 'reconnect_required';
   const formOpen = openForm === meta.id;
-  const synced = linked?.lastSyncAt ? ` · synced ${when(linked.lastSyncAt)}` : '';
+  const synced = linked?.lastSyncAt ? ` · synced ${when(linked.lastSyncAt, loc)}` : '';
   return (
     <article className="pf-app">
       <AppHead
@@ -134,12 +138,13 @@ function BrokerApp({ meta, connections, openForm, setOpenForm, isPending, run }:
 
 function HealthApp({ stepsSummary, openHealth }: Readonly<{ stepsSummary: StepsSummary; openHealth: () => void }>) {
   const lastImport = stepsSummary.lastImport;
+  const loc = usePersonLocale();
   return (
     <article className="pf-app">
       <AppHead
         tile={<HeartPulse size={18} strokeWidth={1.9} />}
         name="Apple Health"
-        detail={lastImport ? `Last import ${when(lastImport.importedAt)}` : 'Import your steps from the Health app export'}
+        detail={lastImport ? `Last import ${when(lastImport.importedAt, loc)}` : 'Import your steps from the Health app export'}
         status={lastImport ? <Status state="on">Imported</Status> : <Status state="off">Not imported</Status>}
       />
       <div className="fd-act pf-act">

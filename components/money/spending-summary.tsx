@@ -2,8 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { categoryStyle } from '@/components/money/category-style';
-import { money } from '@/lib/finance/money';
 import type { FinanceSummary } from '@/lib/finance/types';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { localParts } from '@/lib/locale/dates';
+import { formatMoney } from '@/lib/locale/money';
 
 type Month = NonNullable<FinanceSummary['month']>;
 
@@ -30,10 +32,12 @@ function dayClass(day: number, today: number) {
 
 export function SpendingSummary({ month, highlight = null, incomeShown = true }: Readonly<{ month: Month; highlight?: string | null; incomeShown?: boolean }>) {
   // A heads-up about one category brings its row into view.
+  const loc = usePersonLocale();
+  const money = (amount: number, currency: string) => formatMoney(amount, currency, loc.locale);
   const focusRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { focusRef.current?.scrollIntoView({ block: 'center' }); }, []);
-  const monthName = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' });
-  const shortMonth = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
+  const monthName = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString(loc.locale, { month: 'long', timeZone: 'UTC' });
+  const shortMonth = new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString(loc.locale, { month: 'short', timeZone: 'UTC' });
   const net = month.received - month.spent;
 
   if (month.spent <= 0) {
@@ -41,7 +45,7 @@ export function SpendingSummary({ month, highlight = null, incomeShown = true }:
   }
 
   const peak = Math.max(...month.daily.map((day) => day.amount), 1);
-  const today = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', day: 'numeric' }).format(new Date()));
+  const today = localParts(new Date(), loc.timeZone).day;
   const elapsed = month.daily.filter((day) => day.day <= today).length;
   const dailyAverage = elapsed ? month.spent / elapsed : 0;
 

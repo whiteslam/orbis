@@ -16,6 +16,7 @@ export async function proxy(request: NextRequest) {
     nonce,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     isDev: process.env.NODE_ENV === 'development',
+    sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
     scope: PUBLIC_PAGES.has(request.nextUrl.pathname) ? 'public' : 'app',
   });
 

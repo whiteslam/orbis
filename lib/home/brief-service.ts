@@ -12,8 +12,10 @@ import { getPersonalProfile } from '@/lib/personal/repository';
 import { getRoutinesSummary } from '@/lib/routines/repository';
 import { currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
 import { clockLabel } from '@/lib/routines/types';
+import { dailyLimit } from '@/lib/ai/limits';
 import { claimAiCredit } from '@/lib/ai/quota';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getPersonSettings } from '@/lib/locale/repository';
 
 // The brief regenerates on a data change, not on every visit; a saved brief
 // for the same snapshot costs nothing. It is rewritten when the stretch of the
@@ -21,9 +23,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // to not heard about, which is most of a day's rewrites. Eight a day covers
 // that and costs about ₹0.72 even when every one falls through to Claude.
 // After the eighth, Home shows Orbis's own wording, which is always accurate,
-// until tomorrow (India time). It has its own counter (lib/ai/quota.ts): a background brief
+// until the quota day turns, which is midnight India time for everyone (the claim
+// function in Postgres counts by Asia/Kolkata, not the person's own zone). It has
+// its own counter (lib/ai/quota.ts): a background brief
 // must never eat a request the user wanted to spend on asking a question.
-const DAILY_BRIEF_LIMIT = 8;
 
 export type BriefResult =
   | { state: 'ok'; caption: string; generatedAt: string; fresh: boolean }
@@ -75,14 +78,15 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   if (!preferences.homeBriefEnabled || !aiAllowed(preferences)) return { state: 'off' };
   if (!preferences.configured) return { state: 'error', message: 'No AI provider that can hold personal data is available right now.' };
 
-  const [finance, library, profile, routines] = await Promise.all([
+  const [finance, library, profile, routines, { timeZone }] = await Promise.all([
     getFinanceSummary(userId),
     getHealthLibrary(userId),
     getPersonalProfile(userId),
     getRoutinesSummary(userId),
+    getPersonSettings(userId),
   ]);
 
-  const due = routinesToday(routines, new Date());
+  const due = routinesToday(routines, new Date(), timeZone);
   const current = currentRoutine(due);
 
   const full = briefSnapshot({
@@ -102,6 +106,7 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
       : null,
     missedCount: missedRoutines(due).length,
     weather: readWeather(input.weather),
+    timeZone,
   });
   // The month's spending already has its own tile right under the note, so the
   // note is never handed the figures: the same number twice on Home is noise.
@@ -121,7 +126,7 @@ export async function loadHomeBrief(userId: string, input: { weather?: unknown }
   } catch {
     return { state: 'error', message: 'AI usage limits are not available right now.' };
   }
-  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'home_brief', DAILY_BRIEF_LIMIT);
+  const credit = await claimAiCredit((fn, args) => admin.rpc(fn, args), userId, 'home_brief', await dailyLimit(admin, userId, 'home_brief'));
   if (credit === 'error') return { state: 'error', message: 'The brief can’t be written right now.' };
   if (credit === 'limit') return { state: 'error', message: 'Today’s AI requests are used up. The brief will write itself again tomorrow.' };
 

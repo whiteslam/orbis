@@ -14,7 +14,11 @@ import { getRoutinesSummary } from '@/lib/routines/repository';
 import { getSocialConnections } from '@/lib/social/connections';
 import { metaConfigured } from '@/lib/social/meta';
 import { listMonth } from '@/lib/social/repository';
-import { indiaToday, periodOfDate } from '@/lib/social/month';
+import { periodOfDate } from '@/lib/social/month';
+import { getPersonSettings } from '@/lib/locale/repository';
+import { localDate } from '@/lib/locale/dates';
+import { PersonSettingsProvider } from '@/components/locale/person-locale';
+import { Onboarding } from '@/components/onboarding/onboarding';
 import type { SavedPortfolioAdvice, SavedWorkbookAdvice } from '@/lib/ai/saved';
 import { APP_LOCK_IDLE_MS } from '@/lib/security/app-lock';
 import { AppLockGuard } from '@/components/security/app-lock-guard';
@@ -33,8 +37,23 @@ export default async function Page() {
   if (!gate.open) return gate.render;
   const { userId, email } = gate;
 
-  // This month in India, where the social planner counts its months.
-  const socialPeriod = periodOfDate(indiaToday());
+  // Read first: the social planner's month starts on this person's calendar, in their own time zone.
+  const settings = await getPersonSettings(userId);
+
+  // First run: a good read with no settings row. A failed read counts as
+  // onboarded (ONBOARDED_UNKNOWN), so a blip never sends anyone back here.
+  if (settings.onboardedAt === null) {
+    const [profile, ai] = await Promise.all([getPersonalProfile(userId), getAiPreferences(userId)]);
+    return (
+      <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
+        <PersonSettingsProvider value={settings}>
+          <Onboarding initialName={profile.profile?.preferredName ?? ''} initialAi={ai.aiEnabled} aiAvailable={ai.state === 'ready'} externalDocumentIndexing={ai.externalDocumentIndexing} />
+        </PersonSettingsProvider>
+      </AppLockGuard>
+    );
+  }
+
+  const socialPeriod = periodOfDate(localDate(new Date(), settings.timeZone));
   const [financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections] = await Promise.all([
     getFinanceSummary(userId),
     getContextNotes(userId),
@@ -57,7 +76,9 @@ export default async function Page() {
   ]);
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
-      <AppShell financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } }} />
+      <PersonSettingsProvider value={settings}>
+        <AppShell financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } }} />
+      </PersonSettingsProvider>
     </AppLockGuard>
   );
 }

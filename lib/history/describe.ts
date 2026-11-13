@@ -105,7 +105,7 @@ export function deletedJournalDays(revisions: JournalRevision[], existing: Set<s
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-/** "28 Sept, 2:14 pm" in India time. */
-export function historyTime(iso: string): string {
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+/** "28 Sept, 2:14 pm" in the person's zone. */
+export function historyTime(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso));
 }

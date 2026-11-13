@@ -7,12 +7,15 @@ import { deleteManualTransactionAction } from '@/app/finance/actions';
 import { paymentMethodLabel } from '@/lib/finance/manual';
 import type { FinanceTransactionSummary } from '@/lib/finance/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
+import { formatWhen, localDate } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
-function money(amount: number, currency: string) {
+function money(amount: number, currency: string, locale: string) {
   try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: Number.isInteger(amount) ? 0 : 2 }).format(amount);
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: Number.isInteger(amount) ? 0 : 2 }).format(amount);
   } catch {
-    return `${currency} ${amount.toLocaleString('en-IN')}`;
+    return `${currency} ${amount.toLocaleString(locale)}`;
   }
 }
 
@@ -21,11 +24,12 @@ function money(amount: number, currency: string) {
  * with the fraction set quieter than the whole.
  */
 export function LedgerAmount({ amount, currency, sign = '' }: Readonly<{ amount: number; currency: string; sign?: string }>) {
+  const { locale } = usePersonLocale();
   let parts: Intl.NumberFormatPart[];
   try {
-    parts = new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).formatToParts(amount);
+    parts = new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).formatToParts(amount);
   } catch {
-    return <>{sign}{money(amount, currency)}</>;
+    return <>{sign}{money(amount, currency, locale)}</>;
   }
   const cut = parts.findIndex((part) => part.type === 'decimal');
   const whole = (cut < 0 ? parts : parts.slice(0, cut)).map((part) => part.value).join('');
@@ -41,24 +45,23 @@ function dayTotal(items: FinanceTransactionSummary[]) {
   return { amount: spent.reduce((sum, item) => sum + item.amount, 0), currency: spent[0].currency };
 }
 
-const dayKey = (value: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(value));
-const transactionTime = (value: string) => new Intl.DateTimeFormat('en-IN', { timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(value));
-
-function dayHeading(key: string) {
-  const today = dayKey(new Date());
-  const yesterday = dayKey(new Date(Date.now() - 86_400_000));
+function dayHeading(key: string, loc: PersonLocale) {
+  const today = localDate(new Date(), loc.timeZone);
+  const yesterday = localDate(new Date(Date.now() - 86_400_000), loc.timeZone);
   if (key === today) return 'Today';
   if (key === yesterday) return 'Yesterday';
-  return new Date(`${key}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  // `key` is already the person's calendar day, so it's labelled in UTC to stay that day.
+  return new Date(`${key}T00:00:00Z`).toLocaleDateString(loc.locale, { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 export function TransactionList({ transactions }: Readonly<{ transactions: FinanceTransactionSummary[] }>) {
+  const loc = usePersonLocale();
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function remove(transaction: FinanceTransactionSummary) {
-    if (!window.confirm(`Delete this ${transaction.direction} of ${money(transaction.amount, transaction.currency)}?`)) return;
+    if (!window.confirm(`Delete this ${transaction.direction} of ${money(transaction.amount, transaction.currency, loc.locale)}?`)) return;
     setMessage(null);
     setDeletingId(transaction.id);
     startTransition(async () => {
@@ -70,7 +73,7 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
 
   const days = new Map<string, FinanceTransactionSummary[]>();
   for (const transaction of transactions) {
-    const key = dayKey(transaction.occurredAt);
+    const key = localDate(transaction.occurredAt, loc.timeZone);
     days.set(key, [...(days.get(key) ?? []), transaction]);
   }
 
@@ -81,7 +84,7 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
         return (
           <section key={key} className="transaction-day">
             <h4 className="mn-day-head">
-              <span>{dayHeading(key)}</span>
+              <span>{dayHeading(key, loc)}</span>
               {total && <span className="mn-day-total"><span className="sr-only">Spent </span><LedgerAmount amount={total.amount} currency={total.currency} /></span>}
             </h4>
             <div className="mn-rows">
@@ -97,7 +100,7 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
                       <strong>{transaction.merchant || transaction.category || 'Transaction'}</strong>
                       <small className="finance-transaction-meta">
                         {transaction.source === 'manual' ? <PenLine size={10} aria-label="Added manually" /> : <Mail size={10} aria-label="From Gmail" />}
-                        {[transactionTime(transaction.occurredAt), details].filter(Boolean).join(' · ')}
+                        {[formatWhen(transaction.occurredAt, loc, 'shortTime'), details].filter(Boolean).join(' · ')}
                       </small>
                       {transaction.note && <p className="finance-transaction-note">{transaction.note}</p>}
                     </div>

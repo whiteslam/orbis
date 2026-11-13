@@ -10,11 +10,12 @@ import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
 import { ShortsView } from '@/components/shorts/shorts-view';
 import { loadSocialMonthAction } from '@/app/social/actions';
-import { PERIOD_PATTERN, indiaToday, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
+import { PERIOD_PATTERN, todayIn, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, type SocialFormat, type SocialPost, type SocialStatus } from '@/lib/social/types';
 import type { SocialMonth } from '@/lib/social/repository';
 import { safeAction } from '@/lib/client/safe-action';
 import type { SocialConnectNotice } from '@/lib/social/connect-notice';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 type View = 'list' | 'grid';
 type Area = 'planner' | 'shorts';
@@ -44,17 +45,18 @@ function periodFromHash() {
  * month lives in the URL hash, so a reload stays where it was.
  */
 export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectNotice }: Readonly<{ initial: SocialMonth & { period: string }; hasProfile: boolean; connectNotice?: SocialConnectNotice | null; clearConnectNotice?: () => void }>) {
+  const { timeZone, locale } = usePersonLocale();
   const [period, setPeriod] = useState(initial.period);
   const [month, setMonth] = useState<SocialMonth>(initial);
   const [view, setView] = useState<View>('list');
   const [sort, setSort] = useState<SocialSort>('status');
   const [screen, setScreen] = useState<Screen>({ name: 'main' });
   const [area, setArea] = useState<Area>('planner');
-  const [selected, setSelected] = useState<string | null>(() => indiaToday());
+  const [selected, setSelected] = useState<string | null>(() => todayIn(timeZone));
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [isLoading, startLoading] = useTransition();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
-  const today = indiaToday();
+  const today = todayIn(timeZone);
 
   function load(next: string) {
     setPeriod(next);
@@ -192,7 +194,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
                 <>
                   <span className="so-lead-sep" aria-hidden="true" />
                   <button type="button" className="so-next" onClick={() => openPost(nextUp)}>
-                    Next up: <b>{nextUp.title}</b>, {nextUp.plannedFor === today ? 'today' : dayLabel(nextUp.plannedFor ?? today)}
+                    Next up: <b>{nextUp.title}</b>, {nextUp.plannedFor === today ? 'today' : dayLabel(nextUp.plannedFor ?? today, locale)}
                   </button>
                 </>
               )}

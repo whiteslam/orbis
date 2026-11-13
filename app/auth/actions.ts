@@ -1,13 +1,16 @@
 'use server';
 
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { clearAppUnlock, isAppUnlocked, unlockWithFreshAuth } from '@/lib/security/app-lock';
 import { UNLOCK_METHODS } from '@/lib/security/unlock-token';
 import { canChangePassword, MIN_PASSWORD_LENGTH, type PasswordChangeCheck } from '@/lib/security/fresh-auth';
-import { rateLimitRefusal } from '@/lib/security/rate-limit';
+import { anonRateLimitAllows, rateLimitRefusal } from '@/lib/security/rate-limit';
+import { OAUTH_START_COOKIE, OAUTH_START_MAX_AGE_SEC, signFlowStart } from '@/lib/security/oauth-start';
+import { anonRateKey, clientIpFrom } from '@/lib/security/anon-rate-key';
 import { passwordMatches } from '@/lib/security/verify-password';
-import { ACCESS_DENIED_MESSAGE, SIGNUP_CLOSED_MESSAGE, accessAllowed, signupsOpen } from '@/lib/security/access';
+import { ACCESS_DENIED_MESSAGE, SIGNUP_CLOSED_MESSAGE, accessAllowed, googleSignInEnabled, signupsOpen } from '@/lib/security/access';
 import { looksLikeEmail } from '@/lib/site';
 
 export type AuthActionState = {
@@ -56,6 +59,12 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
   const baseUrl = siteUrl();
   if (!baseUrl) return { error: 'Account email links are not configured. Please contact the app administrator.', message: null };
 
+  // Counted per caller address (kept only as a keyed hash) and overall, after
+  // the cheap checks above so a typo doesn't use up an attempt.
+  if (!(await anonRateLimitAllows(anonRateKey(clientIpFrom(await headers())), 'signup'))) {
+    return { error: 'Too many new accounts from here. Try again in an hour.', message: null };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -75,6 +84,40 @@ export async function signUp(formData: FormData): Promise<AuthActionState> {
     ...emptyState,
     message: 'Check your email for a confirmation link to finish creating your account.',
   };
+}
+
+/**
+ * Starts "Continue with Google". The server client runs the OAuth start so the
+ * PKCE code verifier lands in this request's cookies, then the browser is sent
+ * to Google; /auth/callback finishes the exchange.
+ */
+export async function signInWithGoogle(): Promise<AuthActionState> {
+  if (!googleSignInEnabled()) return { error: 'Google sign-in isn’t available here.', message: null };
+  const baseUrl = siteUrl();
+  if (!baseUrl) return { error: 'Google sign-in is unavailable right now.', message: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${baseUrl}/auth/callback?next=/active` },
+  });
+  if (error || !data?.url) return { error: 'Google sign-in is unavailable right now.', message: null };
+
+  // A signed note of when this flow began, so the callback can tell an account
+  // this flow created from one that already existed (lib/security/new-account.ts).
+  try {
+    (await cookies()).set(OAUTH_START_COOKIE, signFlowStart(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: OAUTH_START_MAX_AGE_SEC,
+    });
+  } catch (caught) {
+    // Without it the callback falls back to the ten-minute rule.
+    console.error('signInWithGoogle: could not set the flow cookie', caught instanceof Error ? caught.name : 'unknown');
+  }
+  redirect(data.url);
 }
 
 export async function signIn(formData: FormData): Promise<AuthActionState> {

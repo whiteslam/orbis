@@ -60,6 +60,8 @@ const BY_PARAM: Map<string, Opening> = new Map([
   ['settings', { tab: 'today', settings: 'connections' }],
   // Career's Gmail "Allow sending" round trip lands back on the tab.
   ['career', { tab: 'career' }],
+  // Onboarding's "Finish and open Security".
+  ['security', { tab: 'today', settings: 'security' }],
 ]);
 
 /** Where a URL asks the app to open, or null for the default. `?tab=` wins over the hash. */

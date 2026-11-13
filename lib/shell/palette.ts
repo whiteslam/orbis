@@ -24,9 +24,13 @@ export type AppPaletteItem = {
 // On desktop Career is the full panel, so its tab entry leaves for it.
 const CAREER_PANEL = '/active/career';
 
-/** Every place the palette knows. `careerPages` are the panel's pages (PANEL_PAGES), passed in so lib/ stays free of components. */
-export function appPalette(careerPages: ReadonlyArray<{ id: string; label: string }>): AppPaletteItem[] {
-  const tabs: AppPaletteItem[] = TABS.map(({ id, label }) => ({
+/**
+ * Every place the palette knows. `careerPages` are the panel's pages (PANEL_PAGES),
+ * passed in so lib/ stays free of components. `shown` is the tabs the person has
+ * on (lib/shell/modules.ts); a switched-off module's tab, views and pages are left out.
+ */
+export function appPalette(careerPages: ReadonlyArray<{ id: string; label: string }>, shown: readonly TabId[] = TABS.map((tab) => tab.id)): AppPaletteItem[] {
+  const tabs: AppPaletteItem[] = TABS.filter(({ id }) => shown.includes(id)).map(({ id, label }) => ({
     id: `tab-${id}`,
     label,
     detail: id === 'career' ? 'Open the Career panel' : 'Go to tab',
@@ -40,7 +44,7 @@ export function appPalette(careerPages: ReadonlyArray<{ id: string; label: strin
   const settings: AppPaletteItem[] = SETTINGS_SECTIONS.map(({ id, label }) => ({ id: `settings-${id}`, label, detail: 'Settings', kind: 'settings', go: { to: 'settings', section: id } }));
   const career: AppPaletteItem[] = careerPages.map(({ id, label }) => ({ id: `career-${id}`, label, detail: 'Career panel', kind: 'career', go: { to: 'href', href: `${CAREER_PANEL}#/${id}` } }));
   const ask: AppPaletteItem = { id: 'action-ask', label: 'Ask Orbis', detail: 'Ask about your spending, journal, routines or steps', kind: 'action', go: { to: 'ask' } };
-  return [...tabs, ...views, ...settings, ...career, ask];
+  return [...tabs, ...(shown.includes('money') ? views : []), ...settings, ...(shown.includes('career') ? career : []), ask];
 }
 
 /**

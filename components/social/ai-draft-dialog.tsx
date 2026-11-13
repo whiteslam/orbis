@@ -8,6 +8,7 @@ import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, type DraftTone } from '
 import { monthName } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_PLATFORMS, type SocialFormat, type SocialPlatform, type SocialPost } from '@/lib/social/types';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 const TONE_LABEL: Record<DraftTone, string> = { friendly: 'Friendly', professional: 'Professional', playful: 'Playful', inspiring: 'Inspiring' };
 
@@ -22,6 +23,7 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: Readon
   onClose: () => void;
   onDrafted: (posts: SocialPost[], message: string) => void;
 }>) {
+  const { locale } = usePersonLocale();
   const [brief, setBrief] = useState('');
   const [count, setCount] = useState(8);
   const [formats, setFormats] = useState<SocialFormat[]>(['post', 'reel']);
@@ -59,7 +61,7 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: Readon
           <label className="fd-field wide">What is this month about?{' '}
             <textarea rows={5} value={brief} maxLength={MAX_BRIEF_LENGTH} required disabled={isPending} placeholder="Launching my autumn menu, a behind-the-scenes week, two customer stories…" onChange={(event) => setBrief(event.currentTarget.value)} />
           </label>
-          <p className="so-counter"><span>{brief.length.toLocaleString('en-IN')} / {MAX_BRIEF_LENGTH.toLocaleString('en-IN')}</span></p>
+          <p className="so-counter"><span>{brief.length.toLocaleString(locale)} / {MAX_BRIEF_LENGTH.toLocaleString(locale)}</span></p>
         </div>
 
         <div className="so-ai-options">

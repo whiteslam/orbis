@@ -8,12 +8,12 @@ import { dayTime } from '@/components/career/format';
 import { STAGE_GROUPS, groupOf, isOpen, type StageGroupId } from '@/lib/career/status';
 import type { CareerEvent, CareerJob } from '@/lib/career/types';
 import type { ApplicationCard, CareerHome } from '@/lib/career/view';
+import { formatWhen, localDate, localParts } from '@/lib/locale/dates';
+import type { PersonLocale } from '@/lib/locale/person';
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
-/** India time, which every Career date on screen uses (format.ts). */
-const IST_OFFSET_MS = 330 * MINUTE_MS;
 
 // ─── Pages ───────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ export const hrefFor = (page: PanelPage) => `#/${page}`;
 // ─── Time ────────────────────────────────────────────────────────────────
 
 /** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then the date. */
-export function relativeTime(iso: string, now: Date = new Date()): string {
+export function relativeTime(iso: string, loc: PersonLocale, now: Date = new Date()): string {
   const gap = now.getTime() - Date.parse(iso);
   if (Number.isNaN(gap)) return '';
   if (gap < MINUTE_MS) return 'just now';
@@ -70,7 +70,7 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   const days = Math.floor(gap / DAY_MS);
   if (days === 1) return 'yesterday';
   if (days < 14) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+  return formatWhen(iso, loc, 'day');
 }
 
 /** "in 3 h", "tomorrow", "in 4 days": how far off a future moment is. */
@@ -83,17 +83,14 @@ export function untilText(iso: string, now: Date = new Date()): string {
   return days === 1 ? 'tomorrow' : `in ${days} days`;
 }
 
-/** The calendar day in India time, as 'YYYY-MM-DD'. */
-export function istDay(value: Date | string): string {
-  const time = typeof value === 'string' ? Date.parse(value) : value.getTime();
-  return new Date(time + IST_OFFSET_MS).toISOString().slice(0, 10);
+/** The ISO week a moment falls in, in the person's zone: '2026-W44'. Matches insights.funnel's keys. */
+export function isoWeek(value: Date | string, timeZone: string): string {
+  return weekOfDay(new Date(`${localDate(value, timeZone)}T00:00:00Z`));
 }
 
-/** The ISO week a moment falls in, in India time: '2026-W44'. Matches insights.funnel's keys. */
-export function isoWeek(value: Date | string): string {
-  const time = typeof value === 'string' ? Date.parse(value) : value.getTime();
-  const local = new Date(time + IST_OFFSET_MS);
-  const day = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
+/** The ISO week of a calendar day held as UTC midnight. */
+function weekOfDay(calendarDay: Date): string {
+  const day = new Date(calendarDay.getTime());
   const weekday = day.getUTCDay() || 7;
   // The Thursday of this week decides the year it belongs to.
   day.setUTCDate(day.getUTCDate() + 4 - weekday);
@@ -102,10 +99,9 @@ export function isoWeek(value: Date | string): string {
   return `${day.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-/** The Monday that starts the week `back` weeks before `now`'s, in India time. */
-function weekStart(now: Date, back: number): Date {
-  const local = new Date(now.getTime() + IST_OFFSET_MS);
-  const monday = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
+/** The Monday that starts the week `back` weeks before `now`'s, in the person's zone, as UTC midnight of that day. */
+function weekStart(now: Date, back: number, timeZone: string): Date {
+  const monday = new Date(`${localDate(now, timeZone)}T00:00:00Z`);
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() || 7) - 1) - back * 7);
   return monday;
 }
@@ -163,23 +159,24 @@ const REPLY_EVENTS = new Set(['reply', 'recruiter_question', 'assessment', 'reje
  * comes from each application's sentAt and replies and interviews from the
  * recent events, which only reach back so far (`partial` says so).
  */
-export function weeklySeries(home: CareerHome, weeks: number, now: Date = new Date()): { points: WeekPoint[]; partial: boolean; empty: boolean } {
+export function weeklySeries(home: CareerHome, weeks: number, loc: PersonLocale, now: Date = new Date()): { points: WeekPoint[]; partial: boolean; empty: boolean } {
   const funnel = home.insights?.funnel ?? [];
   const byWeek = new Map<string, WeekPoint>();
   for (let back = weeks - 1; back >= 0; back -= 1) {
-    const start = weekStart(now, back);
-    const week = isoWeek(new Date(start.getTime() + 12 * HOUR_MS - IST_OFFSET_MS));
-    const label = start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const start = weekStart(now, back, loc.timeZone);
+    const week = weekOfDay(start);
+    // `start` is already a calendar day, so it's labelled in UTC to keep it that day.
+    const label = formatWhen(start, { ...loc, timeZone: 'UTC' }, 'day');
     byWeek.set(week, { week, label, sent: 0, replies: 0, interviews: 0 });
   }
   const partial = funnel.length === 0;
   if (partial) {
     for (const card of allApplications(home)) {
-      const point = card.application.sentAt ? byWeek.get(isoWeek(card.application.sentAt)) : undefined;
+      const point = card.application.sentAt ? byWeek.get(isoWeek(card.application.sentAt, loc.timeZone)) : undefined;
       if (point) point.sent += 1;
     }
     for (const event of home.recent) {
-      const point = byWeek.get(isoWeek(event.at));
+      const point = byWeek.get(isoWeek(event.at, loc.timeZone));
       if (!point) continue;
       if (REPLY_EVENTS.has(event.kind)) point.replies += 1;
       if (event.kind === 'interview_invite') point.interviews += 1;
@@ -199,10 +196,9 @@ export function weeklySeries(home: CareerHome, weeks: number, now: Date = new Da
 
 // ─── Weekly goal ─────────────────────────────────────────────────────────
 
-/** What's left of the week's goal and the pace that would land it (Monday to Sunday, India time). */
-export function weekPace(week: CareerHome['week'], now: Date = new Date()): { left: number; daysLeft: number; perDay: number; done: boolean } {
-  const local = new Date(now.getTime() + IST_OFFSET_MS);
-  const weekday = local.getUTCDay() || 7;
+/** What's left of the week's goal and the pace that would land it (Monday to Sunday, in the person's zone). */
+export function weekPace(week: CareerHome['week'], timeZone: string, now: Date = new Date()): { left: number; daysLeft: number; perDay: number; done: boolean } {
+  const weekday = localParts(now, timeZone).weekday + 1;
   const daysLeft = 8 - weekday;
   const left = Math.max(0, week.goal - week.sent);
   return { left, daysLeft, perDay: left === 0 ? 0 : Math.ceil(left / daysLeft), done: left === 0 };
@@ -217,7 +213,7 @@ export type PanelHeadsup = { id: string; kind: 'interview' | 'offer' | 'question
  * kinds), worked out from the home: an interview within two days, an offer
  * waiting, a recruiter's question from the last week, and a follow-up due.
  */
-export function panelHeadsups(home: CareerHome, now: Date = new Date()): PanelHeadsup[] {
+export function panelHeadsups(home: CareerHome, loc: PersonLocale, now: Date = new Date()): PanelHeadsup[] {
   const cards = allApplications(home);
   const byApp = new Map(cards.map((card) => [card.application.id, card]));
   const out: PanelHeadsup[] = [];
@@ -225,7 +221,7 @@ export function panelHeadsups(home: CareerHome, now: Date = new Date()): PanelHe
     if (!item.at) continue;
     const gap = Date.parse(item.at) - now.getTime();
     if (gap < 0 || gap > 2 * DAY_MS) continue;
-    out.push({ id: `interview-${item.application.id}`, kind: 'interview', title: `Interview with ${item.job.company}`, detail: dayTime(item.at), jobId: item.job.id, urgent: gap < DAY_MS });
+    out.push({ id: `interview-${item.application.id}`, kind: 'interview', title: `Interview with ${item.job.company}`, detail: dayTime(item.at, loc), jobId: item.job.id, urgent: gap < DAY_MS });
   }
   for (const card of cards) {
     if (card.application.status !== 'offer') continue;
@@ -249,14 +245,14 @@ export function panelHeadsups(home: CareerHome, now: Date = new Date()): PanelHe
 export type AgendaItem = { id: string; kind: 'interview' | 'follow_up'; title: string; detail: string; at: string | null; jobId: string };
 
 /** Today's interviews and due follow-ups (the checklist), and the interviews after today. */
-export function todayAgenda(home: CareerHome, now: Date = new Date()): { today: AgendaItem[]; comingUp: AgendaItem[] } {
+export function todayAgenda(home: CareerHome, timeZone: string, now: Date = new Date()): { today: AgendaItem[]; comingUp: AgendaItem[] } {
   const today: AgendaItem[] = [];
   const comingUp: AgendaItem[] = [];
-  const day = istDay(now);
+  const day = localDate(now, timeZone);
   const sorted = [...home.upcoming].sort((left, right) => (left.at ?? '9').localeCompare(right.at ?? '9'));
   for (const item of sorted) {
     const entry: AgendaItem = { id: `interview-${item.application.id}`, kind: 'interview', title: `Interview: ${item.job.company}`, detail: [item.job.title, item.format].filter(Boolean).join(', '), at: item.at, jobId: item.job.id };
-    if (item.at && istDay(item.at) === day) today.push(entry);
+    if (item.at && localDate(item.at, timeZone) === day) today.push(entry);
     else if (!item.at || Date.parse(item.at) > now.getTime()) comingUp.push(entry);
   }
   for (const card of home.followUps) {

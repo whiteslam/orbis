@@ -52,7 +52,7 @@ function rescorer(jobs: ReadonlyMap<string, CareerJob>, profile: CareerProfile, 
  * Everything the Insights view shows, or null before Career is set up.
  * `today` is the owner's 'YYYY-MM-DD'; `timeZone` places the best-day card.
  */
-export async function loadInsights(client: CareerDb, userId: string, today: string, timeZone = 'Asia/Kolkata'): Promise<CareerInsights | null> {
+export async function loadInsights(client: CareerDb, userId: string, today: string, timeZone: string): Promise<CareerInsights | null> {
   const row = await getCareerRow(userId, client);
   if (!row?.profile || !row.spec) return null;
   const { profile, spec, settings } = row;

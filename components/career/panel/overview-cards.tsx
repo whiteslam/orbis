@@ -8,6 +8,7 @@ import { usePanel } from '@/components/career/panel/panel-context';
 import { allApplications, openCount, relativeTime } from '@/components/career/panel/panel-data';
 import type { EventKind } from '@/lib/career/types';
 import type { CareerHome } from '@/lib/career/view';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 // ─── Predictions ─────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ const EVENT_ICON: Partial<Record<EventKind, typeof Send>> = {
 
 export function RecentActivity({ home }: Readonly<{ home: CareerHome }>) {
   const { openJobId } = usePanel();
+  const loc = usePersonLocale();
   const jobByApp = new Map(allApplications(home).map((card) => [card.application.id, card.job.id]));
   const events = home.recent.slice(0, 5);
   return (
@@ -75,7 +77,7 @@ export function RecentActivity({ home }: Readonly<{ home: CareerHome }>) {
                   <b>{EVENT_LABEL[event.kind]}{event.company ? `: ${event.company}` : ''}</b>
                   {event.title && <small>{event.title}</small>}
                   {event.summary && <span>{event.summary}</span>}
-                  <time dateTime={event.at}>{relativeTime(event.at)}</time>
+                  <time dateTime={event.at}>{relativeTime(event.at, loc)}</time>
                 </span>
               </>
             );

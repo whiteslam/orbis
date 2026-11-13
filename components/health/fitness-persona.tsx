@@ -6,6 +6,7 @@ import { deleteFitnessPersonaAction, saveFitnessPersonaAction } from '@/app/pers
 import { FITNESS_PERSONA_STARTER } from '@/lib/personal/fitness-persona';
 import type { PersonalDataState } from '@/lib/personal/repository';
 import { safeAction } from '@/lib/client/safe-action';
+import { usePersonLocale } from '@/components/locale/person-locale';
 
 /** Why the coaching style can't be used right now, if it can't. */
 function noticeFor(state: PersonalDataState) {
@@ -33,6 +34,7 @@ function saveLabel(pending: boolean, persona: string | null) {
  */
 export function FitnessPersonaEditor({ state, persona }: Readonly<{ state: PersonalDataState; persona: string | null }>) {
   const router = useRouter();
+  const { locale } = usePersonLocale();
   const [draft, setDraft] = useState(persona ?? '');
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -91,7 +93,7 @@ export function FitnessPersonaEditor({ state, persona }: Readonly<{ state: Perso
     }}>
       <label className="fd-field wide" htmlFor="fitness-persona">How should Orbis coach you?<textarea id="fitness-persona" value={draft} rows={12} onChange={(event) => setDraft(event.currentTarget.value)} disabled={blocked} required placeholder="For example: be direct and nonjudgmental, give me one next step, keep meals practical, and ask before giving me numbers." /></label>
       {/* A count, not a budget: there is no limit to count down to any more. */}
-      <p className="fd-count">{draft.length.toLocaleString('en-IN')} character{draft.length === 1 ? '' : 's'}</p>
+      <p className="fd-count">{draft.length.toLocaleString(locale)} character{draft.length === 1 ? '' : 's'}</p>
       <div className="fd-act">
         <button type="submit" disabled={blocked}>{saveLabel(pending, persona)}</button>
         <button className="ghost" type="button" disabled={pending} onClick={() => { setDraft(persona ?? ''); setEditing(false); setMessage(''); }}>Cancel</button>
