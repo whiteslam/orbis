@@ -134,6 +134,34 @@ describe('device schema', () => {
     assert.deepEqual(await deviceRow(), { v: '1.2.4', t: null, seen: true });
   });
 
+  it('a push token synced by another phone is taken off the phone that held it before', async () => {
+    // A held T; then B (another person's phone, e.g. the same handset after a new sign-in) syncs T.
+    await sync({ meta: { pushToken: 'tok-T' } });
+    const other = await asUser(db, USER_B, async () => {
+      const res = await db.query<{ id: string }>(
+        `insert into public.devices (user_id, name, flavour, secret_hash)
+         values ($1, 'Pixel', 'play', $2) returning id`,
+        [USER_B, HASH],
+      );
+      return res.rows[0].id;
+    });
+    await asAnon(db, () =>
+      db.query(`select public.device_sync($1, $2, $3::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)`, [
+        other,
+        SECRET,
+        JSON.stringify({ pushToken: 'tok-T' }),
+      ]),
+    );
+    const tokens = await db.query<{ id: string; t: string | null }>(`select id, push_token as t from public.devices`);
+    const tokenOf = (id: string) => tokens.rows.find((row) => row.id === id)?.t;
+    assert.equal(tokenOf(device), null);
+    assert.equal(tokenOf(other), 'tok-T');
+    // A sync with a different token leaves the other phone's token alone.
+    await sync({ meta: { pushToken: 'tok-A2' } });
+    const after = await db.query<{ t: string | null }>(`select push_token as t from public.devices where id = $1`, [other]);
+    assert.equal(after.rows[0].t, 'tok-T');
+  });
+
   it('sync with a wrong secret returns null and stores nothing', async () => {
     const result = await sync({
       secret: 'wrong',

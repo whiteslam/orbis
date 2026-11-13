@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { SOURCES } from '@/lib/device/sources';
-import { activityWords, addToList, blockedFirst, isSource, lastSeenWords, pauseState, SOURCE_LABELS, toggleBlocked } from './privacy-words';
+import { activityWords, addToList, blockedFirst, isSource, lastSeenWords, pauseState, SOURCE_LABELS, syncWords, toggleBlocked } from './privacy-words';
 
 test('every wire name has a plain label, and only wire names are sources', () => {
   for (const source of SOURCES) assert.ok(SOURCE_LABELS[source].length > 0, source);
@@ -68,4 +68,24 @@ test('last seen in plain words', () => {
   assert.equal(lastSeenWords('2026-11-12T08:00:00Z', now), 'Yesterday');
   assert.equal(lastSeenWords('2026-11-03T12:00:00Z', now), '10 days ago');
   assert.equal(lastSeenWords('not a date', now), 'Not synced yet');
+});
+
+test('this phone’s sync reads as one plain line: when, what is waiting, and why it failed', () => {
+  const now = Date.parse('2026-11-13T12:00:00Z');
+  const at = (iso: string) => Date.parse(iso);
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: null }, now), 'Not synced yet');
+  assert.equal(syncWords({ lastSyncAt: at('2026-11-13T11:59:30Z'), pendingSignals: 0, lastSyncError: null }, now), 'Last synced just now');
+  assert.equal(syncWords({ lastSyncAt: at('2026-11-13T11:55:00Z'), pendingSignals: 3, lastSyncError: null }, now), 'Last synced 5 minutes ago · 3 waiting');
+  assert.equal(syncWords({ lastSyncAt: at('2026-11-12T11:00:00Z'), pendingSignals: 1, lastSyncError: null }, now), 'Last synced yesterday · 1 waiting');
+  assert.equal(
+    syncWords({ lastSyncAt: at('2026-11-13T11:55:00Z'), pendingSignals: 3, lastSyncError: 'unexpected response' }, now),
+    'Last synced 5 minutes ago · 3 waiting · Couldn’t sync: unexpected response',
+  );
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: 'HTTP 503' }, now), 'Not synced yet · Couldn’t sync: HTTP 503');
+  // The phone's own codes for no connection and a busy store read as words.
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 2, lastSyncError: 'network' }, now), 'Not synced yet · 2 waiting · Couldn’t sync: no connection');
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: 'storage' }, now), 'Not synced yet · Couldn’t sync: this phone’s storage was busy');
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: 'constructor' }, now), 'Not synced yet · Couldn’t sync: constructor');
+  // A blank reason is no reason.
+  assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: ' ' }, now), 'Not synced yet');
 });

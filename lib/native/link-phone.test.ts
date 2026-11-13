@@ -140,3 +140,48 @@ test('once the phone answers again and is already linked, the old "couldn’t re
   assert.equal(core.signOut.mock.calls.length, 1);
   assert.equal(fetchMock.mock.calls.length, 1);
 });
+
+test('a phone service that fails to save a fresh credential has its new row removed, best effort', async () => {
+  const m = await load();
+  core.status.mockResolvedValue(status({ registered: false, userId: null, deviceId: null }));
+  core.setDevice.mockRejectedValue(Object.assign(new Error('x'), { code: 'store_unavailable' }));
+  fetchMock.mockImplementation(async (url: string) => (url === '/api/device/register' ? created() : new Response(null, { status: 204 })));
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  await m.linkThisPhone(ME);
+  assert.equal(fetchMock.mock.calls.length, 2);
+  const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+  assert.equal(url, '/api/device/revoke');
+  assert.equal(init.method, 'POST');
+  assert.equal(init.credentials, 'same-origin');
+  // Only the id: the secret never leaves this function except into setDevice.
+  assert.deepEqual(JSON.parse(String(init.body)), { deviceId: 'd2' });
+  assert.ok(!String(init.body).includes('s'.repeat(43)));
+  assert.ok(!JSON.stringify(init.headers ?? {}).includes('s'.repeat(43)));
+  for (const call of [...log.mock.calls, ...warn.mock.calls]) assert.ok(!JSON.stringify(call).includes('s'.repeat(43)));
+  assert.equal(m.getPhoneLink().registerError?.status, 201);
+  log.mockRestore();
+  warn.mockRestore();
+});
+
+test('a failing clean-up of the new row still settles with the registration error', async () => {
+  const m = await load();
+  core.status.mockResolvedValue(status({ registered: false, userId: null, deviceId: null }));
+  core.setDevice.mockRejectedValue(new Error('store_unavailable'));
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/device/register') return created();
+    throw new TypeError('offline');
+  });
+  await m.linkThisPhone(ME);
+  assert.equal(fetchMock.mock.calls.length, 2);
+  assert.equal(m.getPhoneLink().registerError?.status, 201);
+});
+
+test('a refused registration makes no clean-up request', async () => {
+  const m = await load();
+  core.status.mockResolvedValue(status({ registered: false, userId: null, deviceId: null }));
+  fetchMock.mockImplementation(async () => new Response(JSON.stringify({ error: 'ten phones' }), { status: 409 }));
+  await m.linkThisPhone(ME);
+  assert.equal(fetchMock.mock.calls.length, 1);
+  assert.equal(core.setDevice.mock.calls.length, 0);
+});

@@ -23,6 +23,8 @@ create table if not exists public.devices (
 );
 
 create index if not exists devices_user_idx on public.devices (user_id);
+-- device_sync clears a token from every other row that still holds it.
+create index if not exists devices_push_token_idx on public.devices (push_token) where push_token is not null;
 
 create table if not exists public.device_sources (
   device_id uuid not null references public.devices (id) on delete cascade,
@@ -210,6 +212,17 @@ begin
 
   if jsonb_array_length(v_signals) > 100 then
     raise exception 'too_many_signals';
+  end if;
+
+  -- A push token belongs to one app install. When this phone sends one, any other row
+  -- still holding it (a stale row left by an earlier sign-in on the same handset, maybe
+  -- another person's) loses it, so a push for that row can't reach whoever holds the
+  -- phone now.
+  if nullif(v_meta ->> 'pushToken', '') is not null then
+    update public.devices
+    set push_token = null
+    where push_token = v_meta ->> 'pushToken'
+      and id <> p_device;
   end if;
 
   update public.devices

@@ -6,7 +6,8 @@
 // "not implemented" error, so callers check isNativeApp() first.
 //
 // Every call rejects with code 'not_orbis_origin' unless the WebView is on the
-// Orbis site itself, and with a short code (never a message meant for people)
+// Orbis site itself ('unsupported_webview' on a WebView too old to keep other
+// frames out of the bridge), and with a short code (never a message meant for people)
 // when the phone's store can't be read: 'store_unavailable'. Other codes:
 // 'invalid_credential', 'invalid_source', 'invalid_until', 'invalid_privacy',
 // 'invalid_text', 'invalid_token', 'invalid_limit', 'no_activity'.

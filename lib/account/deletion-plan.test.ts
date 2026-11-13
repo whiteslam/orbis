@@ -11,6 +11,7 @@ import {
   deletionSteps,
   exportFilename,
   isMissingBucketError,
+  leftOutQuietly,
   refusalMessage,
   refusalStatus,
   sensitiveAuthCheck,
@@ -61,6 +62,24 @@ test('the export includes phone data, and the device list never names its creden
   const columns = devices.columns.split(',').map((column) => column.trim());
   assert.deepEqual(columns, ['id', 'user_id', 'name', 'platform', 'flavour', 'app_version', 'created_at', 'last_seen_at', 'revoked_at']);
   assert.ok(!columns.includes('secret_hash') && !columns.includes('push_token'));
+});
+
+test('a phone table that is not set up yet is left out of the export quietly; nothing else is', () => {
+  const entry = (table: string) => {
+    const found = EXPORT_TABLES.find((item) => item.table === table);
+    assert.ok(found, table);
+    return found;
+  };
+  const missing = { code: 'PGRST205', message: "Could not find the table 'public.signals' in the schema cache" };
+  const noRelation = { code: '42P01', message: 'relation "public.devices" does not exist' };
+  for (const table of ['devices', 'device_sources', 'signals', 'activity_ledger']) {
+    assert.equal(leftOutQuietly(entry(table), missing), true, table);
+    assert.equal(leftOutQuietly(entry(table), noRelation), true, table);
+    // Any other failure is still named in the export.
+    assert.equal(leftOutQuietly(entry(table), { code: '42501', message: 'permission denied' }), false, table);
+    assert.equal(leftOutQuietly(entry(table), new Error('fetch failed')), false, table);
+  }
+  for (const table of ['transactions', 'journal_entries', 'research_runs']) assert.equal(leftOutQuietly(entry(table), missing), false, table);
 });
 
 test('phone tables are paged by a key that is unique per person', () => {

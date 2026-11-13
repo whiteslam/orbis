@@ -115,6 +115,28 @@ function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; sh
 }
 
 /**
+ * True once a section has been on screen: picked in the list, or scrolled into view on
+ * the phone, where every section is stacked in one scroll. The desktop hides every
+ * section but the picked one (display: none), and a hidden section never intersects.
+ * Stays true until Settings closes.
+ */
+function useSeen(id: SettingsSection, shown: SettingsSection) {
+  const [seen, setSeen] = useState(shown === id);
+  if (!seen && shown === id) setSeen(true);
+  useEffect(() => {
+    if (seen || typeof IntersectionObserver === 'undefined') return;
+    const target = document.getElementById(`settings-${id}`);
+    if (!target) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setSeen(true);
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [id, seen]);
+  return seen;
+}
+
+/**
  * Everything you configure, in one place, opened from the avatar on any tab.
  * It sits above the bottom nav, so tapping a tab is always a way out. On a
  * desktop it is a large dialog over a veil instead: the sections listed down
@@ -143,6 +165,9 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
   }
 
   useEffect(() => jumpTo(section), [section]);
+  // What Orbis can see reads the phone list (and, in the app, the phone itself) as it
+  // mounts, so it mounts only once its section is on screen, not on every Settings open.
+  const privacySeen = useSeen('privacy', shown);
 
   // Move focus into the sheet on open, and give it back to whatever opened it
   // (an avatar button, a Today card) on close — a mount/unmount effect, since
@@ -262,7 +287,7 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
         </Group>
 
         <Group id="privacy" shown={shown} note="What Orbis reads on your phone, and what it keeps. Nothing is read until you turn it on.">
-          <PrivacyCenter userId={userId} />
+          {privacySeen && <PrivacyCenter userId={userId} />}
         </Group>
 
         <Group id="data" shown={shown}>

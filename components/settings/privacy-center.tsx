@@ -11,7 +11,7 @@ import { batteryHelp } from '@/lib/native/battery-help';
 import { linkThisPhone, pushPlugin } from '@/lib/native/link-phone';
 import { OrbisCore, type ActivityEntry, type CoreStatus, type LauncherApp, type Privacy, type TestCaptureResult } from '@/lib/native/orbis-core';
 import { pauseUntil, type PauseChoice } from '@/lib/native/pause';
-import { activityWords, addToList, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, reasonWords, SOURCE_LABELS, toggleBlocked } from '@/lib/native/privacy-words';
+import { activityWords, addToList, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, reasonWords, SOURCE_LABELS, syncWords, toggleBlocked } from '@/lib/native/privacy-words';
 
 type Message = { text: string; success: boolean } | null;
 
@@ -56,6 +56,9 @@ function useDevices() {
  * Settings → What Orbis can see. Inside the Android app it is where people choose
  * what Orbis reads on this phone, and test it; on the web it lists the phones and
  * deletes what Orbis kept on the server.
+ *
+ * It reads as it mounts: the phone list, and in the app the phone's status, privacy
+ * settings, activity and apps. Settings mounts it only once its section is on screen.
  */
 export function PrivacyCenter({ userId }: Readonly<{ userId: string }>) {
   const nativeApp = useNativeApp();
@@ -252,6 +255,8 @@ function PhonePrivacy({ userId, phones }: Readonly<{ userId: string; phones: Pho
       {status && (
         <>
           <Sources status={status} onStatus={setStatus} notifications={notifications} onChanged={refresh} />
+          {/* Last synced, how many items are waiting, and why the last try failed, if it did. */}
+          {status.registered && <p className="fd-note tight">{syncWords(status, now)}</p>}
           <KeepRunning status={status} />
         </>
       )}

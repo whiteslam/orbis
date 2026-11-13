@@ -1,4 +1,4 @@
-import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename, refusalMessage, refusalStatus } from '@/lib/account/deletion-plan';
+import { EXPORT_TABLES, STORAGE_BUCKETS, exportFilename, leftOutQuietly, refusalMessage, refusalStatus } from '@/lib/account/deletion-plan';
 import { sensitiveRequester } from '@/lib/account/sensitive-auth';
 import { listUserObjects } from '@/lib/account/storage';
 import { decryptForUser, phoneDataReady } from '@/lib/crypto/user-keys';
@@ -91,19 +91,22 @@ export async function POST(request: Request) {
 
   const tables: Record<string, unknown[]> = {};
   const unavailable: string[] = [];
-  const results = await Promise.all(EXPORT_TABLES.map(async ({ table, columns, key }) => {
+  const results = await Promise.all(EXPORT_TABLES.map(async (entry) => {
+    const { table, columns, key } = entry;
     try {
-      return { table, rows: await readTable(supabase, userId, table, columns, key) };
+      return { table, rows: await readTable(supabase, userId, table, columns, key), quiet: false };
     } catch (error) {
-      // A table this session can't read (or that isn't set up yet) is left out
-      // and named, rather than failing the whole export.
+      // A phone table whose migration isn't applied yet holds nothing: it is
+      // simply left out. Any other table this session can't read (or that isn't
+      // set up yet) is left out and named, rather than failing the whole export.
+      if (leftOutQuietly(entry, error)) return { table, rows: null, quiet: true };
       console.error(`Account export: ${table} could not be read`, error);
-      return { table, rows: null };
+      return { table, rows: null, quiet: false };
     }
   }));
-  for (const { table, rows } of results) {
+  for (const { table, rows, quiet } of results) {
     if (rows) tables[table] = rows;
-    else unavailable.push(table);
+    else if (!quiet) unavailable.push(table);
   }
   let phoneDataNote: string | null = null;
   if (tables.signals) {

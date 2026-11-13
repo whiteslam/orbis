@@ -114,11 +114,30 @@ async function register(status: CoreStatus, userId: string): Promise<void> {
   try {
     await OrbisCore.setDevice({ deviceId, secret, userId });
   } catch {
+    // The server made a row the phone never saved; remove it so it doesn't count
+    // toward the ten phones. Best effort, by id only: the secret goes nowhere else.
+    await removeUnsaved(deviceId);
     return refused(response.status, null);
   }
   lastFailureAt = null;
   // A new credential: push is asked for again below (register() answers with the current token).
   resetPhoneLink();
+}
+
+/** Revokes a just-registered phone row through the person's session. Never rejects. */
+async function removeUnsaved(deviceId: string): Promise<void> {
+  try {
+    await fetch('/api/device/revoke', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId }),
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REGISTER_TIMEOUT_MS),
+    });
+  } catch {
+    // Offline or refused: the row stays until the person removes it in Settings.
+  }
 }
 
 function refused(status: number, body: unknown): void {

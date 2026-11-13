@@ -100,3 +100,18 @@ test('the WebView tells the site it is the Android app', () => {
   const config = read('capacitor.config.ts');
   assert.ok(config.includes("appendUserAgent: 'OrbisAndroid'"), 'capacitor.config.ts must append OrbisAndroid to the user agent');
 });
+
+test('pushes that arrive while Orbis is open are shown, and plugin calls are never logged', async () => {
+  const { default: config } = await import('@/capacitor.config');
+  assert.deepEqual(config.plugins?.PushNotifications, { presentationOptions: ['alert', 'sound', 'badge'] });
+  assert.equal(config.loggingBehavior, 'none');
+});
+
+test('cleartext is allowed only for an http:// server, never for the hosted https site', async () => {
+  const { serverFor } = await import('@/capacitor.config');
+  assert.equal(serverFor('https://orbis-starter.vercel.app').cleartext, undefined);
+  assert.equal(serverFor('https://abc.trycloudflare.com').cleartext, undefined);
+  assert.equal(serverFor('http://10.0.2.2:3000').cleartext, true);
+  assert.equal(serverFor('http://10.0.2.2:3000').url, 'http://10.0.2.2:3000');
+  assert.equal(serverFor('https://orbis-starter.vercel.app').errorPath, 'offline.html');
+});

@@ -1,6 +1,7 @@
 // What deleting an account removes, in what order, and what an export contains.
 // Pure, so the plan can be tested without a database.
 
+import { phoneTablesMissing } from '@/lib/device/not-set-up';
 import { rateLimitMessage } from '@/lib/security/rate-limit-rules';
 import { hasFreshAuth } from '@/lib/security/unlock-token';
 import { todayIn } from '@/lib/social/month';
@@ -39,10 +40,18 @@ export const STORAGE_BUCKETS: readonly string[] = ['health-documents', 'social-m
  * table holds a credential the person must never be sent, the comma-separated
  * columns to read instead (a table's column grants may also refuse '*').
  */
-export type ExportTable = { table: string; columns: '*' | string; key: string | readonly string[] };
+export type ExportTable = {
+  table: string;
+  columns: '*' | string;
+  key: string | readonly string[];
+  /** Arrives with a migration the web may be deployed ahead of; until then it is left out without a note. */
+  optional?: true;
+};
 
 /** Every devices column except secret_hash (the credential) and push_token. */
 const DEVICE_COLUMNS = 'id,user_id,name,platform,flavour,app_version,created_at,last_seen_at,revoked_at';
+/** The phone tables, from supabase/migrations/202611120004_devices.sql. */
+const PHONE_TABLES = new Set(['devices', 'device_sources', 'signals', 'activity_ledger']);
 const COMPOSITE_KEYS: Record<string, readonly string[]> = {
   device_sources: ['device_id', 'source'],
   activity_ledger: ['device_id', 'day', 'source'],
@@ -123,7 +132,17 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   table,
   columns: table === 'devices' ? DEVICE_COLUMNS : '*',
   key: COMPOSITE_KEYS[table] ?? (SINGLE_ROW_TABLES.has(table) ? 'user_id' : 'id'),
+  ...(PHONE_TABLES.has(table) ? { optional: true as const } : {}),
 }));
+
+/**
+ * Whether a table that couldn't be read is left out of the export without a note:
+ * only an optional (phone) table, and only because it isn't set up yet. Anything
+ * else is named under "could not be read just now", so the person knows to try again.
+ */
+export function leftOutQuietly(entry: ExportTable, error: unknown) {
+  return entry.optional === true && phoneTablesMissing(error);
+}
 
 /** Within this long of any sign-in, the session alone is proof enough. */
 export const DELETION_FRESH_AUTH_SEC = 10 * 60;

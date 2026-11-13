@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { skipsSessionRefresh } from '@/lib/device/session-free';
 import { buildCsp } from '@/lib/security/csp';
 import { updateSession } from '@/lib/supabase/proxy';
 
@@ -8,6 +9,10 @@ import { updateSession } from '@/lib/supabase/proxy';
 const PUBLIC_PAGES = new Set(['/', '/waitlist', '/privacy', '/terms', '/support', '/offline']);
 
 export async function proxy(request: NextRequest) {
+  // The phone's sync and self sign-out use its device credential. Any WebView cookies
+  // that ride along must not refresh (rotate) the person's session from the background.
+  if (skipsSessionRefresh(request.nextUrl.pathname, request.headers.get('authorization'))) return NextResponse.next();
+
   // A fresh nonce per request. Next reads it back out of the Content-Security-Policy
   // request header during rendering and stamps it on its own scripts; the layout
   // reads x-nonce for the inline theme script.

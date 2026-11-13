@@ -3,7 +3,7 @@
 // in Node: the phone's codes (wire names, drop reasons) never reach the screen raw.
 
 import { SOURCES, type Source } from '@/lib/device/sources';
-import type { ActivityEntry, LauncherApp } from './orbis-core';
+import type { ActivityEntry, CoreStatus, LauncherApp } from './orbis-core';
 
 export const SOURCE_LABELS: Record<Source, string> = {
   test: 'Test source',
@@ -97,4 +97,24 @@ export function lastSeenWords(iso: string | null, now: number): string {
   }
   const days = Math.floor(ago / DAY);
   return days === 1 ? 'Yesterday' : `${days} days ago`;
+}
+
+// The phone's short sync-failure codes that aren't words already (SyncRunner: "network",
+// "storage"); "HTTP 503" and "unexpected response" are shown as they are.
+const SYNC_ERRORS: Record<string, string> = {
+  network: 'no connection',
+  storage: 'this phone’s storage was busy',
+};
+
+/**
+ * This phone's sync in one line: "Last synced 5 minutes ago · 3 waiting", with
+ * "· Couldn’t sync: unexpected response" added while the last try failed.
+ */
+export function syncWords(status: Pick<CoreStatus, 'lastSyncAt' | 'pendingSignals' | 'lastSyncError'>, now: number): string {
+  const when = status.lastSyncAt === null ? null : new Date(status.lastSyncAt).toISOString();
+  const parts = [when ? `Last synced ${lastSeenWords(when, now).toLowerCase()}` : 'Not synced yet'];
+  if (status.pendingSignals > 0) parts.push(`${status.pendingSignals} waiting`);
+  const error = status.lastSyncError?.trim();
+  if (error) parts.push(`Couldn’t sync: ${Object.hasOwn(SYNC_ERRORS, error) ? SYNC_ERRORS[error] : error}`);
+  return parts.join(' · ');
 }
