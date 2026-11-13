@@ -113,6 +113,14 @@
 .wl-done strong { color: var(--fd-ink); font-weight: 650; }
 .wl-text-button { min-height: 44px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--fd-accent); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
 
+.wl-submit:focus-visible, .wl-text-button:focus-visible { outline: 2px solid var(--on-fill); outline-offset: 2px; }
+/* A link wearing this class is a block by default: centre its text in the 44px target, as a <button> does. */
+.wl-text-button { display: inline-flex; align-items: center; text-decoration: none; }
+.wl-text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* The error page: the hero's column, centred in the window. No eclipse here,
+   so it never takes the phone hero's room for one. */
+.wl-hero.wl-boundary { align-items: center; min-height: 100vh; min-height: 100dvh; padding: 56px 0; }
 .wl-boundary-act { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 26px; }
 .wl-boundary-act .wl-submit { min-width: 150px; margin-top: 0; padding: 0 22px; }
 .wl-boundary-act .wl-text-button { margin-top: 0; }
