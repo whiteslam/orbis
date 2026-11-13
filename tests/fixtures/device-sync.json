@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "appVersion": "0.1.0",
+    "pushToken": "fcm-token-fixture-0001"
+  },
+  "sources": [
+    { "source": "test", "enabled": true }
+  ],
+  "signals": [
+    {
+      "id": "7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0001",
+      "source": "test",
+      "kind": "test_item",
+      "occurredAt": "2026-11-12T08:15:30.250Z",
+      "content": "Test item one"
+    },
+    {
+      "id": "7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0002",
+      "source": "test",
+      "kind": "test_item",
+      "occurredAt": "2026-11-12T09:00:00Z",
+      "content": "Test item two, with emoji 😀 and café"
+    }
+  ],
+  "ledger": [
+    { "day": "2026-11-12", "source": "test", "kept": 2, "dropped": 1, "actions": 0 }
+  ]
+}
