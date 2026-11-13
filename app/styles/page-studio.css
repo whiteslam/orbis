@@ -75,3 +75,92 @@
 .st-chip-ai { color: var(--fd-accent); }
 .st-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding: 0 12px 12px; }
 .st-card-note { width: 100%; margin: 0; color: var(--brand-gold); font-size: 12px; line-height: 1.4; }
+
+/* ─── The composer ─── */
+.st-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--fd-rule);
+  border-radius: 22px;
+  background: var(--fd-card);
+}
+.st-composer-text {
+  width: 100%;
+  min-height: 72px;
+  max-height: 220px;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--fd-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  field-sizing: content;
+}
+.st-composer-text::placeholder { color: var(--fd-faint); }
+.st-composer-file { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px; border-radius: 14px; background: var(--fd-chip); color: var(--fd-soft); font-size: 13px; }
+.st-composer-file img, .st-composer-file video { flex: none; width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+.st-composer-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-composer-file .st-icon-btn { margin-left: auto; }
+.st-composer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.st-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--fd-rule);
+  border-radius: 999px;
+  background: none;
+  color: var(--fd-soft);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.st-pill::-webkit-details-marker { display: none; }
+.st-pill:hover { color: var(--fd-ink); }
+.st-pill:focus-within, .st-pill:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 1px; }
+.st-pill select, .st-pill input[type="date"] { border: 0; background: none; color: inherit; font: inherit; outline: none; color-scheme: dark light; }
+.st-pill-menu { position: relative; }
+.st-pill-menu fieldset {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--fd-rule);
+  border-radius: 16px;
+  background: var(--fd-surface, var(--sys-surface));
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, .7);
+}
+.st-pill-menu label { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 8px; border-radius: 10px; color: var(--fd-ink); font-size: 14px; }
+.st-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fd-btn, var(--brand-teal));
+  color: var(--fd-btn-ink, var(--brand-on-accent));
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.st-add:disabled { opacity: .45; cursor: default; }
+.st-icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: var(--fd-soft); cursor: pointer; }
+.st-composer-msg { color: var(--fd-soft); font-size: 13px; }
+.st-composer-msg.error { color: var(--fd-alert); }
