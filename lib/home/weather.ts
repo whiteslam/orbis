@@ -1,3 +1,5 @@
+import type { HourTemp } from '@/lib/home/hours';
+
 /** The weather the Home screen fetched, as the brief and the weather line read it. */
 export type BriefWeather = {
   temperature: number;
@@ -14,4 +16,6 @@ export type BriefWeather = {
     soon: number;
     peak: { probability: number; hour: string } | null;
   };
+  /** Hourly temperatures for the next 12 hours; absent on entries cached before this field existed. */
+  hours?: HourTemp[];
 };

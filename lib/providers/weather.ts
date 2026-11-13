@@ -2,6 +2,7 @@ import 'server-only';
 
 import { cached } from '@/lib/providers/cache';
 import { ProviderError, providerJson, type Fetched } from '@/lib/providers/core';
+import { hourLabel, nextHours, type HourTemp } from '@/lib/home/hours';
 
 export type Weather = {
   temperature: number;
@@ -24,6 +25,8 @@ export type Weather = {
     soon: number;
     peak: { probability: number; hour: string } | null;
   };
+  /** The temperature for each of the next 12 hours, for a curve. */
+  hours: HourTemp[];
 };
 
 // WMO weather interpretation codes, as used by Open-Meteo.
@@ -43,20 +46,11 @@ function describe(code: number) {
 
 type ForecastResponse = {
   current?: { time?: string; temperature_2m?: number; apparent_temperature?: number; relative_humidity_2m?: number; weather_code?: number; wind_speed_10m?: number; is_day?: number };
-  hourly?: { time?: string[]; precipitation_probability?: Array<number | null> };
+  hourly?: { time?: string[]; precipitation_probability?: Array<number | null>; temperature_2m?: Array<number | null> };
 };
 
 /** Codes 51-67 and 80-99 are precipitation falling now, not a chance of it. */
 const PRECIPITATING = (code: number) => (code >= 51 && code <= 67) || (code >= 80 && code <= 99);
-
-/** "2026-09-25T21:00" → "9 pm", the hour a forecast actually refers to. */
-function hourLabel(iso: string) {
-  const hour = Number(iso.slice(11, 13));
-  if (!Number.isFinite(hour)) return iso;
-  if (hour === 0) return 'midnight';
-  if (hour === 12) return 'noon';
-  return hour < 12 ? `${hour} am` : `${hour - 12} pm`;
-}
 
 /** How many hours ahead the rain outlook looks. */
 const RAIN_WINDOW_HOURS = 12;
@@ -75,7 +69,7 @@ export async function getWeather(latitude: number, longitude: number, userId: st
       + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
       // Two days, so an outlook taken at 11pm still has a full window ahead of
       // it instead of stopping at midnight.
-      + '&hourly=precipitation_probability&forecast_days=2&timezone=auto';
+      + '&hourly=precipitation_probability,temperature_2m&forecast_days=2&timezone=auto';
     const body = await providerJson<ForecastResponse>('open_meteo', url);
     const current = body.current;
     if (!current || typeof current.temperature_2m !== 'number' || typeof current.weather_code !== 'number') throw new ProviderError('open_meteo', 'unavailable');
@@ -107,6 +101,7 @@ export async function getWeather(latitude: number, longitude: number, userId: st
         soon: window[0]?.probability ?? 0,
         peak: worst && worst.probability > 0 ? { probability: worst.probability, hour: hourLabel(worst.time) } : null,
       },
+      hours: nextHours(times, body.hourly?.temperature_2m ?? [], nowHour, RAIN_WINDOW_HOURS),
     };
   });
 }
