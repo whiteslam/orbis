@@ -81,6 +81,10 @@ on conflict (user_id) do update set plan_id = excluded.plan_id;
 
 See `docs/phase-1-owner-actions.md` for the full pre-deploy checklist the Phase 1 migrations are part of, and `docs/ops/phase-0-owner-actions.md` for what only you can do before opening Orbis to other people.
 
+## Android app
+
+`android/` holds the Android app: a Capacitor shell around the hosted site, plus a Kotlin module (`android/orbis-core`) that applies the person's privacy rules on the phone and syncs only what they chose to share. Nothing is read until a source is turned on. A fresh clone needs `pnpm install` and `npx cap sync android` before Gradle. Build, test and release steps are in [`docs/ops/android.md`](./docs/ops/android.md); the owner's ordered to-do list is [`docs/ops/phase-1-owner-actions.md`](./docs/ops/phase-1-owner-actions.md).
+
 ## Scripts
 
 | Script | What it does |
@@ -125,4 +129,5 @@ TypeScript is pinned to `6.0.3` because `typescript-eslint`'s current release re
 - [`AUDIT_REPORT.md`](./AUDIT_REPORT.md) — the codebase audit this Phase 1 plan was built from.
 - [`BUILD_ROADMAP.md`](./BUILD_ROADMAP.md) — where the project stands and what's next.
 - [`docs/ops/phase-0-owner-actions.md`](./docs/ops/phase-0-owner-actions.md) — the steps only the owner can do before opening sign-up to other people (migrations, owner role, staging, Google sign-in, Sentry, legal text).
+- [`docs/ops/phase-1-owner-actions.md`](./docs/ops/phase-1-owner-actions.md) � the Android app's owner steps (Play account, Firebase, keys, test phones).
 - [`docs/phase-1-owner-actions.md`](./docs/phase-1-owner-actions.md) — the checklist of steps only the project owner can do (Vercel/Supabase dashboard settings, migrations, legal copy).

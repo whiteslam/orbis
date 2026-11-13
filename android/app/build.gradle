@@ -21,8 +21,22 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    // Release signing. The keystore stays outside the repo; its path and passwords come from
+    // ~/.gradle/gradle.properties (see docs/ops/android.md). Without them release builds are unsigned.
+    signingConfigs {
+        release {
+            def storePath = project.findProperty('ORBIS_UPLOAD_STORE_FILE')
+            if (storePath) {
+                storeFile file(storePath)
+                storePassword project.findProperty('ORBIS_UPLOAD_STORE_PASSWORD')
+                keyAlias project.findProperty('ORBIS_UPLOAD_KEY_ALIAS')
+                keyPassword project.findProperty('ORBIS_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (project.findProperty('ORBIS_UPLOAD_STORE_FILE')) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
