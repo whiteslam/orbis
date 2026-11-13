@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Copy, Download, LoaderCircle, Play, Trash2 } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, LoaderCircle, Play, SquarePlay, Trash2 } from 'lucide-react';
 import { deleteShortAction, loadFilesAction } from '@/app/shorts/actions';
+import { draftForYouTubeAction, queueForYouTubeAction } from '@/app/shorts/youtube-actions';
+import { YouTubeSheet } from '@/components/shorts/youtube-sheet';
 import { safeAction } from '@/lib/client/safe-action';
 import type { ShortJob } from '@/lib/shorts/types';
-import type { ShortFiles } from '@/lib/shorts/view';
+import type { ShortFiles, ShortsView } from '@/lib/shorts/view';
+import type { VideoDetails } from '@/lib/youtube/types';
+
+/** Where one short stands on YouTube, from ShortsView.youtube. */
+export type YouTubeState = ShortsView['youtube'][string];
 
 function CopyButton({ text, label }: Readonly<{ text: string; label: string }>) {
   const [copied, setCopied] = useState(false);
@@ -47,12 +53,62 @@ export function LibraryGrid({ jobs, covers, onOpen }: Readonly<{ jobs: ShortJob[
   );
 }
 
+/** Add to YouTube, or where the short already stands there. */
+function YouTubeButton({ jobId, youtube, onQueued, onProblem }: Readonly<{ jobId: string; youtube: YouTubeState | null; onQueued: () => void; onProblem: (message: string | null) => void }>) {
+  const [drafting, setDrafting] = useState(false);
+  const [draft, setDraft] = useState<VideoDetails | null>(null);
+  const [queuedHere, setQueuedHere] = useState(false);
+
+  if (youtube?.status === 'published') {
+    return youtube.youtubeId
+      ? <a className="so-action" href={`https://youtube.com/shorts/${youtube.youtubeId}`} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} aria-hidden="true" /><span>On YouTube</span></a>
+      : <span className="sh-yt-state"><SquarePlay size={14} aria-hidden="true" /> On YouTube</span>;
+  }
+  if (queuedHere || youtube?.status === 'queued' || youtube?.status === 'uploading') {
+    return <span className="sh-yt-state"><SquarePlay size={14} aria-hidden="true" /> In the YouTube queue</span>;
+  }
+
+  async function open() {
+    setDrafting(true);
+    onProblem(null);
+    const result = await safeAction(draftForYouTubeAction)(jobId);
+    setDrafting(false);
+    if (result.success) setDraft(result.data);
+    else onProblem(result.message);
+  }
+
+  async function save(details: VideoDetails): Promise<string | null> {
+    const result = await safeAction(queueForYouTubeAction)(jobId, details);
+    if (!result.success) return result.message;
+    setQueuedHere(true);
+    onQueued();
+    return null;
+  }
+
+  return (
+    <>
+      <button type="button" className="so-action" onClick={() => void open()} disabled={drafting}>
+        {drafting ? <LoaderCircle className="workbook-spinner" size={15} aria-hidden="true" /> : <SquarePlay size={15} aria-hidden="true" />}
+        <span>Add to YouTube</span>
+      </button>
+      {draft && <YouTubeSheet initial={draft} onSave={save} onClose={() => setDraft(null)} />}
+    </>
+  );
+}
+
 /** A finished short: watch it, download it, and the words to post it with. */
-export function ShortResult({ job, onDeleted }: Readonly<{ job: ShortJob; onDeleted: () => void }>) {
+export function ShortResult({ job, youtube = null, onDeleted, onQueued }: Readonly<{
+  job: ShortJob;
+  youtube?: YouTubeState | null;
+  onDeleted: () => void;
+  /** After it joins the YouTube queue, so Shorts can refresh what it knows. */
+  onQueued?: () => void;
+}>) {
   const [files, setFiles] = useState<ShortFiles | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [youtubeProblem, setYouTubeProblem] = useState<string | null>(null);
   const delivery = job.delivery;
 
   useEffect(() => {
@@ -88,6 +144,7 @@ export function ShortResult({ job, onDeleted }: Readonly<{ job: ShortJob; onDele
       </div>
       <div className="sh-result-side">
         {problem && <p className="fd-msg bad">{problem}</p>}
+        {youtubeProblem && <p className="fd-msg bad" role="alert">{youtubeProblem}</p>}
         <div className="sh-actions">
           {files && (
             <a className="so-action primary" href={files.video} download={name}>
@@ -102,6 +159,7 @@ export function ShortResult({ job, onDeleted }: Readonly<{ job: ShortJob; onDele
           {files?.cover && (
             <a className="fd-link" href={files.cover} download={name.replace('.mp4', '-cover.jpg')}>Cover image</a>
           )}
+          <YouTubeButton jobId={job.id} youtube={youtube} onQueued={() => onQueued?.()} onProblem={setYouTubeProblem} />
         </div>
 
         <dl className="sh-post">

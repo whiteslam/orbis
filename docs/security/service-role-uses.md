@@ -57,7 +57,7 @@ If a file stops importing the client, remove it from both places; the test says 
 - **switched to RLS**: the content reads now use the person's session. The file stays listed because something else in it still needs the service role.
 - **needs owner decision**: a request-path read of user content that the person's session can't do today. Switching would need a migration (grants or a Storage policy) or a wider refactor. The row says why.
 
-Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th file, `lib/notifications/context.ts`, used its value import only as a type; it is now `import type` and off the list.
+Counts: 47 files. 41 ok, 2 switched to RLS, 4 need an owner decision. A 45th file, `lib/notifications/context.ts`, used its value import only as a type; it is now `import type` and off the list.
 
 ## Files
 
@@ -70,6 +70,7 @@ Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th fil
 | `app/api/headsups/scan/route.ts` | Cron (`cronAuthorized`) that runs the heads-up checks for everyone with a preferences row. | each person on the scan | yes: the records the checks look at (money, routines, steps, plans), to raise their own heads-ups | ok |
 | `app/api/notifications/dispatch/route.ts` | Cron (`cronAuthorized`) that sends each person's due notification slots. It reads all enabled `notification_preferences`. | each person with notifications on | yes, through `lib/notifications/context.ts` (see below), for their own notification | ok |
 | `app/api/research/weekly/route.ts` | Cron (`cronAuthorized`) that queues weekly research and settles past runs. Uses `auth.admin.getUserById` to check Research-desk access by email. | Research-desk users (owner-only today) | research runs and settings only, no personal records | ok |
+| `app/api/social/youtube/publish/route.ts` | YouTube publish (cron): reads every person's due queue and uploads their videos from the `shorts` bucket; CRON_SECRET only. The work is in `lib/youtube/publish.ts`, which is handed this client. | each person with a connected YouTube and a waiting video, one at a time | yes: their queued video file and its details, sent to their own channel | ok |
 | `app/auth/callback/route.ts` | New-account guard: `auth.admin.deleteUser`, falling back to a ban, when sign-up isn't allowed. | the account just created | no | ok |
 | `app/career/actions.ts` | "Search now" runs the cron's `ingestUser` for the signed-in person. It writes service-role bookkeeping (source cursors, last run, `career_mail`) and reads the Gmail token. | the signed-in person | yes: their job-alert mail, read from Gmail with their token, on a request path | needs owner decision: the content comes from Gmail rather than another person's rows, but the request path holds a service-role client. Splitting ingest into session-scoped reads and service-role bookkeeping is a refactor, and `career_mail` and the cursor columns have no `authenticated` write grant. Recommend keeping it. |
 | `app/headsups/actions.ts` | "Clear all" deletes heads-ups. People have only `update (status, snoozed_until)`. Everything else in the file uses the session. | the signed-in person | no (delete only) | ok |
@@ -78,7 +79,8 @@ Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th fil
 | `app/invest/ai-actions.ts` | AI credit (`dailyLimit` and the claim RPC). | the signed-in person | no | ok |
 | `app/personal/notification-actions.ts` | Subscribing a device inserts into `push_subscriptions`, which people can only select and delete (hardening). "Send a test" runs the cron's `deliverSlot`, which writes `notification_log`. | the signed-in person | yes: the test builds the real message from their routines, spending, steps and social plan | needs owner decision: the reads are the person's own, for their own test. But `deliverSlot`, `buildNotificationContext` and `pushToUser` take one service-role client, and `notification_log` writes are server-only. Passing a session client for the context reads only is a refactor across the cron's delivery path. |
 | `app/research/actions.ts` | Research desk: queues, cancels and saves settings in `research_runs` and `research_settings`. People have select only. | the signed-in owner | no | ok |
-| `app/shorts/actions.ts` | Shorts: queues, edits, cancels and deletes `shorts_jobs` (people have select only); every write is keyed to the signed-in person's id after their own session reads the job. Signs private `shorts` bucket URLs, only for paths under `<user>/<job>/` or shared `styles/` sheets. | the signed-in person | no (reads go through the session) | ok |
+| `app/shorts/actions.ts` | Shorts: queues, edits, cancels and deletes `shorts_jobs` (people have select only); every write is keyed to the signed-in person's id after their own session reads the job. Signs private `shorts` bucket URLs, only for paths under `<user>/<job>/` or shared `styles/` sheets. It also reads `youtube_queue` with the service role, keyed to the person's id: where each of their shorts stands on YouTube, for the list, and whether a short still has a live row before it is deleted (R6). | the signed-in person | no (queue status and YouTube video id only) | ok |
+| `app/shorts/youtube-actions.ts` | Shorts → YouTube: the queue, schedule and Post now. Reads the person's own shorts through their session, then writes `youtube_queue`, `youtube_settings` and `youtube_presets` (people have select only) and starts the publisher for one of their rows. Every call is keyed to the signed-in person's id. Signs `shorts` bucket covers only under `<user>/`. | the signed-in person | yes: their queued video's title, description and cover (shown to them only) | ok |
 | `app/waitlist/actions.ts` | Adds an email to `waitlist`, which has no public grants. | the visitor's own email | no | ok |
 | `lib/account/delete.ts` | Account deletion: reads the user with `auth.admin.getUserById`, removes their files from every bucket, then calls `auth.admin.deleteUser`. | the signed-in person (password re-checked) | no | ok |
 | `lib/ai/consent-store.ts` | Reads the person's AI on/off switch. Also used from crons and AI calls where no session exists. | one person | no (a setting) | ok |
@@ -108,6 +110,7 @@ Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th fil
 | `lib/social/connections.ts` | Social platform sessions (encrypted tokens). | one person | no (tokens) | ok |
 | `lib/social/ai-credit.ts` | `consume_social_ai_request` RPC (the daily Social AI quota: drafts, Orbis promotion posts, new images). Moved here from `app/social/actions.ts`, which now uses only the session. | the signed-in person | no | ok |
 | `lib/storage/signed-upload.ts` | Signs uploads into, reads back and removes files from the staging bucket, which deliberately has no user policy. Claims each staged path once in `staged_upload_claims`. | the signed-in uploader | yes: the file they just uploaded, read once to parse it for their own request | needs owner decision: reading it with the session would need a select-own Storage policy on the staging bucket. With no policy, a leaked upload token can't be used to read or list files. Recommend keeping it. |
+| `lib/youtube/connection.ts` | YouTube connection: stores and reads the encrypted refresh token in `social_connections` (no browser grants). | one person | no (tokens) | ok |
 
 ### Type-only importers (not on the allowlist)
 
@@ -122,6 +125,8 @@ These name the client's type for a parameter. The caller hands them the client, 
 - `lib/notifications/deliver.ts`
 - `lib/notifications/push.ts`: it also reads `devices.push_token` (not granted to `authenticated`, so only the service role can) for the person it is sending to, and clears the token of that person's own phone when FCM reports it gone. Every query is filtered by that `user_id`.
 - `lib/security/roles.ts`
+- `lib/youtube/publish.ts`: YouTube publish (cron): reads every person's due queue and uploads their videos from the `shorts` bucket; CRON_SECRET only. Handed the client by the publish route and by Post now (`app/shorts/youtube-actions.ts`).
+- `lib/youtube/repository.ts`: YouTube queue, settings and presets: writes keyed to the signed-in person or, from the cron, the row's owner.
 
 `lib/notifications/context.ts` reads the person's routines, spending, steps, persona and social plan to word their notification. It is called by the dispatch cron and by "Send a test" (see `app/personal/notification-actions.ts` above).
 

@@ -9,8 +9,24 @@ import { BrandMark } from '@/components/settings/brand-mark';
 import { safeAction } from '@/lib/client/safe-action';
 
 const PLATFORMS = [
-  { id: 'instagram', name: 'Instagram', detail: 'Publish planned posts, read-only otherwise' },
-  { id: 'threads', name: 'Threads', detail: 'Publish planned posts, read-only otherwise' },
+  {
+    id: 'instagram', name: 'Instagram', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/instagram/start', handle: '@',
+    notConfigured: 'Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.',
+    expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
+    confirm: 'Disconnect Instagram? Posts you already published stay as they are.',
+  },
+  {
+    id: 'threads', name: 'Threads', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/threads/start', handle: '@',
+    notConfigured: 'Set THREADS_APP_ID and THREADS_APP_SECRET.',
+    expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
+    confirm: 'Disconnect Threads? Posts you already published stay as they are.',
+  },
+  {
+    id: 'youtube', name: 'YouTube', detail: 'Upload your shorts on a schedule', href: '/auth/youtube/start', handle: '',
+    notConfigured: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+    expired: 'Google stopped accepting Orbis’s access. Connect again.',
+    confirm: 'Disconnect YouTube? Videos already on your channel stay there. Queued shorts wait until you connect again.',
+  },
 ] as const;
 
 /** The status pill: connected, waiting on a reconnect, or not connected at all. */
@@ -26,7 +42,7 @@ function connectLabel(name: string, linked: boolean, expired: boolean) {
 }
 
 /**
- * Instagram and Threads in Connections.
+ * Instagram, Threads and YouTube in Connections.
  *
  * Both were already planning targets: a post could be drafted for them and
  * marked published by hand. What was missing was the account itself, so nothing
@@ -37,8 +53,8 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function disconnect(platform: string, name: string) {
-    if (!window.confirm(`Disconnect ${name}? Posts you already published stay as they are.`)) return;
+  function disconnect(platform: string, confirmText: string) {
+    if (!window.confirm(confirmText)) return;
     startTransition(async () => {
       await safeAction(disconnectSocialAction)(platform);
       router.refresh();
@@ -58,7 +74,7 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
               <span className="pf-app-tile fd-tile pf-tile" aria-hidden="true"><BrandMark id={platform.id} /></span>
               <span className="fd-two">
                 {platform.name}
-                <small>{linked?.username ? `@${linked.username}` : platform.detail}</small>
+                <small>{linked?.username ? `${platform.handle}${linked.username}` : platform.detail}</small>
               </span>
               <span className={`app-status pf-status ${status.tone}`}>
                 <i aria-hidden="true" />{status.label}
@@ -68,19 +84,19 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
             {!ready && <p className="fd-note tight">Apply the social connections migration in Supabase to link these.</p>}
             {ready && !isConfigured && (
               <p className="fd-note tight">
-                Not configured on this server. {platform.id === 'instagram' ? 'Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.' : 'Set THREADS_APP_ID and THREADS_APP_SECRET.'}
+                Not configured on this server. {platform.notConfigured}
               </p>
             )}
-            {expired && <p className="fd-note tight">The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.</p>}
+            {expired && <p className="fd-note tight">{platform.expired}</p>}
 
             <div className="fd-act pf-act">
               {ready && isConfigured && (
-                <a className="fd-button" href={`/auth/social/${platform.id}/start`}>
+                <a className="fd-button" href={platform.href}>
                   {connectLabel(platform.name, Boolean(linked), expired)}
                 </a>
               )}
               {linked && (
-                <button className="fd-link alert" type="button" disabled={isPending} onClick={() => disconnect(platform.id, platform.name)}>
+                <button className="fd-link alert" type="button" disabled={isPending} onClick={() => disconnect(platform.id, platform.confirm)}>
                   <Unplug size={13} aria-hidden="true" /> Disconnect
                 </button>
               )}

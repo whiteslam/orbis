@@ -14,6 +14,7 @@ import { getRoutinesSummary } from '@/lib/routines/repository';
 import { getSocialConnections } from '@/lib/social/connections';
 import { getRole } from '@/lib/security/roles';
 import { metaConfigured } from '@/lib/social/meta';
+import { youtubeConfigured } from '@/lib/youtube/google';
 import { listMonth } from '@/lib/social/repository';
 import { periodOfDate } from '@/lib/social/month';
 import { getPersonSettings } from '@/lib/locale/repository';
@@ -79,7 +80,7 @@ export default async function Page() {
   return (
     <AppLockGuard idleMs={APP_LOCK_IDLE_MS}>
       <PersonSettingsProvider value={settings}>
-        <AppShell userId={userId} financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads') } }} socialIsOwner={role === 'owner'} />
+        <AppShell userId={userId} financeSummary={financeSummary} contextNotes={contextNotes} fitnessPersona={fitnessPersona} personalProfile={personalProfile} stepsSummary={stepsSummary} homeLocation={homeLocation} integrations={integrations} journal={journal} notificationSettings={notificationSettings} appConnections={appConnections} healthLibrary={healthLibrary} savedWorkbookAdvice={savedWorkbookAdvice} savedPortfolioAdvice={savedPortfolioAdvice} aiPreferences={aiPreferences} routines={routines} socialMonth={{ ...socialMonth, period: socialPeriod }} socialConnections={{ ...socialConnections, configured: { instagram: metaConfigured('instagram'), threads: metaConfigured('threads'), youtube: youtubeConfigured() } }} socialIsOwner={role === 'owner'} />
       </PersonSettingsProvider>
     </AppLockGuard>
   );

@@ -14,6 +14,7 @@ const BRAND_FILES: Record<string, string> = {
   google: '/brands/google.svg',
   instagram: '/brands/instagram.svg',
   threads: '/brands/threads.svg',
+  youtube: '/brands/youtube.svg',
   groww: '/brands/groww.png',
   zerodha: '/brands/zerodha.svg',
 };

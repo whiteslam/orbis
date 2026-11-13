@@ -79,6 +79,18 @@ The service stops when you log out. To keep it running after you log out: `login
 - **Claude Code signed out or out of usage:** the job fails with a clear note, and the worker waits 30 minutes before taking the next one.
 - **Project folders stay on this PC.** Later revisions will re-render from them.
 
+## Moving YouTube publishing into Orbis
+
+Orbis now posts to YouTube itself, so the old PC publisher (`~/faceless-shorts/publisher/yt.py` and its timer) can retire. One script moves its queue over, once:
+
+```bash
+cd workers/shorts-studio
+npm run import-youtube-queue              # dry run: prints the plan, writes nothing
+npm run import-youtube-queue -- --apply   # uploads the videos and adds them to the Orbis queue
+```
+
+It uses the same `~/.config/orbis-shorts/.env`, skips anything already published or already queued, and is safe to run again. The full order of steps (migration, Google settings, Connect YouTube, the live check, and only then switching the timer off) is in `docs/ops/youtube-owner-actions.md`.
+
 ## Tests
 
 ```bash

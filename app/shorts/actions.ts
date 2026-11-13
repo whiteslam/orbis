@@ -19,6 +19,7 @@ import { canApprove, canCancel, canDelete, canRetry, cleanTopic, IN_FLIGHT, LIMI
 import type { JobStatus, ShortJob } from '@/lib/shorts/types';
 import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/view';
 import { getPersonSettings } from '@/lib/locale/repository';
+import { activeQueueFor, hasActiveQueue } from '@/lib/youtube/repository';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
 const INVALID = { success: false as const, message: 'That request isn’t valid. Reload and try again.' };
@@ -68,6 +69,8 @@ export async function loadShortsViewAction(): Promise<Result<ShortsView>> {
       const url = job.delivery?.files.cover ? signed.get(job.delivery.files.cover) : undefined;
       if (url) covers[job.id] = url;
     }
+    // A YouTube problem never breaks Shorts: without the tables this is {}.
+    const youtube = await activeQueueFor(admin, me.userId, jobs.filter((job) => job.status === 'done').map((job) => job.id)).catch(() => ({}));
     return ok({
       presence: workerPresence(worker, new Date()),
       worker,
@@ -75,6 +78,7 @@ export async function loadShortsViewAction(): Promise<Result<ShortsView>> {
       jobs,
       covers,
       monthUsed,
+      youtube,
     });
   });
 }
@@ -151,7 +155,10 @@ export async function deleteShortAction(jobId: unknown): Promise<Result<null>> {
     const job = await getJob(me.db, me.userId, jobId);
     if (!job) return NOT_FOUND;
     if (!canDelete(job)) return fail('Stop the short before deleting it.');
-    const removed = await deleteJob(createAdminClient(), me.userId, jobId, ['done', 'failed', 'cancelled']);
+    // R6: a short waiting in (or uploading from) the YouTube queue can't go, or its video would vanish from under the row.
+    const admin = createAdminClient();
+    if (await hasActiveQueue(admin, me.userId, jobId)) return fail('Remove it from the YouTube queue first.');
+    const removed = await deleteJob(admin, me.userId, jobId, ['done', 'failed', 'cancelled']);
     return removed ? ok(null) : fail(MOVED_ON);
   });
 }

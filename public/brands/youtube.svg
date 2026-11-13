@@ -1,0 +1,8 @@
+<!-- YouTube's play button: a rounded red rectangle with a white triangle.
+     A drawn approximation of the published mark; replace with an official
+     asset if you have licensed one. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="YouTube">
+  <rect width="24" height="24" rx="6" fill="#fff"/>
+  <rect x="2.5" y="5.5" width="19" height="13" rx="4" fill="#f00"/>
+  <path d="M10 9.3v5.4l4.7-2.7z" fill="#fff"/>
+</svg>

@@ -6,6 +6,7 @@ import { UserFacingError } from '@/lib/errors';
 import { disconnectGmail } from '@/lib/gmail/connection';
 import { deleteGrowwConnection } from '@/lib/invest/groww-connection';
 import { deleteZerodhaConnection } from '@/lib/invest/zerodha-connection';
+import { disconnectYouTube } from '@/lib/youtube/connection';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isMissingTable } from '@/lib/supabase/errors';
 
@@ -27,7 +28,10 @@ const NOTHING_REMOVED = 'Your account wasn’t deleted, and nothing in it has be
 async function revokeConnections(userId: string) {
   // Google is asked to revoke the refresh token; the row goes either way.
   const gmail = await disconnectGmail(userId);
-  if (!gmail.revoked) console.error('deleteAccount: Google did not confirm token revocation', userId);
+  if (!gmail.revoked && !gmail.sharedWithYouTube) console.error('deleteAccount: Google did not confirm token revocation', userId);
+  // Gmail leaves the shared Google grant alone while YouTube is connected, so
+  // YouTube goes next: with Gmail gone, it is the one that withdraws the grant.
+  await disconnectYouTube(userId);
   await deleteGrowwConnection(userId);
   await deleteZerodhaConnection(userId);
 }
