@@ -19,9 +19,10 @@ import { loadConfig } from './config.ts';
 const BUCKET = 'shorts';
 const PRIVACIES = ['public', 'unlisted', 'private'];
 const DEFAULT_CATEGORY = '24';
+const PAGE = 1000;
 
 type PlanItem = { project: string; videoPath: string; coverPath: string };
-type Planned = PlanItem & { skip: 'published' | 'already queued' | null };
+type Planned = PlanItem & { skip: string | null };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -106,17 +107,40 @@ export function readYouTubeJson(json: unknown, fallbackTitle: string): VideoDeta
   return details;
 }
 
-function planAll(queue: string[], published: Set<string>, alreadyQueuedPaths: Set<string>, owner: string): Planned[] {
+/** Each queue entry with where it goes, and why it is left out, if it is. */
+export function planAll(queue: string[], published: Set<string>, alreadyQueuedPaths: Set<string>, owner: string): Planned[] {
   const publishedKeys = new Set([...published].map(projectKey));
-  const taken = new Set(alreadyQueuedPaths);
+  const taken = new Map<string, string>();
   return queue.map((project) => {
     const folder = pathSafe(project);
     const videoPath = `${owner}/imported/${folder}/video.mp4`;
     const coverPath = `${owner}/imported/${folder}/cover.jpg`;
-    const skip = publishedKeys.has(projectKey(project)) ? 'published' : taken.has(videoPath) ? 'already queued' : null;
-    if (!skip) taken.add(videoPath);
+    const earlier = taken.get(videoPath);
+    const skip = publishedKeys.has(projectKey(project)) ? 'published'
+      : alreadyQueuedPaths.has(videoPath) ? 'already queued'
+      : earlier !== undefined ? `same folder name as ${earlier}`
+      : null;
+    if (!skip) taken.set(videoPath, project);
     return { project, videoPath, coverPath, skip };
   });
+}
+
+/**
+ * Whether published.json can be trusted. A published entry that cannot be read, or a published
+ * list that names nothing we know (no queued project and no project folder), means the format is
+ * probably not what we expect, and a project already live would be queued and posted twice.
+ */
+export function checkPublished(
+  published: { projects: string[]; unreadable: string[] },
+  queue: string[],
+  folders: string[],
+): { notes: string[]; blocking: boolean } {
+  const notes = published.unreadable.map((note) => `published.json: ${note.replace('queue entry', 'entry')}`);
+  const known = new Set([...queue, ...folders].map(projectKey));
+  if (published.projects.length > 0 && !published.projects.some((project) => known.has(projectKey(project)))) {
+    notes.push('published.json: none of its names match a queued project or a project folder, so its format is probably not what this script expects');
+  }
+  return { notes, blocking: notes.length > 0 };
 }
 
 /** What to import, in queue order: not published, and not already in the queue by video_path. */
@@ -180,21 +204,33 @@ async function main(argv: string[]) {
   };
 
   const queueFile = parseQueueFile(read('queue.json'));
-  let published = new Set<string>();
-  if (existsSync(join(publisherDir, 'published.json'))) published = readPublished(read('published.json'));
+  let publishedFile = { projects: [] as string[], unreadable: [] as string[] };
+  if (existsSync(join(publisherDir, 'published.json'))) publishedFile = parseQueueFile(read('published.json'));
   else console.log('Note: there is no published.json, so nothing counts as already published.');
+  const published = new Set(publishedFile.projects);
+  const folders = existsSync(cfg.projectsDir)
+    ? readdirSync(cfg.projectsDir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+    : [];
+  const publishedCheck = checkPublished(publishedFile, queueFile.projects, folders);
 
   const db = createClient(cfg.url, cfg.key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-  const { data: existing, error: existingError } = await db.from('youtube_queue').select('video_path,position').eq('user_id', cfg.owner);
-  if (existingError) throw new Error(`Reading the YouTube queue: ${existingError.message}`);
-  const queuedPaths = new Set((existing ?? []).map((row) => row.video_path as string));
-  let position = Math.max(0, ...(existing ?? []).map((row) => row.position as number));
+  // Page through every row (the API returns at most 1000 at a time).
+  const existing: { video_path: string; position: number }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db.from('youtube_queue').select('video_path,position').eq('user_id', cfg.owner).order('created_at', { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw new Error(`Reading the YouTube queue: ${error.message}`);
+    existing.push(...((data ?? []) as { video_path: string; position: number }[]));
+    if ((data ?? []).length < PAGE) break;
+  }
+  const queuedPaths = new Set(existing.map((row) => row.video_path));
+  let position = existing.reduce((most, row) => Math.max(most, row.position), 0);
 
   console.log(`${apply ? 'APPLY' : 'DRY RUN (nothing is written; add --apply to import)'}: ${queueFile.projects.length} project(s) in the old queue.`);
   for (const note of queueFile.unreadable) console.log(`unreadable: ${note}`);
+  for (const note of publishedCheck.notes) console.log(`unreadable: ${note}`);
 
   const ready: Ready[] = [];
-  let unreadable = queueFile.unreadable.length;
+  let unreadable = queueFile.unreadable.length + publishedCheck.notes.length;
   for (const item of planAll(queueFile.projects, published, queuedPaths, cfg.owner)) {
     if (item.skip) { console.log(`skip (${item.skip}): ${item.project}`); continue; }
     try {
@@ -207,7 +243,10 @@ async function main(argv: string[]) {
     }
   }
   console.log(`${ready.length} to import, ${unreadable} unreadable.`);
-  if (!apply) { if (ready.length) console.log('Nothing was written. Run again with --apply to import.'); return; }
+  if (apply && publishedCheck.blocking) {
+    throw new Error('Not importing: published.json could not be fully read (see above), so a project that is already live might be queued and posted twice. Nothing was written. Tell Claude what published.json looks like.');
+  }
+  if (!apply) { if (publishedCheck.blocking) console.log('--apply will refuse to run until published.json reads cleanly.'); else if (ready.length) console.log('Nothing was written. Run again with --apply to import.'); return; }
 
   async function put(path: string, file: string, contentType: string) {
     const bytes = readFileSync(file);
@@ -222,7 +261,7 @@ async function main(argv: string[]) {
         return;
       }
       last = failure.message ?? 'failed';
-      await sleep(2000 * 2 ** attempt);
+      if (attempt < 2) await sleep(2000 * 2 ** attempt);
     }
     throw new Error(`Uploading ${path}: ${last}`);
   }
