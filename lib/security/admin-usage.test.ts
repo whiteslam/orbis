@@ -147,7 +147,8 @@ test('only reviewed files open the service-role client', () => {
       `Remove these from ADMIN_CLIENT_ALLOWLIST in lib/security/admin-usage.test.ts and their rows from ${DOC}.`);
   }
   assert.deepEqual(actual, [...ADMIN_CLIENT_ALLOWLIST], lines.join('\n\n'));
-});
+  // It reads every source file: well under 5 s alone, but the full parallel run on a busy Windows disk can pass that.
+}, 20_000);
 
 test('the allowlist is sorted, unique, and every path exists', () => {
   assert.deepEqual([...ADMIN_CLIENT_ALLOWLIST], [...new Set(ADMIN_CLIENT_ALLOWLIST)].sort());
