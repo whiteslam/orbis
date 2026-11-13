@@ -192,9 +192,14 @@ describe('device schema', () => {
       ledger: [{ day: '2026-11-12', source: 'test', kept: 1, dropped: 0, actions: 0 }],
     });
     await asUser(db, USER_B, async () => {
-      for (const table of TABLES) {
-        const res = await db.query(`select * from public.${table}`).catch(() => null);
-        assert.equal(res === null ? 0 : res.rows.length, 0, table);
+      // Granted columns only, so a zero here is the RLS policy talking.
+      for (const q of [
+        'select id, name from public.devices',
+        'select device_id, source from public.device_sources',
+        'select id from public.signals',
+        'select day from public.activity_ledger',
+      ]) {
+        assert.equal((await db.query(q)).rows.length, 0, q);
       }
       // B can neither rename nor revoke A's device.
       const upd = await db.query(
@@ -253,15 +258,27 @@ describe('device schema', () => {
     });
   });
 
+  it('as A, registering a device for user B is refused', async () => {
+    await asUser(db, USER_A, async () => {
+      await assert.rejects(
+        db.query(
+          `insert into public.devices (user_id, name, flavour, secret_hash)
+           values ($1, 'Sneaky', 'play', $2)`,
+          [USER_B, HASH],
+        ),
+        /row-level security/,
+      );
+    });
+  });
+
   it('as anon, selecting from devices and signals returns nothing or is denied', async () => {
     await sync({
       sources: [{ source: 'test', enabled: true }],
       signals: [signal(SIGNAL_1, 'test')],
     });
     await asAnon(db, async () => {
-      for (const table of ['devices', 'signals']) {
-        const res = await db.query(`select * from public.${table}`).catch(() => null);
-        assert.equal(res === null ? 0 : res.rows.length, 0, table);
+      for (const table of ['devices', 'device_sources', 'signals', 'activity_ledger']) {
+        await assert.rejects(db.query(`select * from public.${table}`), /permission denied/, table);
       }
     });
   });

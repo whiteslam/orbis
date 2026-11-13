@@ -23,6 +23,12 @@ const STUBS = `
   $$;
   grant usage on schema auth to anon, authenticated;
   grant usage on schema public to anon, authenticated;
+  -- Supabase auto-grants every new public table, function and sequence to anon
+  -- and authenticated; the migration's revokes exist to undo that. Model it so
+  -- those revokes are actually exercised.
+  alter default privileges in schema public grant all on tables to anon, authenticated;
+  alter default privileges in schema public grant all on functions to anon, authenticated;
+  alter default privileges in schema public grant all on sequences to anon, authenticated;
 `;
 
 export function loadMigration(db: PGlite): Promise<unknown> {
