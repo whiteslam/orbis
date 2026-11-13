@@ -5,7 +5,7 @@ import { getPersonSettingsAdmin } from '@/lib/locale/repository';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { defaultPreset } from '@/lib/youtube/details';
 import { QUEUE_COLUMNS, defaultSchedule, readPresetRow, readQueueItem, readQueueRow, readScheduleRow, type QueueRowFull } from '@/lib/youtube/rows';
-import type { Preset, QueueItem, Schedule, VideoDetails } from '@/lib/youtube/types';
+import type { Preset, QueueItem, QueueStatus, Schedule, VideoDetails } from '@/lib/youtube/types';
 
 // The YouTube tables (supabase/migrations/202611130002_youtube.sql). Only the
 // service role writes them, so every function takes the admin client from its
@@ -144,6 +144,62 @@ export async function listPosted(admin: Admin, userId: string, limit = 20): Prom
     .sort((a, b) => when(b) - when(a))
     .map(readQueueItem)
     .filter((item): item is QueueItem => item !== null);
+}
+
+/** Whether the YouTube tables exist (the migration is applied). Any other failure counts as not ready too. */
+export async function tablesReady(admin: Admin): Promise<boolean> {
+  const { error } = await admin.from('youtube_queue').select('id').limit(1);
+  if (error) readFailed(error, 'youtube_queue');
+  return !error;
+}
+
+const JOB_CHUNK = 100;
+const SHOWN = ['queued', 'uploading', 'published'];
+
+/**
+ * Where each of these shorts stands in the person's YouTube queue: waiting,
+ * uploading or on YouTube (a failed or removed row doesn't count, so the short
+ * can be added again). Missing tables or a failed read give what was found, so
+ * Shorts never breaks on them.
+ */
+export async function activeQueueFor(
+  admin: Admin,
+  userId: string,
+  jobIds: string[],
+): Promise<Record<string, { status: QueueStatus; youtubeId: string | null }>> {
+  const found: Record<string, { status: QueueStatus; youtubeId: string | null }> = {};
+  const unique = [...new Set(jobIds)];
+  for (let start = 0; start < unique.length; start += JOB_CHUNK) {
+    const { data, error } = await admin
+      .from('youtube_queue')
+      .select('job_id,status,youtube_id')
+      .eq('user_id', userId)
+      .in('status', SHOWN)
+      .in('job_id', unique.slice(start, start + JOB_CHUNK)); // NOSONAR: a few chunks, one after another
+    if (error) {
+      readFailed(error, 'youtube_queue');
+      return found;
+    }
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      if (typeof row.job_id !== 'string' || !SHOWN.includes(String(row.status))) continue;
+      found[row.job_id] = { status: row.status as QueueStatus, youtubeId: typeof row.youtube_id === 'string' && row.youtube_id ? row.youtube_id : null };
+    }
+  }
+  return found;
+}
+
+/**
+ * True while the short has a row waiting or uploading (R6: deleting it would
+ * leave a row whose video is gone). A missing table means nothing is queued;
+ * any other failed read throws, so a delete is never allowed on a guess.
+ */
+export async function hasActiveQueue(admin: Admin, userId: string, jobId: string): Promise<boolean> {
+  const { data, error } = await admin.from('youtube_queue').select('id').eq('user_id', userId).eq('job_id', jobId).in('status', ACTIVE).limit(1);
+  if (error) {
+    if (isMissingTable(error)) return false;
+    throw failed(error, 'That short couldn’t be checked. Try again in a little while.');
+  }
+  return (data ?? []).length > 0;
 }
 
 /** Adds a short at the back of the queue. */
