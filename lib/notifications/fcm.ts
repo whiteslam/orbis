@@ -61,10 +61,9 @@ export function fcmMessage(token: string, payload: PushPayload) {
   };
 }
 
-/** 200 is sent. 404, or an UNREGISTERED error code, means the phone's token is dead. */
+/** 200 is sent. An UNREGISTERED error code, at any status, means the phone's token is dead. A bare 404 is not enough: a wrong project id also answers 404 and must not wipe tokens. */
 export function fcmOutcome(status: number, body: unknown): FcmOutcome {
   if (status === 200) return 'sent';
-  if (status === 404) return 'gone';
   const details = (body as { error?: { details?: unknown } } | null | undefined)?.error?.details;
   if (Array.isArray(details) && details.some((detail) => (detail as { errorCode?: unknown } | null)?.errorCode === 'UNREGISTERED')) return 'gone';
   return 'failed';

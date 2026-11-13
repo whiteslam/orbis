@@ -61,8 +61,9 @@ describe('fcmMessage', () => {
 describe('fcmOutcome', () => {
   it('maps the response to sent, gone or failed', () => {
     expect(fcmOutcome(200, { name: 'projects/x/messages/1' })).toBe('sent');
-    expect(fcmOutcome(404, null)).toBe('gone');
-    expect(fcmOutcome(404, { error: { status: 'NOT_FOUND' } })).toBe('gone');
+    expect(fcmOutcome(404, { error: { details: [{ errorCode: 'UNREGISTERED' }] } })).toBe('gone');
+    expect(fcmOutcome(404, null)).toBe('failed');
+    expect(fcmOutcome(404, { error: { status: 'NOT_FOUND' } })).toBe('failed');
     expect(fcmOutcome(400, { error: { details: [{ errorCode: 'INVALID_ARGUMENT' }, { errorCode: 'UNREGISTERED' }] } })).toBe('gone');
     expect(fcmOutcome(400, { error: { details: [{ errorCode: 'INVALID_ARGUMENT' }] } })).toBe('failed');
     expect(fcmOutcome(500, { error: { details: 'oops' } })).toBe('failed');
@@ -262,7 +263,7 @@ describe('pushToUser with FCM', () => {
   });
 
   it('clears the token of a phone FCM reports gone, and counts it failed', async () => {
-    stubFetch((call) => (isTokenCall(call) ? tokenReply() : new Response('{}', { status: 404 })));
+    stubFetch((call) => (isTokenCall(call) ? tokenReply() : Response.json({ error: { details: [{ errorCode: 'UNREGISTERED' }] } }, { status: 404 })));
     const { admin, updates } = fakeAdmin({ phones: [{ id: 'd1', push_token: 'old' }] });
     expect(await pushToUser(admin, 'user-1', PAYLOAD)).toEqual({ sent: 0, failed: 1, devices: 1, error: null });
     expect(updates()).toEqual([
@@ -273,6 +274,13 @@ describe('pushToUser with FCM', () => {
         filters: [['eq', 'id', 'd1'], ['eq', 'user_id', 'user-1'], ['eq', 'push_token', 'old']],
       },
     ]);
+  });
+
+  it('keeps the token on a bare 404, which a wrong project id also produces', async () => {
+    stubFetch((call) => (isTokenCall(call) ? tokenReply() : new Response('{}', { status: 404 })));
+    const { admin, updates } = fakeAdmin({ phones: [{ id: 'd1', push_token: 'tok' }] });
+    expect(await pushToUser(admin, 'user-1', PAYLOAD)).toEqual({ sent: 0, failed: 1, devices: 1, error: null });
+    expect(updates()).toEqual([]);
   });
 
   it('keeps the token when the failure is not a gone token', async () => {
