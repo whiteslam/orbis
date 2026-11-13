@@ -207,7 +207,8 @@ function parseSignals(raw: unknown, now: Date): SyncInput['signals'] | string {
     if (!storable(item.content) || item.content.length < 1 || item.content.length > MAX_CONTENT_CHARS) {
       return `${at}.content must be 1-${MAX_CONTENT_CHARS} characters of plain text`;
     }
-    out.push({ id: item.id, source: item.source, kind: item.kind, occurredAt: item.occurredAt as string, content: item.content });
+    // Lowercase, as Postgres stores a uuid: the content is encrypted bound to this id, and the export decrypts with the stored one.
+    out.push({ id: item.id.toLowerCase(), source: item.source, kind: item.kind, occurredAt: item.occurredAt as string, content: item.content });
   }
   return out;
 }

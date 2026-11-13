@@ -95,6 +95,15 @@ describe('syncDevice', () => {
     assert.equal(args.ledger.length, 1);
   });
 
+  it('encrypts and sends a signal id in lowercase even when the phone sent it uppercase', async () => {
+    const upper = FIXTURE.signals[0].id.toUpperCase();
+    const body = JSON.stringify({ ...JSON.parse(BODY), signals: [{ ...JSON.parse(BODY).signals[0], id: upper }] });
+    const { d, calls } = deps();
+    await syncDevice(d, HEADER, body, NOW);
+    assert.equal(calls.encrypt[0][2], FIXTURE.signals[0].id);
+    assert.equal(calls.sync[0].signals[0].id, FIXTURE.signals[0].id);
+  });
+
   it('answers 401 when sync says the phone is not verified', async () => {
     const { d } = deps({ sync: async () => null });
     assert.equal((await syncDevice(d, HEADER, BODY, NOW)).status, 401);

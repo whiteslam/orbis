@@ -205,6 +205,12 @@ describe('parseSync', () => {
       rejects(sync({ signals: [signal({ id: undefined })] }), /id/);
     });
 
+    it('returns signal ids lowercase, whatever case the phone sent', () => {
+      const upper = '7B0F6C1E-3A52-4C8E-9D41-2F6A8B1C00AB';
+      const out = sync({ signals: [signal({ id: upper })] }) as { signals: { id: string }[] };
+      assert.equal(out.signals[0].id, upper.toLowerCase());
+    });
+
     it('rejects a kind the database would refuse', () => {
       for (const kind of ['', 'Test', '1test', 'test-item', 'test item', 'a'.repeat(41), 7]) {
         rejects(sync({ signals: [signal({ kind })] }), /kind/);
