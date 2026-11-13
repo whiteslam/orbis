@@ -47,11 +47,14 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeYouTubeCode(code, siteUrl(request));
     const channel = await getChannel(tokens.accessToken);
     // A Google account can exist without a channel; nothing is stored for it.
+    // Google still holds a grant with upload scope here. It isn't revoked, because that grant is shared with Gmail.
     if (!channel) return back('youtube-no-channel');
     await saveYouTubeConnection(userId, channel, tokens);
   } catch (error_) {
     // Orbis's own words (for example "connect again and allow access") help
     // more than a generic failure.
+    // Only the error's name is logged: its message could carry Google's response.
+    if (!(error_ instanceof YouTubeAuthError)) console.error('YouTube connect failed', error_ instanceof Error ? error_.name : 'unknown');
     const message = error_ instanceof YouTubeAuthError ? error_.message : null;
     const why = message ? `&why=${encodeURIComponent(message.slice(0, 160))}` : '';
     return done(NextResponse.redirect(new URL(`/?tab=social&social=youtube-failed${why}`, request.url)));

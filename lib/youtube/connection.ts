@@ -96,16 +96,27 @@ export async function recordYouTubePublish(admin: Admin, userId: string) {
   }
 }
 
-/** Revokes Orbis's access at Google (best effort), then removes the row. */
+/** True when this person has a Gmail row, whatever its status. A read that fails other than for a missing table counts as yes, the safe answer. */
+async function hasGmailConnection(admin: Admin, userId: string) {
+  const { data, error } = await admin.from('gmail_connections').select('id').eq('user_id', userId).maybeSingle();
+  if (error) return !isMissingTable(error);
+  return Boolean(data);
+}
+
+/** Revokes Orbis's access at Google (best effort, and only when Gmail isn't using it too), then removes the row. */
 export async function disconnectYouTube(userId: string) {
   const admin = createAdminClient();
+  const gmailStillConnected = await hasGmailConnection(admin, userId);
   const { data } = await admin
     .from('social_connections')
     .select('refresh_token_encrypted')
     .eq('user_id', userId)
     .eq('platform', 'youtube')
     .maybeSingle();
-  if (data?.refresh_token_encrypted) {
+  // Gmail uses the same Google client, and Google keeps one grant per account
+  // per client: revoking it here would also kill Gmail's refresh token. So the
+  // grant is only withdrawn when Gmail isn't connected; the row goes either way.
+  if (data?.refresh_token_encrypted && !gmailStillConnected) {
     try {
       await revokeGoogleToken(decryptCredential(data.refresh_token_encrypted));
     } catch {
@@ -113,5 +124,6 @@ export async function disconnectYouTube(userId: string) {
     }
   }
   const { error } = await admin.from('social_connections').delete().eq('user_id', userId).eq('platform', 'youtube');
-  if (error) throw new Error('That connection could not be removed.');
+  // No table means no row to remove (the migration isn't applied), which must not block deleting an account.
+  if (error && !isMissingTable(error)) throw new Error('That connection could not be removed.');
 }

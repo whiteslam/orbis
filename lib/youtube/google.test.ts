@@ -58,6 +58,13 @@ test('exchangeYouTubeCode refuses a grant that left out uploading', async () => 
   await assert.rejects(() => exchangeYouTubeCode('c', 'https://x.test', readOnly), /upload/i);
 });
 
+test('exchangeYouTubeCode refuses a grant that left out seeing the channel', async () => {
+  process.env.GOOGLE_CLIENT_ID = 'client-id';
+  process.env.GOOGLE_CLIENT_SECRET = 'secret';
+  const uploadOnly = (async () => json({ access_token: 'at', refresh_token: 'rt', expires_in: 3600, scope: 'https://www.googleapis.com/auth/youtube.upload' })) as unknown as typeof fetch;
+  await assert.rejects(() => exchangeYouTubeCode('c', 'https://x.test', uploadOnly), /allow access/i);
+});
+
 test('getChannel returns null when the account has no channel', async () => {
   const none = (async () => json({ items: [] })) as unknown as typeof fetch;
   assert.equal(await getChannel('at', none), null);

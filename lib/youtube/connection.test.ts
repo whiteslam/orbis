@@ -4,15 +4,15 @@ import assert from 'node:assert/strict';
 vi.mock('server-only', () => ({}));
 
 type Row = Record<string, unknown>;
-const state: { stored: Row | null; upserts: Row[]; deleted: boolean; failDelete: boolean } = { stored: null, upserts: [], deleted: false, failDelete: false };
+const state: { stored: Row | null; gmail: Row | null; upserts: Row[]; deleted: boolean; failDelete: boolean } = { stored: null, gmail: null, upserts: [], deleted: false, failDelete: false };
 
 // Just enough of the Supabase query builder for this file: a single row per person.
 function fakeAdmin() {
-  const builder = (op: 'select' | 'update' | 'delete' | 'upsert', payload?: Row) => {
+  const builder = (table: string, op: 'select' | 'update' | 'delete' | 'upsert', payload?: Row) => {
     const chain: Record<string, unknown> = {};
     chain.eq = () => chain;
     chain.select = () => chain;
-    chain.maybeSingle = async () => ({ data: state.stored, error: null });
+    chain.maybeSingle = async () => ({ data: table === 'gmail_connections' ? state.gmail : state.stored, error: null });
     chain.then = (resolve: (value: unknown) => void) => {
       if (op === 'upsert') state.upserts.push(payload!);
       if (op === 'update' && state.stored) state.stored = { ...state.stored, ...payload };
@@ -21,7 +21,7 @@ function fakeAdmin() {
     };
     return chain;
   };
-  return { from: () => ({ select: () => builder('select'), update: (p: Row) => builder('update', p), delete: () => builder('delete'), upsert: (p: Row) => builder('upsert', p) }) };
+  return { from: (table: string) => ({ select: () => builder(table, 'select'), update: (p: Row) => builder(table, 'update', p), delete: () => builder(table, 'delete'), upsert: (p: Row) => builder(table, 'upsert', p) }) };
 }
 
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fakeAdmin() }));
@@ -41,7 +41,7 @@ const admin = () => fakeAdmin() as unknown as Admin;
 
 beforeEach(() => {
   process.env.CREDENTIAL_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
-  state.stored = null; state.upserts = []; state.deleted = false; state.failDelete = false; revoked.length = 0;
+  state.stored = null; state.gmail = null; state.upserts = []; state.deleted = false; state.failDelete = false; revoked.length = 0;
 });
 
 test('saving stores both tokens encrypted, the channel id, a trimmed title and no expiry', async () => {
@@ -107,4 +107,12 @@ test('disconnecting still deletes when the token cannot be read, and says so whe
   assert.equal(state.deleted, true);
   state.failDelete = true;
   await assert.rejects(() => disconnectYouTube('u1'), /could not be removed/);
+});
+
+test('disconnecting leaves the shared Google grant alone while Gmail is connected, but still deletes the row', async () => {
+  state.stored = { refresh_token_encrypted: encryptCredential('rt'), status: 'connected' };
+  state.gmail = { id: 'g1' };
+  await disconnectYouTube('u1');
+  assert.deepEqual(revoked, []);
+  assert.equal(state.deleted, true);
 });

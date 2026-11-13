@@ -79,8 +79,11 @@ export async function exchangeYouTubeCode(code: string, site: string, fetchImpl:
     fetchImpl,
   );
   // Google lets people untick a permission on the consent screen.
-  if (typeof payload.scope === 'string' && !payload.scope.split(' ').includes(UPLOAD_SCOPE)) {
-    throw new YouTubeAuthError('Orbis needs permission to upload videos. Connect again and allow it.');
+  if (typeof payload.scope === 'string') {
+    const granted = payload.scope.split(' ');
+    if (!granted.includes(UPLOAD_SCOPE) || !granted.includes(READONLY_SCOPE)) {
+      throw new YouTubeAuthError('Orbis needs permission to upload videos and see your channel. Connect again and allow access.');
+    }
   }
   return { accessToken: payload.access_token, refreshToken: typeof payload.refresh_token === 'string' && payload.refresh_token ? payload.refresh_token : null };
 }

@@ -13,16 +13,19 @@ const PLATFORMS = [
     id: 'instagram', name: 'Instagram', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/instagram/start', handle: '@',
     notConfigured: 'Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.',
     expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
+    confirm: 'Disconnect Instagram? Posts you already published stay as they are.',
   },
   {
     id: 'threads', name: 'Threads', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/threads/start', handle: '@',
     notConfigured: 'Set THREADS_APP_ID and THREADS_APP_SECRET.',
     expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
+    confirm: 'Disconnect Threads? Posts you already published stay as they are.',
   },
   {
     id: 'youtube', name: 'YouTube', detail: 'Upload your shorts on a schedule', href: '/auth/youtube/start', handle: '',
     notConfigured: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
     expired: 'Google stopped accepting Orbis’s access. Connect again.',
+    confirm: 'Disconnect YouTube? Videos already on your channel stay there. Queued shorts wait until you connect again.',
   },
 ] as const;
 
@@ -50,8 +53,8 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function disconnect(platform: string, name: string) {
-    if (!window.confirm(`Disconnect ${name}? Posts you already published stay as they are.`)) return;
+  function disconnect(platform: string, confirmText: string) {
+    if (!window.confirm(confirmText)) return;
     startTransition(async () => {
       await safeAction(disconnectSocialAction)(platform);
       router.refresh();
@@ -93,7 +96,7 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
                 </a>
               )}
               {linked && (
-                <button className="fd-link alert" type="button" disabled={isPending} onClick={() => disconnect(platform.id, platform.name)}>
+                <button className="fd-link alert" type="button" disabled={isPending} onClick={() => disconnect(platform.id, platform.confirm)}>
                   <Unplug size={13} aria-hidden="true" /> Disconnect
                 </button>
               )}
