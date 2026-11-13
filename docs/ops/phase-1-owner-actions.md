@@ -2,7 +2,10 @@
 
 What only you can do to get the Android app from this branch (`android-shell`) onto phones. The code is written and tested; nothing here happens automatically. Do them in this order. How to build and test is in [`android.md`](./android.md).
 
-**Deploy order matters.** Apply migration `202611120004_devices.sql` (step 5) and set `ORBIS_PHONE_DATA_KEY` (step 4) **before** you merge this branch to production. If the code goes live first, `/api/device/signals` answers 503 or 500, phones keep retrying, and no data is lost, but nothing syncs until both are in place.
+**Deploy order matters.** Apply migration `202611120004_devices.sql` (step 5) and set `ORBIS_PHONE_DATA_KEY` (step 4) **before** you merge this branch to production. If the code goes live first, nothing breaks, but the phone features wait:
+- `/api/device/signals` answers 503 or 500, phones keep retrying, and no data is lost, but nothing syncs until both are in place;
+- on the web, Settings, What Orbis can see stays empty ("No phones yet"), and its "Delete what Orbis kept" buttons have nothing to delete;
+- an account export leaves the phone tables out, without a "could not be read" note.
 
 1. **Confirm or replace the app id `app.orbis.android`.** It is a placeholder and it is permanent on Play once you upload the first build. Pick the final one now (a reverse web address you control, like `in.yourname.orbis`). To change it, edit these together, then run `npx cap sync android`:
    - `applicationId` in `android/app/build.gradle`;
@@ -34,16 +37,16 @@ What only you can do to get the Android app from this branch (`android-shell`) o
 
 7. **Tell Claude the test phones** (make, model, Android version). Include at least one Samsung and one Xiaomi or Redmi, and a Pixel if you have one. Phase 1 is not done until these are checked.
 
-8. **The 48-hour check on a Samsung and a Xiaomi phone.** Install the `direct` build (`assembleDirectRelease`), sign in, turn the Test source on, and leave the phone alone for two days. Then check:
+8. **The 48-hour check on a Samsung and a Xiaomi phone.** Install the `direct` build (`assembleDirectRelease`), sign in with your email and password or a passkey (Google sign-in is hidden inside the app), turn the Test source on, and leave the phone alone for two days. Then check:
    - the "Orbis is active" service is still running and its notification is shown (on Android 13 and newer, only if notifications are allowed);
-   - a sync happened in the last hour (What Orbis can see shows the last sync time);
+   - a sync happened in the last hour: in What Orbis can see, the line under Sources reads "Last synced … ago" with an hour or less, and does not end in "Couldn’t sync: …" (a "· 3 waiting" part is fine right after you use Try it);
    - battery use is under about 3% a day (Settings, Battery);
-   - a notification from Private Space or Secure Folder never shows in Recent activity.
+   - **Phase 2, skip for now:** a notification from Private Space or Secure Folder never shows in Recent activity. Phase 1 has no notification source, so there is nothing to see yet; check it once the Notifications source ships.
 
 9. **Review the privacy policy wording for phone data** (`app/privacy/page.tsx`). Phase 1 ships the per-user encryption of phone signal text, but not embeddings and not real phone signals beyond the Test source. The policy should say what exists, not what is planned. Also keep the DPDP consent wording and the Play Data safety form in step with it.
 
 10. **Run the end-to-end check on staging.** It was not run during the build: no staging Supabase project exists, and the local site talks to production, where test accounts must not be created. You need a staging Supabase project ([`staging.md`](./staging.md)) or a local Supabase, with this branch's migrations applied and `ORBIS_PHONE_DATA_KEY` set there.
-    1. Point a debug build at your staging site (`ORBIS_URL=... npx cap sync android`) and sign in on the emulator against staging.
+    1. Point a debug build at your staging site (`ORBIS_URL=... npx cap sync android`) and sign in on the emulator against staging, with email and password or a passkey (Google sign-in is hidden in the app).
     2. In What Orbis can see, turn the Test source on.
     3. Send the text "Your OTP is 123456", plus one blocked item of each kind (a blocked app, a blocked contact, a blocked word).
     4. In the staging database, check there is exactly one `signals` row for it, and that its `content` starts with `p1.` (that is the encrypted form; the readable text must not appear anywhere).

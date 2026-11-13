@@ -38,7 +38,12 @@ The app loads `https://orbis-starter.vercel.app` unless told otherwise. The addr
 ORBIS_URL=http://10.0.2.2:3000 npx cap sync android
 ```
 
-`10.0.2.2` is how the Android emulator reaches your computer. Run `pnpm dev`, then build and install. Careful: `.env.local` points at production Supabase, so a local server still talks to your real data. Sync again without `ORBIS_URL` before building anything you will release, or the release will load your computer.
+`10.0.2.2` is how the Android emulator reaches your computer. Run `pnpm dev`, then build and install.
+
+- **Plain http is allowed only for an http address.** Android blocks unencrypted (cleartext) traffic by default. When `ORBIS_URL` starts with `http://`, `capacitor.config.ts` turns on Capacitor's `server.cleartext` so the WebView can load it; for any `https://` address (the hosted site, a tunnel) it stays off.
+- **Or use https.** An https tunnel to your computer (for example `cloudflared tunnel --url http://localhost:3000`) needs no cleartext at all: `ORBIS_URL=https://<tunnel address> npx cap sync android`.
+- Careful: `.env.local` points at production Supabase, so a local server still talks to your real data.
+- **Sync again without `ORBIS_URL` before building anything you will release.** Otherwise the release loads your computer, and with an http address it also carries the cleartext switch.
 
 ### Release signing
 
@@ -76,6 +81,8 @@ Bump `versionCode` in `android/app/build.gradle` for every upload. Play rejects 
 Put the `google-services.json` you download from the Firebase console in `android/app/`. It is git-ignored; never commit it.
 
 Without that file the app still builds and runs. Push is simply off, the app says so, and nothing crashes. The page checks the app's `pushReady` flag before it asks Android for a push address.
+
+A push that arrives while Orbis is open is shown as a notification too (`presentationOptions` in `capacitor.config.ts`), not only handed to the page.
 
 ## Server settings
 
@@ -120,6 +127,8 @@ Capacitor logging is off on purpose: its debug log would write the phone's secre
 ## What the app does, and what to expect
 
 - **Nothing is read until the person turns a source on.** Every source starts off.
+- **Turning a source off deletes what Orbis kept from it**, on the phone (its items, its queued signals and its activity counts) and on the server.
+- **The sync line.** Once the phone is added, What Orbis can see shows one line under Sources: when the phone last synced ("Last synced 5 minutes ago", or "Not synced yet"), how many items are waiting ("· 3 waiting", left out at none), and, while the last try failed, why ("· Couldn’t sync: unexpected response"). The reasons are "no connection", "HTTP" with a status code (for example "HTTP 503"), "unexpected response", and "this phone’s storage was busy".
 - **Auto Backup is off on purpose.** Android's Google Drive backup would copy the phone's local store off the phone, which breaks "raw text stays on the phone". The cost: a person on a new phone starts again and signs in once more.
 - **A timed pause and the "Orbis is active" service.** When a pause ends, the service only comes back the next time the app is opened. Android 12 and newer forbid starting it from the background, so open Orbis once after a pause and the notification comes back. The periodic sync keeps running meanwhile.
 - **Android 13 and newer hide that notification until notifications are allowed.** The service runs either way. The person must allow notifications to see "Orbis is active".
@@ -128,6 +137,9 @@ Capacitor logging is off on purpose: its debug log would write the phone's secre
 ## How the phone and the server talk
 
 - The phone has its own sign-in (a device credential), separate from the person's web session. It calls `/api/device/*`.
-- **Only a JSON reply counts as success.** The phone treats a sync as done only when the server answers with JSON that has the counts it expects. Until `/api/device/*` is deployed, the site answers those paths with a normal web page; the phone keeps its queue and shows "unexpected response" in the privacy center. Nothing is lost.
+- **The phone never touches the web session.** Capacitor shares the WebView's cookies with the phone's own requests, so a sync can carry them. The site ignores them there: `proxy.ts` passes `/api/device/signals`, and `/api/device/revoke` with the phone's credential, straight through without refreshing the session, so a background sync can't sign the person out.
+- **Only a JSON reply counts as success.** The phone treats a sync as done only when the server answers with JSON that has the counts it expects. Until `/api/device/*` is deployed, the site answers those paths with a normal web page; the phone keeps its queue, and its sync line in What Orbis can see ends "Couldn’t sync: unexpected response". Nothing is lost.
+- **A sign-out is only for the credential that was refused.** If the person signs in again while a sync is out, a late 401 for the old credential is ignored; the new one stays.
+- **A push address belongs to one phone.** When a phone sends its push address, any other phone row still holding it (for example, left over from an earlier sign-in on the same handset) loses it.
 - **Removed phones sign themselves out.** If the person removes a phone on the web, the server answers it with 401 and the phone then wipes its store and signs out. Only a 401 does this. Errors like 403 (a firewall) or 5xx (a server problem) just make the phone retry later.
 - Limits: 100 signals per sync, 4,000 characters per signal, 256 KB per request, 10 active phones per account. The phone keeps raw items 30 days, the activity ledger 90 days, and queues at most 5,000 items.
