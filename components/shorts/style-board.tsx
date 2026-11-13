@@ -15,7 +15,7 @@ const length = (style: StyleCard) => `${style.secondsMin}–${style.secondsMax} 
 /** Every style the installed skill has, as cards to pick from. */
 export function StyleBoard({ styles, onPick }: Readonly<{ styles: StyleCard[]; onPick: (slug: string) => void }>) {
   if (!styles.length) {
-    return <p className="sh-empty">The styles appear here once your PC worker has started once.</p>;
+    return <p className="sh-empty">The styles appear here once your Shorts PC has started the worker once.</p>;
   }
   return (
     <ul className="sh-board" aria-label="Styles">
@@ -48,7 +48,7 @@ export function StyleDetail({ style }: Readonly<{ style: StyleCard }>) {
         <dl className="sh-facts">
           <div><dt>Best for</dt><dd>{style.bestFor}</dd></div>
           <div><dt>Length</dt><dd>{length(style)}, 9:16</dd></div>
-          <div><dt>Look</dt><dd>{style.is3d ? 'Real 3D, rendered on your PC (slower without a graphics card)' : 'Flat 2D, quick to render'}</dd></div>
+          <div><dt>Look</dt><dd>{style.is3d ? 'Real 3D, rendered on your Shorts PC (slower without a graphics card)' : 'Flat 2D, quick to render'}</dd></div>
           {style.exampleTitle && <div><dt>Example</dt><dd>{style.exampleTitle}</dd></div>}
         </dl>
       </div>

@@ -1,21 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ChevronRight, LoaderCircle } from 'lucide-react';
-import { loadShortsViewAction } from '@/app/shorts/actions';
 import { Intake } from '@/components/shorts/intake';
 import { JobCard, StatusChip } from '@/components/shorts/job-card';
 import { LibraryGrid } from '@/components/shorts/library';
 import { StyleBoard, StyleDetail } from '@/components/shorts/style-board';
 import { WorkerStrip } from '@/components/shorts/worker-strip';
-import { safeAction } from '@/lib/client/safe-action';
-import { IN_FLIGHT, isActive, LIMITS, limitRefusal } from '@/lib/shorts/rules';
-import type { ShortJob } from '@/lib/shorts/types';
-import type { ShortsView as View } from '@/lib/shorts/view';
+import type { ShortsData } from '@/components/shorts/use-shorts-data';
+import { IN_FLIGHT, LIMITS, limitRefusal } from '@/lib/shorts/rules';
 
 type Screen = { name: 'home' } | { name: 'style'; slug: string } | { name: 'job'; id: string };
-
-const POLL_MS = 5000;
 
 /**
  * Social → Shorts: faceless shorts made on the owner's PC by the
@@ -23,33 +18,14 @@ const POLL_MS = 5000;
  * each short then moves plan → (your approval) → video, and finished ones
  * collect in the library.
  */
-export function ShortsView() {
-  const [view, setView] = useState<View | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>({ name: 'home' });
+export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsData; openJobId?: string | null }>) {
+  const { view, problem, load, upsert, drop, setPaused } = data;
+  const [screen, setScreen] = useState<Screen>(openJobId ? { name: 'job', id: openJobId } : { name: 'home' });
 
-  const load = useCallback(async () => {
-    const result = await safeAction(loadShortsViewAction)();
-    if (result.success) { setView(result.data); setProblem(null); }
-    else setProblem(result.message);
-  }, []);
-
-  // The view loads after the screen is up, so the Planner switch never waits on it.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, [load]);
-
-  // While the worker has work, refresh the list (statuses and the strip) now and then.
-  const busy = view?.jobs.some(isActive) ?? false;
-  useEffect(() => {
-    if (!busy || screen.name === 'job') return;
-    const timer = setInterval(() => void load(), POLL_MS);
-    return () => clearInterval(timer);
-  }, [busy, screen.name, load]);
+  // One short's own page polls its events; the list refresh waits meanwhile.
+  useEffect(() => { setPaused(screen.name === 'job'); return () => setPaused(false); }, [screen.name, setPaused]);
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [screen]);
-
-  const upsert = (job: ShortJob) => setView((current) => current && ({ ...current, jobs: [job, ...current.jobs.filter((item) => item.id !== job.id)] }));
-  const drop = (id: string) => setView((current) => current && ({ ...current, jobs: current.jobs.filter((item) => item.id !== id) }));
 
   if (!view) {
     return (
@@ -78,7 +54,7 @@ export function ShortsView() {
   if (screen.name === 'style') {
     const style = styleOf(screen.slug);
     const inFlight = view.jobs.filter((job) => IN_FLIGHT.includes(job.status)).length;
-    const blocked = view.presence === 'none' ? 'Set up the worker on your PC first (see the steps above).' : limitRefusal(inFlight, view.monthUsed);
+    const blocked = view.presence === 'none' ? 'Set up the worker on your Shorts PC first (see the steps above).' : limitRefusal(inFlight, view.monthUsed);
     return (
       <div className="sh-view">
         {back}
@@ -98,8 +74,6 @@ export function ShortsView() {
 
   return (
     <div className="sh-view">
-      <WorkerStrip presence={view.presence} worker={view.worker} />
-
       {open.length > 0 && (
         <section className="sh-section" aria-label="On the go">
           <h2 className="sh-h">On the go <span className="so-count">{open.length}</span></h2>
@@ -125,12 +99,15 @@ export function ShortsView() {
         <StyleBoard styles={view.styles} onPick={(slug) => setScreen({ name: 'style', slug })} />
       </section>
 
+      {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}
+      {(view.presence === 'none' || view.presence === 'offline' || view.presence === 'setup') && <WorkerStrip presence={view.presence} worker={view.worker} />}
+
       <section className="sh-section" aria-label="Your shorts">
         <h2 className="sh-h">Your shorts <span className="so-count">{done.length}</span></h2>
         <LibraryGrid jobs={done} covers={view.covers} onOpen={(id) => setScreen({ name: 'job', id })} />
       </section>
 
-      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your PC and stored privately in Orbis; nothing is posted for you.</p>
+      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis; nothing is posted for you.</p>
     </div>
   );
 }

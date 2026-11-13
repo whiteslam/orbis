@@ -66,11 +66,14 @@ test('iPhone: the Ask panel and its input sit above the nav and below the notch'
 });
 
 for (const viewport of [IPHONE, SMALL]) {
-  test(`iPhone insets at ${viewport.width}x${viewport.height}: the New post action bar rests directly on the nav`, async ({ browser, userA }) => {
+  test(`iPhone insets at ${viewport.width}x${viewport.height}: the post drawer's action bar rests directly on the nav`, async ({ browser, userA }) => {
     const { context, page } = await openPhone(browser, userA, viewport);
     await openTab(page, 'Social');
-    await page.locator('.so-new summary').click();
-    await page.locator('.so-new-menu').getByRole('button', { name: 'Post', exact: true }).click();
+    // The Studio composer adds the post; its card opens the drawer.
+    const caption = `Inset check ${viewport.width}`;
+    await page.getByLabel('Caption').fill(caption);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('button', { name: `Open “${caption}”` }).click();
     await expect(page.locator('.so-bar')).toBeVisible();
     const top = await navTop(page);
     const bar = await box(page, '.so-bar');

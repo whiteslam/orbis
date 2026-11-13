@@ -4,6 +4,7 @@ import { composeSocialRow } from './social.ts';
 import type { SocialPost } from '../social/types.ts';
 
 const post = (over: Partial<SocialPost> = {}): SocialPost => ({
+  account: 'me',
   id: 'p', period: '2026-09-01', title: 'T', headline: null, caption: 'c', hashtags: [], format: 'post', platforms: [],
   plannedFor: '2026-09-28', status: 'draft', mediaPath: null, mediaType: null, mediaUrl: null, published: null,
   source: 'manual', position: 0, updatedAt: '', ...over,

@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { Bell, Search } from 'lucide-react';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -40,7 +41,7 @@ function HeadsupsButton({ onAction }: Readonly<{ onAction: (action: HeadsupActio
 }
 
 /**
- * The desktop's top bar: hello and the date on the left, search (Ctrl/⌘+K) in
+ * The desktop's top bar: the Orbis mark, hello and the date on the left, search (Ctrl/⌘+K) in
  * the middle, then heads-ups, the appearance switch and the avatar that opens
  * Settings. Hidden by app/styles/desktop.css below the breakpoint, where each
  * screen's own header does this job.
@@ -58,6 +59,7 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
     <header className="dk-header">
       {/* The hour and the date are in the person's own zone on both server and client, but either can turn between the two renders. */}
       <div className="dk-hello">
+        <OrbisMark size={34} className="dk-mark" />
         <p suppressHydrationWarning><b suppressHydrationWarning>{greeting(localParts(now, loc.timeZone).hour, name)}</b><small suppressHydrationWarning>{today}</small></p>
       </div>
       <button type="button" className="dk-search" onClick={onSearch} aria-keyshortcuts="Control+K Meta+K">

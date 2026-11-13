@@ -2,15 +2,29 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import { editUnreadies, readyProblem } from '@/lib/social/month';
+import { SOCIAL_BUCKET_NAME } from '@/lib/social/types';
 import type { NewPost, PostPatch, SocialFormat, SocialPlatform, SocialPost, SocialRevision, SocialStatus } from '@/lib/social/types';
 import { isMissingTable } from '@/lib/supabase/errors';
 
-export const SOCIAL_BUCKET = 'social-media';
-const COLUMNS = 'id,period,title,headline,caption,hashtags,format,platforms,planned_for,status,media_path,media_type,published_at,published_platform,published_link,source,position,updated_at';
+export const SOCIAL_BUCKET = SOCIAL_BUCKET_NAME;
+const LEGACY_COLUMNS = 'id,period,title,headline,caption,hashtags,format,platforms,planned_for,status,media_path,media_type,published_at,published_platform,published_link,source,position,updated_at';
+/** With the account column; before its migration runs, reads fall back to LEGACY_COLUMNS and every post is 'me'. */
+const COLUMNS = `${LEGACY_COLUMNS},account`;
 const SIGNED_URL_SECONDS = 60 * 60;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type HistoryAction = 'created' | 'edited' | 'ai_draft' | 'ready' | 'unready' | 'published' | 'unpublished' | 'moved' | 'deleted';
+
+/** Postgres and PostgREST codes for a column the database doesn't have yet. */
+const MISSING_COLUMN = new Set(['42703', 'PGRST204']);
+const isMissingColumn = (error: { code?: string } | null) => Boolean(error?.code && MISSING_COLUMN.has(error.code));
+const MIGRATION_MESSAGE = 'Social needs a database update. Ask the owner to run the latest migration.';
+
+/** Runs a query with the account column, and once more without it when the migration hasn't run yet. */
+async function withColumns<R extends { error: { code?: string } | null }>(run: (columns: string) => PromiseLike<R>): Promise<R> {
+  const first = await run(COLUMNS);
+  return isMissingColumn(first.error) ? run(LEGACY_COLUMNS) : first;
+}
 
 const SETUP_MESSAGE = 'Social posts aren’t available right now. Try again later.';
 
@@ -35,6 +49,7 @@ function publishedOf(row: Record<string, unknown>): SocialPost['published'] {
 function toPost(row: Record<string, unknown>): SocialPost {
   return {
     id: String(row.id),
+    account: row.account === 'orbis' ? 'orbis' : 'me',
     period: String(row.period),
     title: String(row.title),
     headline: typeof row.headline === 'string' ? row.headline : null,
@@ -110,26 +125,26 @@ export type SocialMonth = { posts: SocialPost[]; databaseReady: boolean; loadErr
 export async function listMonth(userId: string, period: string): Promise<SocialMonth> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data, error } = await withColumns((columns) => supabase
       .from('social_posts')
-      .select(COLUMNS)
+      .select(columns)
       .eq('user_id', userId)
       .eq('period', period)
       .order('planned_for', { ascending: true, nullsFirst: false })
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
-      .limit(200);
+      .limit(200));
     if (error) return { posts: [], databaseReady: !isMissingTable(error.code), loadError: !isMissingTable(error.code) };
-    return { posts: await withMedia(supabase, (data ?? []).map(toPost)), databaseReady: true, loadError: false };
+    return { posts: await withMedia(supabase, ((data ?? []) as unknown as Record<string, unknown>[]).map(toPost)), databaseReady: true, loadError: false };
   } catch {
     return { posts: [], databaseReady: true, loadError: true };
   }
 }
 
 async function readPost(supabase: Supabase, userId: string, id: string) {
-  const { data, error } = await supabase.from('social_posts').select(COLUMNS).eq('id', id).eq('user_id', userId).maybeSingle();
+  const { data, error } = await withColumns((columns) => supabase.from('social_posts').select(columns).eq('id', id).eq('user_id', userId).maybeSingle());
   if (error) throw queryFailed(error, 'That post could not be loaded.');
-  return data ? toPost(data) : null;
+  return data ? toPost(data as unknown as Record<string, unknown>) : null;
 }
 
 export async function getPost(userId: string, id: string) {
@@ -166,7 +181,13 @@ export async function insertPost(userId: string, input: NewPost, action: 'create
     media_path: input.mediaPath ?? null,
     media_type: input.mediaType ?? null,
   };
-  const { data, error } = await supabase.from('social_posts').insert(row).select(COLUMNS).single();
+  const account = input.account ?? 'me';
+  let { data, error } = await supabase.from('social_posts').insert({ ...row, account }).select(COLUMNS).single();
+  if (isMissingColumn(error)) {
+    // Before the account migration only the person's own posts can be saved.
+    if (account !== 'me') throw new SocialError(MIGRATION_MESSAGE);
+    ({ data, error } = await supabase.from('social_posts').insert(row).select(LEGACY_COLUMNS).single());
+  }
   if (error) {
     if (error.code === '23505' && input.id) {
       const existing = await readPost(supabase, userId, input.id);
@@ -174,7 +195,7 @@ export async function insertPost(userId: string, input: NewPost, action: 'create
     }
     throw queryFailed(error, 'That post could not be saved.');
   }
-  const post = toPost(data);
+  const post = toPost(data as unknown as Record<string, unknown>);
   await record(supabase, userId, post, action, null, post);
   return (await withMedia(supabase, [post]))[0];
 }
@@ -236,17 +257,17 @@ export async function updatePost(userId: string, id: string, patch: PostPatch, a
   if (!Object.keys(row).length) return (await withMedia(supabase, [before]))[0];
 
   // Only while it is still what we read: a post published in another tab is not overwritten.
-  const { data, error } = await supabase
+  const { data, error } = await withColumns((columns) => supabase
     .from('social_posts')
     .update(row)
     .eq('id', id)
     .eq('user_id', userId)
     .eq('status', before.status)
-    .select(COLUMNS)
-    .maybeSingle();
+    .select(columns)
+    .maybeSingle());
   if (error) throw saveFailed(error);
   if (!data) throw new SocialError('This post changed somewhere else. Refresh and try again.');
-  const after = toPost(data);
+  const after = toPost(data as unknown as Record<string, unknown>);
   await record(supabase, userId, after, action ?? (changes.period ? 'moved' : 'edited'), before, after);
   return (await withMedia(supabase, [after]))[0];
 }
@@ -292,14 +313,14 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
 
   const { row, action } = statusChange(before, status, published);
 
-  const { data, error } = await supabase
+  const { data, error } = await withColumns((columns) => supabase
     .from('social_posts')
     .update(row)
     .eq('id', id)
     .eq('user_id', userId)
     .eq('status', before.status)
-    .select(COLUMNS)
-    .maybeSingle();
+    .select(columns)
+    .maybeSingle());
   if (error) throw await statusFailed(supabase, userId, id, error);
   if (!data) {
     // Someone (another tab, a second tap) got there first. If it already has the status asked for, that is success.
@@ -307,7 +328,7 @@ export async function setStatus(userId: string, id: string, status: SocialStatus
     if (now.status === status) return (await withMedia(supabase, [now]))[0];
     throw new SocialError('This post changed somewhere else. Refresh and try again.');
   }
-  const after = toPost(data);
+  const after = toPost(data as unknown as Record<string, unknown>);
   await record(supabase, userId, after, action, before, after);
   return (await withMedia(supabase, [after]))[0];
 }
@@ -360,6 +381,18 @@ export async function createMediaUpload(path: string) {
     throw new SocialError('The upload could not be started. Try again in a moment.');
   }
   return { path: data.path, token: data.token };
+}
+
+/** Stores bytes the server made (a generated picture) at a path the server chose, under the user's folder. */
+export async function uploadMediaBytes(path: string, bytes: Uint8Array, contentType: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.storage.from(SOCIAL_BUCKET).upload(path, bytes, { contentType, upsert: false });
+    if (error) console.error('Uploading a generated social image failed', error);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 /** Whether an uploaded file really exists at this path before a post points at it. */

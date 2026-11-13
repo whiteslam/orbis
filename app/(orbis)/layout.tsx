@@ -36,6 +36,7 @@ import '../styles/page-money.css';
 import '../styles/page-health.css';
 import '../styles/page-social.css';
 import '../styles/page-shorts.css';
+import '../styles/page-studio.css';
 import '../styles/page-career.css';
 import '../styles/page-settings.css';
 

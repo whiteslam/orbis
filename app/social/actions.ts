@@ -2,6 +2,8 @@
 
 import { requireUser } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
+import { getRole } from '@/lib/security/roles';
+import { accountAllowed } from '@/lib/social/studio';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { rateLimitRefusal } from '@/lib/security/rate-limit';
@@ -25,7 +27,7 @@ import { DRAFT_TONES, MAX_BRIEF_LENGTH, MAX_DRAFT_COUNT, buildDraftPrompt, draft
 import { AI_OFF_MESSAGE } from '@/lib/ai/consent';
 import { aiBlocked } from '@/lib/ai/gate';
 import { routeJson } from '@/lib/ai/router';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { claimSocialAiCredit } from '@/lib/social/ai-credit';
 import { getPersonalProfile } from '@/lib/personal/repository';
 import type { SocialPost, SocialRevision } from '@/lib/social/types';
 
@@ -64,6 +66,8 @@ export async function savePostAction(input: {
   format: string;
   platforms: string[];
   plannedFor: string | null;
+  /** 'me' (default) or, for the owner only, 'orbis'. Only read when creating: an edit never moves a post between accounts. */
+  account?: string;
 }): Promise<Result> {
   const userId = (await requireUser())?.userId;
   if (!userId) return SIGN_IN;
@@ -71,11 +75,13 @@ export async function savePostAction(input: {
   if (input?.clientId !== undefined && !isUuid(input.clientId)) return INVALID;
   const clean = cleanPostInput(input);
   if (!clean.ok) return { success: false, message: clean.message };
+  const { account, ...fields } = clean.value;
+  if (!input.id && !accountAllowed(account, await getRole(userId))) return { success: false, message: 'That account isn’t available.' };
 
   try {
     const post = input.id
-      ? await updatePost(userId, input.id, clean.value)
-      : await insertPost(userId, { ...clean.value, id: input.clientId }, 'created');
+      ? await updatePost(userId, input.id, fields)
+      : await insertPost(userId, { ...fields, account, id: input.clientId }, 'created');
     revalidatePath('/active');
     return { success: true, message: input.id ? 'Saved.' : 'Post added.', post };
   } catch (error) {
@@ -149,6 +155,7 @@ export async function duplicatePostAction(id: string): Promise<Result> {
       : null;
     const post = await insertPost(userId, {
       id: copyId,
+      account: original.account,
       period: original.period,
       title: `${original.title} (copy)`.slice(0, 120),
       headline: original.headline,
@@ -268,9 +275,6 @@ export async function removeMediaAction(postId: string): Promise<Result> {
   }
 }
 
-const DAILY_DRAFT_LIMIT = 10;
-// A second Generate within this many seconds is a double click, not a new request.
-const DRAFT_GAP_SECONDS = 20;
 
 type DraftMonthInput = {
   period: string;
@@ -309,26 +313,6 @@ function readDraftRequest(input: DraftMonthInput): DraftRequest | string {
   const platforms = cleanPlatforms(input.platforms);
   if (!DRAFT_TONES.includes(input.tone as DraftTone)) return 'Choose a tone.';
   return { period: input.period, brief, count: input.count, formats, platforms, tone: input.tone as DraftTone, useProfile: input.useProfile === true };
-}
-
-/** Spends one of today's AI drafts; a message when none can be spent. */
-async function claimDraftCredit(userId: string): Promise<string | null> {
-  try {
-    const { data: verdict, error } = await createAdminClient().rpc('consume_social_ai_request', {
-      p_user_id: userId,
-      p_daily_limit: DAILY_DRAFT_LIMIT,
-      p_gap_seconds: DRAFT_GAP_SECONDS,
-    });
-    if (error) {
-      console.error('consume_social_ai_request failed', error);
-      return 'AI drafts aren’t available right now. Try again later.';
-    }
-    if (verdict === 'busy') return 'Already drafting. Give it a moment.';
-    if (verdict !== 'ok') return `You have used today’s ${DAILY_DRAFT_LIMIT} AI drafts. Try again tomorrow.`;
-    return null;
-  } catch {
-    return 'AI drafts are not available right now. Try again later.';
-  }
 }
 
 /** Saves each draft as a new post, in order; one that fails to save is left out rather than costing the others. */
@@ -371,7 +355,7 @@ export async function draftMonthWithAiAction(input: DraftMonthInput): Promise<Re
     profile = summary.profile;
   }
 
-  const refused = await claimDraftCredit(userId);
+  const refused = await claimSocialAiCredit(userId);
   if (refused) return { success: false, message: refused };
 
   const prompt = buildDraftPrompt({ period, brief, count, formats, platforms, tone, profile });

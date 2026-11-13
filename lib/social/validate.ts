@@ -1,7 +1,7 @@
 // Everything the browser sends about a post, trimmed and capped before it is
 // trusted. Shared by the Server Actions and the AI draft parser, so a caption
 // from a model meets exactly the same limits as one typed by hand.
-import type { SocialFormat, SocialPlatform } from './types.ts';
+import type { SocialAccount, SocialFormat, SocialPlatform } from './types.ts';
 // Relative, so the unit tests can load this module under plain Node.
 import { PUBLISH_PLACES, SOCIAL_CAPS, SOCIAL_FORMATS, SOCIAL_PLATFORMS } from './types.ts';
 import { MONTHS, PERIOD_PATTERN, isRealDate } from './month.ts';
@@ -37,7 +37,11 @@ export function cleanPlatforms(value: unknown): SocialPlatform[] {
   return Array.from(new Set(value.filter((item): item is SocialPlatform => typeof item === 'string' && PLATFORM_IDS.includes(item))));
 }
 
+/** 'orbis' only when asked for exactly; anything else is the person's own account. */
+export const cleanAccount = (value: unknown): SocialAccount => (value === 'orbis' ? 'orbis' : 'me');
+
 export type CleanPost = {
+  account: SocialAccount;
   period: string;
   title: string;
   headline: string | null;
@@ -71,6 +75,7 @@ export function cleanPostInput(input: unknown): Result<CleanPost> {
   return {
     ok: true,
     value: {
+      account: cleanAccount(raw.account),
       period,
       title,
       headline: text(raw.headline, SOCIAL_CAPS.headline) || null,

@@ -53,7 +53,7 @@ export function PlanEditor({ job, onChanged }: Readonly<{ job: ShortJob & { plan
         : await safeAction(cancelJobAction)(job.id);
     setBusy(null);
     if (!result.success) return setMessage(result.message);
-    onChanged(result.data, kind === 'build' ? 'Approved. Your PC is building the video.' : kind === 'changes' ? 'Sent back to your PC for a new plan.' : 'Discarded.');
+    onChanged(result.data, kind === 'build' ? 'Approved. Your Shorts PC is building the video.' : kind === 'changes' ? 'Sent back to your Shorts PC for a new plan.' : 'Discarded.');
   }
 
   return (

@@ -103,7 +103,7 @@ export async function queueShortAction(input: unknown): Promise<Result<ShortJob>
       countSince(me.db, me.userId, monthStartIst(new Date())),
     ]);
     // Only a person whose own PC worker has checked in can queue: nobody else's would ever run.
-    if (!worker) return fail('Set up the Shorts worker on your PC first.');
+    if (!worker) return fail('Set up the worker on your Shorts PC first.');
     const style = styles.find((item) => item.slug === slug);
     if (!style) return fail('That style isn’t available. Reload and pick another.');
     const refusal = limitRefusal(inFlight, monthUsed);

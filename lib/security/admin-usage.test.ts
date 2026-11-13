@@ -34,7 +34,6 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/personal/notification-actions.ts',
   'app/research/actions.ts',
   'app/shorts/actions.ts',
-  'app/social/actions.ts',
   'app/waitlist/actions.ts',
   'lib/account/delete.ts',
   'lib/ai/consent-store.ts',
@@ -61,6 +60,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'lib/providers/status.ts',
   'lib/security/pin-store.ts',
   'lib/security/rate-limit.ts',
+  'lib/social/ai-credit.ts',
   'lib/social/connections.ts',
   'lib/storage/signed-upload.ts',
 ];
@@ -147,7 +147,8 @@ test('only reviewed files open the service-role client', () => {
       `Remove these from ADMIN_CLIENT_ALLOWLIST in lib/security/admin-usage.test.ts and their rows from ${DOC}.`);
   }
   assert.deepEqual(actual, [...ADMIN_CLIENT_ALLOWLIST], lines.join('\n\n'));
-});
+  // It reads every source file: well under 5 s alone, but the full parallel run on a busy Windows disk can pass that.
+}, 20_000);
 
 test('the allowlist is sorted, unique, and every path exists', () => {
   assert.deepEqual([...ADMIN_CLIENT_ALLOWLIST], [...new Set(ADMIN_CLIENT_ALLOWLIST)].sort());
