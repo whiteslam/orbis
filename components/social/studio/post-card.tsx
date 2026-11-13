@@ -20,28 +20,28 @@ export function PostCard({ post, accountName, onOpen, actions }: Readonly<{
 }>) {
   const { locale } = usePersonLocale();
   return (
-    <article className="st-card">
-      <button type="button" className="st-card-open" onClick={() => onOpen(post)} aria-label={`Open “${post.title}”`}>
-        <span className="st-card-head">
-          <span className="st-card-avatar" aria-hidden="true" />
-          <span className="st-card-who">{accountName}</span>
-          <span className="st-card-day">{post.plannedFor ? dayLabel(post.plannedFor, locale) : 'No date'}</span>
+    <article className="studio-card">
+      <button type="button" className="studio-card-open" onClick={() => onOpen(post)} aria-label={`Open “${post.title}”`}>
+        <span className="studio-card-head">
+          <span className="studio-card-avatar" aria-hidden="true" />
+          <span className="studio-card-who">{accountName}</span>
+          <span className="studio-card-day">{post.plannedFor ? dayLabel(post.plannedFor, locale) : 'No date'}</span>
         </span>
-        <span className="st-card-media">
+        <span className="studio-card-media">
           {post.mediaUrl && post.mediaType === 'image' && <img src={post.mediaUrl} alt="" loading="lazy" />}
           {post.mediaUrl && post.mediaType === 'video' && <video src={post.mediaUrl} muted playsInline preload="metadata" />}
-          {!post.mediaUrl && <span className={`st-card-tint is-${post.format}`}>{post.headline || post.title}</span>}
+          {!post.mediaUrl && <span className={`studio-card-tint is-${post.format}`}>{post.headline || post.title}</span>}
         </span>
-        <span className="st-card-caption">
+        <span className="studio-card-caption">
           <b>{accountName}</b> {post.caption || post.title}
         </span>
-        <span className="st-card-chips">
-          <span className="st-chip">{formatLabel(post.format)}</span>
+        <span className="studio-card-chips">
+          <span className="studio-chip">{formatLabel(post.format)}</span>
           <StatusChip status={post.status} />
-          {post.source === 'ai' && <span className="st-chip st-chip-ai"><Sparkles size={11} aria-hidden="true" />AI</span>}
+          {post.source === 'ai' && <span className="studio-chip studio-chip-ai"><Sparkles size={11} aria-hidden="true" />AI</span>}
         </span>
       </button>
-      {actions && <div className="st-card-actions">{actions}</div>}
+      {actions && <div className="studio-card-actions">{actions}</div>}
     </article>
   );
 }

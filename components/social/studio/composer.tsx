@@ -92,12 +92,12 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
 
   // The extra row (Orbis's Suggest) sits outside the form, so Enter in it never adds the caption as a post.
   return (
-    <div className="st-composer">
-    <form className="st-composer-form" onSubmit={(event) => { event.preventDefault(); add(); }} aria-busy={isSaving || undefined}>
+    <div className="studio-composer">
+    <form className="studio-composer-form" onSubmit={(event) => { event.preventDefault(); add(); }} aria-busy={isSaving || undefined}>
       <label htmlFor={`${id}-caption`} className="sr-only">Caption</label>
       <textarea
         id={`${id}-caption`}
-        className="st-composer-text"
+        className="studio-composer-text"
         rows={3}
         maxLength={5000}
         placeholder={account === 'orbis' ? 'Write a post for Orbis…' : 'Write a post…'}
@@ -106,21 +106,21 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
       />
 
       {file && (
-        <div className="st-composer-file">
+        <div className="studio-composer-file">
           {preview && (fileType === 'video'
             ? <video src={preview} muted playsInline preload="metadata" aria-hidden="true" />
             // eslint-disable-next-line @next/next/no-img-element
             : <img src={preview} alt="" />)}
           <span>{file.name}</span>
-          <button type="button" className="st-icon-btn" onClick={clearFile} aria-label="Remove the picture or video"><X size={16} aria-hidden="true" /></button>
+          <button type="button" className="studio-icon-btn" onClick={clearFile} aria-label="Remove the picture or video"><X size={16} aria-hidden="true" /></button>
         </div>
       )}
 
-      <div className="st-composer-bar">
+      <div className="studio-composer-bar">
         <input ref={fileInput} id={`${id}-file`} type="file" accept={ACCEPT} className="sr-only" onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)} />
-        <label htmlFor={`${id}-file`} className="st-pill" title="Add a picture or video"><ImagePlus size={16} aria-hidden="true" /><span>Photo</span></label>
+        <label htmlFor={`${id}-file`} className="studio-pill" title="Add a picture or video"><ImagePlus size={16} aria-hidden="true" /><span>Photo</span></label>
 
-        <label className="st-pill st-pill-select">
+        <label className="studio-pill studio-pill-select">
           <span className="sr-only">Format</span>
           <select value={format} onChange={(event) => setFormat(event.currentTarget.value as SocialFormat)}>
             {SOCIAL_FORMATS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -128,16 +128,16 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
         </label>
 
         {/* The native picker opens from one plain button; the field itself stays for keyboards and screen readers. */}
-        <span className="st-pill st-pill-date">
-          <button type="button" className="st-pill-hit" onClick={() => { try { dayInput.current?.showPicker(); } catch { dayInput.current?.focus(); } }}>
+        <span className="studio-pill studio-pill-date">
+          <button type="button" className="studio-pill-hit" onClick={() => { try { dayInput.current?.showPicker(); } catch { dayInput.current?.focus(); } }}>
             <CalendarDays size={16} aria-hidden="true" />{day ? dayLabel(day, locale) : 'No day'}
           </button>
-          <input ref={dayInput} type="date" className="st-date-field" value={day} onChange={(event) => setDay(event.currentTarget.value)} aria-label="Day" tabIndex={-1} />
-          {day && <button type="button" className="st-icon-btn st-pill-clear" onClick={() => setDay('')} aria-label="Clear the day"><X size={14} aria-hidden="true" /></button>}
+          <input ref={dayInput} type="date" className="studio-date-field" value={day} onChange={(event) => setDay(event.currentTarget.value)} aria-label="Day" tabIndex={-1} />
+          {day && <button type="button" className="studio-icon-btn studio-pill-clear" onClick={() => setDay('')} aria-label="Clear the day"><X size={14} aria-hidden="true" /></button>}
         </span>
 
-        <details className="st-pill-menu">
-          <summary className="st-pill">{platforms.length ? SOCIAL_PLATFORMS.filter((item) => platforms.includes(item.id)).map((item) => item.label).join(', ') : 'Where'}</summary>
+        <details className="studio-pill-menu">
+          <summary className="studio-pill">{platforms.length ? SOCIAL_PLATFORMS.filter((item) => platforms.includes(item.id)).map((item) => item.label).join(', ') : 'Where'}</summary>
           <fieldset>
             <legend className="sr-only">Where it goes</legend>
             {SOCIAL_PLATFORMS.map((item) => (
@@ -146,10 +146,10 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
           </fieldset>
         </details>
 
-        <button type="submit" className="st-add" disabled={!canAdd}><Plus size={17} aria-hidden="true" />{isSaving ? 'Adding…' : 'Add'}</button>
+        <button type="submit" className="studio-add" disabled={!canAdd}><Plus size={17} aria-hidden="true" />{isSaving ? 'Adding…' : 'Add'}</button>
       </div>
 
-      {message && <output className={`st-composer-msg${message.error ? ' error' : ''}`}>{message.text}</output>}
+      {message && <output className={`studio-composer-msg${message.error ? ' error' : ''}`}>{message.text}</output>}
     </form>
     {extra}
     </div>

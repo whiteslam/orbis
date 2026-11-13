@@ -21,16 +21,16 @@ const titleOf = (job: ShortJob) => job.plan?.title ?? job.topic;
 function JobRow({ job, cover, styleName, onOpen, action }: Readonly<{ job: ShortJob; cover: string | undefined; styleName: string; onOpen: () => void; action?: string }>) {
   return (
     <li>
-      <button type="button" className="st-live-row" onClick={onOpen}>
-        <span className="st-live-cover" aria-hidden="true">
+      <button type="button" className="studio-live-row" onClick={onOpen}>
+        <span className="studio-live-cover" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {cover && <img src={cover} alt="" loading="lazy" />}
         </span>
-        <span className="st-live-text">
+        <span className="studio-live-text">
           <b>{titleOf(job)}</b>
           <span>{styleName}</span>
         </span>
-        {action ? <span className="st-live-action">{action}</span> : <StatusChip status={job.status} />}
+        {action ? <span className="studio-live-action">{action}</span> : <StatusChip status={job.status} />}
       </button>
     </li>
   );
@@ -46,10 +46,10 @@ export function LiveColumn({ data, onOpenShorts }: Readonly<{ data: ShortsData; 
 
   if (!view) {
     return (
-      <aside className="st-side" aria-label="Shorts">
+      <aside className="studio-side" aria-label="Shorts">
         {problem
-          ? <p className="st-live st-live-problem">Shorts couldn’t load. <button type="button" className="st-link" onClick={() => void load()}>Try again</button></p>
-          : <div className="st-live st-live-skeleton" aria-hidden="true" />}
+          ? <p className="studio-live studio-live-problem">Shorts couldn’t load. <button type="button" className="studio-link" onClick={() => void load()}>Try again</button></p>
+          : <div className="studio-live studio-live-skeleton" aria-hidden="true" />}
       </aside>
     );
   }
@@ -62,37 +62,37 @@ export function LiveColumn({ data, onOpenShorts }: Readonly<{ data: ShortsData; 
   const phoneLine = needsYou.length ? `Shorts PC ${pc.text.toLowerCase()}, ${needsYou.length} waiting for you` : `Shorts PC ${pc.text.toLowerCase()}`;
 
   return (
-    <aside className="st-side" aria-label="Shorts">
-      <button type="button" className="st-live-line" onClick={() => onOpenShorts(needsYou[0]?.id)}>
+    <aside className="studio-side" aria-label="Shorts">
+      <button type="button" className="studio-live-line" onClick={() => onOpenShorts(needsYou[0]?.id)}>
         <span>{phoneLine}</span>
         <ChevronRight size={16} aria-hidden="true" />
       </button>
 
-      <section className="st-live" aria-labelledby="st-live-title">
-        <div className="st-live-head">
-          <h2 id="st-live-title" className="st-live-h">Shorts</h2>
-          <span className={`st-live-state is-${pc.tone}`}>PC: {pc.text}</span>
+      <section className="studio-live" aria-labelledby="studio-live-title">
+        <div className="studio-live-head">
+          <h2 id="studio-live-title" className="studio-live-h">Shorts</h2>
+          <span className={`studio-live-state is-${pc.tone}`}>PC: {pc.text}</span>
         </div>
-        {view.presence === 'none' && <p className="st-live-empty">Set up the worker on the PC that makes your shorts. The steps are in the Shorts tab.</p>}
+        {view.presence === 'none' && <p className="studio-live-empty">Set up the worker on the PC that makes your shorts. The steps are in the Shorts tab.</p>}
 
         {needsYou.length + making.length > 0 && (
-          <ul className="st-live-list" aria-label="On the go">
+          <ul className="studio-live-list" aria-label="On the go">
             {needsYou.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} action="Review" />)}
             {making.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} />)}
           </ul>
         )}
-        {view.presence !== 'none' && needsYou.length + making.length === 0 && <p className="st-live-empty">Nothing being made right now.</p>}
+        {view.presence !== 'none' && needsYou.length + making.length === 0 && <p className="studio-live-empty">Nothing being made right now.</p>}
 
         {finished.length > 0 && (
           <>
-            <h3 className="st-live-sub">Finished</h3>
-            <ul className="st-live-list">
+            <h3 className="studio-live-sub">Finished</h3>
+            <ul className="studio-live-list">
               {finished.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} />)}
             </ul>
           </>
         )}
 
-        <button type="button" className="st-btn st-live-make" onClick={() => onOpenShorts()}><Plus size={16} aria-hidden="true" />Make a short</button>
+        <button type="button" className="studio-btn studio-live-make" onClick={() => onOpenShorts()}><Plus size={16} aria-hidden="true" />Make a short</button>
       </section>
     </aside>
   );
