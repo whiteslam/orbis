@@ -53,13 +53,21 @@ class SyncRunnerTest {
     private class FakeClient(vararg val answers: Any) : SyncClient {
         val bodies = mutableListOf<String>()
         val creds = mutableListOf<DeviceCredential>()
-        override suspend fun post(credential: DeviceCredential, body: String): Int {
+        override suspend fun post(credential: DeviceCredential, body: String): SyncReply {
             creds += credential
             bodies += body
             val a = answers[minOf(bodies.size - 1, answers.size - 1)]
             if (a is IOException) throw a
-            return a as Int
+            if (a is SyncReply) return a
+            // A bare status: a 2xx comes with the server's counts (R20), anything else with no body.
+            val status = a as Int
+            return SyncReply(status, if (status in 200..299) COUNTS else null)
         }
+    }
+
+    private companion object {
+        const val COUNTS = "{\"accepted\":1,\"duplicate\":0,\"refused\":0}"
+        const val HTML = "<!DOCTYPE html><html><body>Orbis</body></html>"
     }
 
     private fun signals(n: Int) = (0 until n).map {
@@ -145,6 +153,28 @@ class SyncRunnerTest {
         assertEquals(3, store.pending.size)
         assertEquals(5L, store.lastSync)
         assertEquals("HTTP 503", store.syncError)
+    }
+
+    // R20: production's 200 text/html for the undeployed route must not empty the outbox.
+    @Test
+    fun a200HtmlReplyLeavesTheBatchPendingAndRecordsTheError() {
+        val store = FakeStore(signals(3)).apply { credential = cred; lastSync = 5L }
+        assertEquals(SyncRunner.Result.Retry, run(runner(store, FakeClient(SyncReply(200, HTML)))))
+        assertEquals(3, store.pending.size)
+        assertFalse("markSynced" in store.calls)
+        assertEquals(5L, store.lastSync)
+        assertEquals("unexpected response", store.syncError)
+        assertFalse(logs.joinToString("\n").contains("<html>"))
+    }
+
+    @Test
+    fun a204OrAJsonReplyWithoutTheCountsIsARetryToo() {
+        for (reply in listOf(SyncReply(204, null), SyncReply(200, "{\"accepted\":1}"), SyncReply(200, ""))) {
+            val store = FakeStore(signals(2)).apply { credential = cred }
+            assertEquals(SyncRunner.Result.Retry, run(runner(store, FakeClient(reply))))
+            assertEquals(2, store.pending.size)
+            assertEquals("unexpected response", store.syncError)
+        }
     }
 
     @Test

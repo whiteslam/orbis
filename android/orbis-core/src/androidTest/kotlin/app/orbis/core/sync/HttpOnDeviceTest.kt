@@ -70,13 +70,13 @@ class HttpOnDeviceTest {
     private val credential get() =
         DeviceCredential("0b6f5c1e-2f43-4a51-9d1e-6c1f3e2a9b70", "s".repeat(43), "u-1", "http://127.0.0.1:${server.localPort}")
 
-    private fun sync(): Int = runBlocking { HttpSyncClient().post(credential, "{\"signals\":[]}") }
+    private fun sync(): Int = runBlocking { HttpSyncClient().post(credential, "{\"signals\":[]}").status }
 
     @Test
     fun a401WithNoChallengeHeaderIs401() {
         status = 401
         assertEquals(401, sync())
-        assertEquals(SyncOutcome.Revoked, SyncOutcome.from(401))
+        assertEquals(SyncOutcome.Revoked, SyncOutcome.from(401, null))
     }
 
     @Test

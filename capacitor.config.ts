@@ -12,6 +12,8 @@ const config: CapacitorConfig = {
     errorPath: 'offline.html',
   },
   android: { appendUserAgent: 'OrbisAndroid' },
+  // Never log plugin calls: their arguments include the device secret (setDevice) and test text.
+  loggingBehavior: 'none',
 };
 
 export default config;

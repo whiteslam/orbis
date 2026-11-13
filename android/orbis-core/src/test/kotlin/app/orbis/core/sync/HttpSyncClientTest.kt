@@ -22,6 +22,8 @@ class HttpSyncClientTest {
     // Written by the test thread and read by the server thread, or the other way round.
     @Volatile private var status = 200
     @Volatile private var challenge = false
+    @Volatile private var replyType = "application/json"
+    @Volatile private var replyBody = ""
     @Volatile private var lastRequestHead = ""
     @Volatile private var lastBody = ""
 
@@ -62,12 +64,16 @@ class HttpSyncClientTest {
         val reason = when (status) { 200 -> "OK"; 401 -> "Unauthorized"; else -> "Error" }
         socket.getOutputStream().apply {
             val extra = if (challenge) "WWW-Authenticate: Basic realm=x\r\n" else ""
-            write("HTTP/1.1 $status $reason\r\n${extra}Content-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+            val bytes = replyBody.toByteArray(Charsets.UTF_8)
+            write("HTTP/1.1 $status $reason\r\n${extra}Content-Type: $replyType\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray())
+            write(bytes)
             flush()
         }
     }
 
-    private fun post(body: String = "{\"signals\":[]}"): Int {
+    private fun post(body: String = "{\"signals\":[]}"): Int = reply(body).status
+
+    private fun reply(body: String = "{\"signals\":[]}"): SyncReply {
         val cred = DeviceCredential("dev-1", "s3cret", "user-1", "http://127.0.0.1:${server.localPort}/")
         return runBlocking { HttpSyncClient().post(cred, body) }
     }
@@ -101,7 +107,7 @@ class HttpSyncClientTest {
     @Test
     fun a401ThatReachesTheRunnerMapsToRevoked() {
         status = 401
-        assertEquals(SyncOutcome.Revoked, SyncOutcome.from(post()))
+        assertEquals(SyncOutcome.Revoked, SyncOutcome.from(post(), null))
     }
 
     @Test
@@ -111,6 +117,34 @@ class HttpSyncClientTest {
         assertEquals(true, lastRequestHead.startsWith("POST /api/device/signals HTTP/1.1")) // no doubled slash
         assertEquals(true, lastRequestHead.contains("Authorization: Device dev-1.s3cret"))
         assertEquals("{\"hello\":\"caf\u00E9\"}", lastBody)
+    }
+
+    @Test
+    fun a200WithTheServersCountsIsDone() {
+        status = 200
+        replyBody = "{\"accepted\":1,\"duplicate\":0,\"refused\":0}"
+        val r = reply()
+        assertEquals(200, r.status)
+        assertEquals(replyBody, r.body)
+        assertEquals(SyncOutcome.Done, SyncOutcome.from(r.status, r.body))
+    }
+
+    // R20: production answered the undeployed route with 200 text/html; that must not empty the outbox.
+    @Test
+    fun a200HtmlPageIsRetry() {
+        status = 200
+        replyType = "text/html; charset=utf-8"
+        replyBody = "<!DOCTYPE html><html><head><title>Orbis</title></head><body>Hello</body></html>"
+        val r = reply()
+        assertEquals(200, r.status)
+        assertEquals(SyncOutcome.Retry, SyncOutcome.from(r.status, r.body))
+    }
+
+    @Test
+    fun a200WithAnEmptyBodyIsRetry() {
+        status = 200
+        val r = reply()
+        assertEquals(SyncOutcome.Retry, SyncOutcome.from(r.status, r.body))
     }
 
     // The JDK stub does not throw from responseCode (checked: the tests above pass even without the

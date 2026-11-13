@@ -88,13 +88,14 @@ class SyncRunner(
         var rejected: Int? = null
         for (batch in batches) {
             val body = SyncPayload.toJson(meta, sources, batch, ledger)
-            val status = try {
+            val reply = try {
                 client.post(credential, body)
             } catch (e: IOException) {
                 log("sync: network error (${e.javaClass.simpleName}), will retry")
                 return fail("network")
             }
-            when (SyncOutcome.from(status)) {
+            val status = reply.status
+            when (SyncOutcome.from(status, reply.body)) {
                 SyncOutcome.Done -> {
                     if (SyncOutcome.isDropped(status)) {
                         log("sync: server answered $status, dropped ${batch.size} signals")
@@ -115,6 +116,12 @@ class SyncRunner(
                     return Result.Success
                 }
                 SyncOutcome.Retry -> {
+                    // R20: a 2xx without the server's counts (an HTML page, a portal) keeps the batch.
+                    // The log never holds the body.
+                    if (SyncOutcome.isUnexpected(status, reply.body)) {
+                        log("sync: server answered $status without the expected counts, will retry")
+                        return fail(UNEXPECTED_RESPONSE)
+                    }
                     log("sync: server answered $status, will retry")
                     return fail("HTTP $status")
                 }
@@ -156,5 +163,6 @@ class SyncRunner(
     companion object {
         const val MAX_BATCHES = 5
         const val REVOKED = "revoked"
+        const val UNEXPECTED_RESPONSE = "unexpected response"
     }
 }

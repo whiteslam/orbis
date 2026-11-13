@@ -8,14 +8,21 @@ import java.net.HttpRetryException
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Posts one sync body and returns the HTTP status. Throws [IOException] when there is no answer. */
+/**
+ * One sync answer: the HTTP [status] and the answer's [body] as text, or null when there was none or it
+ * could not be read (or was larger than [HttpSyncClient.MAX_REPLY_BYTES]). [SyncOutcome.from] needs both:
+ * a 2xx counts only with the server's JSON counts in the body (R20).
+ */
+data class SyncReply(val status: Int, val body: String?)
+
+/** Posts one sync body and returns the answer. Throws [IOException] when there is no answer. */
 fun interface SyncClient {
-    suspend fun post(credential: DeviceCredential, body: String): Int
+    suspend fun post(credential: DeviceCredential, body: String): SyncReply
 }
 
 /** [SyncClient] over [HttpURLConnection], with 15 s timeouts. */
 class HttpSyncClient : SyncClient {
-    override suspend fun post(credential: DeviceCredential, body: String): Int = withContext(Dispatchers.IO) {
+    override suspend fun post(credential: DeviceCredential, body: String): SyncReply = withContext(Dispatchers.IO) {
         val url = URL(credential.serverUrl.trimEnd('/') + PATH)
         val conn = url.openConnection() as HttpURLConnection
         try {
@@ -31,13 +38,14 @@ class HttpSyncClient : SyncClient {
             conn.setFixedLengthStreamingMode(bytes.size)
             conn.outputStream.use { it.write(bytes) }
             val status = statusOf(conn)
-            // Read the answer out so the connection closes cleanly; its content isn't needed, and the
-            // status is already known, so a failure here changes nothing.
-            try {
-                (if (status >= 400) conn.errorStream else conn.inputStream)?.use { it.readBytes() }
+            // The answer decides whether a 2xx counts (R20). The status is already known, so a failed
+            // read only means "no body", which makes a 2xx a retry.
+            val reply = try {
+                (if (status >= 400) conn.errorStream else conn.inputStream)?.use { readCapped(it) }
             } catch (_: IOException) {
+                null
             }
-            status
+            SyncReply(status, reply)
         } finally {
             conn.disconnect()
         }
@@ -73,6 +81,20 @@ class HttpSyncClient : SyncClient {
                 !message.contains("proxy", ignoreCase = true)
         }
 
+        /** Up to [MAX_REPLY_BYTES] of [input] as UTF-8, or null when it is longer (not the server's small JSON). */
+        internal fun readCapped(input: java.io.InputStream): String? {
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(4096)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                out.write(buffer, 0, n)
+                if (out.size() > MAX_REPLY_BYTES) return null
+            }
+            return out.toString("UTF-8")
+        }
+
+        const val MAX_REPLY_BYTES = 16 * 1024
         const val PATH = "/api/device/signals"
         const val TIMEOUT_MS = 15_000
     }
