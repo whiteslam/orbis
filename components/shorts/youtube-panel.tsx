@@ -21,7 +21,7 @@ const POST_NOW_NOTICE: Record<PostNowState, { text: string; ok: boolean }> = {
   held: { text: 'YouTube’s upload limit for today is used up. It goes out on the next posting day.', ok: false },
   reconnect: { text: 'YouTube needs you to connect again. The video stays in the queue.', ok: false },
   failed: { text: 'It couldn’t be posted. The reason is under Posted.', ok: false },
-  retry: { text: 'That try didn’t work. It stays in the queue and goes again on the next run.', ok: false },
+  retry: { text: 'That try didn’t work. It stays in the queue, and Post now can try it again.', ok: false },
 };
 
 type Notice = { text: string; ok: boolean; part: 'queue' | 'schedule' | 'posted' };
@@ -206,30 +206,36 @@ export function YouTubePanel({ onChanged }: Readonly<{ onChanged: () => void }>)
               const at = queued.findIndex((one) => one.id === item.id);
               const waiting = item.status === 'queued';
               const rowBusy = busy?.id === item.id;
+              let meta = 'Uploading now';
+              if (waiting) meta = item.privacy[0].toUpperCase() + item.privacy.slice(1);
+              else if (!connected) meta = 'Waiting for YouTube to be connected.';
+              const removeButton = (
+                <button type="button" className="fd-link alert" onClick={() => setConfirmRemove(item.id)} disabled={busy !== null}><Trash2 size={13} aria-hidden="true" /> Remove</button>
+              );
               return (
                 <li key={item.id} className="sh-yt-row">
                   <Cover src={panel.covers[item.id]} />
                   <div className="sh-yt-main">
                     <b className="sh-yt-title">{item.title}</b>
-                    <span className="sh-yt-meta">{waiting ? item.privacy[0].toUpperCase() + item.privacy.slice(1) : 'Uploading now'}</span>
-                    {waiting && item.error && <span className="sh-yt-error">Last try: {item.error}</span>}
-                    {waiting && (
-                      confirmRemove === item.id ? (
-                        <div className="sh-yt-tools">
-                          <span className="sh-yt-ask">Take it out of the queue?</span>
-                          <button type="button" className="fd-link alert" onClick={() => { setConfirmRemove(null); void change(item.id, 'remove', () => safeAction(removeQueueItemAction)(item.id)); }}>Remove</button>
-                          <button type="button" className="fd-link" onClick={() => setConfirmRemove(null)}>Keep</button>
-                        </div>
-                      ) : (
-                        <div className="sh-yt-tools">
-                          <button type="button" className="sh-yt-post" onClick={() => void postNow(item.id)} disabled={busy !== null || !connected} title={connected ? undefined : 'Connect YouTube first'}>
-                            {rowBusy && busy?.kind === 'post' ? <LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}
-                            <span>{rowBusy && busy?.kind === 'post' ? 'Posting…' : 'Post now'}</span>
-                          </button>
-                          <button type="button" className="fd-link" onClick={() => setEditing(item)} disabled={busy !== null}><Pencil size={13} aria-hidden="true" /> Edit</button>
-                          <button type="button" className="fd-link alert" onClick={() => setConfirmRemove(item.id)} disabled={busy !== null}><Trash2 size={13} aria-hidden="true" /> Remove</button>
-                        </div>
-                      )
+                    <span className="sh-yt-meta">{meta}</span>
+                    {item.error && <span className="sh-yt-error">Last try: {item.error}</span>}
+                    {confirmRemove === item.id && (
+                      <div className="sh-yt-tools">
+                        <span className="sh-yt-ask">Take it out of the queue?</span>
+                        <button type="button" className="fd-link alert" onClick={() => { setConfirmRemove(null); void change(item.id, 'remove', () => safeAction(removeQueueItemAction)(item.id)); }}>Remove</button>
+                        <button type="button" className="fd-link" onClick={() => setConfirmRemove(null)}>Keep</button>
+                      </div>
+                    )}
+                    {confirmRemove !== item.id && !waiting && <div className="sh-yt-tools">{removeButton}</div>}
+                    {confirmRemove !== item.id && waiting && (
+                      <div className="sh-yt-tools">
+                        <button type="button" className="sh-yt-post" onClick={() => void postNow(item.id)} disabled={busy !== null || !connected} title={connected ? undefined : 'Connect YouTube first'}>
+                          {rowBusy && busy?.kind === 'post' ? <LoaderCircle className="workbook-spinner" size={14} aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}
+                          <span>{rowBusy && busy?.kind === 'post' ? 'Posting…' : 'Post now'}</span>
+                        </button>
+                        <button type="button" className="fd-link" onClick={() => setEditing(item)} disabled={busy !== null}><Pencil size={13} aria-hidden="true" /> Edit</button>
+                        {removeButton}
+                      </div>
                     )}
                   </div>
                   {waiting && (

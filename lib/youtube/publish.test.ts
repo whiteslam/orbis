@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
   mint: null as null | (() => Promise<string>),
   marked: 0,
   recorded: 0,
-  signed: true,
+  signed: 'yes' as 'yes' | 'missing' | 'failed',
   outcome: { kind: 'partial' } as unknown,
   uploads: [] as { bytesSent: number; uploadUrl: string | null }[],
   users: [] as string[],
@@ -30,12 +30,30 @@ const state = vi.hoisted(() => ({
   failedScheduledAt: null as string | null,
   recordThrows: false,
   now: '',
+  // Rows keep what each slice saved and released, as the database would.
+  persist: false,
+  scheduleReadFails: false,
+  lastReadFails: false,
+  // A strict read that failed, as the repository throws it.
+  ReadError: class extends Error {},
 }));
 
 vi.mock('./repository.ts', () => ({
-  getSchedule: async () => state.schedule,
+  YouTubeReadError: state.ReadError,
+  // Lenient reads fall back to an unpaused default; strict ones throw (as the repository does).
+  getSchedule: async (_admin: unknown, _user: string, opts?: { strict?: boolean }) => {
+    if (!state.scheduleReadFails) return state.schedule;
+    if (opts?.strict) throw new state.ReadError('youtube_settings couldn’t be read');
+    return { ...state.schedule, paused: false };
+  },
   // As the repository does: the later of the last scheduled publish and the last scheduled row that failed for good.
-  lastScheduledAt: async () => [state.lastScheduled, state.failedScheduledAt].filter(Boolean).sort().at(-1) ?? null,
+  lastScheduledAt: async (_admin: unknown, _user: string, opts?: { strict?: boolean }) => {
+    if (state.lastReadFails) {
+      if (opts?.strict) throw new state.ReadError('youtube_queue couldn’t be read');
+      return null;
+    }
+    return [state.lastScheduled, state.failedScheduledAt].filter(Boolean).sort().at(-1) ?? null;
+  },
   listQueue: async () => state.queue,
   uploadingRowId: async () => state.uploading,
   takeRow: async (_admin: unknown, user: string, id: string, from: string, postedBy?: string) => {
@@ -44,14 +62,18 @@ vi.mock('./repository.ts', () => ({
     // Like the SQL: only a row in the expected status is taken, and starting it records who posted it.
     if (!row || row.status !== from) return null;
     if (from === 'queued') state.takenBy.set(id, postedBy);
+    if (state.persist) state.rows.set(id, { ...row, status: 'uploading' });
     // Each person's copy of a shared test row sits in their own folder, unless the test placed it elsewhere.
     return { ...row, status: 'uploading', videoPath: row.videoPath.replace(state.owner, user) };
   },
   release: async (_admin: unknown, id: string, patch: Record<string, unknown>) => {
     state.releases.push({ id, patch });
+    if (state.persist) state.rows.set(id, { ...(state.rows.get(id) as QueueRowFull), ...rowPatch(patch) });
     if (patch.status === 'failed' && state.takenBy.get(id) === 'schedule') state.failedScheduledAt = state.now;
   },
-  saveUpload: async () => {},
+  saveUpload: async (_admin: unknown, id: string, progress: { uploadUrl?: string | null; bytesSent?: number }) => {
+    if (state.persist) state.rows.set(id, { ...(state.rows.get(id) as QueueRowFull), ...progress });
+  },
   setHold: async (_admin: unknown, _user: string, iso: string) => { state.holds.push(iso); },
   usersWithWork: async () => state.users,
 }));
@@ -70,22 +92,34 @@ vi.mock('./google.ts', async () => {
   return { ...actual, mintAccessToken: async () => (state.mint ? state.mint() : 'access') };
 });
 
-vi.mock('@/lib/shorts/repository', () => ({
-  SHORTS_BUCKET: 'shorts',
-  signPaths: async (_admin: unknown, paths: string[]) => new Map(state.signed ? paths.map((path) => [path, `https://storage/${path}?token=t`]) : []),
+vi.mock('./video-file.ts', () => ({
+  signVideo: async (_admin: unknown, path: string) => {
+    if (state.signed === 'missing') return { missing: true };
+    if (state.signed === 'failed') return { failed: 'storage said 500' };
+    return { url: `https://storage/${path}?token=t` };
+  },
 }));
 
 vi.mock('./upload.ts', async () => {
   const actual = await vi.importActual<typeof import('./upload.ts')>('./upload.ts');
   return {
     ...actual,
-    runUpload: async (row: { bytesSent: number; uploadUrl: string | null }) => {
+    runUpload: async (...args: Parameters<typeof actual.runUpload>) => {
+      const [row] = args;
       state.uploads.push({ bytesSent: row.bytesSent, uploadUrl: row.uploadUrl });
       if (state.outcome === 'throw') throw new Error('database went away');
+      // The real protocol, over whatever fetch the test stubbed.
+      if (state.outcome === 'real') return actual.runUpload(...args);
       return state.outcome as UploadOutcome;
     },
   };
 });
+
+/** The columns a release patch names, as the row reader names them. */
+function rowPatch(patch: Record<string, unknown>): Partial<QueueRowFull> {
+  const names: Record<string, keyof QueueRowFull> = { status: 'status', attempts: 'attempts', error: 'error', upload_url: 'uploadUrl', bytes_sent: 'bytesSent', youtube_id: 'youtubeId' };
+  return Object.fromEntries(Object.entries(patch).flatMap(([key, value]) => (names[key] ? [[names[key], value]] : [])));
+}
 
 import { YouTubeAuthError } from './google.ts';
 import { publishDue, publishSlice } from './publish.ts';
@@ -134,7 +168,7 @@ beforeEach(() => {
   state.mint = null;
   state.marked = 0;
   state.recorded = 0;
-  state.signed = true;
+  state.signed = 'yes';
   state.outcome = { kind: 'partial' };
   state.uploads = [];
   state.users = [];
@@ -142,6 +176,10 @@ beforeEach(() => {
   state.failedScheduledAt = null;
   state.recordThrows = false;
   state.now = NOW.toISOString();
+  state.persist = false;
+  state.scheduleReadFails = false;
+  state.lastReadFails = false;
+  vi.unstubAllGlobals();
 });
 
 test('not due and nothing uploading does nothing', async () => {
@@ -286,7 +324,7 @@ test('Google being down uses an attempt, and the last one fails the row', async 
 test('a video that won’t sign uses an attempt instead of failing at once', async () => {
   state.queue = [{ id: 'row-1', status: 'queued' }];
   state.rows.set('row-1', queueRow());
-  state.signed = false;
+  state.signed = 'failed';
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
   assert.deepEqual(state.uploads, []);
   assert.deepEqual(state.releases[0].patch, { status: 'queued', attempts: 1, error: 'The video file couldn’t be opened for upload.', upload_url: null, bytes_sent: 0 });
@@ -361,4 +399,127 @@ test('publishDue counts what each person’s slice did', async () => {
 
 test('publishDue with nobody to serve does nothing', async () => {
   assert.deepEqual(await publishDue(admin, NOW, later()), { users: 0, published: 0, partial: 0, errors: 0 });
+});
+
+// Finding 1: the final chunk lands but its answer is lost. The next slice must
+// ask the same session what it has, and never open a second one.
+test('a lost answer to the final chunk is published once, from the same session', async () => {
+  state.persist = true;
+  state.queue = [{ id: 'row-1', status: 'queued' }];
+  state.rows.set('row-1', queueRow());
+  state.outcome = 'real';
+  const video = new Uint8Array(1000).fill(7);
+  const calls: { method: string; range: string | null; body: boolean }[] = [];
+  let lostOnce = false;
+  vi.stubGlobal('fetch', async (input: string | URL | Request, init: RequestInit = {}) => {
+    const url = String(input);
+    const headers = new Headers(init.headers);
+    if (url.startsWith('https://storage/')) {
+      const [, from, to] = /bytes=(\d+)-(\d+)/.exec(headers.get('range') ?? '')!.map(Number);
+      return new Response(video.slice(from, to + 1), { status: 206, headers: { 'content-range': `bytes ${from}-${to}/${video.length}` } });
+    }
+    calls.push({ method: init.method ?? 'GET', range: headers.get('content-range'), body: init.body !== undefined });
+    if (init.method === 'POST') return new Response(null, { status: 200, headers: { location: 'https://upload/session-1' } });
+    if (headers.get('content-range') === 'bytes 0-999/1000') {
+      // YouTube got every byte, but the answer never arrived.
+      lostOnce = true;
+      throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+    }
+    if (headers.get('content-range') === 'bytes */1000' && lostOnce) {
+      return Response.json({ id: 'yt-once', status: { privacyStatus: 'public' } }, { status: 200 });
+    }
+    return new Response('unexpected', { status: 500 });
+  });
+
+  // The first slice: the session opens, every byte goes, the answer is lost.
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
+  const kept = state.rows.get('row-1') as QueueRowFull;
+  assert.equal(kept.status, 'uploading');
+  assert.equal(kept.uploadUrl, 'https://upload/session-1');
+  assert.equal(kept.attempts, 1);
+  assert.match(String(kept.error), /Couldn’t reach YouTube/);
+  assert.equal('upload_url' in state.releases[0].patch, false);
+
+  // The next cron run finishes the row first (R4) and asks the session what it has.
+  state.uploading = 'row-1';
+  state.queue = [];
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'published');
+  assert.equal(state.releases[1].patch.youtube_id, 'yt-once');
+  assert.equal(state.recorded, 1);
+  assert.deepEqual(calls.map((call) => `${call.method} ${call.range ?? ''}`.trim()), ['POST', 'PUT bytes 0-999/1000', 'PUT bytes */1000']);
+  assert.equal(calls.filter((call) => call.method === 'POST').length, 1);
+});
+
+test('an error once a session exists keeps the session and the row uploading', async () => {
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8, attempts: 0 }));
+  state.outcome = { kind: 'error', message: 'Couldn’t reach YouTube: timed out' };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
+  assert.deepEqual(state.releases[0].patch, { status: 'uploading', attempts: 1, error: 'Couldn’t reach YouTube: timed out' });
+});
+
+test('Google down on a resumed upload keeps its session too', async () => {
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8, attempts: 1 }));
+  state.mint = async () => { throw new TypeError('fetch failed'); };
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'retry');
+  assert.deepEqual(state.releases[0].patch, { status: 'uploading', attempts: 2, error: 'Google couldn’t be reached to sign in.' });
+  errors.mockRestore();
+});
+
+test('the last attempt with a session fails the row and drops the session', async () => {
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8, attempts: 2 }));
+  state.outcome = { kind: 'error', message: 'YouTube said 500: busy' };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'failed');
+  assert.deepEqual(state.releases[0].patch, { status: 'failed', attempts: 3, error: 'YouTube said 500: busy', upload_url: null, bytes_sent: 0 });
+});
+
+test('an uploading row that holds an error is still picked by Post now', async () => {
+  state.rows.set('row-x', queueRow({ id: 'row-x', status: 'uploading', uploadUrl: 'https://upload/x', bytesSent: 8, attempts: 1, error: 'Couldn’t reach YouTube: timed out' }));
+  state.outcome = { kind: 'done', youtubeId: 'yt-x', privacy: 'public' };
+  assert.equal(await publishSlice(admin, USER, { rowId: 'row-x', postedBy: 'manual', deadline: later(), now: NOW }), 'published');
+  assert.equal(state.releases[0].patch.error, null);
+});
+
+// Finding 2: the publisher never posts on a guess.
+test('a settings read error while paused posts nothing', async () => {
+  state.schedule.paused = true;
+  state.scheduleReadFails = true;
+  state.queue = [{ id: 'row-1', status: 'queued' }];
+  state.rows.set('row-1', queueRow());
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'none');
+  assert.deepEqual(state.takes, []);
+  errors.mockRestore();
+});
+
+test('a failed read of the last scheduled post posts nothing', async () => {
+  state.lastReadFails = true;
+  state.queue = [{ id: 'row-1', status: 'queued' }];
+  state.rows.set('row-1', queueRow());
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'none');
+  assert.deepEqual(state.takes, []);
+  errors.mockRestore();
+});
+
+// Minor 1: a video that isn't in storage at all fails at once.
+test('a video that isn’t in storage fails the row at once', async () => {
+  state.queue = [{ id: 'row-1', status: 'queued' }];
+  state.rows.set('row-1', queueRow());
+  state.signed = 'missing';
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'failed');
+  assert.deepEqual(state.uploads, []);
+  assert.deepEqual(state.releases[0].patch, { status: 'failed', error: 'video file missing', upload_url: null, bytes_sent: 0 });
+});
+
+test('a reconnect on a row whose session may already hold the video keeps that session', async () => {
+  // A one-chunk video: the chunk went, its answer was lost, so bytes_sent is still 0.
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 0, attempts: 1 }));
+  state.mint = async () => { throw new YouTubeAuthError('Google stopped accepting Orbis’s access. Connect again.', true); };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'reconnect');
+  assert.deepEqual(state.releases[0].patch, {});
 });

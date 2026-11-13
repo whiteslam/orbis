@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 vi.mock('server-only', () => ({}));
 
 type Row = Record<string, unknown>;
-const state: { stored: Row | null; gmail: Row | null; upserts: Row[]; deleted: boolean; failDelete: boolean } = { stored: null, gmail: null, upserts: [], deleted: false, failDelete: false };
+const state: { stored: Row | null; gmail: Row | null; upserts: Row[]; deleted: boolean; failDelete: boolean; readError: { code: string } | null } = { stored: null, gmail: null, upserts: [], deleted: false, failDelete: false, readError: null };
 
 // Just enough of the Supabase query builder for this file: a single row per person.
 function fakeAdmin() {
@@ -12,7 +12,7 @@ function fakeAdmin() {
     const chain: Record<string, unknown> = {};
     chain.eq = () => chain;
     chain.select = () => chain;
-    chain.maybeSingle = async () => ({ data: table === 'gmail_connections' ? state.gmail : state.stored, error: null });
+    chain.maybeSingle = async () => (state.readError ? { data: null, error: state.readError } : { data: table === 'gmail_connections' ? state.gmail : state.stored, error: null });
     chain.then = (resolve: (value: unknown) => void) => {
       if (op === 'upsert') state.upserts.push(payload!);
       if (op === 'update' && state.stored) state.stored = { ...state.stored, ...payload };
@@ -41,7 +41,7 @@ const admin = () => fakeAdmin() as unknown as Admin;
 
 beforeEach(() => {
   process.env.CREDENTIAL_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
-  state.stored = null; state.gmail = null; state.upserts = []; state.deleted = false; state.failDelete = false; revoked.length = 0;
+  state.stored = null; state.gmail = null; state.upserts = []; state.deleted = false; state.failDelete = false; state.readError = null; revoked.length = 0;
 });
 
 test('saving stores both tokens encrypted, the channel id, a trimmed title and no expiry', async () => {
@@ -115,4 +115,16 @@ test('disconnecting leaves the shared Google grant alone while Gmail is connecte
   await disconnectYouTube('u1');
   assert.deepEqual(revoked, []);
   assert.equal(state.deleted, true);
+});
+
+test('connecting before the migration asks for it, whether the table or only its new columns are missing', async () => {
+  for (const code of ['42703', '42P01']) {
+    state.readError = { code };
+    await assert.rejects(
+      saveYouTubeConnection('u1', { id: 'UC1', title: 'T' }, { accessToken: 'at', refreshToken: 'rt' }),
+      /Apply the YouTube migration in Supabase/,
+    );
+  }
+  state.readError = { code: '57014' };
+  await assert.rejects(saveYouTubeConnection('u1', { id: 'UC1', title: 'T' }, { accessToken: 'at', refreshToken: 'rt' }), /That connection could not be saved/);
 });

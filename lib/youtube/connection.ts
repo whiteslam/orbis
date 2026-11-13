@@ -13,6 +13,10 @@ import type { YouTubeConnection } from '@/lib/youtube/types';
 type Admin = ReturnType<typeof createAdminClient>;
 
 const TITLE_MAX = 64;
+const APPLY_MIGRATION = 'Apply the YouTube migration in Supabase, then try again.';
+
+/** The table, or the columns the YouTube migration adds to it (42703, undefined column), aren't there yet. */
+const beforeMigration = (error: { code?: string }) => isMissingTable(error) || error.code === '42703';
 
 export async function saveYouTubeConnection(
   userId: string,
@@ -26,7 +30,7 @@ export async function saveYouTubeConnection(
     .eq('user_id', userId)
     .eq('platform', 'youtube')
     .maybeSingle();
-  if (readError) throw new Error(isMissingTable(readError) ? 'Apply the YouTube migration in Supabase, then try again.' : 'That connection could not be saved.');
+  if (readError) throw new Error(beforeMigration(readError) ? APPLY_MIGRATION : 'That connection could not be saved.');
 
   // Google only sends a refresh token when it asks for consent afresh. Without
   // one, the stored token is still good if it belongs to the same channel.
@@ -49,7 +53,7 @@ export async function saveYouTubeConnection(
     expires_at: null,
     status: 'connected',
   }, { onConflict: 'user_id,platform' });
-  if (error) throw new Error(isMissingTable(error) ? 'Apply the YouTube migration in Supabase, then try again.' : 'That connection could not be saved.');
+  if (error) throw new Error(beforeMigration(error) ? APPLY_MIGRATION : 'That connection could not be saved.');
 }
 
 /** What the screens show: the channel and whether it still works. No token in it. */

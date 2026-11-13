@@ -12,12 +12,20 @@ import type { Preset, QueueItem, QueueStatus, Schedule, VideoDetails } from '@/l
 // caller: a server action that has checked who is asking, or the publish cron
 // working through each person's own rows. Every query is keyed to that user id.
 // Reads that find the tables missing (migration not applied) give empty or
-// default values; writes throw a message safe to show.
+// default values; writes throw a message safe to show. The publisher reads the
+// schedule strictly: a read that fails for any other reason throws
+// YouTubeReadError, so it never posts on a default it guessed.
 
 type Admin = ReturnType<typeof createAdminClient>;
 
 /** An error whose message is safe to show as-is. */
 export class YouTubeQueueError extends Error {}
+
+/** A strict read that failed for a reason other than a missing table: the caller can't know the truth. */
+export class YouTubeReadError extends Error {}
+
+/** strict: throw YouTubeReadError rather than fall back to defaults (the publisher's reads). */
+type ReadOptions = { strict?: boolean };
 
 /** How long one slice may hold a row. Longer than a request can run (60 s), so a crashed slice frees it soon after. */
 export const LEASE_SECONDS = 75;
@@ -33,8 +41,10 @@ function failed(error: { code?: string; message?: string }, message = SAVE_MESSA
   return new YouTubeQueueError(isMissingTable(error) ? SETUP_MESSAGE : message);
 }
 
-function readFailed(error: { code?: string; message?: string }, what: string) {
-  if (!isMissingTable(error)) console.error(`Could not read ${what}`, error);
+function readFailed(error: { code?: string; message?: string }, what: string, opts: ReadOptions = {}) {
+  if (isMissingTable(error)) return;
+  console.error(`Could not read ${what}`, error);
+  if (opts.strict) throw new YouTubeReadError(`Could not read ${what}`);
 }
 
 const detailsColumns = (details: VideoDetails) => ({
@@ -48,12 +58,15 @@ const detailsColumns = (details: VideoDetails) => ({
 
 const SCHEDULE_COLUMNS = 'post_time,days,timezone,paused,hold_until';
 
-/** The person's schedule. The first read creates it in their own time zone (R2). */
-export async function getSchedule(admin: Admin, userId: string): Promise<Schedule> {
+/**
+ * The person's schedule. The first read creates it in their own time zone (R2).
+ * A failed read gives the defaults, unless strict (then it throws).
+ */
+export async function getSchedule(admin: Admin, userId: string, opts: ReadOptions = {}): Promise<Schedule> {
   const read = () => admin.from('youtube_settings').select(SCHEDULE_COLUMNS).eq('user_id', userId).maybeSingle();
   const { data, error } = await read();
   if (error) {
-    readFailed(error, 'youtube_settings');
+    readFailed(error, 'youtube_settings', opts);
     return defaultSchedule('Asia/Kolkata');
   }
   if (data) return readScheduleRow(data, 'Asia/Kolkata');
@@ -69,6 +82,7 @@ export async function getSchedule(admin: Admin, userId: string): Promise<Schedul
     return fresh;
   }
   const again = await read();
+  if (again.error) readFailed(again.error, 'youtube_settings', opts);
   return again.data ? readScheduleRow(again.data, timeZone) : fresh;
 }
 
@@ -246,13 +260,20 @@ export async function moveQueued(admin: Admin, userId: string, id: string, dir: 
   if (error) throw failed(error);
 }
 
+/**
+ * Takes a row out of the queue: one waiting, one that failed, or one left part
+ * way through an upload (say its connection is gone), so it never strands its
+ * short (R6). Never a row a slice holds right now: the lease must be empty or
+ * run out. Any upload session is dropped with it.
+ */
 export async function removeQueued(admin: Admin, userId: string, id: string): Promise<boolean> {
   const { data, error } = await admin
     .from('youtube_queue')
-    .update({ status: 'removed' })
+    .update({ status: 'removed', upload_url: null, bytes_sent: 0 })
     .eq('user_id', userId)
     .eq('id', id)
-    .in('status', ['queued', 'failed'])
+    .in('status', ['queued', 'failed', 'uploading'])
+    .or(`lease_until.is.null,lease_until.lt.${new Date().toISOString()}`)
     .select('id');
   if (error) throw failed(error);
   return (data ?? []).length > 0;
@@ -271,7 +292,11 @@ export async function retryFailed(admin: Admin, userId: string, id: string): Pro
     .eq('id', id)
     .eq('status', 'failed')
     .select('id');
-  if (error) throw failed(error);
+  if (error) {
+    // The same short was added again after it failed, and that row is still live.
+    if (error.code === '23505') throw new YouTubeQueueError(ALREADY_QUEUED);
+    throw failed(error);
+  }
   return (data ?? []).length > 0;
 }
 
@@ -339,9 +364,10 @@ export async function uploadingRowId(admin: Admin, userId: string): Promise<stri
 /**
  * When the schedule last used its daily slot: its latest published row, or its
  * latest row that failed for good (at the time it failed). Either way the next
- * row waits for the next posting day. A manual post doesn't count.
+ * row waits for the next posting day. A manual post doesn't count. A failed
+ * query is skipped, unless strict (then it throws).
  */
-export async function lastScheduledAt(admin: Admin, userId: string): Promise<string | null> {
+export async function lastScheduledAt(admin: Admin, userId: string, opts: ReadOptions = {}): Promise<string | null> {
   const [published, failedRow] = await Promise.all([
     admin
       .from('youtube_queue')
@@ -364,7 +390,7 @@ export async function lastScheduledAt(admin: Admin, userId: string): Promise<str
   const times: string[] = [];
   for (const [result, column] of [[published, 'published_at'], [failedRow, 'updated_at']] as const) {
     if (result.error) {
-      readFailed(result.error, 'youtube_queue');
+      readFailed(result.error, 'youtube_queue', opts);
       continue;
     }
     const value = ((result.data ?? [])[0] as Record<string, unknown> | undefined)?.[column];

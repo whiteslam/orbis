@@ -4,7 +4,9 @@ import { publishDue } from '@/lib/youtube/publish';
 
 export const maxDuration = 60;
 
-const TIME_BUDGET_MS = 50_000;
+// A slice ends by its deadline plus one request time-out (15 s): 55 s at most,
+// inside both maxDuration (60 s) and the 75 s lease.
+const TIME_BUDGET_MS = 40_000;
 
 // Called every 10 minutes by pg_cron (supabase/cron/youtube_schedule.sql).
 // Finishes uploads under way, then posts the next short for each person whose

@@ -33,9 +33,14 @@ const MOVED = 'That video has moved on. Reload and try again.';
 const BAD_DETAILS = 'Give the video a title, a category and a privacy setting.';
 const BAD_SCHEDULE = 'That schedule isn’t valid. Check the time, the days and the time zone.';
 const NOT_WAITING = 'That video isn’t waiting, or it is being posted right now. Reload and check.';
+const NOT_REMOVABLE = 'That video is being posted right now, or has moved on. Wait a minute, then reload and try again.';
 
-/** How long Post now works before it stops and lets the cron finish the upload. The page allows 60 s. */
-const POST_NOW_MS = 45_000;
+/**
+ * How long Post now works before it stops and lets the cron finish the upload.
+ * The slice ends by this plus one request time-out (15 s): 55 s at most, inside
+ * the page's 60 s and the 75 s lease.
+ */
+const POST_NOW_MS = 40_000;
 
 const ok = <T,>(data: T): Result<T> => ({ success: true, data });
 const fail = (message: string) => ({ success: false as const, message });
@@ -138,11 +143,12 @@ async function changeQueue(
   id: unknown,
   fallback: string,
   change: (admin: Admin, userId: string, rowId: string) => Promise<boolean>,
+  refused = MOVED,
 ): Promise<Result<QueueItem[]>> {
   if (!isUuid(id)) return INVALID;
   return asUser(fallback, async (me) => {
     const admin = createAdminClient();
-    if (!(await change(admin, me.userId, id))) return fail(MOVED);
+    if (!(await change(admin, me.userId, id))) return fail(refused);
     return ok(await listQueue(admin, me.userId));
   });
 }
@@ -163,7 +169,7 @@ export async function moveQueueItemAction(id: unknown, dir: unknown): Promise<Re
 }
 
 export async function removeQueueItemAction(id: unknown): Promise<Result<QueueItem[]>> {
-  return changeQueue(id, 'The video couldn’t be removed. Try again in a little while.', (admin, userId, rowId) => removeQueued(admin, userId, rowId));
+  return changeQueue(id, 'The video couldn’t be removed. Try again in a little while.', (admin, userId, rowId) => removeQueued(admin, userId, rowId), NOT_REMOVABLE);
 }
 
 /** A failed video goes back to the front of the queue with fresh attempts. */
@@ -174,7 +180,7 @@ export async function retryQueueItemAction(id: unknown): Promise<Result<QueueIte
 export type PostNowState = 'published' | 'partial' | 'held' | 'reconnect' | 'failed' | 'retry';
 
 /**
- * Posts one queued video now, outside the schedule. It works for up to 45 s (the
+ * Posts one queued video now, outside the schedule. It works for up to 40 s (the
  * page allows 60); a bigger file carries on by itself within 10 minutes
  * ('partial'). It takes the same lease as the cron run, so the two never send
  * the same bytes.

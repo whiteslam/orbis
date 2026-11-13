@@ -1,14 +1,16 @@
 import 'server-only';
 
 import type { createAdminClient } from '@/lib/supabase/admin';
-import { signPaths } from '@/lib/shorts/repository';
 import { getYouTubeRefreshToken, markYouTubeReconnect, recordYouTubePublish } from '@/lib/youtube/connection';
 import { MAX_ATTEMPTS } from '@/lib/youtube/details';
 import { mintAccessToken, YouTubeAuthError } from '@/lib/youtube/google';
-import { getSchedule, lastScheduledAt, listQueue, release, saveUpload, setHold, takeRow, uploadingRowId, usersWithWork } from '@/lib/youtube/repository';
+import {
+  getSchedule, lastScheduledAt, listQueue, release, saveUpload, setHold, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
+} from '@/lib/youtube/repository';
 import type { QueueRowFull } from '@/lib/youtube/rows';
 import { isDue, nextDayStart } from '@/lib/youtube/schedule';
 import { rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadOutcome } from '@/lib/youtube/upload';
+import { signVideo } from '@/lib/youtube/video-file';
 
 // Posting to YouTube, one slice at a time (spec: "Publishing run", rulings
 // R1–R5). A slice takes one row under a lease, sends what it can before the
@@ -27,6 +29,9 @@ const UNSIGNED = 'The video file couldn’t be opened for upload.';
 /** fetch with the same per-request time limit the upload uses. */
 const timedFetch: typeof fetch = (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 
+/** Failed for good: there is no video to send. */
+const MISSING = { status: 'failed', error: MISSING_MESSAGE, upload_url: null, bytes_sent: 0 } as const;
+
 /** Back in the queue as if never started: a queued row never keeps an upload session. */
 const BACK_IN_QUEUE = { status: 'queued', upload_url: null, bytes_sent: 0 } as const;
 
@@ -43,8 +48,18 @@ async function pick(admin: Admin, userId: string, opts: SliceOptions): Promise<Q
   const uploading = await uploadingRowId(admin, userId);
   if (uploading) return takeRow(admin, userId, uploading, 'uploading');
 
-  const schedule = await getSchedule(admin, userId);
-  if (!isDue(schedule, opts.now, await lastScheduledAt(admin, userId))) return null;
+  // Strict reads: if the pause switch or the day's last post can't be read,
+  // nothing is due. A guessed default could post while paused, or twice a day.
+  let due: boolean;
+  try {
+    const schedule = await getSchedule(admin, userId, { strict: true });
+    due = isDue(schedule, opts.now, await lastScheduledAt(admin, userId, { strict: true }));
+  } catch (error) {
+    if (!(error instanceof YouTubeReadError)) throw error;
+    console.error('YouTube schedule unreadable; not posting for now:', error.message);
+    return null;
+  }
+  if (!due) return null;
   const next = (await listQueue(admin, userId)).find((item) => item.status === 'queued');
   return next ? takeRow(admin, userId, next.id, 'queued', opts.postedBy) : null;
 }
@@ -60,20 +75,30 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
   // Whatever happens, the lease is given back. A throw leaves the row as it was
   // (uploading rows resume on the next run).
   let patch: Record<string, unknown> = {};
-  let bytesSent = row.bytesSent;
-  // An upload that hasn't sent anything goes back to the queue; one part-way through stays to be finished.
-  const pause = () => (bytesSent === 0 ? { ...BACK_IN_QUEUE } : {});
-  // An attempt used up: back to the queue from scratch, or failed after the last one.
+  // The row's upload session, as last saved: the one it came with, or one this slice opened.
+  let session = row.uploadUrl;
+  // A row without a session goes back to the queue. One with a session stays
+  // uploading to be finished, even at 0 bytes: a one-chunk video may be on
+  // YouTube already if the answer to that chunk was lost.
+  const pause = () => (session ? {} : { ...BACK_IN_QUEUE });
+  // An attempt used up. After the last one the row fails and drops its session.
+  // Before that, a row with a session keeps it and stays uploading: YouTube may
+  // already have every byte (the answer to the final chunk was lost), so the
+  // next slice asks that session what it has rather than upload the video again.
+  // Without a session it goes back to the queue.
   const countError = (message: string): SliceResult => {
     const attempts = row.attempts + 1;
-    const status = attempts >= MAX_ATTEMPTS ? 'failed' : 'queued';
-    patch = { status, attempts, error: message, upload_url: null, bytes_sent: 0 };
-    return status === 'failed' ? 'failed' : 'retry';
+    if (attempts >= MAX_ATTEMPTS) {
+      patch = { status: 'failed', attempts, error: message, upload_url: null, bytes_sent: 0 };
+      return 'failed';
+    }
+    patch = session ? { status: 'uploading', attempts, error: message } : { status: 'queued', attempts, error: message, upload_url: null, bytes_sent: 0 };
+    return 'retry';
   };
   try {
     // A path outside the person's own folder can never be sent.
     if (!ownPath(userId, row.videoPath)) {
-      patch = { status: 'failed', error: MISSING_MESSAGE, upload_url: null, bytes_sent: 0 };
+      patch = { ...MISSING };
       return 'failed';
     }
 
@@ -100,9 +125,18 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
       return countError(message);
     }
 
-    // A path that won't sign may be a passing fault, so it uses an attempt rather than failing at once.
-    const signedUrl = (await signPaths(admin, [row.videoPath])).get(row.videoPath);
-    if (!signedUrl) return countError(UNSIGNED);
+    // A video storage says isn't there can never be posted. Any other signing
+    // failure may be a passing fault, so it uses an attempt.
+    const signed = await signVideo(admin, row.videoPath);
+    if ('missing' in signed) {
+      patch = { ...MISSING };
+      return 'failed';
+    }
+    if ('failed' in signed) {
+      console.error('Could not sign a YouTube video:', signed.failed);
+      return countError(UNSIGNED);
+    }
+    const signedUrl = signed.url;
 
     const outcome: UploadOutcome = await runUpload(row, accessToken, opts.deadline, {
       readRange: rangeReader(signedUrl, fetch),
@@ -110,7 +144,7 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
       now: Date.now,
       async save(progress) {
         await saveUpload(admin, row.id, progress);
-        if (progress.bytesSent !== undefined) bytesSent = progress.bytesSent;
+        if (progress.uploadUrl !== undefined) session = progress.uploadUrl;
       },
     });
 
@@ -133,7 +167,7 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
         return 'held';
       }
       case 'missing':
-        patch = { status: 'failed', error: MISSING_MESSAGE, upload_url: null, bytes_sent: 0 };
+        patch = { ...MISSING };
         return 'failed';
       case 'error':
         return countError(outcome.message);
