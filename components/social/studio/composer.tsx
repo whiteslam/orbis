@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
-import { ImagePlus, Plus, X } from 'lucide-react';
+import { CalendarDays, ImagePlus, Plus, X } from 'lucide-react';
 import { savePostAction } from '@/app/social/actions';
 import { uploadPostMedia } from '@/components/social/upload-media';
+import { dayLabel } from '@/components/social/social-list';
+import { usePersonLocale } from '@/components/locale/person-locale';
 import { safeAction } from '@/lib/client/safe-action';
 import { titleFromCaption } from '@/lib/social/studio';
 import { SOCIAL_FORMATS, SOCIAL_PLATFORMS, type SocialAccount, type SocialFormat, type SocialPlatform, type SocialPost } from '@/lib/social/types';
@@ -24,6 +26,8 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
 }>) {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
+  const dayInput = useRef<HTMLInputElement>(null);
+  const { locale } = usePersonLocale();
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -123,10 +127,14 @@ export function Composer({ account, period, onAdded, extra }: Readonly<{
           </select>
         </label>
 
-        <label className="st-pill st-pill-date">
-          <span className={day ? 'sr-only' : undefined}>No day</span>
-          <input type="date" value={day} onChange={(event) => setDay(event.currentTarget.value)} aria-label="Day" />
-        </label>
+        {/* The native picker opens from one plain button; the field itself stays for keyboards and screen readers. */}
+        <span className="st-pill st-pill-date">
+          <button type="button" className="st-pill-hit" onClick={() => { try { dayInput.current?.showPicker(); } catch { dayInput.current?.focus(); } }}>
+            <CalendarDays size={16} aria-hidden="true" />{day ? dayLabel(day, locale) : 'No day'}
+          </button>
+          <input ref={dayInput} type="date" className="st-date-field" value={day} onChange={(event) => setDay(event.currentTarget.value)} aria-label="Day" tabIndex={-1} />
+          {day && <button type="button" className="st-icon-btn st-pill-clear" onClick={() => setDay('')} aria-label="Clear the day"><X size={14} aria-hidden="true" /></button>}
+        </span>
 
         <details className="st-pill-menu">
           <summary className="st-pill">{platforms.length ? SOCIAL_PLATFORMS.filter((item) => platforms.includes(item.id)).map((item) => item.label).join(', ') : 'Where'}</summary>

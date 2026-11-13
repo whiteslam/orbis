@@ -160,10 +160,10 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
     const busy = busyPost === post.id;
     return (
       <>
-        {!post.mediaPath && <p className="st-card-note">Image couldn’t be made. Try another image.</p>}
-        {post.status !== 'ready' && <button type="button" className="st-pill st-card-btn st-card-keep" disabled={busy} onClick={() => void onPromoCard(post, 'keep')}>Keep</button>}
-        <button type="button" className="st-pill st-card-btn" disabled={busy} onClick={() => void onPromoCard(post, 'image')}>{busy ? 'Working…' : 'Try another image'}</button>
-        <button type="button" className="st-pill st-card-btn" disabled={busy} onClick={() => openPost(post)}>Edit</button>
+        {!post.mediaPath && <p className="st-card-note">No image yet. Press New image to try again.</p>}
+        {post.status !== 'ready' && <button type="button" className="st-btn st-btn-accent" disabled={busy} onClick={() => void onPromoCard(post, 'keep')}>Keep</button>}
+        <button type="button" className="st-btn" disabled={busy} onClick={() => void onPromoCard(post, 'image')}>{busy ? 'Working…' : 'New image'}</button>
+        <button type="button" className="st-btn" disabled={busy} onClick={() => openPost(post)}>Edit</button>
       </>
     );
   }
@@ -199,10 +199,19 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
       <span ref={top} hidden />
       <FieldHead title="Social" />
 
-      <div className="st-tabs" role="tablist" aria-label="Social area">
-        {AREAS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={area === id} onClick={() => (id === 'shorts' ? openShorts() : chooseArea(id))}>{label}</button>
-        ))}
+      {/* One row: what you're working on, and (owner only, on Posts) whose page. */}
+      <div className="st-bar">
+        <div className="st-seg" role="tablist" aria-label="Social area">
+          {AREAS.map(([id, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={area === id} onClick={() => (id === 'shorts' ? openShorts() : chooseArea(id))}>{label}</button>
+          ))}
+        </div>
+        {isOwner && area === 'posts' && (
+          <div className="st-seg" role="radiogroup" aria-label="Account">
+            <button type="button" role="radio" aria-checked={account === 'me'} onClick={() => chooseAccount('me')}>Me</button>
+            <button type="button" role="radio" aria-checked={account === 'orbis'} onClick={() => chooseAccount('orbis')}>Orbis</button>
+          </div>
+        )}
       </div>
 
       {connectNotice && (
@@ -220,13 +229,6 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
             <ShortsView key={openJob.key} data={shorts} openJobId={openJob.id} />
           ) : (
             <>
-              {isOwner && (
-                <div className="st-accounts" role="radiogroup" aria-label="Account">
-                  <button type="button" role="radio" aria-checked={account === 'me'} onClick={() => chooseAccount('me')}>Me</button>
-                  <button type="button" role="radio" aria-checked={account === 'orbis'} onClick={() => chooseAccount('orbis')}>Orbis</button>
-                </div>
-              )}
-
               <Composer
                 account={account}
                 period={period}
@@ -234,11 +236,14 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
                 extra={isOwner && account === 'orbis' ? <PromoSuggest period={period} onSuggested={(posts) => posts.forEach(upsert)} /> : undefined}
               />
 
+              {/* The month's posts: its name on the left, the way to other months on the right. */}
               <div className="st-month">
-                <button type="button" className="so-round" onClick={() => load(shiftMonth(period, -1))} disabled={isLoading} aria-label="Previous month"><ChevronLeft size={18} strokeWidth={2.2} aria-hidden="true" /></button>
                 <h2 className="st-month-name" aria-live="polite">{monthName(period)}</h2>
-                <button type="button" className="so-round" onClick={() => load(shiftMonth(period, 1))} disabled={isLoading} aria-label="Next month"><ChevronRight size={18} strokeWidth={2.2} aria-hidden="true" /></button>
-                {!isThisMonth && <button type="button" className="fd-link" onClick={() => load(periodOfDate(today))} disabled={isLoading}>This month</button>}
+                {!isThisMonth && <button type="button" className="st-link" onClick={() => load(periodOfDate(today))} disabled={isLoading}>This month</button>}
+                <div className="st-month-nav">
+                  <button type="button" className="st-icon-btn" onClick={() => load(shiftMonth(period, -1))} disabled={isLoading} aria-label="Previous month"><ChevronLeft size={18} aria-hidden="true" /></button>
+                  <button type="button" className="st-icon-btn" onClick={() => load(shiftMonth(period, 1))} disabled={isLoading} aria-label="Next month"><ChevronRight size={18} aria-hidden="true" /></button>
+                </div>
               </div>
 
               {!month.databaseReady && <p className="so-problem">Social planning isn’t available right now. Try again later.</p>}
@@ -252,7 +257,7 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
 
               {ready && shown.map(([key, label]) => (
                 <section key={key} className="st-group" aria-label={label} aria-busy={isLoading || undefined}>
-                  <h2 className="so-h">{label} <span className="so-count">{groups[key].length}</span></h2>
+                  <h3 className="st-group-h">{label} <span>{groups[key].length}</span></h3>
                   <ul className="st-cards">
                     {groups[key].map((post) => (
                       <li key={post.id}><PostCard post={post} accountName={accountName} onOpen={openPost} actions={promoActions(post)} /></li>

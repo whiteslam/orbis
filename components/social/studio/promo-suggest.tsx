@@ -49,7 +49,7 @@ export function PromoSuggest({ period, onSuggested }: Readonly<{ period: string;
           <output aria-live="polite">{count} {count === 1 ? 'post' : 'posts'}</output>
           <button type="button" className="st-icon-btn" onClick={() => setCount((value) => Math.min(PROMO_MAX, value + 1))} disabled={isWorking || count >= PROMO_MAX} aria-label="One more"><Plus size={15} aria-hidden="true" /></button>
         </div>
-        <button type="button" className="st-pill st-promo-go" onClick={suggest} disabled={isWorking}>
+        <button type="button" className="st-btn st-promo-go" onClick={suggest} disabled={isWorking}>
           <Sparkles size={16} aria-hidden="true" />{isWorking ? 'Suggesting…' : 'Suggest posts'}
         </button>
       </div>

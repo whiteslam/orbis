@@ -5,9 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { StatusChip } from '@/components/social/status-chip';
 import { dayLabel } from '@/components/social/social-list';
 import { usePersonLocale } from '@/components/locale/person-locale';
-import { SOCIAL_FORMATS, formatLabel, type SocialPost } from '@/lib/social/types';
-
-const tintOf = (post: SocialPost) => SOCIAL_FORMATS.find((format) => format.id === post.format)?.tint ?? SOCIAL_FORMATS[0].tint;
+import { formatLabel, type SocialPost } from '@/lib/social/types';
 
 /**
  * A post as it will look on Instagram: who it's from, the square picture (or
@@ -32,7 +30,7 @@ export function PostCard({ post, accountName, onOpen, actions }: Readonly<{
         <span className="st-card-media">
           {post.mediaUrl && post.mediaType === 'image' && <img src={post.mediaUrl} alt="" loading="lazy" />}
           {post.mediaUrl && post.mediaType === 'video' && <video src={post.mediaUrl} muted playsInline preload="metadata" />}
-          {!post.mediaUrl && <span className="st-card-tint" style={{ background: tintOf(post) }}>{post.headline || post.title}</span>}
+          {!post.mediaUrl && <span className={`st-card-tint is-${post.format}`}>{post.headline || post.title}</span>}
         </span>
         <span className="st-card-caption">
           <b>{accountName}</b> {post.caption || post.title}

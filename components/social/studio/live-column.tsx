@@ -2,13 +2,19 @@
 
 import { ChevronRight, Plus } from 'lucide-react';
 import { StatusChip } from '@/components/shorts/job-card';
-import { WORKER_LINE } from '@/components/shorts/worker-strip';
 import type { ShortsData } from '@/components/shorts/use-shorts-data';
 import { IN_FLIGHT } from '@/lib/shorts/rules';
 import type { ShortJob, WorkerPresence } from '@/lib/shorts/types';
 
-/** The status dot's colour: teal when the PC can work, gold when it needs a hand, grey when it's away. */
-const TONE: Record<WorkerPresence, 'ok' | 'warn' | 'off'> = { idle: 'ok', busy: 'ok', setup: 'warn', paused: 'warn', offline: 'off', none: 'off' };
+/** The Shorts PC in two or three words; the tone colours the word, never a dot. */
+const PC_STATE: Record<WorkerPresence, { text: string; tone: 'ok' | 'warn' | 'off' }> = {
+  idle: { text: 'Online', tone: 'ok' },
+  busy: { text: 'Making a short', tone: 'ok' },
+  setup: { text: 'Needs the skill', tone: 'warn' },
+  paused: { text: 'Paused', tone: 'warn' },
+  offline: { text: 'Offline', tone: 'off' },
+  none: { text: 'Not set up', tone: 'off' },
+};
 
 const titleOf = (job: ShortJob) => job.plan?.title ?? job.topic;
 
@@ -31,9 +37,9 @@ function JobRow({ job, cover, styleName, onOpen, action }: Readonly<{ job: Short
 }
 
 /**
- * The Studio's right-hand column: whether the Shorts PC is there, what it is
- * making, what waits for you, and the newest finished shorts. Under 720 px it
- * folds into one line that opens the Shorts tab.
+ * The Studio's right-hand column, one card: the Shorts PC's state, what waits
+ * for you, what is being made, the newest finished shorts and the way to make
+ * one. Under 720 px it folds into one line that opens the Shorts tab.
  */
 export function LiveColumn({ data, onOpenShorts }: Readonly<{ data: ShortsData; onOpenShorts: (jobId?: string) => void }>) {
   const { view, problem, load } = data;
@@ -42,8 +48,8 @@ export function LiveColumn({ data, onOpenShorts }: Readonly<{ data: ShortsData; 
     return (
       <aside className="st-side" aria-label="Shorts">
         {problem
-          ? <p className="st-live-card st-live-problem">Shorts couldn’t load. <button type="button" className="fd-link" onClick={() => void load()}>Try again</button></p>
-          : <div className="st-live-card st-live-skeleton" aria-hidden="true" />}
+          ? <p className="st-live st-live-problem">Shorts couldn’t load. <button type="button" className="st-link" onClick={() => void load()}>Try again</button></p>
+          : <div className="st-live st-live-skeleton" aria-hidden="true" />}
       </aside>
     );
   }
@@ -52,46 +58,42 @@ export function LiveColumn({ data, onOpenShorts }: Readonly<{ data: ShortsData; 
   const needsYou = view.jobs.filter((job) => job.status === 'plan_ready');
   const making = view.jobs.filter((job) => job.status !== 'plan_ready' && IN_FLIGHT.includes(job.status));
   const finished = view.jobs.filter((job) => job.status === 'done').slice(0, 2);
-  const tone = TONE[view.presence];
-  const phoneLine = [
-    view.presence === 'none' ? 'Shorts PC not set up' : WORKER_LINE[view.presence].replace(/\.$/, ''),
-    needsYou.length ? `${needsYou.length} needs you` : null,
-  ].filter(Boolean).join(' · ');
+  const pc = PC_STATE[view.presence];
+  const phoneLine = needsYou.length ? `Shorts PC ${pc.text.toLowerCase()}, ${needsYou.length} waiting for you` : `Shorts PC ${pc.text.toLowerCase()}`;
 
   return (
     <aside className="st-side" aria-label="Shorts">
       <button type="button" className="st-live-line" onClick={() => onOpenShorts(needsYou[0]?.id)}>
-        <i className={`st-dot is-${tone}`} aria-hidden="true" />
         <span>{phoneLine}</span>
         <ChevronRight size={16} aria-hidden="true" />
       </button>
 
-      <div className="st-live-full">
-        <p className="st-live-card st-live-pc">
-          <i className={`st-dot is-${tone}`} aria-hidden="true" />
-          <span>{view.presence === 'none' ? 'No Shorts PC yet. Set one up in the Shorts tab.' : WORKER_LINE[view.presence]}</span>
-        </p>
+      <section className="st-live" aria-labelledby="st-live-title">
+        <div className="st-live-head">
+          <h2 id="st-live-title" className="st-live-h">Shorts</h2>
+          <span className={`st-live-state is-${pc.tone}`}>PC: {pc.text}</span>
+        </div>
+        {view.presence === 'none' && <p className="st-live-empty">Set up the worker on the PC that makes your shorts. The steps are in the Shorts tab.</p>}
 
-        <section className="st-live-card" aria-label="Shorts on the go">
-          <h2 className="st-live-h">Shorts</h2>
-          {needsYou.length + making.length > 0 ? (
-            <ul className="st-live-list">
-              {needsYou.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} action="Review" />)}
-              {making.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} />)}
-            </ul>
-          ) : <p className="st-live-empty">Nothing being made right now.</p>}
-          <button type="button" className="st-pill st-live-make" onClick={() => onOpenShorts()}><Plus size={16} aria-hidden="true" />Make a short</button>
-        </section>
+        {needsYou.length + making.length > 0 && (
+          <ul className="st-live-list" aria-label="On the go">
+            {needsYou.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} action="Review" />)}
+            {making.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} />)}
+          </ul>
+        )}
+        {view.presence !== 'none' && needsYou.length + making.length === 0 && <p className="st-live-empty">Nothing being made right now.</p>}
 
         {finished.length > 0 && (
-          <section className="st-live-card" aria-label="Finished shorts">
-            <h2 className="st-live-h">Finished</h2>
+          <>
+            <h3 className="st-live-sub">Finished</h3>
             <ul className="st-live-list">
               {finished.map((job) => <JobRow key={job.id} job={job} cover={view.covers[job.id]} styleName={styleName(job.style)} onOpen={() => onOpenShorts(job.id)} />)}
             </ul>
-          </section>
+          </>
         )}
-      </div>
+
+        <button type="button" className="st-btn st-live-make" onClick={() => onOpenShorts()}><Plus size={16} aria-hidden="true" />Make a short</button>
+      </section>
     </aside>
   );
 }
