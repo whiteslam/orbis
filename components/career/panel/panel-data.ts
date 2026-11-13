@@ -17,7 +17,7 @@ const DAY_MS = 86_400_000;
 
 // ─── Pages ───────────────────────────────────────────────────────────────
 
-export const PANEL_PAGES = ['overview', 'pipeline', 'jobs', 'interviews', 'offers', 'insights', 'setup'] as const;
+export const PANEL_PAGES = ['overview', 'pipeline', 'jobs', 'interviews', 'offers', 'insights', 'skills', 'setup'] as const;
 export type PanelPage = (typeof PANEL_PAGES)[number];
 
 /** The page's name (the palette's word too), and its title: a faint context line over the big one. */
@@ -28,19 +28,21 @@ export const PAGE_META: Record<PanelPage, { label: string; title: readonly [stri
   interviews: { label: 'Interviews', title: ['Applications', 'Interviews'] },
   offers: { label: 'Offers', title: ['Applications', 'Offers'] },
   insights: { label: 'Market insights', title: ['Jobs', 'Market insights'] },
+  skills: { label: 'Skill tree', title: ['What your commits prove', 'Skill tree'] },
   setup: { label: 'Profile and settings', title: ['Career', 'Profile and settings'] },
 };
 
 /**
  * The header's three destinations, by what a job seeker comes to do: see what
  * needs them (Home), find and judge jobs (Jobs), and see where each application
- * stands (Applications). The other pages live under one of them and keep their
+ * stands (Applications), plus Skills, the owner's skill tree. The other pages live under one of them and keep their
  * own address; Profile and settings is a quiet button beside the bell.
  */
 export const PANEL_NAV: ReadonlyArray<{ id: PanelPage; label: string; pages: readonly PanelPage[] }> = [
   { id: 'overview', label: 'Home', pages: ['overview'] },
   { id: 'jobs', label: 'Jobs', pages: ['jobs', 'insights'] },
   { id: 'pipeline', label: 'Applications', pages: ['pipeline', 'interviews', 'offers'] },
+  { id: 'skills', label: 'Skills', pages: ['skills'] },
 ];
 
 /** The destination a page sits under; Setup sits under none. */

@@ -11,6 +11,7 @@ import { ForYouView } from '@/components/career/for-you-view';
 import { StageStrip, attentionItems } from '@/components/career/attention';
 import { InsightsView } from '@/components/career/insights-view';
 import { SetupView } from '@/components/career/setup/setup-view';
+import { SkillTreeView } from '@/components/career/skill-tree-view';
 import { TodayView } from '@/components/career/today-view';
 import { TrackerView } from '@/components/career/tracker-view';
 import { allApplications } from '@/components/career/panel/panel-data';
@@ -21,22 +22,23 @@ import type { ApplicationCard, ApplicationDetail, CareerHome, CareerSetup } from
 import { usePersonLocale } from '@/components/locale/person-locale';
 
 /**
- * The views. Three are on the switch: Today (what needs you, then where things
- * stand), Jobs (find and judge, with the market numbers folded below) and
- * Applications (every one by stage). The older names still land somewhere:
+ * The views. Four are on the switch: Today (what needs you, then where things
+ * stand), Jobs (find and judge, with the market numbers folded below),
+ * Applications (every one by stage) and Skills (the owner's skill tree). The older names still land somewhere:
  * 'queue' is Today, 'insights' is Jobs with the numbers open, and 'setup' is
  * Profile and settings, reached from its link under the title.
  */
-export type CareerTab = 'today' | 'for_you' | 'queue' | 'tracker' | 'insights' | 'setup';
+export type CareerTab = 'today' | 'for_you' | 'queue' | 'tracker' | 'insights' | 'skills' | 'setup';
 
-type SwitchTab = 'today' | 'for_you' | 'tracker';
-const TABS: Array<[SwitchTab, string]> = [['today', 'Today'], ['for_you', 'Jobs'], ['tracker', 'Applications']];
+type SwitchTab = 'today' | 'for_you' | 'tracker' | 'skills';
+const TABS: Array<[SwitchTab, string]> = [['today', 'Today'], ['for_you', 'Jobs'], ['tracker', 'Applications'], ['skills', 'Skills']];
 
 /** Which switch button a view belongs under; Setup belongs under none. */
 function switchOf(tab: CareerTab): SwitchTab | null {
   if (tab === 'queue' || tab === 'today') return 'today';
   if (tab === 'insights' || tab === 'for_you') return 'for_you';
   if (tab === 'tracker') return 'tracker';
+  if (tab === 'skills') return 'skills';
   return null;
 }
 
@@ -48,7 +50,7 @@ function findApplication(home: CareerHome, applicationId: string): ApplicationCa
   return all.find((card) => card.application.id === applicationId) ?? null;
 }
 
-/** The tab's switch: three views, with what needs you counted beside Today. */
+/** The tab's switch: four views, with what needs you counted beside Today. */
 function CareerTabs({ tab, onTab, waiting }: Readonly<{ tab: CareerTab; onTab: (tab: CareerTab) => void; waiting: number }>) {
   const on = switchOf(tab);
   return (
@@ -145,6 +147,8 @@ function ViewBody({ tab, home, context, openJobId, openCard, onSetup, onTab, rel
   const { state } = home;
   const setup: CareerSetup = { profile: state.profile, spec: state.spec, settings: state.settings, resumeFileName: state.resumeFileName };
   if (tab === 'setup') return <SetupView initial={setup} gmail={state.gmail} onChanged={patchSetup} />;
+  // The tree needs no resume or spec: uploading it can be the first step.
+  if (tab === 'skills') return <SkillTreeView onProfileChanged={reload} onSetup={onSetup} />;
   if (!state.profile || !state.spec) return <FirstRun onSetup={onSetup} hasProfile={Boolean(state.profile)} />;
   if (tab === 'tracker') return <ApplicationsView home={home} onOpen={openCard} onReload={reload} />;
   if (tab === 'for_you' || tab === 'insights') return <JobsView home={home} threshold={context.threshold} openJobId={openJobId} numbersOpen={tab === 'insights'} />;

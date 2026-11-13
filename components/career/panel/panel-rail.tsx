@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, ClipboardPaste, Ellipsis, FileDown, ListChecks, Moon, Radar, Search, Sun, type LucideIcon } from 'lucide-react';
+import { OrbisMark } from '@/components/brand/orbis-mark';
 import { BusyIcon } from '@/components/career/bits';
 import { useDismiss } from '@/components/career/panel/panel-bits';
 import type { PanelPage } from '@/components/career/panel/panel-data';
@@ -66,8 +67,10 @@ function RailButton({ label, hint, onClick, children, badge, busy = false }: Rea
 }
 
 /**
- * With the desktop layout on, the rail is the app's navigation, the same as
- * /active's: every tab, Career marked as here, named by its tooltip. Career's
+ * With the desktop layout on, the rail is the app's navigation and looks the
+ * same as /active's sidebar (components/shell/desktop-rail.tsx): the Orbis
+ * name, then every tab as an icon and its name, Career marked as here. A
+ * narrower window folds it to icons, and the names become tooltips. Career's
  * actions are on the page instead, so the rail is never a mix of the two.
  * career-panel.css hides it below 900px, where the bottom bar keeps the
  * actions and "Back to the app".
@@ -77,6 +80,7 @@ function AppNav() {
   const shown = visibleTabs(modules);
   return (
     <nav className="cp-rail-apps" aria-label="Orbis">
+      <p className="cp-rail-brand" aria-hidden="true"><OrbisMark size={22} /><span>Orbis</span></p>
       <ul>
         {TABS.filter(({ id }) => shown.includes(id)).map(({ id, label }) => {
           const Icon = TAB_ICONS[id];
@@ -84,7 +88,8 @@ function AppNav() {
           return (
             <li key={id}>
               <a className="cp-rail-btn" href={here ? '/active/career' : appHref(id)} aria-label={label} aria-current={here ? 'page' : undefined}>
-                <Icon size={19} aria-hidden="true" />
+                <Icon size={18} aria-hidden="true" />
+                <span className="cp-rail-label" aria-hidden="true">{label}</span>
                 <span className="cp-tip" aria-hidden="true">{label}</span>
               </a>
             </li>
@@ -137,6 +142,7 @@ const PRIMARY: Record<PanelPage, readonly string[]> = {
   pipeline: ['search', 'queue'],
   interviews: ['search'],
   offers: ['search'],
+  skills: [],
   setup: [],
 };
 

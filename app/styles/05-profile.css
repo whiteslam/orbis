@@ -13,41 +13,42 @@
    A sticky offset is measured from the scroller's padding box, not from the
    top of the scrollport, so the screen's own top padding has to come back out
    of it — otherwise the bar pins that far down the screen. */
-.fd-tabs { position: sticky; top: calc(var(--fd-tabs-top, 28px) - var(--screen-pad-top, 34px)); z-index: 6; display: flex; gap: 22px; margin: 2px -16px 4px; padding: 9px 16px 11px; background: var(--fd-veil); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%); border-bottom: 1px solid var(--fd-rule); }
-.fd-tabs button { position: relative; padding: 4px 0 8px; border: 0; background: none; color: var(--fd-faint); font: inherit; font-size: 13.5px; font-weight: 600; letter-spacing: -.015em; cursor: pointer; }
-.fd-tabs button[aria-selected="true"] { color: var(--fd-ink); font-weight: 700; }
+.fd-tabs { position: sticky; top: calc(var(--fd-tabs-top, 28px) - var(--screen-pad-top, 34px)); z-index: 6; display: flex; gap: 22px; margin: 2px -16px 4px; padding: 9px 16px 11px; background: var(--fd-veil); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%); border-bottom: .5px solid var(--sys-separator); }
+.fd-tabs button { position: relative; min-height: 32px; padding: 4px 0 8px; border: 0; background: none; color: var(--sys-secondary); font: var(--t-subhead); cursor: pointer; }
+.fd-tabs button[aria-selected="true"] { color: var(--sys-label); font-weight: 600; }
+.fd-tabs button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 4px; }
 .fd-tabs button[aria-selected="true"]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: var(--r-pill); background: var(--fd-ink); }
 
 /* The line under the title. Profile has no decision to lead with, so this is
    context, set below a headline rather than as one. */
-.fd-lead { margin: 18px 0 2px; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; text-wrap: pretty; }
+.fd-lead { margin: 18px 0 2px; color: var(--sys-secondary); font: var(--t-subhead); text-wrap: pretty; }
 
 /* Profile opens with a person, not a title: the initial, the name, what you do,
    and only the chips that are true. It sits above the section tabs, so the
    screen reads as you whether Journal, Profile or Settings is open. */
 .fd-id { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
-.fd-avatar { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--fd-wash); color: var(--fd-accent); font-size: 22px; font-weight: 700; line-height: 1; letter-spacing: -.02em; box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.fd-avatar { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--sys-fill); color: var(--sys-label); font: var(--t-title-2); line-height: 1; }
 .fd-id-text { min-width: 0; }
-.fd-id-text h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.12; color: var(--fd-ink); overflow-wrap: anywhere; }
-.fd-id-text > p { margin: 3px 0 0; color: var(--fd-soft); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.fd-id-text h1 { margin: 0; font: var(--t-title-1); letter-spacing: -.02em; color: var(--fd-ink); overflow-wrap: anywhere; }
+.fd-id-text > p { margin: 2px 0 0; color: var(--sys-secondary); font: var(--t-subhead); overflow-wrap: anywhere; }
 .fd-id-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.fd-id-meta span { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: var(--r-pill); background: var(--fd-chip); color: var(--fd-faint); font-size: 11px; font-weight: 650; box-shadow: inset 0 0 0 1px var(--fd-rule); }
-.fd-id-meta span.on { background: var(--fd-wash); color: var(--fd-accent); box-shadow: none; }
+.fd-id-meta span { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: var(--r-pill); background: var(--sys-fill); color: var(--sys-secondary); font: var(--t-caption); }
+.fd-id-meta span.on { background: var(--sys-fill); color: var(--sys-label); }
 
 /* What you have already saved reads as text, the way a journal entry does. The
    form is a mode you enter, not the resting state of your own profile. */
 .field .fd-pairs { display: grid; margin: 12px 0 0; }
-.field .fd-pairs > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 12px 2px; border-bottom: 1px solid var(--fd-rule); }
-.field .fd-pairs dt { color: var(--fd-soft); font-size: 13px; }
-.field .fd-pairs dd { margin: 0; color: var(--fd-ink); font-size: 13px; font-weight: 650; text-align: right; overflow-wrap: anywhere; }
-.field .fd-prose { margin: 14px 0 0; color: var(--fd-ink); font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.field .fd-pairs > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 11px 2px; border-bottom: .5px solid var(--sys-separator); }
+.field .fd-pairs dt { color: var(--sys-label); font: var(--t-body); }
+.field .fd-pairs dd { margin: 0; color: var(--sys-secondary); font: var(--t-body); text-align: right; overflow-wrap: anywhere; }
+.field .fd-prose { margin: 14px 0 0; color: var(--sys-label); font: var(--t-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 .field .fd-prose.clamp { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
-.field .fd-note-lead { margin-top: 10px; font-size: 12.5px; color: var(--fd-soft); }
+.field .fd-note-lead { margin-top: 10px; color: var(--sys-secondary); font: var(--t-footnote); }
 .field .fd-row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .field .fd-row-actions .finance-button { min-height: 36px; padding: 0 15px; font-size: 12px; }
 .fd-group-note { margin-top: 6px; }
 .field .section-title { margin: 24px 0 0; }
-.field .section-title h3 { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--fd-faint); font-weight: 700; }
+.field .section-title h3 { color: var(--sys-secondary); font: var(--t-footnote); }
 
 /* Forms: the ground carries them, the fields themselves are the only surface. */
 .field .personal-form { display: grid; gap: 13px; margin-top: 12px; padding: 0; background: none; box-shadow: none; }

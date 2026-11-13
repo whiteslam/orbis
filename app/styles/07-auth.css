@@ -21,6 +21,18 @@
 .auth-submit { min-height: 48px; margin-top: 15px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
 .auth-submit:enabled:hover { opacity: .88; }
 .auth-submit:disabled { cursor: not-allowed; opacity: .65; }
+/* While it works, the button's words give way to a spinner in place (the
+   lock screen's Unlock, from the Apple pass); the button keeps its look. */
+.auth-submit { position: relative; display: grid; place-items: center; }
+.auth-submit > * { grid-area: 1 / 1; }
+.auth-spinner { width: 20px; height: 20px; border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%; opacity: 0; }
+.auth-submit[aria-busy="true"] { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-submit-label, .auth-spinner { transition: opacity .2s ease, transform var(--spring-snappy-dur, .3s) var(--spring-snappy, ease-out); }
+  .auth-submit[aria-busy="true"] .auth-submit-label { opacity: 0; transform: scale(.9); }
+  .auth-submit[aria-busy="true"] .auth-spinner { opacity: 1; animation: auth-spin .8s linear infinite; }
+}
+@keyframes auth-spin { to { transform: rotate(1turn); } }
 .auth-link { color: var(--fd-accent); font-size: 12.5px; font-weight: 650; text-decoration: none; }
 .auth-link:hover { text-decoration: underline; }
 .auth-forgot { display: block; align-self: center; margin-top: 20px; text-align: center; }
@@ -38,65 +50,88 @@
 .auth-signout { padding: 0; border: 0; background: none; color: var(--fd-alert); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
 .auth-signout:hover { text-decoration: underline; }
 
+/* ─── Lock and PIN: the iPhone passcode screen ─── */
 .lock-heading { display: flex; flex-direction: column; align-items: center; }
-.lock-heading h1 { margin: 20px 0 0; font-size: 27px; font-weight: 700; letter-spacing: -.03em; line-height: 1.16; }
-.lock-heading p { margin: 10px 0 0; color: var(--fd-soft); font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
-.lock-heading strong { color: var(--fd-ink); font-weight: 650; }
-.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; background: var(--fd-wash); color: var(--fd-accent); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.auth-stage .lock-heading h1 { margin: 20px 0 0; font: var(--t-title-1); letter-spacing: -.02em; overflow-wrap: break-word; min-width: 0; }
+.auth-stage .lock-heading p { margin: 6px 0 0; color: var(--sys-secondary); font: var(--t-subhead); overflow-wrap: anywhere; }
+.lock-heading strong { color: var(--sys-label); font-weight: 600; }
+.lock-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: var(--sys-surface); color: var(--sys-label); }
 .lock-device { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 0; }
-.lock-alt { display: block; margin: 0 auto; padding: 0; border: 0; background: none; color: var(--fd-accent); font-size: 13px; font-weight: 650; cursor: pointer; }
-.lock-alt:hover { text-decoration: underline; }
-.lock-password { margin-top: 32px; }
+.auth-stage .lock-alt { display: flex; align-items: center; justify-content: center; min-height: 44px; margin: 0 auto; padding: 0 8px; border: 0; background: none; color: var(--tint); font: var(--t-body); cursor: pointer; }
+.auth-stage .lock-alt:hover { opacity: .8; }
+.auth-stage .lock-password { margin-top: 28px; }
 .lock-password .auth-passkey { margin-top: 8px; }
-.lock-pin { display: flex; flex-direction: column; align-items: center; margin-top: 38px; }
-.lock-pin label { color: var(--fd-faint); font-size: 10px; font-weight: 700; }
-.lock-pin-status { margin: 12px 0 0; color: var(--fd-soft); font-size: 12px; }
+.auth-stage .lock-pin { display: flex; flex-direction: column; align-items: center; margin-top: 32px; }
+.auth-stage .lock-pin label { color: var(--sys-label); font: var(--t-body); }
+.auth-stage .lock-pin-status { margin: 12px 0 0; color: var(--sys-secondary); font: var(--t-footnote); }
 
 /* The PIN: a real numeric field under six dots, so typing and autofill still work. */
-.pin-field { position: relative; width: 236px; height: 52px; margin-top: 12px; }
+.pin-field { position: relative; width: 236px; height: 50px; margin-top: 12px; }
 .pin-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; font-size: 16px; cursor: text; }
-.pin-dots { height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border: 1px solid var(--fd-rule); border-radius: var(--r-lg); background: var(--fd-card); pointer-events: none; }
-.pin-field:focus-within .pin-dots { border-color: var(--fd-accent); box-shadow: 0 0 0 3px var(--fd-wash); }
-.pin-dots span { width: 13px; height: 13px; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1.5px var(--fd-hairline); transition: background .12s, box-shadow .12s; }
-.pin-dots span.filled { background: var(--fd-ink); box-shadow: none; }
-/* With the keypad: bare dots, no box. */
+.pin-dots { height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border: 0; border-radius: var(--r-field); background: var(--sys-surface-2); pointer-events: none; }
+.pin-field:focus-within .pin-dots { box-shadow: 0 0 0 2px var(--tint); }
+.pin-dots span { width: 12px; height: 12px; border-radius: 50%; background: none; box-shadow: inset 0 0 0 1.5px var(--sys-label); }
+.pin-dots span.filled { background: var(--sys-label); box-shadow: none; }
+/* With the keypad: bare dots, as on the iPhone. */
 .pin-field.keypad { width: auto; height: 28px; }
-.pin-field.keypad .pin-dots { gap: 11px; padding: 0 6px; border: 0; background: none; }
+.pin-field.keypad .pin-dots { gap: 22px; padding: 0 6px; background: none; }
 .pin-field.keypad:focus-within .pin-dots { box-shadow: none; }
-.pin-field.keypad:has(.pin-native:focus-visible) .pin-dots { box-shadow: 0 0 0 1.5px var(--fd-hairline); border-radius: var(--r-pill); }
-.pin-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 260px; margin: 30px auto 0; }
-.pin-key { aspect-ratio: 1; min-height: 62px; justify-self: center; width: 100%; max-width: 76px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); font-family: var(--rounded); font-size: 25px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background .12s, transform .08s; }
-.pin-key:active:not(:disabled) { background: var(--fd-wash); transform: scale(.96); }
-.pin-key:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
-.pin-key:disabled { cursor: not-allowed; }
-.pin-key:disabled:not(.plain) { opacity: .55; cursor: not-allowed; }
-.pin-key.plain { background: none; box-shadow: none; color: var(--fd-soft); }
-.pin-key.plain:disabled { opacity: .35; cursor: not-allowed; }
-.pin-key.accent { color: var(--fd-accent); }
+/* The field is focused on arrival and is the only thing to type into, so its ring stays faint. */
+.pin-field.keypad:has(.pin-native:focus-visible) .pin-dots { box-shadow: 0 0 0 1.5px var(--sys-separator); border-radius: var(--r-pill); }
+.auth-stage .pin-field.keypad { height: 28px; margin-top: 20px; }
+.auth-stage .pin-field.keypad .pin-dots { gap: 22px; }
+.auth-stage .pin-dots span { width: 13px; height: 13px; }
+.auth-stage .pin-dots span.filled { background: var(--sys-label); }
+/* Keys: iOS's grey discs, a big light digit, a brighter disc while pressed. */
+.auth-stage .pin-pad { display: grid; grid-template-columns: repeat(3, 78px); justify-content: center; gap: 16px 26px; width: 100%; max-width: none; margin: 40px auto 0; }
+.auth-stage .pin-key { width: 78px; height: 78px; min-height: 0; max-width: none; aspect-ratio: auto; justify-self: center; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--sys-fill); box-shadow: none; color: var(--sys-label); font: 400 34px/1 var(--font-display); font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background-color .3s ease; }
+.auth-stage .pin-key:active:not(:disabled) { background: var(--sys-surface-3); transition: none; }
+.auth-stage .pin-key:disabled { cursor: not-allowed; }
+.auth-stage .pin-key:disabled:not(.plain) { opacity: .4; }
+.auth-stage .pin-key.plain { background: none; color: var(--sys-label); }
+.auth-stage .pin-key.plain:active:not(:disabled) { background: none; opacity: .5; }
+.auth-stage .pin-key.plain:disabled { opacity: .3; }
+.auth-stage .pin-key.accent { color: var(--tint); }
+@media (max-height: 700px) {
+  .auth-stage .pin-pad { grid-template-columns: repeat(3, 68px); gap: 12px 24px; margin-top: 28px; }
+  .auth-stage .pin-key { width: 68px; height: 68px; font-size: 30px; }
+}
+
+/* A dot fills with a small spring; a wrong PIN shakes the row, as the iPhone does
+   (lock-screen.tsx and pin-setup.tsx flip data-shake between a and b to restart it). */
+@media (prefers-reduced-motion: no-preference) {
+  .pin-dots span.filled { animation: pin-pop var(--spring-snappy-dur, .3s) var(--spring-snappy, cubic-bezier(.23, 1, .32, 1)); }
+  .lock-pin[data-shake="a"] .pin-dots { animation: pin-shake-a .5s cubic-bezier(.36, .07, .19, .97); }
+  .lock-pin[data-shake="b"] .pin-dots { animation: pin-shake-b .5s cubic-bezier(.36, .07, .19, .97); }
+}
+@keyframes pin-pop { from { transform: scale(.5); } }
+@keyframes pin-shake-a { 15% { transform: translateX(-14px); } 30% { transform: translateX(12px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
+@keyframes pin-shake-b { 15% { transform: translateX(-14px); } 30% { transform: translateX(12px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
 
 .auth-card.centered { align-items: center; padding-top: 26px; text-align: center; }
 .auth-card.centered > * { width: 100%; }
 .auth-card.centered .auth-form, .auth-card.centered .auth-feedback { text-align: left; }
-.lock-signout { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 12px; }
+.auth-stage .lock-signout { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding-top: 0; border-top: 0; color: var(--sys-secondary); font: var(--t-subhead); }
 .auth-foot > .lock-signout:first-child { margin-top: 0; }
 /* Keyboard open: pin the column to the top of the visible area so the field sits right above the keyboard. */
 .keyboard-open .auth-stage { padding-top: max(12px, var(--safe-top)); }
 .keyboard-open .auth-card { margin-top: 0; padding-top: 8px; min-height: 0; }
 .keyboard-open .auth-card .auth-brand { margin-bottom: 16px; }
 .keyboard-open .auth-foot { display: none; }
-.lock-cover { gap: 14px; align-items: center; justify-content: center; color: var(--fd-soft); font-size: 13px; }
+.auth-stage.lock-cover { gap: 16px; align-items: center; justify-content: center; color: var(--sys-secondary); font: var(--t-subhead); }
 .lock-cover p { margin: 0; }
-.passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--sys-surface); }
-.passkey-prompt strong { font-size: 13px; }
-.passkey-prompt p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.passkey-prompt .passkey-error { color: var(--status-critical); }
-.passkey-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
-.passkey-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* "Secure your Orbis" on Today: a cell with Face ID's green glyph. */
+.passkey-prompt { display: flex; gap: 12px; margin: 0 0 16px; padding: 16px; border: 0; border-radius: var(--r-card); background: var(--sys-surface); }
+.passkey-prompt strong { display: block; color: var(--sys-label); font: var(--t-headline); }
+.passkey-prompt p { margin: 2px 0 0; color: var(--sys-secondary); font: var(--t-subhead); }
+.passkey-prompt .passkey-error { color: var(--sys-red); }
+.passkey-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; background: var(--sys-green); color: var(--on-fill); }
+.passkey-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.passkey-prompt .passkey-actions .finance-button.primary { min-height: 44px; padding: 0 20px; font: var(--t-headline); }
+.passkey-prompt .passkey-actions .finance-button.passkey-later { min-height: 44px; padding: 0 4px; border: 0; background: none; box-shadow: none; color: var(--tint); font: var(--t-body); }
+.passkey-prompt .passkey-actions .finance-button.passkey-later:hover { color: var(--tint); opacity: .8; }
 .passkey-prompt.added { align-items: center; }
-.auth-back { display: block; margin-top: 20px; text-align: center; }
-.auth-feedback { margin: 10px 0 0; padding: 11px 14px; border-radius: 13px; font-size: 12.5px; line-height: 1.5; }
-.auth-feedback.error { background: var(--fd-alert-wash); color: var(--fd-alert); }
-.auth-feedback.success { background: var(--fd-wash); color: var(--fd-accent); }
 /* Phones in portrait, and touch devices in landscape (short screens), run Orbis full-screen. */
 @media (max-width: 720px), (pointer: coarse) and (max-height: 540px) {
   /* Only the screen inside the app scrolls. Left scrollable, the page itself

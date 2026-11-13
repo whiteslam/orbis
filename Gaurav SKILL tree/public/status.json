@@ -1,0 +1,226 @@
+{
+  "version": "070c96a55809",
+  "updatedAt": "2026-11-07T08:25:40.277Z",
+  "commits": 1099,
+  "skills": 44,
+  "events": [
+    {
+      "type": "levelup",
+      "id": "ssr",
+      "name": "Server-Side Rendering",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "designsystems",
+      "name": "Design Systems",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "interactive",
+      "name": "Interactive UI Development",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "apidesign",
+      "name": "API Design and Development",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "integration",
+      "name": "Third-Party Integration",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "scheduling",
+      "name": "Task Scheduling",
+      "branch": "backend",
+      "level": 4,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "automation",
+      "name": "Scripting and Automation",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "dbsecurity",
+      "name": "Database Access Control",
+      "branch": "databases",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "indexing",
+      "name": "Database Indexing",
+      "branch": "databases",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "datamigration",
+      "name": "Data Migration",
+      "branch": "databases",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "prompts",
+      "name": "Prompt Engineering",
+      "branch": "ai",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "debugging",
+      "name": "Debugging and Root Cause Analysis",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "performance",
+      "name": "Web Performance Optimization",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "appsec",
+      "name": "Application Security",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "levelup",
+      "id": "techdocs",
+      "name": "Technical Design Documentation",
+      "branch": "practices",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "cicd",
+      "name": "CI/CD Pipelines",
+      "branch": "practices",
+      "level": 3,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "e2e",
+      "name": "End-to-End Testing",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "payments",
+      "name": "Payment Integration",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "mobile",
+      "name": "Mobile App Development",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "statemanagement",
+      "name": "State Management",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "geo",
+      "name": "Geolocation and Mapping",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "dataviz",
+      "name": "Data Visualization",
+      "branch": "frontend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "pwa",
+      "name": "Progressive Web Apps",
+      "branch": "frontend",
+      "level": 4,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "push",
+      "name": "Push Notifications",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "documents",
+      "name": "Document Processing",
+      "branch": "backend",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "ratelimit",
+      "name": "API Rate Limiting",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    },
+    {
+      "type": "unlock",
+      "id": "a11y",
+      "name": "Web Accessibility",
+      "branch": "quality",
+      "level": 5,
+      "at": "2026-11-07T08:12:22.899Z"
+    }
+  ],
+  "lockKey": "636cdfc4b681ca6479d363c1a235425a9683ca8d",
+  "lockError": null
+}

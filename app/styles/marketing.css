@@ -1,3 +1,5 @@
+/* Hallmark · redesign: full, below the hero only (the eclipse hero kept as built) · genre: atmospheric · job: subscribe (a waitlist) · shape: split studio, then a statement band, then the close · signature: a sample morning brief, built because a real one would show a real person's money · nav: kept · footer: one row, the mark, three links, the year · surface: the brand's dark, one lightness step for the privacy band · checked: by hand against gates.md; sloplint not run (blocked in this session) */
+/* Hallmark · critique: the old section was a numbered three-row feature list beside a half-empty note, with no picture of the product and no way to join at the end; now the brief is shown, the promise is a statement, and the page ends on the form · reworded "AI that never trains on you" to "Only what you connect" with four real controls listed and the chip "Never trains AI on your data" to "AI you can switch off" · 46a: the old claim was no longer true */
 /* ─── Public pages: privacy, terms, support, delete-account, offline ───
    Sits on the same Field ground as auth (--fd-*), full-bleed rather than
    the phone-frame shell: a stranger reads these before there is any
@@ -68,8 +70,6 @@
 .wl-join-link:hover { filter: brightness(1.06); }
 .wl-login:focus-visible, .wl-join-link:focus-visible { outline: 2px solid var(--on-fill); outline-offset: 2px; }
 .wl-main { flex: 1 0 auto; width: 100%; }
-.wl-body { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px 72px; }
-.wl-body > * { max-width: 640px; }
 
 .wl-hero { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: min(92svh, 860px); padding: 104px 0 72px; }
 .wl-backdrop { position: absolute; inset: 0; z-index: 0; }
@@ -122,27 +122,83 @@
 .wl-trust li { display: inline-flex; align-items: center; gap: 7px; color: var(--fd-soft); font-size: 12.5px; }
 .wl-trust svg { flex: none; color: var(--brand-teal); }
 
-.wl-body > .wl-what { max-width: none; }
-.wl-what { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 36px; margin-top: 24px; }
-.wl-row { padding: 24px 0 8px; border-top: 1px solid var(--fd-rule); }
-.wl-num { display: block; margin-bottom: 14px; color: var(--brand-teal); font-size: 11.5px; font-weight: 500; letter-spacing: .5px; }
-.wl-row h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.012em; }
-.wl-row p { margin: 7px 0 0; max-width: 54ch; color: var(--fd-soft); font-size: 13.5px; line-height: 1.65; }
+/* ─── Below the hero (Hallmark redesign, 2026-11-12) ─────────────────────
+   The product, then the promise, then the door again. One container width
+   (1120px) and one split (5 to 6 columns) for all three sections, so they
+   line up under the hero copy. The sample brief is the one picture; the
+   privacy band is set off by a lightness step, not by rules or boxes. Heads
+   take the hero's light display voice at section size. */
+.wl-wrap { box-sizing: border-box; width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.wl-brief-grid, .wl-private-grid, .wl-close-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; }
+.wl-brief h2, .wl-private h2, .wl-close h2 { margin: 0; min-width: 0; color: var(--on-fill); font-size: clamp(2.5rem, 1.5rem + 2.8vw, 3.5rem); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; overflow-wrap: break-word; }
 
-.wl-note { margin-top: 44px; }
-.wl-note h2 { margin: 0; font-size: 15.5px; font-weight: 650; letter-spacing: -.012em; }
-.wl-note p { margin: 8px 0 0; max-width: 54ch; color: var(--fd-soft); font-size: 13.5px; line-height: 1.65; }
-.wl-note a { color: var(--fd-accent); font-weight: 650; }
+.wl-brief { padding: 96px 0 136px; }
+.wl-brief-grid { grid-template-areas: 'head sample' 'covers sample'; grid-template-rows: auto auto; row-gap: 48px; }
+.wl-brief-head { grid-area: head; align-self: end; }
+.wl-brief .wl-sample { grid-area: sample; align-self: center; }
+.wl-covers { grid-area: covers; align-self: start; }
+.wl-brief-lede { margin: 20px 0 0; max-width: 34ch; color: var(--wl-lede); font-size: 18px; line-height: 1.6; }
+.wl-covers { display: grid; gap: 28px; margin: 0; padding: 0; list-style: none; }
+.wl-covers h3 { margin: 0; color: var(--fd-ink); font-size: 17px; font-weight: 600; letter-spacing: -.015em; }
+.wl-covers p { margin: 6px 0 0; max-width: 46ch; color: var(--fd-soft); font-size: 15px; line-height: 1.6; }
 
-.wl-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; width: 100%; max-width: 1120px; margin: 0 auto; padding: 20px 24px max(26px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fd-rule); }
-.wl-footer ul { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; }
-.wl-footer a { color: var(--fd-soft); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.wl-sample { min-width: 0; margin: 0; }
+.wl-sample-sheet { padding: 36px 36px 28px; border-radius: 24px; background: var(--brand-s1); box-shadow: var(--wl-sheet-shadow); }
+.wl-sample-head { display: flex; align-items: center; gap: 12px; margin: 0; }
+.wl-sample-head .orbis-mark { border-radius: 8px; }
+.wl-sample-head b { color: var(--fd-ink); font-size: 17px; font-weight: 600; }
+.wl-sample-head time { margin-left: auto; color: var(--fd-faint); font-size: 14px; font-variant-numeric: tabular-nums; }
+.wl-sample-text { margin: 22px 0 0; color: var(--fd-ink); font-size: clamp(18px, 1rem + .4vw, 21px); line-height: 1.6; text-wrap: pretty; }
+.wl-sample-from { margin: 24px 0 0; padding-top: 18px; border-top: 1px solid var(--fd-rule); color: var(--fd-faint); font-size: 13px; }
+.wl-sample figcaption { margin: 14px 0 0 4px; color: var(--fd-faint); font-size: 13px; }
+
+/* The wordmark band: the dark ground above the middle, the privacy band's
+   step below it, and the name set across the full container on the seam.
+   Sized in container units so it fills the measure at every width. The
+   letters are lit from the top and dissolve into the band's own colour at
+   the foot, so the name blends into the section rather than sitting on it. */
+.wl-bigmark { background: linear-gradient(180deg, var(--fd-field) 30%, var(--brand-s1) 78%); }
+.wl-bigmark + .wl-private { padding-top: 72px; }
+.wl-bigmark .wl-wrap { container-type: inline-size; }
+.wl-bigmark p { margin: 0; font-size: 44.6cqi; font-weight: 700; letter-spacing: -.055em; line-height: .78; white-space: nowrap; user-select: none; color: var(--brand-s2); background: var(--wl-bigmark-fill); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+.wl-private { padding: 120px 0; background: var(--brand-s1); }
+.wl-private-grid { align-items: start; }
+.wl-private-lede { margin: 20px 0 0; max-width: 32ch; color: var(--wl-lede); font-size: 18px; line-height: 1.6; }
+/* The four things a person controls, as rows: the section's mass is the list. */
+.wl-controls { margin: 0; padding: 0; list-style: none; }
+.wl-controls li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 18px; align-items: center; padding: 22px 0; border-top: 1px solid var(--fd-rule); color: var(--fd-ink); font-size: 19px; line-height: 1.45; }
+.wl-controls li:last-child { border-bottom: 1px solid var(--fd-rule); }
+.wl-controls svg { color: var(--brand-teal); }
+.wl-controls-more { margin: 22px 0 0; font-size: 15px; }
+.wl-private a { color: var(--fd-accent); font-weight: 600; text-underline-offset: .2em; }
+
+.wl-close { padding: 136px 0 120px; }
+.wl-close-grid { align-items: end; }
+.wl-close h2 { max-width: 12ch; }
+.wl-close-form { min-width: 0; scroll-margin-top: 96px; }
+
+.wl-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; box-sizing: border-box; width: 100%; max-width: 1120px; margin: 0 auto; padding: 28px 24px max(32px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fd-rule); }
+.wl-footer-brand { display: inline-flex; align-items: center; gap: 10px; }
+.wl-footer-brand .orbis-mark { border-radius: 8px; }
+.wl-footer-brand strong { color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.04em; }
+.wl-footer ul { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 auto 0 0; padding: 0; list-style: none; }
+.wl-footer a { color: var(--fd-soft); font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .wl-footer a:hover { color: var(--fd-ink); text-decoration: underline; }
-.wl-footer p { margin: 0; color: var(--fd-faint); font-size: 11.5px; }
+.wl-footer p { margin: 0; color: var(--fd-faint); font-size: 12.5px; }
 
-@media (max-width: 860px) {
-  .wl-what { grid-template-columns: 1fr; }
-  .wl-row { padding-bottom: 22px; }
+@media (max-width: 899px) {
+  .wl-brief-grid, .wl-private-grid, .wl-close-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  /* On a phone the picture follows the lede, before the two items. */
+  .wl-brief-grid { grid-template-areas: 'head' 'sample' 'covers'; row-gap: 40px; }
+  .wl-controls li { padding: 18px 0; font-size: 17px; }
+  .wl-brief { padding: 88px 0 96px; }
+  .wl-private { padding: 88px 0; }
+  .wl-private-grid { gap: 20px; }
+  .wl-close { padding: 96px 0 88px; }
+  .wl-close-grid { gap: 28px; }
+  .wl-sample-sheet { padding: 26px 22px 22px; border-radius: 20px; }
+  .wl-footer ul { margin: 0; }
 }
 @media (max-width: 560px) {
   .wl-form { grid-template-columns: 1fr; }
@@ -155,14 +211,19 @@
   .wl-hero { align-items: flex-start; min-height: 0; padding: calc(min(130vw, 520px) * 0.29 + 100px) 0 56px; }
 }
 @media (max-width: 420px) {
-  .wl-hero-copy, .wl-body, .wl-header, .wl-footer { padding-left: 20px; padding-right: 20px; }
+  /* Three chips do not fit two to a row evenly; one per line, none left alone. */
+  .wl-hero .wl-trust { flex-direction: column; gap: 10px; }
+  .wl-hero-copy, .wl-wrap, .wl-header, .wl-footer { padding-left: 20px; padding-right: 20px; }
 }
 
 /* Eclipse: the hero backdrop (components/marketing/eclipse-backdrop.tsx).
    The Orbis ring as an eclipse in a starfield. The page's own black shows
    through everywhere; nothing here paints a background of its own except the
    ring's dark centre. Only transform and opacity animate. */
+/* The stars and the veil fade out at the hero's foot, so the page runs on into
+   the sections below without a seam; the eclipse itself is never masked. */
 .wl-space { overflow: hidden; pointer-events: none; }
+.wl-stars, .wl-space-veil { -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent); mask-image: linear-gradient(180deg, #000 72%, transparent); }
 
 /* Two tiled star layers drifting at different speeds give the sky depth. */
 .wl-stars { position: absolute; inset: -80px; background-repeat: repeat; will-change: transform; }

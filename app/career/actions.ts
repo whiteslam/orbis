@@ -31,13 +31,14 @@ import { validateTerms } from '@/lib/career/mail';
 import { annualise, capCounter, type CompetingOffer } from '@/lib/career/offer';
 import { totalYears, validateProfile } from '@/lib/career/profile';
 import {
-  addEvent, CareerError, countForYou, createOffer, findJobIdByKey, getApplication, getApplicationFiles, getApplicationForJob,
-  getCareerRow, getCareerState, getJob, getOffer, linkEvent, listApplications, listEvents, listJobs, listJobsByIds, listJobsPage,
-  listOffers, readSettings, saveProfile, saveSettings, saveSpec, sentAddresses, setJobDescription, setJobState, signedCareerUrl, transitionApplication,
+  addEvent, CareerError, clearSkillTree, countForYou, createOffer, findJobIdByKey, getApplication, getApplicationFiles, getApplicationForJob,
+  getCareerRow, getCareerState, getJob, getSkillTreeRow, getOffer, linkEvent, listApplications, listEvents, listJobs, listJobsByIds, listJobsPage,
+  listOffers, readSettings, saveProfile, saveSettings, saveSkillTree, saveSpec, sentAddresses, setJobDescription, setJobState, signedCareerUrl, transitionApplication,
   updateApplication, updateOffer, upsertJobs, type CareerDb, type CareerRow,
 } from '@/lib/career/repository';
-import { careerToday, scoreJob } from '@/lib/career/scoring';
+import { careerToday, rescoreStored, scoreJob } from '@/lib/career/scoring';
 import { getPersonSettings } from '@/lib/locale/repository';
+import { applySkillTree, validateSkillTree, type SkillTree, type SkillTreeImport } from '@/lib/career/skill-tree';
 import { buildPasteKit, resumeFileName } from '@/lib/career/send-plan';
 import { applyRecipient } from '@/lib/career/recipient';
 import { markApplied, offerTargetFor, sendApplication, sendFollowUp, sendOfferReply } from '@/lib/career/send';
@@ -296,6 +297,64 @@ export async function saveProfileAction(profile: CareerProfile): Promise<Result<
     await saveProfile(userId, valid, client);
     refresh();
     return ok(valid);
+  });
+}
+
+// ─── Skill tree ───────────────────────────────────────────────────────────
+
+/** The newest jobs rescored after an upload; older ones rescore at their next search. */
+const RESCORE_LIMIT = 100;
+
+const SKILL_TREE_NOT_READY = 'Skill trees aren’t set up in the database yet. Try again later.';
+
+/** The owner's uploaded skill tree (null when there is none), and the profile, to show which CV lines are confirmed. */
+export async function loadSkillTreeAction(): Promise<Result<{ tree: SkillTree | null; profile: CareerProfile | null; ready: boolean }>> {
+  return signedIn('Your skill tree couldn’t be loaded. Try again in a little while.', async ({ userId, client }) => ok(await getSkillTreeRow(userId, client)));
+}
+
+/**
+ * Stores the tree the browser read from data.js and puts it into the profile:
+ * its tools and skills as profile skills, its CV lines as unconfirmed facts
+ * (lib/career/skill-tree.ts, applySkillTree). Jobs are scored against them
+ * from the next search or rescore.
+ */
+export async function importSkillTreeAction(tree: SkillTree): Promise<Result<SkillTreeImport>> {
+  if (tooBig(tree, 400_000)) return fail('That skill tree is too large to upload.');
+  const valid = validateSkillTree(tree);
+  if (!valid) return fail('That file isn’t a skill tree Orbis can read. Choose the tree’s public/data.js.');
+  // Which fact a skill made is the server's to know, never the browser's.
+  const incoming: SkillTree = { ...valid, importedAt: new Date().toISOString(), skills: valid.skills.map((skill) => ({ ...skill, factId: null })) };
+  return signedIn('Your skill tree couldn’t be saved. Try again in a little while.', async ({ userId, client }) => {
+    const current = await getSkillTreeRow(userId, client);
+    if (!current.ready) return fail(SKILL_TREE_NOT_READY);
+    const applied = applySkillTree(current.profile, incoming, current.tree);
+    const profile = validateProfile(applied.profile);
+    if (!profile) return fail('Your profile and the skill tree together don’t fit: check Setup for very long text, then try again.');
+    await saveSkillTree(userId, applied.tree, profile, client);
+    // Jobs already found score against the new skills now, not at the next search.
+    let rescored = 0;
+    try {
+      const row = await getCareerRow(userId, client);
+      if (row?.spec) {
+        const jobs = await listJobs(userId, { view: 'everything', threshold: row.settings.threshold, limit: RESCORE_LIMIT }, client);
+        rescored = await rescoreStored(client, userId, jobs, profile, row.spec, row.settings);
+      }
+    } catch (error) {
+      console.error('Rescoring jobs after a skill tree upload failed', error);
+    }
+    refresh();
+    return ok({ tree: applied.tree, profile, added: applied.added, skipped: applied.skipped, rescored });
+  });
+}
+
+/** Takes the tree off Career. What it added to the profile stays, to keep or delete in Setup. */
+export async function clearSkillTreeAction(): Promise<Result<null>> {
+  return signedIn('Your skill tree couldn’t be removed. Try again in a little while.', async ({ userId, client }) => {
+    const current = await getSkillTreeRow(userId, client);
+    if (!current.ready) return fail(SKILL_TREE_NOT_READY);
+    await clearSkillTree(userId, client);
+    refresh();
+    return ok(null);
   });
 }
 

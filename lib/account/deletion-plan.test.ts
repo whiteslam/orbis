@@ -31,7 +31,7 @@ test('only the sweep after the account is gone is best effort', () => {
   assert.ok(steps.indexOf('sweep-storage') > steps.indexOf('delete-user'));
 });
 test('every private bucket is emptied', () => {
-  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
+  for (const bucket of ['health-documents', 'social-media', 'journal-voice', 'workbook-uploads', 'career-documents', 'research-memory', 'shorts']) assert.ok(STORAGE_BUCKETS.includes(bucket), bucket);
 });
 test('the export never includes stored credentials', () => {
   const tables = EXPORT_TABLES.map((entry) => entry.table);

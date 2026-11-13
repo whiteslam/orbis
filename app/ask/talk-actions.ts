@@ -17,6 +17,8 @@ export type TalkResult = {
   transcript?: string;
   answer?: string;
   citations?: Citation[];
+  inferred?: string[];
+  followUps?: string[];
   /** BCP-47 code the answer is written and spoken in. */
   language?: string;
   /** Base64 WAV, or absent when speech failed and the client should read the text itself. */
@@ -88,5 +90,5 @@ export async function talkToOrbisAction(form: FormData): Promise<TalkResult> {
   if (!result.success || !result.answer) return { ...result, transcript };
 
   const audio = await speak(result.answer, language, { apiKey });
-  return { success: true, message: '', transcript, answer: result.answer, citations: result.citations, language, audio: audio ?? undefined };
+  return { success: true, message: '', transcript, answer: result.answer, citations: result.citations, inferred: result.inferred, followUps: result.followUps, language, audio: audio ?? undefined };
 }

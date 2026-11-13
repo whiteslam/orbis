@@ -78,6 +78,30 @@ function jumpTo(section: SettingsSection) {
   document.getElementById(`settings-${section}`)?.scrollIntoView({ block: 'start' });
 }
 
+/** Seconds or milliseconds from a CSS time ("0.4s", "400ms"), or the fallback. */
+function cssTime(value: string, fallback: number) {
+  const ms = value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000;
+  return Number.isFinite(ms) && ms > 0 ? ms : fallback;
+}
+
+/**
+ * The picked section arrives from the right, as a pushed page does in iOS
+ * Settings. Only for a tap or click: a key press moves instantly, and Reduce
+ * Motion gets a short fade instead. The spring comes from brand.css.
+ */
+function pushIn(section: SettingsSection) {
+  const target = document.getElementById(`settings-${section}`);
+  if (!target || typeof target.animate !== 'function') return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    target.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease' });
+    return;
+  }
+  const style = getComputedStyle(target);
+  const easing = style.getPropertyValue('--spring').trim() || 'cubic-bezier(0.32, 0.72, 0, 1)';
+  const duration = cssTime(style.getPropertyValue('--spring-dur').trim(), 450);
+  target.animate([{ opacity: 0.4, transform: 'translateX(28%)' }, { opacity: 1, transform: 'none' }], { duration, easing });
+}
+
 // `shown` marks the section picked in the list; only the desktop layout hides the rest (app/styles/desktop.css).
 function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; shown: SettingsSection; note?: string; children: ReactNode }>) {
   return (
@@ -169,6 +193,8 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
       {/* The desktop's veil behind the dialog; a press on it closes Settings. Hidden on the phone. */}
       <div className="settings-veil" aria-hidden="true" onClick={onClose} />
       <dialog open ref={dialogRef} className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
+        {/* Drag down from here to close (the shared sheet motion); phone only. */}
+        <div className="sheet-grabber" aria-hidden="true" />
         <header className="settings-head">
           <div className="st-title">
             <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
@@ -183,7 +209,7 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
             const Icon = GLYPH[item.id];
             const hint = hints[item.id];
             return (
-              <button key={item.id} className="st-row" data-section={item.id} type="button" aria-current={shown === item.id || undefined} onClick={() => { setShown(item.id); jumpTo(item.id); }}>
+              <button key={item.id} className="st-row" data-section={item.id} type="button" aria-current={shown === item.id || undefined} onClick={(event) => { setShown(item.id); jumpTo(item.id); if (event.detail > 0) pushIn(item.id); }}>
                 <span className="st-glyph" aria-hidden="true"><Icon size={16} strokeWidth={2} /></span>
                 <span className="st-row-label">{item.label}</span>
                 {hint && <small className={hint.warn ? 'st-row-hint warn' : 'st-row-hint'}>{hint.text}</small>}
@@ -205,8 +231,11 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
               <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
             </output>
           )}
-          <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
-          <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
+          {/* One inset grouped cell for every app, as a row each. */}
+          <div className="st-cell st-apps">
+            <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
+            <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
+          </div>
           <p className="fd-note tight st-subnote">Services Orbis uses for weather, rates, prices and AI.</p>
           <Integrations items={dataServices} heading={false} />
         </Group>
@@ -230,11 +259,13 @@ export function SettingsSheet({ section, onClose, openHealth, googleNotice, clea
         </Group>
 
         <Group id="data" shown={shown}>
-          <div className="fd-source pf-account">
-            <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
-            <SignOutButton variant="text" />
+          <div className="st-cell st-data">
+            <div className="fd-source pf-account">
+              <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
+              <SignOutButton variant="text" />
+            </div>
+            <AccountData />
           </div>
-          <AccountData />
         </Group>
       </dialog>
     </>

@@ -1,0 +1,1099 @@
+b2998b79|2026-11-06|V4 tasks and client hub work (Gaurav, 6 Nov 2026): Phoenix finance options, link approval cards, website page icons, client hub screens, EA Team SOP drafts
+53f69789|2026-11-05|V4 additional tasks (Gaurav, 5 Nov 2026): tidier team page, no empty pushes, review instructions, booking calendars, generator form
+744da23d|2026-11-03|V4 My Tasks (Gaurav, 3 Nov 2026): Foundations > AI as the Trello card, and clearer client task screens
+80d84e56|2026-10-31|Screens fit every device, AI Layer switched off, and the Dominate Calls sheet redesigned (owner, 31 Oct 2026)
+1b070ee1|2026-10-30|One AI Agents card on the team's board too: the orange push card opens the card's pop-up, with the push in a strip at its top (Gaurav, 30 Oct 2026)
+3bcc9e10|2026-10-30|AI Agents card on V4 only, fully built and pushed as one card that opens as a pop-up; V1 to V3 untouched; AI Agents Onboarding table keeps unsaved work (Gaurav, 30 Oct 2026)
+83935b31|2026-10-30|Playbooks and SOPs: the "Your bootcamp checklist" box is hidden (Gaurav, 30 Oct 2026)
+fe10ecf2|2026-10-30|Gaurav's in-progress work (30 Oct 2026): V4 short task names, Add additional task, Dominate Calls, Employee Hub menu gap
+37520271|2026-10-30|Leave Management on the Team pages (Gaurav, 30 Oct 2026)
+24793b1e|2026-10-29|V4's Leads Hub steps are the real Leads Hub checklist (Gaurav, 29 Oct 2026; V1, V2 and V3 untouched): the eight placeholder steps on LEADS HUB ACCOUNT SETUP (p1-12~0 to ~7, "Review your Leads Hub overview" and so on), which the Leads Hub team did not recognise, became the ten every Trello-era client follows: set-up video, log in, Launchpad, the training series, ivy@webuildtrades.com as Google My Business admin, import contacts, job management software (logins go on the Account page, never typed in), the usage costs, the 30-minute call with Ivy (her calendar inside the step), and CRN plus proof of address. The steps live in lib/tasks/leadsHubV4Tasks.json with the real Loom videos and links; scripts/v4-leads-hub-checklist.mjs put them on the V4 template, Test Company Inc and the two GRV test boards in the shared database (dry run by default, V4 boards only, proves V3 unchanged, refreshes steps in place keeping ticks). Only fields live's older task schema already knows. The usage costs are the Leads Hub usage-costs picture (public/task-examples): a step that is not an upload now shows its `examples` as pictures under the instructions, and Edit Client Tasks has a Pictures box on every step. An email in a step's instructions stands out with a Copy button (only this step holds one). Test: leadsHubV4Tasks.
+7ef0eb9b|2026-10-29|pushhhhhhhhh
+00cb1351|2026-10-28|V4 drops the old team checklists (Gaurav, 28 Oct 2026; V1, V2 and V3 untouched): in the shared database, V4's PHASE 1: PAID LAUNCH lost its five "ACCOUNT MANAGER: …" lines, DOMINATE PACKAGE its [ACCOUNT MANAGER] MONTHLY CALL CHECKLIST ("dgdg" included) and CLIENT SUPPORT CARD its CALL LOG blank; the new version does that work in the department checklists, on the Strategy call page and in Recording Centre. The cards stay. Edit Client Tasks now hides "Other / staff checklists" on a new-layout template that holds no team checklist item, and shows it again if one is added; classic templates keep it. Test: templateWorkspaceNewLayout.
+339d5bf0|2026-10-28|Preview on Other / staff checklists (Gaurav, 28 Oct 2026): each card there has a Preview button that opens it read-only in the client board pop-up's frame, with "Client sees" and "Team sees", one line on what kind of card it is (information card, team checklist, client tick-boxes, or a mix) and the My Board column it sits in. Built from the pop-up's own parts (ModalDialog, CardDescription, groupCardTasks), not the pop-up itself, which saves a tick on click and reads and marks the card's messages; every tick-box here is disabled. The template page now loads each card's description and column. Test: templateCardPreview.
+bc019dc5|2026-10-28|Template editor wears the client's My Tasks look (Gaurav, 28 Oct 2026): Edit Client Tasks draws the tab strip, the Monthly tasks box, the teal sub-tabs, the pale list with a teal top line and the white task card as components/tasks/ClientTaskWorkspace.tsx does, with Edit content and Remove in a slim bar above the card. Counts sit in grey bubbles (how many items a tab holds, not work waiting); each row's round marker is its number, so the order still shows while dragging; the grey line under a row says Required step or Optional, and which Paid Ads item or Additional Tasks phase it is. Organic's list keeps its Website heading. Editing, dragging, adding, removing and saving are unchanged. Tests: templateWorkspace, templateWorkspaceNewLayout read the new markup.
+1fd72a2f|2026-10-28|Template editor, one list per tab like the client's My Tasks (Gaurav, 28 Oct 2026): on a new-layout template (V4) Edit Client Tasks lists Paid Ads (Landing Page, Google Ads, Meta Ads) and Organic (Website, Social Media, Blog Posts) as one checklist each, in that order, with Organic under one Website heading and no sub-tabs, as the client has read them since 27 Oct. Foundations and Optimisation keep their sub-tabs; a V3 template keeps today's editor. Test: templateWorkspaceNewLayout (organic and paid lists, order, sub-tabs kept elsewhere).
+739b655d|2026-10-28|New clients get the V4 template once it is published (Gaurav, 28 Oct 2026): findLiveTemplate prefers "Dominate Board Template V4" when its board reads "Client task template V4: published", then V3, then V1. A V4 client is treated like a V3 one (no card due dates, the Plan tab switched on, the template's task videos and phases, the push cards topped up on the template's own task page). Live's older code only knows the V3 and V1 names, so live keeps giving V3 until this code is deployed. scripts/create-v4-template.mjs gains --publish / --unpublish; V4 was published in the shared database the same day, after checking it matched V3 task for task apart from Google Ads. scripts/reset-test-client.mjs brought up to date: it copies the template IN USE (cloneChecklist flags, no due dates, deep links re-pointed), clears the history added since August (tickets, Ava's chats, runs and memory notes, plan answers, website builder work, designs, notifications and more), unticks the team checklists and keeps logins, onboarding answers and recordings. Test Company Inc was reset onto V4 with it. Test: templatePersistence (V4 when published, V3 while a draft or removed).
+300617a0|2026-10-27|Staff Tasks page, tidied (owner, 27 Oct 2026): additional task cards are board-sized and grouped Foundations, Paid Ads, Organic, then the rest; every team's checklist has its phase buttons, with Hide completed on their row, the checklist note as a small (i) on hover at the end of the header, and "View only" a small caption above the box. A task with no linked SOP now shows the library's write-up for it on its own, only where a heading or title is the task at 95% or better (lib/sop-library/autoSop.ts, read on load, never stored): the steps, tidied of labels and unwritten placeholders, a "How to do this" pill and a small Source tag opening the SOP. Linking another SOP stays under one fold.
+6a6c935f|2026-10-27|Phase 2 is website live by day 70, not 60 (owner, 27 Oct 2026: 30 days after Phase 1's day 40). Client Stage's header, its traffic light (green to 70, amber to 80, red after) and every Phase 2 task's deadline read the new number.
+5fbd4940|2026-10-27|New layout, one list per tab (owner, 27 Oct 2026): the client's Paid Ads tab lists Landing Page, Google Ads and Meta Ads down the left instead of sub-tabs, and Organic lists Social Media and Blog Posts under one Website heading. The team's Client progress reads the same: one "Organic · Website" group, and a Paid Ads row that is always there, its tasks marked "Not shared yet" until pushed.
+f165ba6c|2026-10-26|Template picker: taller cards, only relevant templates under More templates, clearer heading and shorter notes caption
+fc5264fc|2026-10-26|Improve staff mobile experience
+3a6eb7bb|2026-10-24|Speed pass on the Clients tab and two client-app screens: the department counts for the whole book now load in parallel groups instead of four calls in a row, the owners, staff and department reads start as soon as the small id list is back instead of queueing behind the whole book, the ServiceM8 connect check pauses on a hidden tab and stops after ten minutes, and images in task review, task examples, machine designs, brand logos and the template gallery load as they scroll into view (gaurav, 24 Oct 2026)
+cdc470ba|2026-10-23|push
+be2e0a13|2026-10-23|Additional tasks in the client's order (Gaurav, 23 Oct 2026): the staff dropdown and the team's board lanes run Foundations, Paid Ads, Organic, then Other, and the website's tasks in the order the work is done (homepage design, website content, draft, final build, domain, email notifications, social, blogs). "Review your website content" now reads Organic / Phase 2 instead of Other. Display only, nothing on a board moves. An old link to an additional task opens it where it is now instead of "We couldn't find that page"
+534f3f15|2026-10-22|Give feedback: drag files onto the attachment tray, or click it to choose (owner, 22 Oct 2026), the same as both ticket forms. The tray lights up and says "Drop to attach" while a file is dragged over the form, the whole form takes the drop, and pasting a screenshot still works
+cc34bd9c|2026-10-22|Create A Ticket on the Client Hub: drag files onto the attachment tray, or click it to choose (owner, 22 Oct 2026), the same as the team's Raise a ticket for a client. The tray lights up and says "Drop to attach" while a file is dragged over the form, and the whole form takes the drop
+41be5695|2026-10-22|Raise a ticket for a client: drag files onto the attachment box, or click it to choose (owner, 22 Oct 2026). The box lights up while a file is dragged over the form, and the whole form takes the drop so a file let go just off the box never opens in the browser and loses what was typed
+304ad59f|2026-10-21|Get set up reads cleanly end to end (21 Oct 2026): one "Welcome" instead of five, the "answers below" note only on Your details where the answers are, "press" / "Mark as read" instead of "tap", the ring says it counts details, the sitemap card is named as part of Your details, reads are "read" not "watched", the kickoff step names the client's Business Development Partner so they pick the right calendar, "call" not "meeting", All set no longer says "will be unlocked" to a client whose hub is open, "Client Hub" not "Customer Hub", and "Tell us" instead of "Tell your team"
+1a7b35a7|2026-10-21|Bell: read notifications can be read again, Unread / Read switch like Trello (21 Oct 2026)
+3e300f75|2026-10-16|Quote form handover, two-step and vault fixes (16 Oct 2026)
+202a867d|2026-10-15|fix delivery team checklist data mapping etc
+8689b4f4|2026-10-15|Quote form link is the team's to give; team Client progress reads like a new-template client's My Tasks (15 Oct 2026)
+7bfc5ba3|2026-10-15|My Tasks: show what the client told us in the old Plan above an empty task form (Essex Heating, 15 Oct 2026)
+350a66d5|2026-10-14|Tagging A.I.V.A: typing @a, @ai, @ava, @aiva or @a.i in any ticket, card or thread box puts A.I.V.A first in the suggestions (the team's menu offers her too, the client's still only where ticket chat is on); picking her writes @A.I.V.A, and the old @Ava keeps working (owner, 14 Oct 2026)
+99e036bf|2026-10-14|Last Ava wording in the Command Hub becomes A.I.V.A: the admin access-map note, the Recordings filter, the author name saved on her SOP edits, her audit-trail name, the name on her emailed client updates, and the line in her ticket instructions that says she was asked with the tag (Rocket.Chat wording and stored data left for later) (owner, 14 Oct 2026)
+1c40c8b9|2026-10-14|Ava is A.I.V.A everywhere clients and the team see her: buttons, tabs, ticket threads, admin and AI Setup screens, notices, and her own instructions; typing @A.I.V.A, @AIVA or the old @Ava in a ticket finds her in the tag menu and triggers her, drawn as one tag (owner, 14 Oct 2026)
+b8b3a754|2026-10-14|Team's Client progress counts the blog review while the client has not unlocked monthly content, so it agrees with the client's own count (Test Company Inc read 8/40 on both sides, was 7/39 on the team's); an Additional Tasks card with no tasks no longer shows a 0/0 row (owner, 14 Oct 2026)
+548f724a|2026-10-14|Templates has a "Dominate Board Template V4" for the new My Tasks layout: a copy of V3 as it stands plus the Google Ads task, DRAFT, never copied onto a client (owner, 14 Oct 2026)
+58fe1b95|2026-10-13|New My Tasks for new clients (Foundations, Monthly Calls, My Results, A.I.V.A, Paid Ads, Organic, Optimisation); Home lists the client's next steps one by one with their place in the section (3/8); "Ask A.I.V.A" for every client; the team's board reads the same words (owner, 14 Oct 2026)
+ae139da1|2026-10-12|minor fixxes
+c272b2f1|2026-10-10|Checklist fix & email and some inor fixes
+1b661193|2026-10-09|add the blog and social tab in phase 2
+daf4facb|2026-10-08|new Security for the passwords
+7c1a0e70|2026-10-07|Phone boards, card window, Ava dock and client map follow the phone design; Access Control's By permission follows the new design (Gaurav, 7 Oct 2026): Access Control > By permission is one card per permission (People with Take it away / Put it back inline, Roles and Departments as on/off switches, same save rules). On a phone, My Tasks and the Client Stage board show one column per screen, snap on swipe, and carry back / forward arrows in each column header; My Tasks' search and Request help share one row; the My Tasks card window is a grey page with white cards, a "Step 2 of 5" line and pill tabs; the Client Stage key hides its sentence and holds the book notice behind an "i"; the Ava dock hides Open full screen, opens History as the client side's slide-over, and has quick prompts and a one-line note; the Client Map's top bar wraps into three rows, its filters are a slide-over, and its pills and colour key no longer overlap. Wider screens keep their existing look.
+ed3107e0|2026-10-06|Client Hub on a phone follows the new mobile design, phone widths only (Gaurav, 6 Oct 2026): the top bar shows the logo on Home and a back arrow plus the page name elsewhere (the repeated page titles are hidden on a phone), Home is the deep-teal build card, three lead tiles, four quick buttons and Needs you, and the Board / Tasks switch, task phase tabs, monthly box and onboarding buttons are aligned. Library, Calendar, Calls and Recordings, Account, Support and Tickets, Feedback (list and detail), the ticket page, the social post review pop-up and Ask Ava (history button, shorter welcome, chips above a one-row message box) were restyled to the design, with no orange on phone buttons or the notification count. Wider screens keep their existing look, and every figure shown is still the client's own data.
+12897018|2026-10-03|Take out the three leftover writes to the stored monthly-unlock column (go-live, phase move, automatic phase advance): the database change is not run, so each was a pointless extra write, and the go-live test caught it (3 Oct 2026). The unlock is read live from the phase, the go-live date and the Phase 3 card.
+4c139e77|2026-10-03|The client's review inside their Additional Task has one way to answer, each card's Review popup: no per-card Approve tick and no "Approve ticked" bar there. Monthly Tasks keeps both (Gaurav, 3 Oct 2026).
+06f58fa6|2026-10-03|The team's client page tab reads Social Media, not Organic Social: the same words the client and Content Generation use (Gaurav, 3 Oct 2026).
+ef3a48cd|2026-10-03|Monthly tasks before Phase 3: Social Media and Blogs both show the same "begins in Phase 3" page, with a button to the Additional Task holding their first posts or articles, instead of jumping into Additional Tasks (Gaurav, 3 Oct 2026).
+00e5b665|2026-10-03|Before Phase 3, posts and blogs go to Additional Tasks, with no database change and no grey lock (Gaurav, 3 Oct 2026)
+774e2048|2026-10-03|Monthly tasks: no lock, only a note before Phase 3 (Gaurav, 3 Oct 2026)
+699f4296|2026-10-03|Monthly content unlock: a shared month only holds an unlock already stamped. On its own it is a locked client's first batch, shared as their Additional Task, so the client record's switch no longer reads such a client as unlocked (3 Oct 2026).
+5f9a7244|2026-10-02|Send to board never reaches the client by itself, and an empty month card is off the client's board (Gaurav, 2 Oct 2026)
+a0744d34|2026-10-02|Monthly content unlock, part 5: four review findings fixed. The first batch is posts and blogs only (Meta ads were being swept into one list for every locked client); Meta ads and logos keep the month notice they always had (only a locked client's posts task gets the task notice); the Monthly content switch reads every signal, counts a month already in Monthly Tasks as holding the unlock, and refuses OFF over any of them (it could re-lock a backfilled client, and flapped on a Phase 3 card unlock); an empty first batch still hides the month calendar. The years runs were made FOR are kept when filing into the batch, so a copy already in another year is moved, never doubled.
+78d1adc2|2026-10-02|Monthly content unlock, part 4: the screens. Before a client's monthly content unlocks, their posts and blogs are ONE running list (the first batch, lib/content-gen/firstBatch: AI Studio runs file into it, Content Generation and the team's client page show it with no month calendar), sent into the board's own review task as before; the client sees that task under Additional Tasks (Social media / Blog posts tabs), approves the items inside it like the Meta ads task, the Monthly tasks box reads "Unlocks in Phase 3", Phase 2 has no Blogs / Socials rows, the monthly page sends them to the task, and the bell is the task's own. Home, My Board, the staff copies and the change stamp read the same unlock. Unlocked, every screen is as it was.
+813d30c4|2026-10-02|Monthly content unlock, part 3: the pure gate. isMonthlyContentTask, hiddenFromClient, groupCardTasks, additionalTasks, clientTaskRows and phase2Progress take { monthlyUnlocked } (default true, exactly as before); locked, a pushed posts or blogs review is an ordinary Additional Task and the Blogs / Socials rows are not counted. Additional Tasks' tab order gains Social media and Blog posts.
+7bc2918b|2026-10-02|Monthly content unlock, part 2: the server read (lib/db/monthlyContentUnlock: fails open to today, stamps the first unlock once), the stamp from a Phase 3 move (Client Stage drag and the delivery-advance cron) and from go-live, and the Monthly content switch on the client record, which cannot be turned off while a live signal holds.
+0b54bf1b|2026-10-02|Monthly content unlocks at Phase 3 or website live (Gaurav, 2 Oct 2026), part 1: the pure rule (lib/board/monthlyUnlock) and the migration that adds clients.monthly_content_unlocked_at with a backfill for every client already past that point. NOT YET APPLIED, runbook row 43; until it runs the app behaves as today.
+9defaf4f|2026-10-02|Client Library: the folder counts are asked for alongside the listing instead of after it, and a failed count no longer empties the Library
+3a3d2e94|2026-10-02|Task uploads: a photo goes to the Library's Images folder and a video to Videos, and each upload shows as a small preview with an X to remove it
+6f47303d|2026-10-01|Logos go inside one "Review your logo" task in Phase 1, not a new card
+833e1331|2026-10-01|Meta ads go inside the board's own "Approve your Meta ads" task, not a new card per month
+c8534bef|2026-10-01|The push panel on a content task no longer carries the long Send to board explanation; the button to the client's content stays
+729ec463|2026-10-01|A month of posts or blogs is one orange task card on both boards
+ec659263|2026-10-01|Social posts and blogs are reviewed in Monthly Tasks again; their board task stays the team's
+0cfcd537|2026-10-01|Social posts and blogs go inside the board's own review task, not a new card per month
+f5b79fb4|2026-10-01|Content Generation's website Send / Take back no longer trips a hydration mismatch
+21b88439|2026-09-30|manjor fixes both
+f51ad805|2026-09-30|manjor fixes both side meta ads
+462b1e27|2026-09-30|Blog & social popups: clients can edit an article's heading in place and rename posts, a Loom link rides with a review, the editor keeps its toolbar pinned; client ticket desk and team call bar tidied, breadcrumb shows just the page name
+de9dae1f|2026-09-29|manjor fixes both side blog & social
+637957c5|2026-09-28|Phase 2 count matches the client's board; staff see that only the client can tick card steps
+2fa427ea|2026-09-28|Add Files: pick the folder first, then the files; client uploads can reuse Library photos
+af2f19a7|2026-09-28|Blogs & Organic Social redesign: month strip, item list, article editor, post preview and calendar
+5c07ac68|2026-09-28|Client pages: iPads get the website layout, phones stay on the app layout
+60dbc5c2|2026-09-25|Staff QA fixes: staff ticket wording, overdue shown to clients, phone overflow, tab titles
+1a997a1f|2026-09-25|home page of client ui fixxes
+2f707f1f|2026-09-23|home page of client data matching
+fb0fb5a8|2026-09-23|home page of client data matching
+d4f2d109|2026-09-23|Next 16.3.5 rewrites its own block in AGENTS.md
+be2d257f|2026-09-23|A task with no phase inherits Onboarding's deadline, and the SOP filters lose the browser's arrow
+9d29e13b|2026-09-22|Employee Hub uses its full width, My Day returns, and a deleted SOP goes to a bin
+3e95bb5f|2026-09-22|Cheklist updates SOP
+f6ad42fe|2026-09-21|Cheklist
+ea3efa01|2026-09-17|The client Tasks tab becomes the department checklist
+84f55020|2026-09-17|client side ui fixxes
+7287ba29|2026-09-16|Employee Hub: one page shell, Ask Ava's rail, Dan's Team and SOPs
+801d61af|2026-09-16|Blend the topbar's panels and avatars into the V2 design
+65945ada|2026-09-16|Park My Day and give the Employee Hub a Team directory
+22a7dc81|2026-09-15|ui redesigned
+1d950275|2026-09-15|The client's support screen is the team's desk, and both forms open in Dan's popup
+b7e1c689|2026-09-15|The three rail panels are rebuilt as Dan's, so the column reads as one thing
+12e090a3|2026-09-15|The Daily Brief is built to Dan's panel, not styled to look like it
+703bf9e2|2026-09-15|One button per row, one tile colour, three tags — Dan's restraint, not ours
+5e467994|2026-09-15|Dan's heading, and the brief stops shouting
+3c4fc77a|2026-09-15|My Day is parked back to the five sections Dan's design has
+53ae94db|2026-09-15|Five ways of writing "view more" become one
+87fb712b|2026-09-15|The duplicated row buttons collapse into one shared vocabulary
+dcedafa8|2026-09-15|Five hard-coded colours take their tokens, and the last odd card takes its shape
+383e8913|2026-09-15|Every My Day card takes Dan's 14px corners and drops its resting shadow
+3a05f46a|2026-09-15|Ava's read becomes the dark teal band Dan draws it as
+49a51ab8|2026-09-15|Dan's card kit, built once, reusing what the app already had
+61e45d0d|2026-09-15|Who is signed in sits at the head of the rail, name over department
+9dc93c70|2026-09-15|The header's three controls take Dan's shapes: boxed bell, mint square, caret field
+9725133a|2026-09-15|Dan's white breadcrumb header replaces the dark topbar
+da0448ff|2026-09-15|The rail takes Dan's spacing, and its active row is marked in cyan
+00737075|2026-09-15|Client Map and Project Tracker come off the topbar and back into the rail
+c29e1d17|2026-09-15|My Day returns to the rail and the phone tabs, under Dan's Today heading
+52c9143d|2026-09-15|The employee rail's rows move to one module, so the header can read the same list
+028ccfe4|2026-09-15|The Employee Hub rebuild gets a design and a plan before any code
+4f086934|2026-09-12|An iPad turned sideways gets the Client Hub's website, not the phone layout
+202f526c|2026-09-12|Park the rest of the job-tag feature, and keep one SOP version badge
+0bea2180|2026-09-12|A checklist item can carry a job tag, and only the people who hold it can tick it
+7c7a4470|2026-09-11|A client's checklist takes its phases from the template, and the task headings leave both screens
+3e873c14|2026-09-10|The ⓘ dot leaves the delivery checklist rows, with a note on how to bring it back
+4f2e6b26|2026-09-10|The delivery checklist becomes a four-level tree, authored in one Templates card
+2e60575c|2026-09-10|The customer's Home is rebuilt in panels, and the speed test moves to their Website page
+1b1e1875|2026-09-08|Editing a SOP gets the whole width of the screen
+6a345c1d|2026-09-08|The CEO Vault is written in the same editor as everything else
+9e91682f|2026-09-08|A header slot sits in its own box, not loose among its siblings
+0a914883|2026-09-08|A vault SOP opens the document, and the document carries its file
+50268952|2026-09-07|The employee side writes SOPs the same way leadership does
+978c2b16|2026-09-07|A SOP can be split into named document tabs
+b00d6bab|2026-09-04|Add download-as-PDF and share-link buttons to the SOP Library
+3b23d5a1|2026-09-03|Strip leftover HTML from SOP headings before they show as Contents tabs
+9fcd5ab2|2026-09-03|Let SOP edit access be granted to a whole department, not just one person at a time
+3f675135|2026-09-02|Redesign the New SOP editor and SOP Library header
+9d34df95|2026-09-01|Follow linked documents recursively, not just one level from the master
+7518f99b|2026-09-01|Drop the AI clean-up step from the Google Doc import
+2781e782|2026-09-01|Add a Document Tabs panel to every SOP page, and declutter the Details rail
+72b3c0eb|2026-09-01|Show real loading feedback while a Google Doc import is in flight
+abe87b07|2026-09-01|chore: remove the CSV import feature it was replaced by
+4430e94f|2026-09-01|feat: replace Import CSV with Import from Google Doc on the SOP Library page
+6768ea54|2026-09-01|fix: catch a network failure in the Google Doc import fetch
+5016f89d|2026-09-01|feat: add the Import from Google Doc modal
+3a898a56|2026-09-01|feat: add /api/playbooks/import-google-doc route
+5fae9f85|2026-09-01|feat: orchestrate the Google Doc import pipeline (fetch, follow links, AI merge)
+e12f96ec|2026-09-01|feat: build the Google Doc merge/clean-up prompt
+9479e763|2026-09-01|fix: tighten googleDocIdFromUrl host check to exact match
+b7577103|2026-09-01|feat: extract linked Google Doc ids from a fetched SOP doc
+4b2ca592|2026-09-01|Add implementation plan for Google Doc SOP import feature
+9494d5ad|2026-09-01|Add design spec for Google Doc SOP import feature
+197376dc|2026-08-24|Revert the Ava launcher pop-up card back to a direct chat open
+eef2babd|2026-08-22|My Day: one morning card, a folded inbox, and mail that finds every inbox
+3e670e55|2026-08-22|Ava's read: the note about losing its card chrome moves out of the JSX
+ab13f157|2026-08-22|My Day work in progress: Ava asks in the dock, and rails replace Shape of Day
+c7f4fcf0|2026-08-21|My Day: plainer card titles, and feedback above the desk
+bb95ee3c|2026-08-21|the emplyee hub front page ui
+ee2bc4e6|2026-08-20|Design: Mail - a queue of the work mail that needs you
+a7c6c24a|2026-08-20|Read the app's own queue
+fc00c3ac|2026-08-20|The app's own status, as a shape we can test
+8e22beef|2026-08-20|Tickets and messages follow the same rule: yours, not your department's
+708462ad|2026-08-20|The brief is what was handed to you, and it says who handed it over
+533452d8|2026-08-20|Open the card you clicked, not the board it lives on
+c23d0fff|2026-08-20|It is a daily brief - people log in in the afternoon too
+370b199f|2026-08-19|The brief can see the work you have open, not just the work that is dated
+46a8f981|2026-08-19|The unknown-status test stops using a status we now know
+deligro:8e6d793d|2026-11-05|feat(admin): desktop vendor pages, team controls, delivery radius and settlements on a shop
+deligro:def6a673|2026-11-04|revert(admin): bring back the previous dashboard, remove the order desk
+deligro:dfbba71e|2026-11-04|test(support): follow the manager ticket page's stricter rule
+deligro:ebfbccfd|2026-11-04|fix(wallet): read the customer switch by id; tests and History label follow
+deligro:505836a5|2026-11-04|feat(wallet): Admin App features controls the customer wallet
+deligro:e44bfa63|2026-11-04|feat(admin): the dashboard is now the order desk
+deligro:c63c832a|2026-11-04|fix(wallet): say when a wallet read failed; keep the rider payload's shape on orders with no points
+deligro:41710f17|2026-11-04|test(manager): customer fixture follows the no-refund rule
+deligro:4ed68887|2026-11-04|chore(wallet): the migration is 0198, 0197 belongs to feat/vendors-no-approval
+deligro:0434b28e|2026-11-04|feat(wallet): customer, rider, vendor and manager apps; audit log; test:wallet
+deligro:6710eb3a|2026-11-04|fix: address hook reads clean with the switch off; audit log row; vendor test
+deligro:7fbd066f|2026-11-04|test: customer switches in Postgres, every key has a server reader, app behaviour
+deligro:683a667e|2026-11-04|feat: Admin App features page, and make every existing switch honest
+deligro:78f13652|2026-11-04|feat(wallet): server, rider and customer web, admin wallets page, every cash reader uses cash due
+deligro:dc4d37dc|2026-11-04|feat(vendors): remove review and approval; only admin and managers add shops
+deligro:bd8d7a34|2026-11-04|feat: customer feature switches, on the server and in both customer surfaces
+deligro:f7f45df5|2026-11-04|feat(wallet): the database: ledger, locks, points on orders, cancel returns
+deligro:a4a44e85|2026-11-04|fix: settle the combined rule branches; tests follow the current rules
+deligro:0a6faec7|2026-11-04|chore(rules): finish the three rules: 0196 proof, dead code, checkout wording
+deligro:9ee0a0e0|2026-11-04|test(rider-pay): tests follow the fixed-salary rule, and rider app finishes it
+deligro:5b15f510|2026-11-04|chore: the reject switch says what it does; audit label fixture
+deligro:81a60a56|2026-11-04|chore: tidy what the Refunds removal left unused
+deligro:40facb64|2026-11-04|chore: full-chain proof for 0191, a rejection alert test, plain wording
+deligro:ee15f290|2026-11-04|test: QA scripts follow the cancelling and refund rules
+deligro:ebb6ce0d|2026-11-04|feat(rider-pay): riders get a fixed salary only
+deligro:02a6e198|2026-11-04|test(customer): the cancel countdown; timer in place of a stopwatch
+deligro:f87aa062|2026-11-04|feat: staff cancel with a reason, shops can't cancel, no refunds anywhere
+deligro:9457bd41|2026-11-04|feat(cash): the owner confirms rider and manager cash, and who confirmed is recorded
+deligro:16ff0acd|2026-11-04|feat(payments): platform cash limit and cash switch
+deligro:0b10324f|2026-11-04|feat(db): 0191, the owner's cancelling and refund rules in SQL
+deligro:48491817|2026-11-04|test(manager): record the menu sheet and weather permissions correctly
+deligro:de6bcd87|2026-11-04|test(apps): popup waits for the session; a switch-off reread; a changed total at checkout
+deligro:ba43b37a|2026-11-04|fix(admin): a stopped manager isn't bounced at sign-in; plainer open and close control
+deligro:d985dd98|2026-11-04|fix(rider): keep the named SOS sentence; ask /me again through a signal, not a provider cycle
+deligro:7e47bb9a|2026-11-04|fix(admin): no Reject on your own rider salary request; Cancel is the way
+deligro:d98ffbb1|2026-11-04|test(admin): prove migration 0190 on the whole migration chain
+deligro:e435b135|2026-11-04|docs(admin): record the one-admin default and add the new checks to the test scripts
+deligro:c6d80ad2|2026-11-04|fix(admin): marketing moves, alert rules, reset, storage tab, announcements
+deligro:19fc8796|2026-11-04|fix(admin): customer search covers everyone; audit log has Next and Back
+deligro:5727f3f6|2026-11-04|fix(manager): remove the empty Insights page; a required update holds on resume
+deligro:557d2699|2026-11-04|fix(manager): settlement reversal request, approvals tile and money wording
+deligro:33cdafb7|2026-11-04|fix(admin): shop page can pin, place, open and delete a shop safely
+deligro:3f706421|2026-11-04|feat(admin): stop, start again and reset password for managers and riders
+deligro:2fabff25|2026-11-04|fix(admin): banners offer what works and say when one shows nowhere
+deligro:ac1a5582|2026-11-04|fix(admin): banner and coupon times are India time; log admin writes first
+deligro:2336141d|2026-11-04|feat(manager): search orders by customer name, shop or whole phone number
+deligro:71d4ea18|2026-11-04|fix(manager): report status filter works and the rider picker lists everyone
+deligro:adfb8a71|2026-11-04|fix(manager): on/off alert switches can be saved
+deligro:0bb5ed20|2026-11-04|fix(manager): offer and campaign edits are no longer refused as stale
+deligro:970fd3a7|2026-11-04|fix(admin): money screens show the whole truth, and pages reach every row
+deligro:e5bf1638|2026-11-04|fix(customer): order again, banner stats and targets, safe push links, real total
+deligro:3ea83d12|2026-11-04|fix(vendor): statement wording, links, switches, moderation state, dashboard figures
+deligro:4770a1f9|2026-11-04|fix(rider): blocked riders, early pickup, shop-report photos, calling and navigation switches
+deligro:e631e58f|2026-11-04|docs: add wallet, salary-only and feature control rules to the rule book
+deligro:b4076c70|2026-11-04|fix(admin): riders are paid through payment requests; one-admin payments on by default; refunds list is whole
+deligro:86a75351|2026-11-04|docs: add the owner's rule book
+deligro:b6e70e81|2026-11-04|docs(admin): remove the Version 2 design the owner rejected
+deligro:91c3bc2a|2026-11-04|docs(admin): add the audit's missing controls and problem list to the V2 design
+deligro:aca383e9|2026-11-04|test(admin): match the tap-shrink class, not the word press
+deligro:ce8b549b|2026-11-04|fix(admin): restore a sentence the cleanup cut; guard the Settings page
+deligro:a6fa7ea1|2026-11-04|feat(admin): the admin panel is desktop only
+deligro:3fdbbaef|2026-11-04|fix(settlements): cash orders pay the shop; screens show the amount to send
+deligro:d9b7ff4c|2026-11-04|feat(admin): Feature access switch for the Refunds page
+deligro:36f7b1b2|2026-11-04|wip(welcome): hero loop, MP4 fallback (H.264, 14s, 1.8 MB)
+deligro:ba18c9d1|2026-11-04|wip(welcome): hero loop, WebM (VP9, 14s, 1.7 MB)
+deligro:d141378f|2026-10-31|wip(welcome): public landing page with a video hero at /welcome
+deligro:ae1b9b64|2026-10-31|docs: UI polish report for the Hallmark pass
+deligro:99aeaa8b|2026-10-31|style(rider-app): loading skeletons for jobs and history, a next step on no orders
+deligro:e93aea09|2026-10-31|style(rider-app): sentence-case labels, larger cash figure, 48dp targets, still pulse
+deligro:dd243821|2026-10-31|style(storefront): skeletons shaped like checkout, tracking and the receipt
+deligro:a32a9a3b|2026-10-31|style(storefront): polish the customer screens against the Hallmark floor
+deligro:32111589|2026-10-31|style(storefront): one focus ring and named tones for the customer app
+deligro:a6ec0988|2026-10-31|style(vendor-app): order popup, order detail and dashboard polish
+deligro:262e1806|2026-10-31|style(vendor-app): skeleton, empty and error states for the order lists
+deligro:cec3f255|2026-10-31|style(rider-app): untracked captions, darker ink on yellow, shadows from the theme
+deligro:643191ee|2026-10-31|style(customer-app): polish orders, checkout and account screens
+deligro:ea962aa8|2026-10-31|style(customer-app): polish the browse screens
+deligro:d6ac6fcd|2026-10-31|style(customer-app): shared state widgets and contrast-safe tokens
+deligro:9af1cf4b|2026-10-31|style(vendor-app): theme tokens for on-colour text, stars and veg marks; floor fixes
+deligro:7410bda0|2026-10-28|fix(vendor): a new order pops up with Accept and Reject on any screen
+deligro:5386d22a|2026-10-28|fix(developer): the database round-trip probe times one query, alone
+deligro:62927db5|2026-10-28|fix: three production queries that failed on every call
+deligro:2117139a|2026-10-28|fix(obs): system health stops reading an absence of measurement as an answer
+deligro:a8fba8ca|2026-10-28|fix(rider-cash): claim cash reminders without a 23505 (DEL-1187)
+deligro:fb5557be|2026-10-27|docs: owner steps — website DNS has no address record
+deligro:9db689d7|2026-10-27|fix(db): 0179 guests can read the catalog again
+deligro:3b3b4659|2026-10-27|fix: review fixes for the pause switch and weather
+deligro:0e02b824|2026-10-27|docs: developer pause switch security notes, owner steps for 2026-10-27
+deligro:54fb2a67|2026-10-27|feat(manager-app): weather notices per zone
+deligro:29c9e171|2026-10-27|feat(rider-app): weather notice on Home
+deligro:fc83acad|2026-10-27|feat(customer-app): weather banner and longer delivery times in rain
+deligro:96c9c200|2026-10-27|feat(weather): zone weather notices add to delivery times (server)
+deligro:41030523|2026-10-27|fix(manager): review fixes for menu sheets
+deligro:99940bc9|2026-10-27|feat(developer): platform pause switch (stop new orders / pause operations)
+deligro:44c8b16b|2026-10-27|docs(manager): menu sheet and photo replace owner steps
+deligro:2f7af258|2026-10-27|feat(manager-app): replace a wrong dish photo
+deligro:b03e2008|2026-10-27|feat(manager-app): menu sheet for a shop
+deligro:28f80bdf|2026-10-27|feat(manager): replace a dish photo from the phone or the photo library
+deligro:e1607114|2026-10-27|feat(manager): menu sheet upload for a shop
+deligro:ed0dec56|2026-10-27|feat(manager): bulk menu and replace photo switches
+deligro:2733a7ef|2026-10-27|feat(manager): 0176 bulk menu and photo replace RPCs, no self-approval
+deligro:7713cee2|2026-10-27|fix(push): stop duplicate order pushes; add Deligro status-bar icon to all four apps
+deligro:ff0530c7|2026-10-24|feat(obs): v2 phase 6 — steps and people in the console and the copied report
+deligro:de6cc046|2026-10-24|feat(obs): v2 phase 5 — page speed for real people, and a Performance tab
+deligro:1295b6ea|2026-10-24|feat(obs): v2 phase 3 — sign-in records and a Security tab
+deligro:ae120c39|2026-10-24|feat(obs): v2 phase 4 — alert developers when an issue is new or comes back
+deligro:0d1c1710|2026-10-24|feat(obs): v2 phase 2 — close the capture gaps
+deligro:27c37ec3|2026-10-24|feat(obs): v2 phase 1 — one bug is one issue across deploys, and people per issue
+deligro:8c9e7cb8|2026-10-24|feat(apps): the glossy Deligro logo as the app icon and sign-in logo
+deligro:5a6f7daa|2026-10-24|chore(apps): version 2.1.0 for the customer, partner, rider and manager apps
+deligro:88979da9|2026-10-24|fix: the remaining SonarCloud reliability findings
+deligro:e22335da|2026-10-24|fix: SonarCloud findings and the last Hindi labels
+deligro:0385cfb3|2026-10-24|feat: bulk upload of menu and stock from Excel or CSV (admin, partner, manager)
+deligro:a811ffea|2026-10-24|feat(customer-app): restaurant cards swipe through the shop's dishes
+deligro:090c2773|2026-10-24|feat(apps): new launcher icons for the customer, partner and rider apps
+deligro:8b5c1f9e|2026-10-24|feat(notifications): rich push cards for the customer, partner, rider and manager apps
+deligro:7a294a5b|2026-10-24|feat(customer-app): Contact developers row on the Account tab
+deligro:c97cb960|2026-10-23|wip(perf): performance audit work in progress
+deligro:137a772f|2026-10-23|db: add 0060 perf indexes migration (pending approval, not applied)
+deligro:be7abc27|2026-10-23|docs(manager-app): resume guide, APK list in README, pointer in CLAUDE.md
+deligro:576d9258|2026-10-23|docs(manager-app): phase 9 part S resume notes, DATABASE.md row for 0174
+deligro:9cb69633|2026-10-23|S7: audit catalog entries for schedules and accounting settings, literal audit codes in 0174, resume notes
+deligro:2683a943|2026-10-23|S7: report schedules + accounting settings migration 0174, pdf deps and fonts
+deligro:9631c342|2026-10-23|feat(insights): fraud rules and SLA breach alerts as standalone modules, with dismissals
+deligro:e536c9b2|2026-10-23|perf(manager): 100k-order seed, budget runner, volume parity, performance doc
+deligro:32278a77|2026-10-23|fix(manager-p10): 0144 helpers inline and the order breakdown is one SQL expression
+deligro:3ce570e8|2026-10-23|feat(dispatch): per-zone automatic rider assignment with the same eligibility rules
+deligro:f4b3d558|2026-10-23|feat(manager-app): finance and customer screens kept out of screenshots and recents (FLAG_SECURE)
+deligro:90dc0625|2026-10-23|feat(insights): zone grid and suggestions, vendor benchmarks, SLA targets and breaches
+deligro:526a7313|2026-10-23|chore(manager-app): phase 9 release check
+deligro:a27c851b|2026-10-23|test(manager): permission and zone matrix over every route and ops RPC
+deligro:9b7f9097|2026-10-23|feat(insights): demand forecast with backtest, and riders needed by hour
+deligro:9aa8da46|2026-10-23|test(manager): English-only check widened, terminology table, spec-label tests
+deligro:2041f7a7|2026-10-23|feat(db): 0170 hourly demand and rider supply rollups
+deligro:81643696|2026-10-23|test(db): prove the whole migration chain in order; document apply order and post-apply check
+deligro:ef7006d8|2026-10-23|feat(api): city filter and city rollups across every manager area
+deligro:4364544c|2026-10-23|fix(manager-p10): 0162 casts payment_method/payment_status to text for ops_counts_as_order
+deligro:c8ac0d34|2026-10-23|fix(manager-p7): a revealed customer number hides itself after 30 seconds; an email-only customer can be revealed
+deligro:c7ab8225|2026-10-23|fix(manager-p7): the Partner side lists a platform code only where the checkout would apply it
+deligro:57580228|2026-10-23|chore(manager-p8): regenerate the contract fixtures; keep the alert counts in the phase 8 emitter; drop an unused variable
+deligro:eb7c2073|2026-10-23|feat(manager-app): scheduled reports and accounting export
+deligro:6e974b5b|2026-10-23|fix(manager-p7): an image upload is read as a capped stream
+deligro:29d4e5f5|2026-10-23|fix(manager-p7): cursors are a timestamp and a uuid only; a banner edit keeps creation's https rules
+deligro:130cfc63|2026-10-23|fix(manager-p7): the customer list picks its customers before it reads orders; campaign headlines are worked out once
+deligro:ce22cc23|2026-10-23|fix(manager-p7): featured slots are laid out per zone, the label is honest, and caches follow the window
+deligro:c758a0ff|2026-10-23|docs(security): log the Phase 8 review fixes
+deligro:0504339e|2026-10-23|fix(manager-p8): the incident budget reads plainly in the app
+deligro:bfdb43d2|2026-10-23|feat(manager-app): fraud cases with dismissal, fraud rules, and per-zone dispatch mode
+deligro:40f29256|2026-10-23|fix(manager-p8): refund flags and settlement corrections are recorded with their audit rows; the audit gate pins the follow-up writes
+deligro:cc4fc7bc|2026-10-23|fix(manager-p7): suspension fails closed, ends live sessions, and reconciles a ban that never landed
+deligro:a7b56eae|2026-10-23|fix(manager-p7): personal data reaches a manager only through the server, scoped and logged
+deligro:d93941cb|2026-10-23|feat(manager-app): zone map with suggestions, vendor benchmarks and service levels
+deligro:8bcc84e7|2026-10-23|fix(manager-p8): uploads are limited while they stream, not after they are buffered
+deligro:641eabdc|2026-10-23|fix(manager-p8): legacy ops notices and SOS open the right screen in the app
+deligro:9a520f74|2026-10-23|fix(manager-p7): the offers list is filtered, counted by state and paged in SQL
+deligro:7fb4d2dd|2026-10-23|fix(manager-p8): a late delivery pushes the rider once and the managers through the alert only
+deligro:190e976f|2026-10-23|fix(manager-p7): retention is computed in SQL, exact however many customers there are
+deligro:50578ad0|2026-10-23|fix(manager-p8): ticket unread counts and the rider filter come from the database
+deligro:a14130f8|2026-10-23|feat(manager-app): insights hub, demand forecast and riders needed
+deligro:81066ebf|2026-10-23|fix(manager-p8): staff pushes and alerts print a ticket's category, never its subject; the desk tells staff about escalations; incident budget answers 429
+deligro:faf6457e|2026-10-23|fix(manager-p7): campaigns stay in their zone; a request backs one campaign; vendor consent is used once and bounds the terms; linked codes restore on cancel
+deligro:d1b43f28|2026-10-23|fix(manager-p8): the alert engine — batched raises, one staff directory, a time budget, clears that spare fresh alerts, strict cursors, honest redaction
+deligro:e28b7ac3|2026-10-23|feat(manager-app): insight models and a city-aware area picker on every screen
+deligro:1513c816|2026-10-23|fix(manager-p8): alert rules — stuck after 3x threshold (an hour at least), one cancellation alert per zone, shortage needs a real wait
+deligro:14aee2ac|2026-10-23|fix(manager-p8): alert store — manual resolves stick, clears spare fresh alerts, batched raise, no direct reads, incident budget
+deligro:f2714f6a|2026-10-23|fix(manager-p8): one rule for ticket moves — closed is final, resolved_at is never cleared, requesters see no staff reasons
+deligro:a91f3718|2026-10-23|docs(manager-app): phase 7 integration result
+deligro:0ada5911|2026-10-23|feat(manager-app): phase 7 integration — links, audit coverage, personal-data scan and contract check
+deligro:a72adb71|2026-10-23|docs(manager-app): phase 8 integration result
+deligro:9d20e079|2026-10-23|test(manager): the alert engine's zone reader is allowed, redacted audit values are not leaks, settlements runs server-side
+deligro:972221f0|2026-10-23|feat(manager-app): Phase 8 integration — app takes the server's answers as they are
+deligro:dc073d47|2026-10-23|test(finance): parity fixture follows 0083's awards table; Phase 7 Part S execution notes
+deligro:8f7177b0|2026-10-23|feat(support): the admin desk writes tickets through the audited RPCs; SOS goes to the rider's zone and admins
+deligro:31b68694|2026-10-23|docs(release): final build, smoke boot and handover touch-ups
+deligro:0ee65b43|2026-10-23|fix(rider-app): an expired document says Deligro checks the new one
+deligro:b07c2800|2026-10-23|fix(rider-app): sign-out stops an offer that is still ringing
+deligro:d869f456|2026-10-23|fix(rider-app): sign-out tells the SOS queue the user is gone (P7-R3)
+deligro:54f93fc7|2026-10-23|fix(rider-app): ownerless steps from an earlier build get an owner when the queue loads
+deligro:b7a1c18a|2026-10-23|fix(rider-app): a saved step is re-checked for its owner after the photo upload
+deligro:81eca37f|2026-10-23|test(rider-app): queue-owner and sign-out clean-up tests wait for background deletes
+deligro:ecb92699|2026-10-23|fix(rider-app): Today's deliveries no longer opens a History that disagrees
+deligro:c9b1eedb|2026-10-23|perf(rider-app): offline SOS essentials are fetched at most every 30 minutes (M2)
+deligro:b34fd2f2|2026-10-23|fix(rider-app): a forced update reaches a rider mid-shift (C-I4)
+deligro:42d9978d|2026-10-23|fix(rider-app): signing out clears what the rider left on the phone (C-I3)
+deligro:591b3342|2026-10-23|fix(rider-app): a ring tapped on a cold start opens Jobs, not Home (C-I1)
+deligro:7ff57b0a|2026-10-23|fix(rider-app): Home no longer trips the provider scheduler on resume
+deligro:0801790b|2026-10-23|fix(rider-app): saved delivery steps go out whatever tab is showing (I-4)
+deligro:a2aa2d85|2026-10-23|fix(rider-app): saved delivery steps belong to the rider who tapped them (I-3)
+deligro:91995b01|2026-10-23|fix(rider-app): document copy follows the re-check rules (P8-R8, P8-R9)
+deligro:3d730ad4|2026-10-23|fix(rider-app): a shared phone never shows one rider's data to the next (I-2)
+deligro:9e7a0027|2026-10-23|chore(rider-app): release build, handover notes — low-end run, memory series, screenshots
+deligro:ad3b38e5|2026-10-23|fix(rider-app): cash preview stands in a rider id (cash providers are keyed to the user)
+deligro:83161ed7|2026-10-23|docs(rider-money): 0083 says a COD delivery whose cash was collected can't move to another rider (review M5)
+deligro:8aba78c9|2026-10-23|fix(rider-docs): a document replaced before its date passed never counts as expired (review M3)
+deligro:6bb238a8|2026-10-23|fix(rider-docs): page the document-block read past PostgREST's 1000-row cap (review M1)
+deligro:97793a02|2026-10-23|test(rider-app): poll instead of fixed real-clock waits
+deligro:08e60058|2026-10-23|test(rider-app): push routing test follows the real cash and documents pages
+deligro:fbae124a|2026-10-23|fix(rider-app): dark ink on the bright red and green fills in dark mode
+deligro:4164db81|2026-10-23|docs(rider-app): coverage rows 2.5, 2.7, 11.2 and 12.9 follow the final fix wave
+deligro:ffb6fde9|2026-10-23|build(rider-app): a release without key.properties fails unless allowDebugSigning
+deligro:05ae2fd0|2026-10-23|docs(rider-db): close ruling P8-R2 - Manager 0143 drops the two all-zone manager reads
+deligro:04b68794|2026-10-23|docs(rider-delivery): note ruling P8-R6 where replayed offline steps are accepted
+deligro:39ad0fcb|2026-10-23|fix(staff-delivered): no COD cash booked to a rider who never picked up; announce incentives like completeDelivery (review B minor 5)
+deligro:037f10e1|2026-10-23|chore(rider-app): drop the board ringer's dead silent check
+deligro:29a28ed5|2026-10-23|refactor(rider-app): one IST helper; push targets use the router's paths
+deligro:bbb37878|2026-10-23|fix(rider-alerts): the high-demand call goes only to riders who could take a job (review B minor 4)
+deligro:8cc29c97|2026-10-23|fix(manager): rate-limit board actions; a hand-assignment refuses non-riders, inactive, rejected and document-blocked riders (review A minor 7, B minor 3)
+deligro:581b7414|2026-10-23|chore(rider-app): insights preview follows the phone's theme unless PREVIEW_DARK
+deligro:86d6a166|2026-10-23|docs(rider-app): handover — final rulings P8-R4..R12, SPEED-4, coverage totals, Manager notes
+deligro:2ddffcc4|2026-10-22|chore(rider-app): remove customer-app leftovers
+deligro:98dd09ab|2026-10-22|refactor(rider-app): one EmergencyContact model
+deligro:105b618e|2026-10-22|fix(rider-app): the online notification uses the white status-bar icon
+deligro:a4906610|2026-10-22|perf(rider-app): the deposit receipt thumbnail decodes at 168 px
+deligro:12e1609d|2026-10-22|perf(rider-app): the route map keeps one tile provider
+deligro:2597f10f|2026-10-22|perf(rider-app): Jobs ticks every second only while a countdown shows
+deligro:447b0ed4|2026-10-22|fix(rider-app): an announcement shows once in the inbox
+deligro:1ec73eb7|2026-10-22|fix(rider-app): notification switch hints say everything each category carries
+deligro:8ac3160a|2026-10-22|fix(rider-app): opt out of Android backup and device transfer (P8-R13)
+deligro:9f319aa6|2026-10-22|fix(rider-db): 0087 runs as one transaction like 0081-0086 (review A minor 6)
+deligro:388a1a54|2026-10-22|test(rider-db): prove P8-R12 on a job corrected back out of delivered (0083 already pins a delivered row's rider)
+deligro:1a424d57|2026-10-22|docs(manager-app): phase 8 Part S execution notes and security log
+deligro:07f6e1b0|2026-10-22|fix(rider-money): a recorded payout's rider, amount, paid-on date and period never change (review A minor 5)
+deligro:13a5e42b|2026-10-22|fix(rider-db): a delivery whose COD cash was collected cannot move to another rider (P8-R12)
+deligro:ee8f2bad|2026-10-22|fix(rider-db): only the service role, an admin or the owner may make a delivery correction (P8-R10)
+deligro:e1cef57f|2026-10-22|feat(customer): featured and sponsored labels, campaign tracking, dish-limited codes, account refusals in the app
+deligro:8dc0b15b|2026-10-22|test(privacy): manager payloads carry personal data only where a permission and a live need allow
+deligro:99852ca5|2026-10-22|feat(api): align Phase 8 server with the app half
+deligro:810eb02c|2026-10-22|fix(rider-docs): an upload no longer moves a rejected rider back to pending (P8-R9)
+deligro:0211ace8|2026-10-22|docs(manager-app): phase 8 Part A execution notes and release check
+deligro:cec26314|2026-10-22|test(audit): every sensitive manager action is logged, atomically, behind its permission
+deligro:ade3d11d|2026-10-22|docs(manager-app): phase 7 Part A execution notes and release check
+deligro:80cdba82|2026-10-22|style(rider-cash): write the dispute ticket's claim line with escapes, not a multi-line template
+deligro:b76d9044|2026-10-22|feat(customer): featured and sponsored placements on the web — overlay, labels, tracking
+deligro:32d271f1|2026-10-22|fix(rider-docs): an expired document stays blocking until a verified in-date one exists (P8-R8)
+deligro:c8ac707b|2026-10-22|fix(manager-p6): app — safe refund retries, reversal approvals, server kind filter, full reconciliation paging, order picker
+deligro:f7c236e6|2026-10-22|fix(manager-p6): dues net of corrections, abandoned checkouts not stuck payments, admin Reports zone filter, QA manager login
+deligro:54d3c500|2026-10-22|fix(rider-cash): a confirmed deposit is booked to the confirmer, not the manager the rider named (P8-R11)
+deligro:2e81f41c|2026-10-22|feat(api): manager alerts, thresholds, inbox and audit log; admin alerts, thresholds and audit pages
+deligro:3e5f51b7|2026-10-22|feat(api): manager customers — scoped search, contact reveal, history, retention, suspension enforced at sign-in and checkout
+deligro:02e82c7b|2026-10-22|fix(rider-cash): two deposits declared at once can no longer exceed the cash held (review A minor 2)
+deligro:883d9b61|2026-10-22|fix(rider-cash): one open cash dispute per rider and day, enforced by a partial unique index (review A minor 1)
+deligro:c3e6c1e2|2026-10-22|fix(rider-cash): a cash dispute files its linked ticket and alerts ops; resolving it tells the rider (I-5)
+deligro:a027741d|2026-10-22|fix(support): staff answers on a rider's emergency or safety ticket use the locked safety category (I-6)
+deligro:b9b21df5|2026-10-22|style(manager-app): ticket status on its own line in the queue; Raise incident button styling; Phase 8 screens in the screenshot harness
+deligro:535e6f98|2026-10-22|fix(rider-push): a shared phone's pushes never reach the previous rider (P8-R7)
+deligro:ada41b40|2026-10-22|feat(api): manager support queue — filters, assignment, priority, escalation, attachments, metrics
+deligro:d4c82606|2026-10-22|style(manager-app): readable pending colours, left-aligned chip rows, Phase 7 screenshots
+deligro:03f316ce|2026-10-22|feat(api): manager offers — eligibility, limits, funding consent, usage and change history
+deligro:bd9c413c|2026-10-22|feat(manager-app): alert thresholds and audit log
+deligro:03a88f4e|2026-10-22|feat(manager-app): customers — search, contact reveal, history, complaints, refunds, feedback, suspension, retention
+deligro:353c83c6|2026-10-22|feat(api): manager marketing — requests, campaigns, scheduler, performance, report rows
+deligro:7ef35290|2026-10-22|feat(ops): alert engine — thirteen kinds plus rider inactivity, thresholds, dedupe, auto-clear
+deligro:c66f4c20|2026-10-22|feat(manager-app): alerts, incidents, inbox and alert routing
+deligro:7b6de47d|2026-10-22|fix(manager-p6): settlement report and online reconciliation in SQL; void left out of totals
+deligro:c8b200d9|2026-10-22|feat(manager-app): offers — create, limits, eligibility, usage and change history
+deligro:39a0f323|2026-10-22|feat(db): 0164 offer and customer reads in SQL; marketing notices
+deligro:5a2607ba|2026-10-22|feat(manager-app): campaigns — schedule, edit, performance, cancel
+deligro:8e579129|2026-10-22|feat(db): 0163 campaign attribution, performance and campaigns in the marketing report
+deligro:5df7b757|2026-10-22|feat(manager-app): support queue, ticket assignment, escalation, attachments, history and metrics
+deligro:0709a316|2026-10-22|fix(db): 0160 — approve a request now, schedule its campaign later
+deligro:53c56335|2026-10-22|feat(manager-app): marketing requests — review, approve with campaign or offer, reject with remarks
+deligro:b01a2067|2026-10-22|test(rider-app): two profile upload tests wait for the real work instead of a fixed 50-100 ms
+deligro:bab56555|2026-10-22|feat(marketing): pure rules for campaign state, attribution, offers and retention
+deligro:9e544b75|2026-10-22|feat(notifications): zone- and permission-scoped staff notifications with inbox
+deligro:3969f1a0|2026-10-22|fix(manager-p6): refunds claimed before the gateway; reversals need two people; replays, scope and self-approval
+deligro:c61672a2|2026-10-22|feat(db): 0162 customers for managers — scoped reads, contact reveal, suspension, retention facts
+deligro:3c894390|2026-10-22|feat(manager-app): support, alerts, inbox and audit models and repositories
+deligro:0c7def91|2026-10-22|feat(manager-app): marketing, offers and customers models and repositories
+deligro:4fcc6b04|2026-10-22|feat(db): 0166 ops alerts — rules, dedupe, lifecycle, audited actions
+deligro:0a9bfdf0|2026-10-22|feat(db): 0161 offers — vendor/zone/item eligibility, change log, audited offer RPCs
+deligro:a0e39ae1|2026-10-22|fix(rider-app): review fixes for the English-only and text-scale pass
+deligro:7b804984|2026-10-22|feat(db): 0165 support operations — assignment, priority, events, transitions, metrics
+deligro:ae122dfa|2026-10-22|test(rider-app): profile upload tests poll for the delete instead of a fixed wait
+deligro:6ad36424|2026-10-22|test(rider-app): a Manager 0150/0152 snapshot that cannot be read fails the run
+deligro:d87a115f|2026-10-22|fix(rider-app): retention never purges a delivery corrected back into the flow (N1)
+deligro:0770a862|2026-10-22|feat(db): 0160 marketing requests decided once, campaigns and campaign tracking
+deligro:37017d50|2026-10-22|fix(manager-p6): paid settlements are reversed by two people; one gateway call per refund; stale drafts caught at approval
+deligro:99f08483|2026-10-22|fix(rider): server words to riders say Deligro ops, not dispatch or ops
+deligro:7e276463|2026-10-22|docs(rider-app): rider README and owner handover notes
+deligro:39d46867|2026-10-22|chore(rider-app): roles.json rider entry points to the Flutter build (2.0.0, versionCode 3)
+deligro:c3378501|2026-10-22|chore(manager-app): phase 7 P0 — merge siblings, reconcile
+deligro:cb778b20|2026-10-22|test(rider-app): run-all reads the Manager 0150/0152 from its committed branch
+deligro:f41f932d|2026-10-22|fix(rider-app): English-only copy and text-scale pass
+deligro:90c16702|2026-10-22|test(rider-app): run-all fails a QA step that reports no passed checks
+deligro:9b24019c|2026-10-22|fix(rider-app): review fixes — retention clears without the stamp, ended deliveries, chunked holds; claim-returned offeree
+deligro:d4a7691f|2026-10-22|chore(manager-app): phase 6 integration — contract fixtures and exit checks
+deligro:3640dae3|2026-10-22|test(manager-app): phase 6 contract check and dashboard = finance parity
+deligro:fe2f6d99|2026-10-22|fix(rider-app): delete proof photos after 90 days; camera privacy hint (D1)
+deligro:5a0b48f0|2026-10-22|docs(rider-app): correct the coverage rows for D2
+deligro:bfc2f370|2026-10-22|fix(rider-app): tell the offered rider when staff hand-assign the order (D2)
+deligro:875ffeca|2026-10-22|fix(rider-app): tell the rider when a payout is recorded (D3)
+deligro:f4371f9d|2026-10-22|test(rider-app): requirement coverage and full QA run
+deligro:8b9dc285|2026-10-22|docs(security): Partner handover — 0063's order lock list and 0064's audience function
+deligro:f3e9164d|2026-10-22|docs(release): deployment checklist — support numbers, sibling order, APK pointer
+deligro:8e0a6eca|2026-10-22|fix(rider-db): a re-run rewrites no rows; the sequence proof hashes them
+deligro:111eb69c|2026-10-22|fix(rider-db): 0082's rollback keeps the sibling order locks; bucket notes
+deligro:daca565e|2026-10-22|docs(security): 0087's manager rider-ticket read is not zone-scoped (ruling P8-R2)
+deligro:6e1f3ca2|2026-10-22|docs(release): re-run every migration from 0081 on, all branches (ruling P8-R3)
+deligro:fcf54c33|2026-10-22|feat(rider-app): saved emergency contact refreshes the SOS copy; push targets test
+deligro:67696332|2026-10-22|refactor(rider-app): ticket attachments use the shared upload path
+deligro:32bba8cf|2026-10-22|fix(rider-db): announcement_audience_of answers only for the caller
+deligro:f286abf6|2026-10-22|docs(release): rider app security and deployment checklists
+deligro:abb1162b|2026-10-22|fix(rider-app): save the SOS alert before waiting for a position, stale-alert banner, saved delivery per rider
+deligro:84fcc3e4|2026-10-22|fix(security): rate-limit the admin settings/order writes and sign-out's rider write
+deligro:3c40ee33|2026-10-22|fix(rider-db): 0082's guard_order_update keeps the sibling branches' locks
+deligro:f4f6d7ba|2026-10-22|fix(rider-db): 0086 rollback clears its rider_profiles column grants
+deligro:45f055af|2026-10-22|fix(rider-db): revoke EXECUTE on guard_manual_rider_handover (0085)
+deligro:ecd702c1|2026-10-22|fix(rider-db): 0082 keeps delivery event kinds added after it on a re-run
+deligro:983857c2|2026-10-22|test(rider-migrations): run 0081-0087 in sequence on one database
+deligro:156b5a8e|2026-10-22|refactor(rider-app): one multipart upload path
+deligro:e8ff9d48|2026-10-22|fix(rider-app): SOS queue owner and age, per-rider saved data, fresh SOS position, signed photos in memory, push before gate
+deligro:8ec30f6a|2026-10-22|fix(rider-app): Phase 4 review round 2
+deligro:a5819934|2026-10-22|feat(rider): profile exposes everVerified
+deligro:fb7c5daa|2026-10-22|fix(rider-app): everVerified from the server, photo size guards (P6-R3)
+deligro:12cfaa54|2026-10-22|fix(rider): notification prefs review round 1
+deligro:05e68017|2026-10-22|fix(rider-app): Phase 4 review round 1
+deligro:afe6acde|2026-10-22|fix(rider-app): review round 1 for Profile and documents
+deligro:c2a1e284|2026-10-22|feat(rider): notification preferences on the profile endpoint
+deligro:59204121|2026-10-22|fix(rider-app): cash review round 1 - withdraw dialog, receipt type, summary refresh
+deligro:50d5f725|2026-10-22|feat(rider-app): History and Performance
+deligro:f0fb96a9|2026-10-22|feat(rider-app): Safety screen and SOS
+deligro:26be546b|2026-10-22|fix(support): announcement push state on the row (ruling P7-R2)
+deligro:c0062e88|2026-10-22|fix(rider-app): tidy rejection reason, fixture mix for the preview
+deligro:bfb45492|2026-10-22|fix(support): SOS kinds and re-alerts, scheduled announcements, shop delay for customers, alert settings
+deligro:1ff914b7|2026-10-22|feat(rider-app): Cash screen with deposits, reconciliation and disputes
+deligro:a7a4097f|2026-10-22|fix(rider-p6): verified fields stay locked after an upload; Aadhaar mask, accept block, 4 MB uploads
+deligro:b19aa8bf|2026-10-22|feat(rider-app): Home dashboard with the twelve figures
+deligro:09dbd677|2026-10-22|fix(rider-app): shrink photos to 4 MB before upload, refuse PDFs over 4 MB
+deligro:5efd4738|2026-10-22|feat(rider-app): Profile and documents
+deligro:4c3f0b5a|2026-10-22|fix(rider): Home Pending matches Jobs, strict History cursor
+deligro:d088b867|2026-10-22|feat(rider-app): Help desk and notification inbox
+deligro:1d4a8808|2026-10-22|fix(rider-app): real MediaPlayer release, server clock for unreachable wait, offset clamp
+deligro:999bca6e|2026-10-22|fix(cash): one atomic deposit decision function shared with 0152, reminder batching and review fixes
+deligro:b2995d4d|2026-10-22|feat(admin): support desk, emergencies and announcements
+deligro:896a2f81|2026-10-22|feat(admin): rider verification, documents and change approvals
+deligro:7a74ab88|2026-10-22|feat(rider-app): navigation app, sound and vibration settings
+deligro:41e4d556|2026-10-22|feat(orders): customers rate their rider
+deligro:56993508|2026-10-22|fix(rider): earnings period figures include every ledger entry
+deligro:b1d31c29|2026-10-22|feat(support): tickets, SOS, inbox notifications, announcements and demand alerts
+deligro:b72f1f27|2026-10-22|feat(admin): rider cash limits
+deligro:ea30d98d|2026-10-22|feat(rider): profile, documents, change requests and expiry reminders
+deligro:c59f499a|2026-10-22|feat(cash): rider cash position, deposits with manager confirmation, disputes, reminders
+deligro:181e6584|2026-10-22|feat(rider-app): Earnings tab with records, payouts, incentives and statements
+deligro:63fc68d4|2026-10-22|feat(rider): dashboard, history and performance API
+deligro:f87daeb4|2026-10-22|fix(rider): salary-model alignment — no per-delivery pay shown
+deligro:27cd2001|2026-10-22|feat(db): 0086 rider profile, documents, payout accounts, change requests
+deligro:494358b4|2026-10-22|feat(db): 0087 support tickets, inbox notifications, announcements
+deligro:7bf5dd08|2026-10-22|fix(rider-app): cancel notice with saved steps, offline proof photo, Task 7 review minors
+deligro:ddad9d26|2026-10-22|feat(db): 0084 rider ratings and default targets
+deligro:86f81c2c|2026-10-22|feat(db): 0085 rider cash deposits, disputes and reminders
+deligro:0c30f5e4|2026-10-22|feat(reports): one registry for the twelve reports — manager API and admin Reports
+deligro:71954e0b|2026-10-22|docs(rider-app): phase 3 task 5 — salary-model alignment
+deligro:3d903189|2026-10-22|docs(rider-app): riders are salaried — finance is a recorded ledger
+deligro:31c4a43e|2026-10-22|docs(manager-app): phase 6 Part A execution notes; ignore the Kotlin build cache
+deligro:af6f12e9|2026-10-22|test(manager-app): Phase 6 screens in the screenshot harness
+deligro:0f14924d|2026-10-22|feat(db): 0158 report aggregates — orders, cancellations, refunds, vendors, riders, tickets, marketing
+deligro:962ce707|2026-10-22|feat(manager-app): reports — twelve kinds, filters, CSV, Excel and PDF
+deligro:5675b221|2026-10-22|feat(manager-app): reconciliation — orders, online payments and cash
+deligro:8e48b3b4|2026-10-22|feat(api): finance reconciliation — orders to settlements, online payments, cash to deposits
+deligro:26781e86|2026-10-22|feat(manager-app): payment tracking, maker–checker settlements and refund decisions
+deligro:d36ab873|2026-10-22|feat(api): maker–checker vendor settlements and audited refund decisions for managers
+deligro:7ae7bc8c|2026-10-22|docs(security): log the Phase 5 review fixes, round 2
+deligro:4a9153c9|2026-10-22|fix(manager-p5): onboarding drafts on the phone keep no document number
+deligro:1917ed50|2026-10-22|fix(manager-p5): suspension locks the rider's work; cash is recorded once; replays must match
+deligro:57771fcb|2026-10-22|feat(api): manager finance overview, dues, issues and rider payouts
+deligro:dcd36bd1|2026-10-22|feat(rider-app): active delivery with every status, map, navigation, codes, QR, proof photo and exceptions
+deligro:0b4da8ea|2026-10-22|feat(admin): Riders section with Money tab and incentive rules
+deligro:c203f0b9|2026-10-22|feat(db): 0157 finance rollups — sales and commission, dues, reconciliation, cash, payouts
+deligro:3df8fbeb|2026-10-22|feat(manager-app): finance overview — sales, commission and payments
+deligro:4090b545|2026-10-22|fix(manager-p5): payouts pay exactly what was approved; one-admin payments switch
+deligro:f5782d9c|2026-10-22|feat(manager-app): finance and report models, repositories, fixtures
+deligro:6d3e7143|2026-10-22|feat(ops): finance rules — delays, reconciliation states, ledger totals
+deligro:a61328e3|2026-10-22|feat(db): 0156 maker–checker vendor settlements, audited settlement voids and refund decisions
+deligro:ace84ee8|2026-10-22|fix(manager-p5): no signed-in token reads a change request's raw value
+deligro:85ae5ec9|2026-10-22|feat(db): 0155 zone-scoped manager reads on settlements, refunds, payments; report indexes
+deligro:de77b830|2026-10-22|docs(manager-app): phase 6 P0 result
+deligro:51dd322d|2026-10-22|test(qa): structural pins follow the code they check
+deligro:654652da|2026-10-22|feat(rider): earnings, incentives and statements API; parked commission code removed
+deligro:1048d329|2026-10-22|chore(manager-app): phase 6 P0 — merge siblings, reconcile
+deligro:df6e1888|2026-10-22|fix(manager-p5): the exception queue is scoped by the order's zone
+deligro:d5ce166b|2026-10-22|fix(manager-p5): an exception is approved only while the job is where the rider asked
+deligro:4e00d5a9|2026-10-22|fix(manager-p5): payouts use 0083's arithmetic, and only through two people
+deligro:87813710|2026-10-22|fix(manager-p5): 0150 stops re-declaring Rider 0083's money ledger
+deligro:baeb81c7|2026-10-22|fix(manager-p5): proofs run on the real 0083 and seed past states as 0082 allows
+deligro:2aec6666|2026-10-22|fix(db): 0083 review round 2 — award counted once, P3-R6/R7/R8, rule period locked
+deligro:6891eabf|2026-10-22|fix(db): 0083 review round 1 — rollback order, payout dates, fixed rule period, reversals on correction (P3-R4)
+deligro:e9666f5a|2026-10-22|docs(rider-app): carry task 6 review items into phase 2 task 8
+deligro:e860025c|2026-10-22|docs(manager-app): phase 5 I1 result recorded
+deligro:e2990b17|2026-10-22|feat(rider-app): Jobs tab with offer countdown, accept, reject and native ringing
+deligro:bcc8ed53|2026-10-22|style(manager-app): braces on the if statements dart format split
+deligro:51a423ea|2026-10-21|test(manager-app): Phase 5 contract check — riders, money, cash, exceptions
+deligro:a803c6bf|2026-10-21|fix(manager-p5): rider scope filtered in the database, id lists chunked
+deligro:d0ce1c87|2026-10-21|feat(db): 0083 rider money — rate card, earnings ledger, incentives, adjustments, payouts
+deligro:5b3f87bf|2026-10-21|fix(manager-app): read Phase 5 server shapes — dispute counts, riderCode, approximate route
+deligro:f975471f|2026-10-21|fix(manager-p5): align with Part A — stored exception kind, {type,id} push data, dispute counts; Part S notes
+deligro:e2ebf94a|2026-10-21|fix(ops): go_offline before pickup only, effect_failed, current-assignment approvals
+deligro:1438f189|2026-10-21|docs(manager-app): phase 5 Part A execution notes
+deligro:b9497ae5|2026-10-21|feat(api): manager exception queue — audited decisions with replay-safe after-effects
+deligro:dc10b846|2026-10-21|docs(manager-app): phase 4 review fix round recorded; Partner app moderation display follow-up
+deligro:9fe8381f|2026-10-21|feat(api): maker-checker rider payouts, cash deposit and dispute decisions for managers
+deligro:965a127e|2026-10-21|style(manager-app): exception age in hours and days; Phase 5 screens in the screenshot harness
+deligro:5c484ff7|2026-10-21|feat(ops): delivery exceptions — rider requests, manager and admin decisions
+deligro:fccac10a|2026-10-21|feat(manager-app): delivery exception queue — approve, reject, acknowledge, retry after-effects
+deligro:a44d0db4|2026-10-21|fix(manager-p4): app — stale stock retry, admin-only restricted list, onboarding logo and alternate mobile, photo review queue
+deligro:be6baadd|2026-10-21|feat(rider-app): jobs data layer with offline action queue
+deligro:a90edf52|2026-10-21|feat(api): audited rider verification, suspension, documents and onboarding; suspended riders cannot work
+deligro:725fab0f|2026-10-21|feat(manager-app): cash deposits and disputes — confirm, dispute, resolve
+deligro:d13f9997|2026-10-21|feat(manager-app): approvals with maker-checker, salary payout requests, rider ledger
+deligro:0f1cf897|2026-10-21|chore: leave the generated live fixture to the integration step (apps/manager is Part A's)
+deligro:86e8f006|2026-10-21|feat(api): manager riders — list, detail, live state, performance, ratings, history, ledger
+deligro:fa678e82|2026-10-21|test(manager-app): drop two unused imports in the rider onboarding test
+deligro:94e38fc4|2026-10-21|feat(manager-app): onboard a rider — account, vehicle, licence, emergency contact, documents
+deligro:ac8661db|2026-10-21|feat(orders): delivery instructions and rider arrival for customers
+deligro:37b9a2c1|2026-10-21|fix(manager-p4): admin status changes need a reason; onboarding logo and alternate mobile; early upload size check
+deligro:343d3f58|2026-10-21|fix(manager-p4): the web vendor menu shows Deligro's moderation of each dish
+deligro:11d39d0b|2026-10-21|feat(manager-app): rider detail — live map, deliveries, performance, documents, money, cash, complaints, audited actions
+deligro:98fadcb7|2026-10-21|feat(db): 0154 rider cash position and money summary in SQL
+deligro:2f85460a|2026-10-21|feat(db): 0153 rider list facts and history in SQL
+deligro:fb857ac5|2026-10-21|fix(manager-p4): bounded product reads; §12.7 photo review queue
+deligro:eb31b2a0|2026-10-21|fix(manager-p4): stale stock, admin-only restricted list, pre-0146 fallback, staff storefront
+deligro:8e38f8cc|2026-10-21|feat(db): 0152 maker-checker payment requests, audited cash and exception decisions
+deligro:f4f36dbc|2026-10-21|feat(manager-app): Riders list — live state, search, filters, paging
+deligro:a93ca3a0|2026-10-21|fix(rider): board photo flag decides cash with isCashOrder, like the server
+deligro:9fa3d114|2026-10-21|feat(db): 0151 manager riders — account status, zone reads, audited verification, suspension, documents, onboarding, adjustments
+deligro:965967a4|2026-10-21|fix(manager-p4): 0146 — restricted dishes can't change what customers pay without approval
+deligro:cb4c6c56|2026-10-21|fix(rider): code-guess limit on a null method, order rollback on a refused delivery write
+deligro:48222332|2026-10-21|feat(manager-app): rider, payment, cash and exception models, repositories, fixtures
+deligro:71fea6e6|2026-10-21|feat(db): 0150 converge Rider tables the manager rider screens need
+deligro:e3daedc5|2026-10-21|feat(rider): full delivery flow — arrival, pickup methods, trip, proof photo, vendor handover
+deligro:3c133fc6|2026-10-21|chore(manager-app): phase 5 P0 — merge siblings, reconcile
+deligro:46f86faa|2026-10-21|docs(manager-app): phase 4 I1 result
+deligro:1168cd44|2026-10-21|test(manager-app): contract check covers every Phase 4 endpoint
+deligro:80e8ff2a|2026-10-21|feat(manager-app): vendor directory for pickers; flag note and optional verify note; category suggestions
+deligro:1089a59e|2026-10-21|fix(rider): routed distance at accept, lost-race guards, rejecter refusal, board paging
+deligro:d157a86a|2026-10-21|test(manager-app): Phase 4 screens — release build and screenshots; Part A execution notes
+deligro:b683a85b|2026-10-21|style(manager-app): accent-coloured Add buttons; Phase 4 screens in the screenshot harness
+deligro:c92c7fdd|2026-10-21|feat(rider): offers board API with countdown, accept and reject with reason
+deligro:51e96887|2026-10-21|fix(manager-app): Part S contract notes; amber text readable in dark mode
+deligro:5f21f697|2026-10-21|docs(manager-app): phase 4 Part S execution notes
+deligro:aa6c7e77|2026-10-21|feat(api): audited product moderation and stock adjustment; customer surfaces hide pending and hidden dishes
+deligro:0f722fdc|2026-10-21|feat(manager-app): Products — list, categories, detail with history and sales, insights, moderation, stock
+deligro:7f536535|2026-10-21|docs(partner): Phase 7 release and handover report
+deligro:602445f3|2026-10-21|feat(partner): page past orders and invoice history; search reaches older orders
+deligro:faf9ce9b|2026-10-21|fix(manager-p3): app — refresh merges by id, a reason on every advance, overrides, delivery note, new codes
+deligro:2f7d4c2a|2026-10-21|feat(api): manager products — list, categories, detail with history and sales, insights; vendor stats filter
+deligro:064b025b|2026-10-21|feat(manager-app): ticket thread — replies, internal notes, status with resolution
+deligro:910bf005|2026-10-21|feat(db): 0146 manager products — moderation, restricted listings, change history, flags, audited RPCs
+deligro:c1b3200a|2026-10-21|feat(manager-app): onboard a vendor — shop, owner, pin, hours, documents
+deligro:a32615ac|2026-10-21|fix(manager-p3): address-note correction reaches the rider; a failed leg can take a new rider
+deligro:4ca47233|2026-10-21|fix(manager-p3): queue counts from scoped SQL facts; the Orders list agrees with the tiles
+deligro:009aa0a1|2026-10-21|feat(api): audited vendor status, document review, onboarding, uploads and ticket replies
+deligro:93d2123b|2026-10-21|feat(manager-app): vendor detail — overview, documents, reviews, finance, complaints, audited actions
+deligro:881c28e3|2026-10-21|docs(rider-app): carry phase 1 final-review items into the phase 2 plan
+deligro:157d24e5|2026-10-21|fix(rider-app): a 5xx never throws a loaded rider off Home; delivery keeps location going
+deligro:84a17703|2026-10-21|chore(partner): bundle cupertino_icons so release builds find the icon font
+deligro:85686027|2026-10-21|fix(manager-p3): live rules — unassigned anchored on when the food is due, accept delays, inactivity at 5 minutes
+deligro:509dcb8d|2026-10-21|feat(db): 0082 rider jobs — exceptions, instructions, proof photos, dispatch settings
+deligro:b62bfb18|2026-10-21|fix(manager-p3): actions — a reason on every status change, replay from the RPC, overrides, ring stops, emergency push
+deligro:74c8e63e|2026-10-21|fix(manager-p3): one rider eligibility rule for dispatch, the picker and the database
+deligro:9f36849f|2026-10-21|fix(manager-p3): refunds — partial refunds through one rule, cancellation queues its refund atomically
+deligro:044e4b82|2026-10-21|fix(manager-p3): 0142/0143 database fixes from the Phase 3 review
+deligro:ca789ad3|2026-10-21|fix(rider-app): log rider-path failures to telemetry; bound sign-out bookkeeping
+deligro:841e1c66|2026-10-21|fix(rider-app): backfill picked_up_at on legacy picked_up rows; deploy-order note
+deligro:767c2ced|2026-10-21|feat(api): manager vendors — list, detail, performance, finance, reviews, documents, complaints
+deligro:6317970c|2026-10-21|feat(manager-app): Vendors list — search, status tabs, filters, paging
+deligro:0423e3d0|2026-10-21|fix(partner): keep insights out of the reviews module; inbox paging
+deligro:f61732d9|2026-10-21|feat(manager-app): vendor, product and ticket models, repositories, contract fixtures
+deligro:b150cb7a|2026-10-21|feat(ops): vendor and product rules — transitions, documents, rates, availability, sellers
+deligro:c7495493|2026-10-21|feat(partner): close the requirements gaps found in the release check
+deligro:bf92c1bf|2026-10-21|feat(db): 0145 manager vendors — rejected status, provenance, document review, zone reads, ticket link, audited RPCs
+deligro:969f8da3|2026-10-21|fix(rider-app): tell an online rider when location is gone; generation-safe location service
+deligro:71e385f4|2026-10-21|chore(manager-app): phase 4 P0 — merge siblings, reconcile
+deligro:2ad4252e|2026-10-21|feat(partner-app): offers, reviews & customers, marketing, help & support, notifications
+deligro:a14b4b36|2026-10-21|feat(rider-app): location disclosure and foreground location while online
+deligro:28fc2b58|2026-10-21|docs(manager-app): phase 3 I1 result — merge, contract check, phase exit
+deligro:1bb6eb07|2026-10-21|test(manager): PGlite base sets rider zones exactly after 0141's default-zone trigger
+deligro:0f291715|2026-10-21|feat(vendor-api): offers, reviews & insights, marketing requests, support, inbox, announcements
+deligro:388d1a55|2026-10-21|test(manager): Phase 3 contract check — server serialisers parsed by the app models
+deligro:fdc77225|2026-10-21|fix(manager-p3): item ids on order detail, rider phone on Live by the call rule, break marker colour
+deligro:df1b502c|2026-10-21|docs(manager-app): phase 8 (support, alerts, audit), 9 (insights) and 10 (release) plans
+deligro:f656d34b|2026-10-21|refactor(manager-app): English only — remove Hindi
+deligro:fca01e35|2026-10-21|feat(partner-app): payments, statements, sales report, invoices & receipts
+deligro:fd8637b4|2026-10-21|refactor(rider-app): English only — remove Hindi and the language switch
+deligro:58807dee|2026-10-21|fix(manager-p2): complete statistics export, honest stamps and dates, tablet layout, gated tiles
+deligro:5e290db4|2026-10-21|fix(manager-p2): statistics subtotal each city above its zones (§2.11)
+deligro:a418da9b|2026-10-21|test(manager-app): Phase 3 screens — release build and screenshots
+deligro:5cd4e6e4|2026-10-21|fix(rider-app): forced update is a route that Back, deep links and TalkBack cannot get past
+deligro:ab30214a|2026-10-21|fix(manager-p2): cash handovers and expenses only for riders in the manager's zones
+deligro:afe55b31|2026-10-21|fix(manager-p2): admin overview says when sales failed to load; labels say what they count
+deligro:b8418320|2026-10-21|fix(manager-p2): document and check the required migration order 0061 → 0081 → 0141
+deligro:06dfaf64|2026-10-21|fix(manager-p2): failed session and switch calls are failures, not 'unavailable'
+deligro:3686b48b|2026-10-21|fix(manager-p2): new riders and managers get a zone; vendors can't pick a shop's zone; sign-out-elsewhere needs a session claim
+deligro:44001eed|2026-10-21|feat(manager-app): Live tab — rider map, lanes, unassigned, delayed, signals
+deligro:e11d46ba|2026-10-21|feat(vendor-api): payments, statements, sales report, invoice numbers
+deligro:043fe88c|2026-10-21|feat(rider-app): shell, availability card, More and Settings
+deligro:11812fec|2026-10-21|fix(manager-p2): dashboard refreshes only while Home is on screen; no zone race
+deligro:153b224d|2026-10-21|docs(manager-app): phase 3 Part S execution notes
+deligro:0477b024|2026-10-21|fix(notifications): ops pushes to managers and admins in English only
+deligro:cc0c7aa1|2026-10-21|feat(api): manager live snapshot — riders, lanes, queues, signals
+deligro:5f0d1bfa|2026-10-21|feat(manager-app): order detail — timeline, mini-map, audited actions, rider picker
+deligro:b3752b6f|2026-10-21|fix(manager-p2): CSV exports guard against formula injection and carry a BOM
+deligro:08b8de3f|2026-10-21|refactor(partner-app): English only — remove Hindi
+deligro:d11a94c9|2026-10-21|feat(api): audited manager order actions — advance, cancel, assign, reassign, escalate, correct, note
+deligro:db05a22a|2026-10-21|fix(manager-p2): statistics carry no finance figures without finance.view
+deligro:910a34d0|2026-10-21|fix(manager-p2): dashboard and statistics summed in SQL, cached, rate-limited
+deligro:f3ba1c74|2026-10-21|feat(api): manager orders — search, filters, queues, cursor paging, detail and timeline
+deligro:822c3aa6|2026-10-21|feat(manager-app): Orders tab — search, filters, queues, infinite scroll
+deligro:6d1c7b9b|2026-10-21|feat(customer-app): sizes, add-ons, dish schedules and live shop status
+deligro:e4f8e68e|2026-10-21|feat(ops): live rules — delays, ETAs, rider states, eligibility, signals
+deligro:80f7c98e|2026-10-21|docs(rider-app): rider side is English only (owner decision)
+deligro:08884498|2026-10-21|docs(manager-app): phase 7 (marketing, offers, customers) plan
+deligro:6a44309d|2026-10-21|feat(partner-app): show the add-ons a customer chose on order detail
+deligro:b7048634|2026-10-21|feat(storefront): sizes, add-ons, item schedules and live shop status
+deligro:d613ac58|2026-10-21|fix(manager-p2): unpaid online checkouts are not orders in any figure
+deligro:bbee8ef4|2026-10-21|feat(db): 0143 support tickets for ops — escalation, levels, zones
+deligro:3fa253c2|2026-10-21|feat(manager-app): order and live models, repositories, contract fixtures
+deligro:9b187dab|2026-10-21|feat(db): 0142 manager order interventions — short code, actors, notes, audited RPCs
+deligro:e9dfc947|2026-10-21|docs(manager-app): phase 6 (finance & reports) plan
+deligro:7a43481f|2026-10-21|feat(partner-app): Store and Products & inventory screens
+deligro:a428bb80|2026-10-21|docs(manager-app): phase 5 (riders) plan
+deligro:5e80e237|2026-10-21|docs(manager-app): phase 3 (orders & live) and phase 4 (vendors & products) plans
+deligro:275b51a2|2026-10-21|docs(manager-app): phase 2 records — screenshots reviewed, release build checked
+deligro:7bfbc8f6|2026-10-21|fix(rider-app): a previous rider's data never opens the gate; Hindi default errors; guard missing tokenHash
+deligro:f4c11b95|2026-10-21|feat(rider-app): sign-in with OTP or email and password, rider gate
+deligro:a9f687f4|2026-10-21|feat(manager-app): download the performance report as CSV, Excel or PDF
+deligro:42243fe0|2026-10-21|feat(vendor-api): store and menu management routes for the Partner app
+deligro:c73508b3|2026-10-21|feat(manager-app): statistics — periods, growth, peaks, vendors, categories, zones
+deligro:9026cd0d|2026-10-21|feat(manager-app): Home dashboard — the eighteen figures
+deligro:45462d0b|2026-10-21|feat(api): manager statistics — periods, growth, peaks, best vendors and categories
+deligro:77160358|2026-10-21|fix(orders): vendor-added dishes orderable; options, shop hours and low stock
+deligro:71bba63e|2026-10-21|feat(api): manager dashboard — the eighteen figures, scoped and permission-aware
+deligro:0a271ed6|2026-10-21|feat(db): 0062 shop hours, holidays, stock, schedules, variants and add-ons
+deligro:db25ebef|2026-10-21|refactor(admin): dashboard, earnings and series figures from the shared ops metrics
+deligro:68744b6e|2026-10-21|feat(metrics): scoped loader from Supabase rows to the ops metrics
+deligro:5d00b550|2026-10-21|docs(rider-app): carry phase 1 review findings into the phase 2 plan
+deligro:863da529|2026-10-21|feat(rider-app): Flutter scaffold for the Rider app
+deligro:15918f41|2026-10-21|feat(partner-app): sales analytics
+deligro:96549adf|2026-10-21|docs(manager-app): phase 2 plan — dashboard and statistics
+deligro:da4e329c|2026-10-21|fix(manager-p1): Admin → Feature access; switch changes audited with the change
+deligro:55a215f8|2026-10-21|fix(manager-p1): push links open real routes; push switches reset on sign-out
+deligro:c2473499|2026-10-21|fix(manager-p1): zone-scope the web cash screens; /me fails loudly
+deligro:e1941f65|2026-10-21|fix(manager-p1): 0141 grants and locks; audit entries written with their change
+deligro:21756b7b|2026-10-21|feat(partner-app): dashboard with every figure the client listed
+deligro:6574389c|2026-10-21|feat(api): vendor sales analytics
+deligro:87c24300|2026-10-21|feat(dispatch): offer pickups only to online riders; web rider portal gets the switch
+deligro:f7db1677|2026-10-21|feat(api): vendor ledger, money vocabulary and dashboard
+deligro:fd5c004f|2026-10-21|fix(db): 0141 scopes 0081's rider tables to the manager's zones
+deligro:1e5a32b0|2026-10-21|docs(vendor-app): phase 3 dashboard and analytics plan
+deligro:9f9bfb3a|2026-10-21|feat(partner-app): native new-order ring and alert readiness
+deligro:23a58626|2026-10-21|docs(manager-app): Flutter app supersedes the Capacitor Manager shell; push link tests
+deligro:1c077a24|2026-10-21|fix(rider): end an orphan shift when the rider went offline, not when they return
+deligro:6b74c321|2026-10-21|fix(rider): never adopt an orphan shift; conditional break/resume writes
+deligro:89e95c29|2026-10-21|feat(partner-app): orders tab and order detail with every action
+deligro:1915ea1c|2026-10-21|feat(manager-app): shell, More, profile & permissions, sessions, settings
+deligro:9ce23c21|2026-10-21|feat(rider): server-side online, offline and breaks with /api/rider routes
+deligro:275dc321|2026-10-21|feat(manager-app): sign-in and manager gate
+deligro:27987a2a|2026-10-21|feat(manager-app): Flutter scaffold for the Manager app
+deligro:dc39d972|2026-10-21|feat(admin): cities, zones and manager zone assignment
+deligro:8cc2b639|2026-10-21|feat(partner-app): order model, repository and live board
+deligro:4748c6f6|2026-10-21|docs(rider-app): implementation plans for phases 3-8
+deligro:3986fd28|2026-10-21|fix(driver): delivery writes fall back on PGRST204 and re-probe after 0081
+deligro:4e853e53|2026-10-21|feat(notifications): remind the kitchen about orders left waiting
+deligro:cd22dc6f|2026-10-21|feat(api): manager API base — scope, me, activity, sessions, password, notification prefs
+deligro:54a0af60|2026-10-21|feat(api): Partner app order board, detail, prep time and Preparing step
+deligro:c0185f8c|2026-10-21|docs(vendor-app): phase 2 orders plan
+deligro:dccb8aa7|2026-10-21|feat(releases): Manager app release track
+deligro:2b2bd31c|2026-10-21|docs(rider-app): phase 2 jobs implementation plan
+deligro:8ae9bff1|2026-10-21|feat(features): manager permissions with default-off sensitive powers
+deligro:bc8dfa59|2026-10-21|fix(db): 0081 marks the replayed action id in one session setting
+deligro:3530ad19|2026-10-21|feat(partner-app): shell, shop switcher, More and settings
+deligro:de72bf0d|2026-10-21|feat(db): 0081 rider foundation — availability, shifts, rider ID, delivery audit and transition guard
+deligro:7e75fa0c|2026-10-21|feat(db): 0141 manager foundation — zones, zone-scoped access, ops audit log, sessions
+deligro:d787d746|2026-10-21|feat(partner-app): sign-in with OTP or password, vendor gate
+deligro:c03c781e|2026-10-21|feat(metrics): shared ops metrics module for dashboard, statistics, finance and reports
+deligro:13518f47|2026-10-21|docs(manager-app): phase 1 foundation implementation plan
+deligro:444b405f|2026-10-21|feat(partner-app): Flutter scaffold for the vendor app
+deligro:d7abb524|2026-10-21|docs(manager-app): phased design for the native Manager app
+deligro:b62cfff6|2026-10-21|docs(rider-app): phase 1 foundation implementation plan
+deligro:2af2ad5d|2026-10-21|feat(api): vendor API base and password login for native apps
+deligro:9c645cc9|2026-10-21|docs(rider-app): phased design for the native Rider app
+deligro:0c545c71|2026-10-21|feat(releases): Partner (vendor) app release track
+deligro:d15ada73|2026-10-21|feat(db): 0061 vendor app foundation — preparing step, status events, vendor money read access
+deligro:320b72fc|2026-10-21|docs(vendor-app): phase 1 foundation implementation plan
+deligro:f43c4428|2026-10-21|docs(vendor-app): backend audit and phased design for the Partner app
+deligro:1ca9c9c4|2026-10-21|fix(customer-app): release build opens; website splash, new icon, menu scroll
+deligro:bb375023|2026-10-17|feat(customer-app): native Flutter customer app
+deligro:b6f3d981|2026-10-16|refactor: last 4 Sonar maintainability fixes after the first rescan
+deligro:4f2c2c1f|2026-10-16|docs: Sonar maintainability results, Accepted list and corrected QA count
+deligro:463f83da|2026-10-16|refactor: reduce cognitive complexity, part 2 of 3 (Sonar S3776, 24 issues)
+deligro:451ce93c|2026-10-16|a11y: native output/fieldset for status text and toggle groups (Sonar S6819, 3 issues)
+deligro:cfac6e42|2026-10-16|refactor: reduce cognitive complexity, part 3 of 3 (Sonar S3776, 20 issues)
+deligro:8dca3a8d|2026-10-16|refactor: reduce cognitive complexity, part 1 of 3 (Sonar S3776, 23 issues)
+deligro:4a8dd40b|2026-10-16|refactor: un-nest ternaries, part 1 of 3 (Sonar S3358, 72 issues)
+deligro:89bca92c|2026-10-16|refactor: un-nest ternaries, part 3 of 3 (Sonar S3358, 72 issues)
+deligro:448881d5|2026-10-16|refactor: un-nest ternaries, part 2 of 3 (Sonar S3358, 71 issues)
+deligro:b72f870f|2026-10-16|perf(settings): run the optional-column probes concurrently (Sonar S9382, 1 issue)
+deligro:d7bcd020|2026-10-16|style(offline): drop a needless !important (Sonar S9423)
+deligro:ed427e52|2026-10-16|docs(sql): explicit ORDER BY columns and direction in rls-verification.sql
+deligro:53a9cff5|2026-10-16|refactor: Sonar batch 10 (cont.) — optional chaining in sw-core, .at() in settlements (4 issues)
+deligro:75c9135b|2026-10-16|refactor: Sonar batch 7b — small rules (7 issues)
+deligro:94fc9554|2026-10-16|refactor: Sonar batch 7a — small rules (36 issues)
+deligro:1d356c74|2026-10-16|docs(agents): console-ui stat-tile adapters are gone
+deligro:3bd1d7de|2026-10-16|refactor: migrate admin screens off deprecated console-ui adapters (Sonar S1874, 55 issues)
+deligro:b76baf2e|2026-10-16|refactor: hoist DataTable column definitions out of admin pages (Sonar S6478, 53 issues)
+deligro:393e4941|2026-10-16|refactor: read FormData fields as strings via formString (Sonar S6551, 46 issues)
+deligro:70d90726|2026-10-16|refactor: Sonar batch 10 — mechanical idioms in protected files (31 issues)
+deligro:4f44671c|2026-10-16|refactor: merge consecutive push() calls (Sonar S7778, 131 issues)
+deligro:055cb563|2026-10-16|refactor: mark component props read-only (Sonar S6759, 382 issues)
+deligro:09a6aee4|2026-10-16|docs: SonarQube maintainability audit and batch 1 log
+deligro:64c72795|2026-10-16|refactor: Sonar maintainability batch 1 (66 issues, no behaviour change)
+deligro:2ddb7f2d|2026-10-16|chore(sonar): exclude generated seed and HTML audit reports from analysis
+deligro:b05e8adc|2026-10-16|chore(sonar): exclude generated seed, migrations and reports from duplication
+deligro:e2a55b9a|2026-10-16|feat(seo): canonicals, 1200x630 share image, loading skeletons
+deligro:b50384b8|2026-10-16|fix: resolve remaining SonarCloud findings
+deligro:5bc44af7|2026-10-16|fix(sw): check message origin inline in the listener
+deligro:96d03b30|2026-10-16|chore: remove dead code (knip) and fix SonarCloud findings
+deligro:9174c777|2026-10-15|feat(admin): redesign console shell and dashboard
+deligro:f1fbd5e8|2026-10-13|perf(search): omit default-valued menu keys from the Search payload
+deligro:5608e81e|2026-10-13|feat(developer): create-developer supports an email login
+deligro:3b7148e9|2026-10-13|feat(developer): account script, handover notes
+deligro:bddc13a9|2026-10-13|feat(developer): Feature access moves to the Developer panel
+deligro:b519811a|2026-10-13|feat(developer): health scorecard; technical health leaves the admin chrome
+deligro:d7b1fc81|2026-10-13|feat(developer): a separate Developer panel; Observability moves out of Admin
+deligro:25ba6254|2026-10-13|feat(vendor): Reviews screen with replies
+deligro:24a52987|2026-10-13|docs: record owner decisions, review verification and backlog
+deligro:041e1bff|2026-10-13|fix(location): the saved delivery address is authoritative
+deligro:9bf2726b|2026-10-13|fix(privacy): clear the cached delivery place at sign-out and sign-in
+deligro:c7d43b16|2026-10-13|docs: ratings, shop locations and delivery fee audit (Phase 1, read-only; rider pay out of scope)
+deligro:30463b4f|2026-10-13|docs: delivery location selector audit (Phase 1, read-only)
+deligro:a4658d77|2026-10-13|docs: add fix status and open items to the performance audit
+deligro:f034e2a5|2026-10-13|perf(layout): take the profile read off the critical path of full loads
+deligro:6ff875f0|2026-10-13|perf(home): read only the newest active order, not 101 full orders
+deligro:6108c4b5|2026-10-13|perf(nav): reuse visited customer pages for 20 s, clear the cache on mutations
+deligro:00e6768a|2026-10-13|docs: record live Server-Timing measurements in the performance audit
+deligro:4e7c10b0|2026-10-13|docs: correct performance audit; responses are compressed
+deligro:f284764f|2026-10-13|obs: Server-Timing header from the proxy (proxy and session durations)
+deligro:62d628b8|2026-10-13|feat(admin): web-only console; docs: customer app performance audit
+deligro:4ea32f19|2026-10-12|fix: production-readiness audit - admin guards, payments, OTP, paging, finance, SEO, cleanup
+deligro:6d802f13|2026-10-12|feat(db): migrations 0055-0058 - order integrity, policy guards, indexes, handover-code privacy
+deligro:e04c61e8|2026-10-12|feat(i18n): keep Hindi copy off the operator screens and pushes
+deligro:6ccdd13e|2026-10-08|docs: Flutter development environment setup guide
+deligro:7090bcbc|2026-10-07|security: close leftover grants, keep home/stores HTML out of SW cache; remove dead files
+deligro:d0de5471|2026-10-03|feat: redesign checkout (delivering-to bar, map on its own screen) and driver jobs (route panel, one sheet per step)
+deligro:6b4c5c19|2026-10-03|feat: OTP limits, vendor/driver alert and UI updates, audit docs
+deligro:ed1ebbf5|2026-10-03|fix(ring): review fixes — never lose the alert, stop on every path, survive out-of-order pushes
+deligro:a6c52a0a|2026-10-03|test(qa): ring protocol in the QA pack; release notes for 1.1.0
+deligro:e77de6c2|2026-10-03|feat(ring): setup card so budget phones don't silence the ring
+deligro:a458f06f|2026-10-03|feat(ring): boards ring until accepted — native in the app, looping tone in the browser
+deligro:b88f1951|2026-10-03|feat(mobile): native continuous ring for vendor and rider apps
+deligro:166ecf02|2026-10-03|feat(ring): send ring start on new order and rider offers, silent stop on accept/reject/cancel
+deligro:e950c065|2026-10-03|chore(customer): switch Hindi off — English only, language switch hidden
+deligro:04c2db43|2026-10-03|feat(ring): ring protocol shared by server and apps
+deligro:17522151|2026-10-03|docs: order ringing and notification engine plans
+deligro:e01bcef1|2026-10-03|feat(customer): translate the customer app — English or Hindi, never both
+deligro:28dd1756|2026-10-03|feat(customer): one language at a time — English or Hindi switch
+deligro:4905bc1b|2026-09-28|feat: sync, push, phone UI, launch scope and feature access (session work)
+deligro:8a23ac93|2026-09-28|fix: final-review pass — APK signing, sign-out push, offline retry, 0053 item guard
+deligro:4a3a428c|2026-09-28|docs(delivery): client install guide for Android APKs and iPhone home-screen apps
+deligro:73f5322e|2026-09-28|feat(mobile): signed APK build script and runbook
+deligro:3b6d9003|2026-09-28|feat(mobile): role config, tested build helpers, native push plugin and offline page
+deligro:47927f1f|2026-09-28|feat(push): use the native DeligroPush plugin inside the Android app shells
+deligro:536dfcec|2026-09-28|feat(pwa): per-role manifests so vendor/rider/manager install as their own apps on iOS
+deligro:efa8b912|2026-09-28|docs(delivery): migrations runbook for 0039–0053
+deligro:fa72771a|2026-09-28|fix(db): 0053 release hardening — order insert/pricing, guard regression, phone lock, rate-limit revoke
+deligro:21a507a4|2026-09-28|chore(deps): next 16.3.6 + audit fixes (critical image-optimizer CVE)
+deligro:df0345e5|2026-09-15|Customer app audit: orders, search, stores and account
+deligro:ffb782cb|2026-09-12|In-app directions for riders, with the Google Maps hand-off kept
+deligro:b22ad932|2026-09-12|Courier app: a tab bar, a profile, and a real delivery history
+deligro:e2115574|2026-09-11|Rulebook: master pushes to both remotes, not one
+deligro:2ad4a6ff|2026-09-11|Surface unpinned shops on the admin vendors page
+deligro:22fdaa09|2026-09-10|Require a map pin before a vendor can go live
+deligro:3c5b28a5|2026-09-10|Stop presenting a kitchen's band as a measured delivery estimate
+deligro:db08d555|2026-09-10|Stop inventing a restaurant location on the tracking map
+deligro:db17f130|2026-09-10|Delivery area fails closed: an unmeasurable radius now refuses
+deligro:69136980|2026-09-10|Fix ADD pills painting over the sticky search header
+deligro:56ae5fc6|2026-09-10|Delivery estimates that know how far the food is going, and a map that draws roads
+deligro:2237a945|2026-09-10|Spec: correct the two places it no longer describes what shipped
+deligro:2fe62af0|2026-09-10|Document the console palette, the kit, and the adapter decision
+deligro:ae45fc89|2026-09-10|Phase 9c: one tab strip, one shortcut row, across the rest of the console
+deligro:a9ea921e|2026-09-10|Phase 9b: observability on console tokens — fixing a contrast bug the dark console exposed
+deligro:a83faca1|2026-09-10|Phase 9a: one status vocabulary across the console
+deligro:7e2d7762|2026-09-10|Vendor portal: the same console, and a bar that was lying
+deligro:fb514b3b|2026-09-10|Phase 8: Vendors — a directory that says which shops are worth anything
+deligro:4ba2cb15|2026-09-10|Phase 7: Cash & expenses — the handover chain drawn as a chain
+deligro:e1e22a09|2026-09-10|Phase 6: Reports — a workspace, with charts that plot the report's own rows
+deligro:5125d69e|2026-09-10|Phase 5: Settlements and Order payouts — a derivation, not eight tiles
+deligro:70906a2e|2026-09-10|Phase 4: Orders — real filters, and one timeline instead of two
+deligro:b0da74a6|2026-09-10|Phase 3: the dashboard, arranged around what an operator does next
+deligro:aa8b0577|2026-09-10|Phase 2: the console design system — dark-first tokens and grouping without cards
+deligro:655694df|2026-09-10|Spec: ops console redesign — admin + vendor web shells
+deligro:6d42424a|2026-09-07|Finish the status-bar theme fix: exact --bg, color-scheme, and a test
+deligro:b14ae253|2026-09-05|Fix audit findings and improve PWA performance across customer app
+deligro:e0fe0c4a|2026-09-05|Phone testing on the LAN: unstyled dev pages, and a basket bar inside the tab bar
+deligro:5dc85fff|2026-09-04|Add COD cash handover chain and operational expense tracking
+deligro:0cbea5aa|2026-09-03|Add staticMapUrl helper for pinned-location map images
+deligro:b992346c|2026-09-02|Admin platform: decide the shell on the server, so web stops rendering as the phone app
+deligro:eb71139d|2026-09-02|Observability centre: find and fix production problems, not just read logs
+deligro:4f2a383d|2026-09-02|PWA: one shared service worker, a real offline screen, install and update UX
+deligro:56d5752c|2026-09-01|Add admin-configurable new-order alert sounds, for vendors and riders
+deligro:1cbe7a33|2026-09-01|Fix broken campaign images: seeded banners pointed at a host the CSP blocks
+deligro:9274adb4|2026-09-01|Vendor detail: group the Menu tab by category with a filter, redo the Payment tab
+deligro:d4c61939|2026-09-01|Settlements queue: fix header alignment, drop the Create payout shortcut
+deligro:b53badd7|2026-09-01|Ignore the Supabase CLI's local .temp cache
+deligro:e8086f52|2026-08-26|App version check API: tell the rider and customer APKs when to update
+deligro:b6a3efcc|2026-08-25|Fix crash on /admin/vendors: PAGE_SIZES.includes is not a function
+deligro:fa07bccc|2026-08-25|Rename admin nav item "Food photos" to "Photo storage"
+deligro:babb27c8|2026-08-25|Cancellation cleanup, platform earnings on the admin dashboard, and driver-board refresh on stale orders
+deligro:6dce25a9|2026-08-25|Add design spec: APK version-check API for rider/customer apps
+deligro:5c98b0ef|2026-08-25|Vendor console profile, Storage rail, and vendor list paging
+deligro:4086ef6e|2026-08-20|Rider dispatch, real addresses on the courier app, and a rider ID card
+deligro:8f6922e4|2026-08-20|Vendor coupons, vendor management, and the operator order path
+deligro:a26a53fd|2026-08-19|Untrack the WhatsApp design archive
+deligro:22d30426|2026-08-19|Add the audit reports
+deligro:da198222|2026-08-19|Readable type, drop dead code, untrack design archives, refresh README
+deligro:bad5f8d9|2026-08-19|Audit fixes: lazy charts, live orders list, gate /build, declare server-only
+deligro:494b3d2e|2026-08-19|Admin orders: show the vendor and what was actually ordered
+deligro:03374fd9|2026-08-19|Search: stop matching mid-word, fix category chips, add a semantic layer
+deligro:be4b5d78|2026-08-19|Let crawlers and browsers actually reach robots, sitemap and manifest
+deligro:9e9506f3|2026-08-19|SEO and PWA: sitemap, robots, manifest, per-restaurant metadata
+deligro:5f558745|2026-08-19|Food-first catalog: categories, kitchen pace, service area, charges
+deligro:f3b4501d|2026-08-19|Admin: reject signups, settle single orders, xlsx reports
+deligro:405aa7fa|2026-08-18|Ask which app to open when one account holds more than one
+deligro:ff1f758f|2026-08-17|Food photo library with folder upload, vendor payouts, per-portal sign-in
+deligro:73f50f5d|2026-08-17|Flatten page headings on web; scope admin tools to the shell they fit
+deligro:9690a249|2026-08-15|Readable themes, a platform commission, and campaign previews
+deligro:3fd41a8b|2026-08-13|Admin console redesign + vendor settlements
+deligro:3d143be6|2026-08-13|Phone orders, the checkout guard fix, and coupons that apply
+deligro:29217f41|2026-08-08|Dish-first search + web admin console
+deligro:6b570583|2026-08-08|fix production OTP by rate-limiting via Postgres instead of requiring Upstash.
+deligro:ecbbbac9|2026-08-08|mast
+deligro:0cb4e036|2026-08-07|Manager portal + admin order intervention (slices E & F)
+deligro:ffa2dfa0|2026-08-07|Checkpoint: admin slice partial, manager slice not started
+deligro:5b4949a3|2026-08-07|Order lifecycle: vendor, refunds, customer tracking and rider repairs
+deligro:3cf278a4|2026-08-07|Razorpay integration (shipped off) + order-lifecycle spine
+deligro:b2b5fc5f|2026-08-06|Switch stock food images from Pexels to Unsplash
+deligro:d6186715|2026-08-06|Contain modal dialogs within the phone frame
+deligro:be369417|2026-08-06|Vendor onboarding: convert existing customer to vendor ("stay both")
+deligro:0e230d16|2026-08-06|Security hardening: remediate first full audit + manager role
+deligro:2671b550|2026-07-29|Vendor sorting + registration fixes
+deligro:58dedd7a|2026-07-29|Admin UI redesign + colourful iconography across admin & customer
+deligro:4026ba9b|2026-07-28|Vendor registration wizard: phone OTP, logo upload, menu categories
+deligro:ce86dafd|2026-07-26|Pin Node to 24.x to match Vercel project setting
+deligro:c3945119|2026-07-26|Unify auth into one /login; light default; drop location popup
+deligro:b0fec994|2026-07-25|Sync pnpm-lock.yaml with package.json to fix Vercel frozen install
+deligro:c0917693|2026-07-25|vendro lint
+deligro:5b1ebd60|2026-07-25|vendor
+deligro:d3e8daed|2026-07-19|Sync /build tracker with shipped OTP, checkout, and operator boards.
+deligro:e86ff5fe|2026-07-18|Fix wrong-city location fixes and stop needless permission popups
+deligro:2381f3cc|2026-07-17|Ship developer badge, promo banners, favorites, and splash redesign
+deligro:86924f55|2026-07-17|Fix invisible gold badges in dark mode
+deligro:94b87c4d|2026-07-14|Stop the app inventing data: real dashboards, real distances, real riders
+deligro:c84ef9fe|2026-07-14|Security, the veg bug, and one source of truth for money
+deligro:7b79d222|2026-07-13|Fix all 10 lint errors: derive state instead of syncing it in effects
+deligro:63ef7210|2026-07-13|Pin delivery to Bemetara, real shop distances, iPhone frame + overlay fixes
+deligro:f583e6aa|2026-07-10|Add guest/OTP welcome flow, item sheet, and iPhone 17 Pro Max device frame
+deligro:21395215|2026-07-10|Make customer Profile dynamic + fix home-header address fallback
+deligro:03b1865c|2026-07-09|Add OneSignal push + Google Maps address picker; fix seed scripts
+deligro:05f029b6|2026-07-09|Add saved addresses, handover OTP, order cancel, ratings; coupon/wallet schema
+deligro:139d82b1|2026-07-09|Add phone-OTP login (customer always; operators optional)
+deligro:59fffbaa|2026-07-08|Dev-only CSP eval, tracker status, onboarding comment
+deligro:de003b48|2026-07-08|Add near-realtime auto-refresh to vendor, driver, and admin boards
+deligro:b8d41aa7|2026-07-08|Wire live cross-app sync: driver + admin read/write the shared orders DB
+deligro:821be135|2026-07-08|Fix 500 on /restaurant/[slug]: force-dynamic the customer segment
+deligro:dc805353|2026-07-08|Fix Vercel build: don't hard-depend on `ws` in seed scripts
+deligro:2f4b2cd7|2026-07-08|Add build tracker, guest-first onboarding gate, and role seed tooling
+deligro:f70d9aa5|2026-07-07|Wire Phase 2 backend: live catalog, orders API, and vendor kitchen board.
+deligro:bf648b48|2026-07-04|Add role portals + Supabase auth/RLS backend + security hardening
+deligro:cc8b9c3f|2026-07-04|Add first-run onboarding carousel
+deligro:0a26e424|2026-07-02|Fix header collision between location button and theme toggle
+deligro:6bf679a6|2026-07-02|Add cold-start splash screen and build out customer app
+deligro:7c12751e|2026-07-02|Initial commit from Create Next App
+orbis:182e0869|2026-10-31|Blend: the old design with the new font, motion, Settings and sidebar
+orbis:92cda112|2026-10-31|Journal moods: Fluent 3D faces in place of the device's emoji
+orbis:4282077e|2026-10-31|Keep Orbis's wallpaper, give Career the app's sidebar, full-screen Ask on phones
+orbis:87109b6a|2026-10-31|Keep the front door's gradient; test the Apple design contract
+orbis:9fb8d691|2026-10-31|Apple design pass on every screen
+orbis:7b81622e|2026-10-31|Apple-style motion: springs, gliding selection, sheets that follow the finger
+orbis:b8ac4ad5|2026-10-31|Apple design foundation: system font, Apple palette, plain ground, quiet motion
+orbis:057ace23|2026-10-31|Ask Orbis: show what it reads, what it inferred, and what to ask next
+orbis:95ac0f32|2026-10-29|Document /api/v1: signing in, reads, actions and errors
+orbis:a54f558a|2026-10-29|Add /api/v1: the app's actions and reads behind a bearer token
+orbis:ca7c078d|2026-10-29|Wire up the Social chat box and drop the placeholder analytics
+orbis:6bb9c1b2|2026-10-29|WIP: AI chat box and analytics snapshot on the Social tab
+orbis:d0b78ce5|2026-10-27|Add the guide for continuing both builds on another PC, and the bank-statement import design
+orbis:b501ce5d|2026-10-27|Mark where the desktop layout build stands and where to pick it up
+orbis:97c0620e|2026-10-27|Draw the desktop frame, header, palette, docked Ask and Settings dialog behind a switch
+orbis:f2f4687e|2026-10-27|Mark the Research desk plan's progress and where to resume
+orbis:ae8e37b6|2026-10-27|Add the Research desk panel page, and keep the desk dormant until its worker is set up
+orbis:1b8c5126|2026-10-27|Let worker jobs run side by side and merge the memory log instead of overwriting it
+orbis:05227ec8|2026-10-27|Run a research job end to end, cancel it mid-run, and the private repo's workflow
+orbis:2e2ffae6|2026-10-27|Count each run's tokens and cost, cap them, and settle calls from the memory log
+orbis:8ec00c39|2026-10-27|Set TradingAgents up for Indian stocks with an Indian news vendor
+orbis:a454c157|2026-10-27|Start the research worker: Supabase writer and logs that hold no data
+orbis:a69abd45|2026-10-27|Show the Research desk in Money > Investments with the live run view
+orbis:0fd3ecd3|2026-10-27|Add the Research desk's server actions, repository and run timeline
+orbis:ba093679|2026-10-27|Share one palette dialog between the app and the Career panel
+orbis:cd3dd3b6|2026-10-27|Queue research runs and start the private worker with workflow_dispatch
+orbis:31e58971|2026-10-27|Add the desktop breakpoint, app links and palette list as tested logic
+orbis:8710ceed|2026-10-27|Map broker symbols to Indian tickers and gate the desk to the owner
+orbis:6314ff3d|2026-10-27|Add the Research desk tables and how their rows are read
+orbis:944f35cf|2026-10-27|Plan the Research desk build in five phases
+orbis:032b382f|2026-10-27|Plan the desktop web layout, task by task
+orbis:30b5bb83|2026-10-27|Design the desktop web layout for the whole app
+orbis:4e031c98|2026-10-27|Record the owner's Research desk decisions: owner only, Actions, Sonnet + Haiku
+orbis:e04a5f8b|2026-10-27|Make the notifications cron script safe to run twice
+orbis:0f7ff13d|2026-10-27|Stop outsiders steering where Career's Send goes
+orbis:16c4afc7|2026-10-27|Plan the Research desk: TradingAgents for Money, for the owner's review
+orbis:6b1cb5b5|2026-10-27|Close the gaps between the Career screens and the real actions
+orbis:8e11de2c|2026-10-27|Build the Career web panel at /active/career
+orbis:e14988ab|2026-10-27|Implement the Career actions and Send: Gmail, Recruitee and link applies
+orbis:2d3132f2|2026-10-27|Build the Career tab: matches, approval queue, tracker, insights and setup
+orbis:a54d7a12|2026-10-27|Wire the Career pipeline: AI calls, daily search, drafting and the Gmail watcher
+orbis:834dc39b|2026-10-27|Fix the contract between the Career screens and their server actions
+orbis:868a5432|2026-10-27|Add tailored resumes: truth check, ATS check, PDF and DOCX output
+orbis:57018c2b|2026-10-27|Add career profile, spec and matching: skills, requirements, scores
+orbis:ea075153|2026-10-27|Add career job sources and job-alert email parsing
+orbis:33a2a4fa|2026-10-27|Add career mail reading, stage rules, predictions, offers and interview prep
+orbis:d1aa6ed5|2026-10-27|Lay the Career foundation: tables, tab, web panel route and repository
+orbis:f14aec9b|2026-10-27|Lift the AI budget cap and the no-training rule for personal data
+orbis:f700e9ac|2026-10-27|Design the Career tab and web panel: job search, tailored applications, tracking
+orbis:ba9d8ce1|2026-10-17|Clear the SonarCloud findings: pinned CI actions, native elements, simpler code
+orbis:c78c4292|2026-10-12|Redesign the waitlist hero with a black-hole backdrop and a Log in button
+orbis:83c78227|2026-10-12|Drop the calendar selection outline and the journal form card
+orbis:45f076d8|2026-10-12|Fix review findings: DM Sans on public pages, see-through logo hole, manifest colours
+orbis:feb48076|2026-10-12|Guard text contrast in the brand palette and darken the light accents
+orbis:1423470b|2026-10-12|Regenerate app icons and the share image from the brand ring
+orbis:a73bb841|2026-10-12|Move hard-coded colours onto the brand tokens
+orbis:d4808474|2026-10-12|Apply the brand gradient to buttons and chat bubbles
+orbis:7c4caa24|2026-10-12|Restyle the bottom nav to the brand spec
+orbis:2a0f0840|2026-10-12|Round and border cards to the brand spec
+orbis:ea42547b|2026-10-12|Draw the Orbis logo as a gradient ring
+orbis:77acba2e|2026-10-12|Switch the app to DM Sans
+orbis:d5db26c6|2026-10-12|Add the Orbis brand palette and make dark the default
+orbis:f3c13290|2026-10-12|Add the Orbis rebrand implementation plan
+orbis:1d6f419e|2026-10-12|Add the Orbis visual rebrand design spec
+orbis:3213efbc|2026-10-12|Condense the Orbis brand prompt
+orbis:3cd0f7e3|2026-10-12|Add Orbis brand prompt as the design source of truth
+orbis:43275174|2026-10-02|Stop the brief passing verdicts on routines it has not heard about
+orbis:ade6bd55|2026-10-02|Update next-env.d.ts route types path
+orbis:a498ad51|2026-10-02|Add News, mail Got it, investment categories and Ask about this
+orbis:81fe6a61|2026-10-01|Stop Instagram and Threads refusing to connect on an https site
+orbis:6fa0fa96|2026-10-01|Show what happened when connecting Instagram or Threads
+orbis:6d35e9be|2026-10-01|Add Claude Haiku and Jev to the AI router, inside a monthly budget
+orbis:a0a1086d|2026-09-30|ai
+orbis:b14beb6d|2026-09-30|Heads-ups: fixes from the final review
+orbis:b97a57ae|2026-09-30|Document heads-ups
+orbis:7984915c|2026-09-30|Heads-ups: Settings switches and an end-to-end test
+orbis:1f024cec|2026-09-30|Heads-ups: each prepared step opens its screen ready to go
+orbis:aff8bc1f|2026-09-30|Heads-ups: the Today card, its route and actions
+orbis:023ba071|2026-09-30|Heads-ups: the daily scan, AI wording and urgent pushes
+orbis:ce6a0dfc|2026-09-30|Heads-ups: scan decisions and push rules
+orbis:0b8adec8|2026-09-30|Heads-ups: the wording prompt and its output check
+orbis:3b607131|2026-09-30|Heads-ups: routine and health checks
+orbis:7017878f|2026-09-30|Heads-ups: types, date helpers and the money checks
+orbis:c36a32f9|2026-09-30|Heads-ups: tables, grants, cron job and export
+orbis:2eb25640|2026-09-30|Add the heads-ups implementation plan; refine the spec from planning
+orbis:95677a3d|2026-09-30|Add the proactive heads-ups design spec (phase 1: Money, Routines & health)
+orbis:2c5c7e72|2026-09-30|iPhone layout: keep env() top inset for Field screens; pin the post bar to the nav
+orbis:1a8367a8|2026-09-30|iPhone layout: derive nav clearance from safe-area insets in one place
+orbis:13206112|2026-09-29|App lock: renew the unlock on the first activity after a page load
+orbis:be0b2e60|2026-09-29|Update stale tab names in copy; make the Activity widget's date honest
+orbis:30963f97|2026-09-29|Ask Orbis: own Escape handler, correct the notes/voice comment and hint
+orbis:d1037d24|2026-09-29|Tabs routing: close a prototype-chain hole, fix bare #money, hashchange docs
+orbis:8af7109c|2026-09-29|Glass fix wave: settings sheet positioning, dark tokens, reduced transparency, focus
+orbis:9c3c78c7|2026-09-29|Fix: Spending has manual entries only, not Gmail alerts
+orbis:3a4f4afd|2026-09-29|Bring the README and roadmap in line with the five-tab layout
+orbis:246a9a0a|2026-09-29|Glass: activity and spending widgets on Today
+orbis:7296258b|2026-09-29|Glass fix round 1: card the last flat grouped sections on Money and Health
+orbis:d8743fde|2026-09-29|Glass: frosted cards, segmented controls and sheets on every screen
+orbis:2622cfd1|2026-09-29|Glass: Figtree, frosted chrome and a soft wallpaper behind every screen
+orbis:e36ef78f|2026-09-29|Add a setup checklist to Today
+orbis:144a9dcb|2026-09-29|Point every Profile → … instruction at Settings
+orbis:94a8f38f|2026-09-29|Make Ask Orbis one assistant: type or talk, on every screen
+orbis:5d35fb2d|2026-09-29|Five tabs: Today, Money, Health, Journal, Social
+orbis:1d71a7b7|2026-09-29|Fix Read-only badge layout: keep it inside <strong>, name gets its own span
+orbis:5b19f55e|2026-09-29|Add the Settings sheet, opened from an avatar on every screen
+orbis:4bfa7c01|2026-09-29|Add the tab, settings-section and URL routing rules as a tested module
+orbis:bcc39577|2026-09-29|Split globals.css into app/styles along its sections
+orbis:1a6911fe|2026-09-29|Group components by feature: today, money, journal, settings, assistant
+orbis:03e9d0e5|2026-09-29|Split the app shell into one file per screen
+orbis:3b975d35|2026-09-29|Add the Glass look to the reorganisation spec and plan (stage 5)
+orbis:b499a702|2026-09-29|Add the app reorganisation implementation plan; refine the spec from planning
+orbis:242dd563|2026-09-29|Add the app reorganisation design spec
+orbis:8a5080ba|2026-09-29|Talk to Orbis: ask by voice in any Indian language
+orbis:6d5f0741|2026-09-28|Add the project audit report and dashboard
+orbis:f3373166|2026-09-28|Keep what you write: edit history, archive, voice notes, Ask Orbis and grouped reminders
+orbis:64dadb72|2026-09-28|Apply the hardening migration after deploy, not before
+orbis:b66b2ac0|2026-09-28|Fix Gmail sign-in redirect, push setup hang, AI-off copy and stale e2e checks
+orbis:046e24c8|2026-09-28|Limit password re-entry to five tries in fifteen minutes
+orbis:01c57cf6|2026-09-28|Rewrite the README and environment docs for Phase 1
+orbis:db65f934|2026-09-28|Installable app: service worker on every load, offline page, cached shell, richer manifest
+orbis:6b358601|2026-09-28|Ask before any AI feature runs, and let people turn AI off
+orbis:4db87839|2026-09-28|Honest surface: error boundaries, friendly errors, one sign-in gate, no owner content, dead code removed
+orbis:3db1a877|2026-09-28|Require fresh sign-in or password to export data
+orbis:f58c8f23|2026-09-28|Let people export their data, clear social history and delete their account
+orbis:ca42fdef|2026-09-28|Fix review finding: drop CoinGecko from the Privacy Policy's processor list
+orbis:680a142e|2026-09-28|Add the public site: landing, privacy, terms, support, delete-account, robots, sitemap and share previews
+orbis:b462a1b6|2026-09-28|Claim each staged upload once and charge indexing a parse credit
+orbis:4ae991ed|2026-09-28|Rate-limit uploads, parsing and sync; upload large files straight to storage
+orbis:54f1d5a2|2026-09-28|Harden auth and data: re-auth for password change, push endpoint allowlist, Zerodha state, router allowlists
+orbis:48170d18|2026-09-28|Make Home fast: one render per open, brief asked once, tabs load on demand
+orbis:f9f9a89e|2026-09-28|Add a nonce-based Content Security Policy and security headers
+orbis:657437fe|2026-09-28|Make tests, lint and CI work: vitest everywhere, ESLint flat config, pinned versions
+orbis:a4915cf7|2026-09-28|Point the Phase 1 plan at the audit copy in docs/audit
+orbis:553d08cb|2026-09-28|Add the audit, the productization roadmap and the Phase 1 plan
+orbis:cb1567a8|2026-09-28|Fix review findings in the social planner
+orbis:9a80d549|2026-09-28|Add the social planner to the build roadmap
+orbis:730e6636|2026-09-28|Add one morning social reminder to the daily notification
+orbis:0845211e|2026-09-28|Show today's planned social posts as a quiet row on Home
+orbis:de7227e8|2026-09-28|Add the Social tab: month calendar, list and grid, post view, AI drafts
+orbis:98d20738|2026-09-28|Draft a month of social posts with AI through the router
+orbis:67cc2d8a|2026-09-28|Add social planner server actions with input validation
+orbis:693f7d62|2026-09-28|Add the social planner migration and repository
+orbis:414c43cb|2026-09-28|Add social planner types and month helpers
+orbis:d1d240ee|2026-09-28|Add the social planner implementation plan
+orbis:d991077d|2026-09-25|Finish the Atlas screens and redesign the Home brief
+orbis:de75fa77|2026-09-24|Add daily notification delivery, AI registry and lock screen polish
+orbis:aeaea362|2026-09-24|Add health document library with AI plan builder; fix issues from QA audit
+orbis:f0c63843|2026-09-24|Add AI router core design spec (free-only multi-provider)
+orbis:aa930f9a|2026-09-24|Harden the mobile PWA shell: viewport, safe areas, keyboard, touch
+orbis:ec2663eb|2026-09-24|Fix PDF uploads, add device PIN unlock, and profile/Groww updates
+orbis:8fa06bd3|2026-09-24|Add passkeys, server-enforced app lock, PWA branding and new dashboards
+orbis:9222e05b|2026-09-24|Add daily AI notifications design spec
+orbis:20b2c669|2026-09-24|Support text PDF health uploads
+orbis:b98597b7|2026-09-24|Explain common sign-in failures
+orbis:757fa469|2026-09-24|Add personal profile editor and AI context
+orbis:f02770c1|2026-09-24|Add private fitness persona to workbook coaching
+orbis:e69cd881|2026-09-24|Document live Vercel deployment setup
+orbis:724c8b4a|2026-09-24|Track content-free AI generation outcomes
+orbis:081d7e61|2026-09-24|Record successful GitHub publication
+orbis:9e6cac47|2026-09-24|Exclude local environment files from Vercel uploads
+orbis:d416e54f|2026-09-24|Require evidence-backed workbook advice
+orbis:a1b31534|2026-09-24|Update pending account authorization status
+orbis:77c80771|2026-09-24|Validate investment precision and confirm removal
+orbis:083a0428|2026-09-24|Add private manual investment holdings
+orbis:4635d03e|2026-09-24|Pass saved context availability to workbook advisor
+orbis:769ed62d|2026-09-24|Add consent-based context to workbook advice
+orbis:94625cfc|2026-09-24|Bound workbook advice payload processing
+orbis:453e61da|2026-09-24|Document release and account setup blockers
+orbis:61a541fe|2026-09-24|Add data-grounded daily home brief
+orbis:cbd45af2|2026-09-24|Add private goals habits and Orbis memory
+orbis:bc2df775|2026-09-24|Build Orbis personal finance and workbook advisor MVP

@@ -1,0 +1,119 @@
+/* ─── Career → Skills: the skill tree ─────────────────────────────────────
+   components/career/skill-tree-view.tsx, on the phone tab and in the web
+   panel. Imported from app/(orbis)/layout.tsx. Prefix: .st-
+
+   Each branch keeps the tree's own colour in --st-c (set inline from a
+   validated #rrggbb). Those colours are pale, so they only ever tint, edge
+   or mark: words are always the house ink, in light and dark alike. Phone
+   first: one column of branches; two or three side by side from 720px. */
+
+.st-view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-top: 6px; }
+.st-loading { display: block; padding: 24px 2px; }
+
+/* ─── Empty ─── */
+.st-empty { margin-top: 10px; }
+.st-empty h2 { margin: 0; color: var(--fd-ink); font-size: 20px; font-weight: 650; letter-spacing: -.02em; text-wrap: balance; }
+.st-empty p { margin: 8px 0 0; color: var(--fd-soft); font-size: 14px; line-height: 1.55; text-wrap: pretty; }
+.st-empty .fd-hint { margin-top: 12px; font-size: 12px; }
+.st-upload .hl-drop { margin-top: 14px; }
+
+/* ─── Numbers ─── */
+.st-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.st-summary dl div { padding: 12px 10px; border: var(--gl-edge); border-radius: var(--cr-radius); background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+.st-summary dt { color: var(--fd-faint); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.st-summary dd { margin: 2px 0 0; color: var(--fd-ink); font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.st-span { margin: 8px 2px 0; color: var(--fd-faint); font-size: 12px; line-height: 1.5; }
+
+.st-review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--cr-gap) 45%, transparent); border-radius: var(--cr-radius); background: color-mix(in srgb, var(--cr-gap) 10%, var(--fd-card)); }
+.st-review p { flex: 1 1 240px; margin: 0; color: var(--fd-soft); font-size: 13px; line-height: 1.5; }
+.st-review b { color: var(--fd-ink); }
+.st-review button.cr-panel-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+
+/* ─── Branch filter: scrolls sideways on a phone rather than wrapping into a wall ─── */
+.st-bar { display: flex; align-items: center; gap: 10px; }
+.st-filter { display: flex; flex: 1; gap: 6px; min-width: 0; overflow-x: auto; padding: 2px; scrollbar-width: none; }
+.st-filter::-webkit-scrollbar { display: none; }
+.st-filter button { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: var(--gl-edge); border-radius: var(--r-pill); background: var(--gl-fill); color: var(--fd-soft); font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.st-filter button[aria-pressed="true"] { border-color: var(--fd-ink); background: var(--fd-ink); color: var(--fd-surface); }
+.st-filter button i { width: 8px; height: 8px; border-radius: 50%; background: var(--st-c); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fd-ink) 25%, transparent); }
+.st-filter button:focus-visible, .st-stone:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.st-bar .cr-copy { flex: none; }
+
+/* ─── Branches ─── */
+.st-branches { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.st-branch { padding: 14px 12px 10px; border: var(--gl-edge); border-top: 3px solid var(--st-c); border-radius: var(--cr-radius); background: linear-gradient(180deg, color-mix(in srgb, var(--st-c) 12%, var(--fd-card)), var(--fd-card) 90px); }
+.st-branch h3 { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; color: var(--fd-ink); font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+.st-branch h3 i { width: 10px; height: 10px; border-radius: 50%; background: var(--st-c); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fd-ink) 25%, transparent); }
+.st-branch h3 small { margin-left: auto; color: var(--fd-faint); font-size: 11.5px; font-weight: 500; }
+
+/* The trunk: a line down the branch, each skill a stone hanging off it. */
+.st-trunk { position: relative; display: grid; gap: 2px; margin: 0; padding: 0 0 0 4px; list-style: none; }
+.st-trunk::before { content: ""; position: absolute; top: 18px; bottom: 18px; left: 23px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--st-c) 70%, var(--fd-hairline)); }
+.st-skill { position: relative; }
+.st-stone { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 8px 6px 0; border: 0; border-radius: 12px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.st-stone:hover { background: color-mix(in srgb, var(--fd-ink) 4%, transparent); }
+.st-skill.open .st-stone { background: color-mix(in srgb, var(--st-c) 14%, transparent); }
+
+.st-gem { position: relative; z-index: 1; display: grid; flex: none; place-items: center; width: 40px; height: 40px; border: 2px solid var(--st-c, var(--fd-accent)); border-radius: 50%; background: color-mix(in srgb, var(--st-c, var(--fd-accent)) 24%, var(--fd-card)); color: var(--fd-ink); font-size: 15px; font-weight: 750; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px color-mix(in srgb, var(--st-c, var(--fd-accent)) 35%, transparent); }
+.st-gem.small { width: 30px; height: 30px; font-size: 12.5px; box-shadow: none; }
+
+.st-name { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.st-name b { color: var(--fd-ink); font-size: 14px; font-weight: 620; line-height: 1.3; }
+.st-name small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--fd-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.st-pips { display: inline-flex; gap: 3px; }
+.st-pips i { width: 7px; height: 7px; border-radius: 2px; background: var(--fd-ring-track, var(--fd-hairline)); transform: rotate(45deg); }
+.st-pips i.on { background: var(--st-c); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fd-ink) 30%, transparent); }
+.st-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--cr-gap); }
+
+/* ─── A skill, open ─── */
+.st-detail { margin: 4px 0 10px 52px; padding: 12px 12px 4px; border-left: 2px solid var(--st-c); border-radius: 0 12px 12px 0; background: color-mix(in srgb, var(--fd-ink) 3%, transparent); }
+.st-about { margin: 0; color: var(--fd-soft); font-size: 13px; line-height: 1.5; }
+.st-cv { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--cr-hair); border-radius: 12px; background: var(--fd-card); }
+.st-cv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.st-cv-head .fd-label { margin: 0; }
+.st-cv p { margin: 6px 0 0; color: var(--fd-ink); font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
+.st-cv-state { display: flex; align-items: center; gap: 5px; margin-top: 8px; color: var(--fd-faint); font-size: 11.5px; line-height: 1.4; }
+.st-cv-state.confirmed { color: var(--cr-interview); }
+.st-cv-state.waiting { color: var(--fd-soft); }
+.st-cv-state.waiting svg { color: var(--cr-gap); }
+.st-tools { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 0; padding: 0; list-style: none; }
+.st-tools li { padding: 3px 9px; border: 1px solid var(--cr-hair); border-radius: var(--r-pill); background: var(--fd-card); color: var(--fd-soft); font-size: 11.5px; font-weight: 550; }
+.st-facts { margin: 10px 0 0; color: var(--fd-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.st-proof-title { margin: 12px 0 4px; }
+.st-proof { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.st-proof li { display: flex; gap: 8px; padding: 7px 0; border-top: 1px solid var(--cr-hair); color: var(--fd-ink); font-size: 12.5px; line-height: 1.45; }
+.st-proof li svg { flex: none; margin-top: 2px; color: var(--fd-faint); }
+.st-proof li span { min-width: 0; overflow-wrap: anywhere; }
+.st-proof small { display: block; margin-top: 2px; color: var(--fd-faint); font-size: 11px; }
+.st-proof code { font-size: 10.5px; }
+
+.st-manage { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--cr-hair); }
+.st-manage .hl-drop { min-height: 84px; margin-top: 10px; }
+.st-remove { display: inline-flex; align-items: center; gap: 5px; justify-self: start; min-height: 36px; color: var(--fd-soft); }
+
+/* ─── In a job's sheet ─── */
+.st-jobproof { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--cr-hair); border-radius: var(--cr-radius); background: var(--fd-card); }
+.st-jobproof ul { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.st-jobproof li { display: flex; align-items: center; gap: 10px; }
+.st-jobproof li > span:last-child { display: grid; min-width: 0; }
+.st-jobproof b { color: var(--fd-ink); font-size: 13px; font-weight: 620; }
+.st-jobproof small { overflow: hidden; color: var(--fd-faint); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Small phones: the numbers go two by two ─── */
+@media (max-width: 380px) {
+  .st-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .st-detail { margin-left: 8px; }
+}
+
+/* ─── Wider: branches side by side ─── */
+@media (min-width: 720px) {
+  .st-branches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1180px) {
+  .cp-main .st-branches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .st-detail { animation: st-open .18s ease-out; }
+  @keyframes st-open { from { opacity: 0; transform: translateY(-4px); } }
+}

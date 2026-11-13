@@ -1,0 +1,123 @@
+265b14b1|2026-11-05|Merge origin/staging (9c9914e1b) into staging-gaurav (5 Nov 2026): the Questionnaire tab, SEO tracks and backlinks, A.I.V.A's knowledge, My Tasks slimmer cards, link previews
+94cfcf94|2026-11-04|Merge origin/rahul (a6b5bb22) into staging-gaurav (4 Nov 2026): Your team, the owner manages their team behind two-step sign-in, and passwords need at least 8 characters everywhere
+d15acbcc|2026-11-04|Merge origin/staging (ccdcc018) into staging-gaurav (4 Nov 2026): domain provider tiles and access cards, onboarding tweaks, Library file details and team-only folders
+712d6532|2026-11-04|Merge origin/main (aace791e) into staging-gaurav (4 Nov 2026): View their hub for every head of department plus the named list, a fresh two-step code each time, and the client's own locked tabs shown exactly
+fc9ef1b4|2026-11-03|Merge remote-tracking branch 'origin/main' into staging-gaurav
+ab03758a|2026-11-03|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+dc28b4d0|2026-10-30|Merge remote-tracking branch 'origin/rahul' into staging-gaurav (30 Oct 2026)
+45a3df94|2026-10-30|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+9935208d|2026-10-29|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+47609165|2026-10-29|Merge remote-tracking branch 'origin/main' into staging-gaurav
+d4d494c9|2026-10-28|Merge origin/main into staging-gaurav (28 Oct 2026)
+98c9a6d9|2026-10-27|Merge origin/main into staging-gaurav
+20ff8bc5|2026-10-26|Merge branch 'main' of https://github.com/wbt-web-support/WBT_CHQ into staging-gaurav
+96a56fe3|2026-10-26|Merge branch 'prakhar' of https://github.com/wbt-web-support/WBT_CHQ into gaurav
+2e85cd6c|2026-10-26|Merge branch 'main' of https://github.com/wbt-web-support/WBT_CHQ into gaurav
+c5e54bf2|2026-10-26|Merge main into staging-gaurav with A.I.V.A naming and branch additions
+aa14b467|2026-10-23|Merge origin/main into staging-gaurav (23 Oct 2026): Client Mockups (upload a web page or .zip to host it with the comment bar, Browse | Comment switch, + Comment places one comment, Pages list, Test connection on Next.js and React sites, setup steps for site builders and Tag Manager), Ava competitor ad teardown from the Ad Library, Ava background research and write-up, reply under every message with @Name, message boxes take .html files, Strategy Calls one a month from October 2026, Template question column in Client Management, onboarding defaults for naren, clicks land the first time on staff pages, page speed records how each full load started, sealed-off header on Ava pages reaches the browser. accessMap.ts: kept main's research write-up sentence with this branch's A.I.V.A naming
+cbb9542a|2026-10-22|Merge origin/main into staging-gaurav (22 Oct 2026): Ticket Desk one roundup at the set time, Ava's Rocket.Chat reminders grouped per client and the Yes / No ticket move card, Employee Ava v10.1 with Trade Business School tools, Rahul's branch (TBS plan for Ava, Finance pages, Leads Hub Marketplace app with login renewal every four hours, Sue's onboarding questions, Client Management columns per person, Client Performance counts each person once), card and ticket pop-ups with messages on the right, website redesign Not eligible moves to Complete
+24d394b3|2026-10-21|Merge origin/main into staging-gaurav (21 Oct 2026): Pending / Completed and red pending numbers on My Tasks, whole extra cards as Additional Tasks rows, two-step code checked in the browser, delivery teams set by a super admin, one switch for A.I.V.A attachments, Ava in Rocket.Chat follow-ups
+96300e86|2026-10-17|Merge remote-tracking branch 'origin/main' into staging-gaurav
+5f5dc7dc|2026-10-16|Merge remote-tracking branch 'origin/a-rahul-staging' into staging-gaurav
+b0ee5951|2026-10-16|Merge origin/main into staging-gaurav (16 Oct 2026): quote form task asks only for the enquiry email, signing out ends only this browser's session, a Trello copy is never a phase card, locked phases show "Unlocks once ... is complete"
+bdfc35a4|2026-10-16|Merge origin/main into staging-gaurav (16 Oct 2026): customer Ava's Leads Hub reads and five-mark judge, team boards follow Trello, Manage Client loads by section, staff apps can ask the team's Ava; A.I.V.A wording kept
+6a493db8|2026-10-15|Merge origin/main into staging-gaurav (15 Oct 2026): MCP connected apps, Ava memory per visit, phase pop-up and message-speed work, ticket password sealing; A.I.V.A wording kept
+892c2b89|2026-10-14|Merge remote-tracking branch 'origin/main' into staging-gaurav
+f9e7f5e2|2026-10-14|Merge remote-tracking branch 'origin/main' into staging-gaurav
+65186470|2026-10-13|Merge remote-tracking branch 'origin/main' into staging-gaurav
+c9eb7444|2026-10-13|Merge remote-tracking branch 'origin/main' into staging-gaurav
+6eaab9d1|2026-10-10|Merge branch 'staging' of https://github.com/wbt-web-support/WBT_CHQ into staging-gaurav
+de151a99|2026-10-09|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+dacc4635|2026-10-08|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+c7bd66cd|2026-10-02|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+dd759836|2026-10-01|Merge origin/staging into staging-gaurav: Ava market and SEO reports, My Calendar V2, group calls, Additional Tasks in three columns, My Results refresh
+a5670bc6|2026-10-01|Merge origin/rahul-staging into staging-gaurav: Send to board puts sent content on an additional-task card
+1e650ef2|2026-10-01|Merge origin/rahul-staging into staging-gaurav: select and send, logos as one list, Content Generation rework, Client Performance redesign
+b2cf053e|2026-10-01|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+0045fe1c|2026-10-01|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+e70cc809|2026-09-30|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+f9869a3d|2026-09-25|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+114c55ab|2026-09-23|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+4372f053|2026-09-23|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+cf4eaad1|2026-09-17|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+9ceb6f3c|2026-09-15|Merge remote-tracking branch 'origin/staging' into staging-gaurav
+a57312e9|2026-09-12|Merge origin/main into gaurav
+f33821e4|2026-09-10|Merge main: Ava remembers each customer, prompts move to a studio, and screenshots paste into comments
+caef0946|2026-09-08|Merge remote-tracking branch 'origin/main' into gaurav
+a2b42c9f|2026-09-04|Merge remote-tracking branch 'origin/main' into gaurav
+b4e4b2c7|2026-09-03|Merge remote-tracking branch 'origin/main' into gaurav
+d2f17385|2026-09-02|Merge remote-tracking branch 'origin/main' into gaurav
+71b4f22b|2026-08-22|Merge remote-tracking branch 'origin/rahul' into gaurav
+12083af3|2026-08-22|Merge remote-tracking branch 'origin/main' into gaurav
+5b871362|2026-08-21|Merge branch 'main' of https://github.com/wbt-web-support/WBT_CHQ
+1256a6d8|2026-08-19|Merge remote-tracking branch 'origin/main' into gaurav
+a817bd6b|2026-08-19|Merge remote-tracking branch 'origin/zain' into gaurav
+cc880fff|2026-08-19|Merge remote-tracking branch 'origin/rahul' into gaurav
+deligro:7e00e1f6|2026-11-04|merge: feat/admin-order-desk into wip/welcome-landing
+deligro:63c5887a|2026-11-04|merge: feat/simple-settlements into wip/welcome-landing
+deligro:ee16b5a6|2026-11-04|merge: customer wallet
+deligro:6cd55229|2026-11-04|merge: admin controls features for customers, shops, riders and managers
+deligro:c5edcec9|2026-11-04|merge: cash limit, rider cash confirmation, salary-only riders
+deligro:c90bdb11|2026-11-04|merge: no refunds and the cancel rules
+deligro:26c0c127|2026-11-04|merge: Rider, Partner and Customer app fixes
+deligro:96e42e21|2026-11-04|merge: admin shops and people fixes
+deligro:4d8dd561|2026-11-04|merge: Manager app fixes
+deligro:42fcc883|2026-11-04|merge: admin money fixes
+deligro:8e0e14cf|2026-10-31|Merge rider app Hallmark polish
+deligro:48329896|2026-10-31|Merge storefront Hallmark polish
+deligro:3ed37468|2026-10-31|Merge vendor app Hallmark polish
+deligro:aea0e47f|2026-10-31|Merge customer app Hallmark polish
+deligro:6ae3029c|2026-10-23|Merge branch 'feat/manager-p10-early' into feat/manager-app
+deligro:f9d25c75|2026-10-23|Merge branch 'feat/manager-p7-fix' into feat/manager-app
+deligro:c54c9cb1|2026-10-23|Merge branch 'feat/manager-p7-app' into feat/manager-app
+deligro:4a3c4052|2026-10-23|Merge branch 'feat/manager-p7-server' into feat/manager-app
+deligro:58695c68|2026-10-23|merge: phase 8 final review fixes — app
+deligro:ff53917c|2026-10-23|merge: phase 8 release — handover, release build and low-end device notes
+deligro:98f296a5|2026-10-23|merge: phase 8 final review fixes — server
+deligro:d29b3b6e|2026-10-22|Merge branch 'feat/manager-p8-app' into feat/manager-app
+deligro:01713d06|2026-10-22|Merge branch 'feat/manager-p8-server' into feat/manager-app
+deligro:385c15f9|2026-10-22|merge: feat/rider-app e662f77 (coverage + copy/text-scale) into rider/p8-rel
+deligro:e662f77d|2026-10-22|merge: phase 8 app — English-only copy and text-scale pass
+deligro:9b3ece4f|2026-10-22|merge: phase 8 coverage — requirement coverage, QA runner, proof retention, payout and hand-assign notices
+deligro:1255510e|2026-10-22|Merge branch 'feat/rider-app' into feat/manager-app
+deligro:06ee2a45|2026-10-22|Merge branch 'feat/manager-p6-app' into feat/manager-app
+deligro:12e1d6d5|2026-10-22|Merge branch 'feat/manager-p6-server' into feat/manager-app
+deligro:dd07d75f|2026-10-22|merge: phase 8 server — migrations in sequence, security and deployment checklists
+deligro:b893c229|2026-10-22|merge: phase 7 app — Help, notifications inbox, Safety and SOS
+deligro:66b27cd4|2026-10-22|merge: phase 4 app — Home dashboard, History, Performance
+deligro:4ab04231|2026-10-22|merge: phase 6 app — Profile & documents
+deligro:002aa913|2026-10-22|merge: phase 5 app — Cash screen
+deligro:f168448d|2026-10-22|merge: phase 7 server — support tickets, SOS, inbox notifications, announcements, alerts
+deligro:6abe55ca|2026-10-22|merge: phase 6 server — rider profile, documents, payout accounts, change requests
+deligro:dfd110a6|2026-10-22|merge: phase 4 server — rider ratings, dashboard, history and performance API
+deligro:8de2cf87|2026-10-22|merge: phase 5 server — rider cash deposits, manager confirmation, disputes, reminders
+deligro:b389cdbb|2026-10-22|merge: phase 2 task 8 — navigation, sound and vibration settings, server clock, ring held flag
+deligro:0f3c336f|2026-10-22|Merge branch 'feat/rider-app' into feat/manager-app
+deligro:4f11e96b|2026-10-21|Merge branch 'feat/manager-p5-app' into feat/manager-app
+deligro:28b4423f|2026-10-21|Merge branch 'feat/manager-p5-server' into feat/manager-app
+deligro:d600e3b5|2026-10-21|Merge branch 'feat/rider-app' into feat/manager-app
+deligro:4b4c1672|2026-10-21|Merge branch 'feat/vendor-app' into feat/manager-app
+deligro:6ada0ea1|2026-10-21|Merge branch 'feat/manager-p4-app' into feat/manager-app
+deligro:19bed9e0|2026-10-21|Merge branch 'feat/manager-p4-server' into feat/manager-app
+deligro:4b8d2ba5|2026-10-21|Merge branch 'feat/rider-app' into feat/manager-app
+deligro:41dd9d76|2026-10-21|Merge branch 'feat/vendor-app' into feat/manager-app
+deligro:48eac8da|2026-10-21|Merge branch 'feat/manager-p3-app' into feat/manager-app
+deligro:1d268aac|2026-10-21|Merge branch 'feat/manager-p3-server' into feat/manager-app
+deligro:8515d72c|2026-10-21|Merge branch 'feat/rider-app' into feat/manager-app
+deligro:bb47cb49|2026-10-21|Merge branch 'feat/vendor-app' into feat/manager-app
+deligro:1caee7a7|2026-10-21|Merge branch 'feat/manager-metrics' into feat/manager-app
+deligro:63247cf6|2026-10-03|Merge branch 'feat/order-ringing'
+deligro:28975ece|2026-10-03|Merge branch 'feat/customer-language' into feat/order-ringing
+deligro:3b691cc8|2026-09-05|Merge branch 'office': COD cash handover chain, operational expenses, settlement corrections
+deligro:10850f4b|2026-09-01|Merge office: alert sounds + app-version API, and fix two breaks office shipped
+deligro:bb6f5c33|2026-09-01|Merge remote-tracking branch 'origin/master' into office
+deligro:02dd2304|2026-08-26|Merge office branch: keep the Storage rail, keep All-time ranges
+deligro:988c3a56|2026-08-18|Merge remote-tracking branch 'origin/office'
+deligro:f27bb0f3|2026-08-18|Merge main into office: portal sign-in, payouts, photo library; MFA gone
+deligro:e1b2a9fd|2026-08-18|Merge branch 'master' of https://github.com/whiteslam/deligro26 into office
+deligro:0f6d967d|2026-08-17|Merge origin/office: console-only tooling over the food photo + payouts work
+deligro:ccbe63f9|2026-08-16|Merge main into master
+deligro:f28fd80a|2026-08-15|Merge pull request #1 from whiteslam/office
+deligro:9e4c0cab|2026-07-27|Merge origin/rahul: vendor portal mobile-ops hardening
+deligro:4e27f19e|2026-07-25|Merge origin/rahul: vendor portal (Supabase) into master
+orbis:7352a058|2026-10-27|Merge branch 'research-desk' into continue-web-and-research

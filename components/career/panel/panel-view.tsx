@@ -6,6 +6,7 @@ import { exportTrackerAction, runSearchNowAction } from '@/app/career/actions';
 import { ApplicationSheet, type SheetContext } from '@/components/career/application-sheet';
 import { SkillsToBuild } from '@/components/career/fit-review-view';
 import { SetupView } from '@/components/career/setup/setup-view';
+import { SkillTreeView } from '@/components/career/skill-tree-view';
 import { useRun } from '@/components/career/use-run';
 import { ActivityChart } from '@/components/career/panel/activity-chart';
 import { CommandPalette } from '@/components/career/panel/command-palette';
@@ -60,6 +61,8 @@ function PageBody({ page, query, stage, home, problem, loading, onRetry, onJobs,
     const setup: CareerSetup | null = home ? { profile: home.state.profile, spec: home.state.spec, settings: home.state.settings, resumeFileName: home.state.resumeFileName } : null;
     return <div className="cp-setup"><SetupView initial={setup} gmail={home?.state.gmail ?? null} onChanged={patchSetup} /></div>;
   }
+  // The tree needs no resume or spec: uploading it can be the first step.
+  if (page === 'skills') return <SkillTreeView onProfileChanged={onRetry} setupHref={hrefFor('setup')} />;
   if (!home) {
     if (loading && !problem) return <output className="cp-loading">Loading your job hunt…</output>;
     return (
