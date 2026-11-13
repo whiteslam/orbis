@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { passkeyErrorMessage, supportsPasskeys } from '@/components/security/passkey-errors';
 import { safeAction } from '@/lib/client/safe-action';
 import { MIN_PASSWORD_LENGTH } from '@/lib/security/fresh-auth';
+import { useNativeApp } from '@/components/native/use-native';
 
 /** Google's four-colour "G"; lucide ships no brand marks. */
 function GoogleMark() {
@@ -25,12 +26,15 @@ function GoogleMark() {
 const initialState: AuthActionState = { error: null, message: null };
 
 /**
- * `googleSignIn` shows the Google button, in both modes, only when the server has it switched on.
+ * `googleSignIn` shows the Google button, in both modes, only when the server has it switched on,
+ * and never in the Android app: Google refuses to sign in inside an app's web view.
  * `signupOpen` is false while the installation is restricted to an allowlist.
  * The tab is hidden rather than disabled: offering a control that the server
  * will always refuse is worse than not offering it.
  */
 export function AuthForm({ initialMessage, signupOpen = true, googleSignIn = false }: Readonly<{ initialMessage?: string; signupOpen?: boolean; googleSignIn?: boolean }>) {
+  const nativeApp = useNativeApp();
+  const showGoogle = googleSignIn && !nativeApp;
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [state, setState] = useState<AuthActionState>({ ...initialState, message: initialMessage ?? null });
   const [isPending, startTransition] = useTransition();
@@ -145,8 +149,8 @@ export function AuthForm({ initialMessage, signupOpen = true, googleSignIn = fal
         </button>
       </form>
 
-      {(googleSignIn || (!isSignup && canUsePasskey)) && <div className="auth-divider"><span>or</span></div>}
-      {googleSignIn && (
+      {(showGoogle || (!isSignup && canUsePasskey)) && <div className="auth-divider"><span>or</span></div>}
+      {showGoogle && (
         <button className="auth-passkey" type="button" onClick={continueWithGoogle} disabled={isPending}>
           <GoogleMark /> Continue with Google
         </button>

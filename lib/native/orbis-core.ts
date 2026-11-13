@@ -36,6 +36,8 @@ export type CoreStatus = {
   lastSyncError: string | null;
   batteryOptimized: boolean;
   webAuthn: boolean;
+  /** False when this build has no Firebase config: PushNotifications.register() would crash the app, so never call it then. */
+  pushReady: boolean;
   signedOutReason: 'revoked' | null;
 };
 

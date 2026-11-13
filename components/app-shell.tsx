@@ -36,6 +36,7 @@ import type { FocusTarget } from '@/lib/focus/types';
 import { socialConnectNotice, type SocialConnectNotice } from '@/lib/social/connect-notice';
 import { openAskPanel } from '@/lib/ask/about';
 import { DESKTOP_LAYOUT, isDesktop } from '@/lib/shell/desktop';
+import { NativeBridge } from '@/components/native/native-bridge';
 import type { PaletteGo } from '@/lib/shell/palette';
 
 // Today is what opens, so it is the only screen in the first download. Every
@@ -54,7 +55,7 @@ const AppPalette = dynamic(() => import('@/components/shell/app-palette').then((
 // Coming back to Home re-reads it only after this long away.
 const STALE_AFTER_HIDDEN_MS = 60_000;
 
-export default function AppShell({ financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
+export default function AppShell({ userId, financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections }: Readonly<{ userId: string; financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial }>) {
   const router = useRouter();
   // The tab asked for (a tap, a link, a card), and the one shown: Today stands
   // in for a module this person switched off (Settings → You).
@@ -317,6 +318,8 @@ export default function AppShell({ financeSummary, contextNotes, fitnessPersona,
                 nearest boundary up the tree, which also drops focus from whatever
                 opened it, so Escape had nowhere to give it back to. */}
             {palette && <Suspense fallback={null}><AppPalette tabs={tabs} onGo={goPalette} onClose={closePalette} /></Suspense>}
+            {/* The Android app's link to this page; nothing on the web. */}
+            <NativeBridge userId={userId} />
           </SettingsProvider>
         </div>
       </div>

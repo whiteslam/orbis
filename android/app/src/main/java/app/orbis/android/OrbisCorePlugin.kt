@@ -1,5 +1,6 @@
 package app.orbis.android
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -316,8 +317,19 @@ class OrbisCorePlugin : Plugin() {
             .put("lastSyncError", nullable(snap.lastSyncError))
             .put("batteryOptimized", CoreController.batteryOptimized(context))
             .put("webAuthn", WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION))
+            .put("pushReady", pushReady())
             .put("signedOutReason", if (snap.signedOutReason == "revoked") "revoked" else JSONObject.NULL)
     }
+
+    /**
+     * True when this build carries Firebase's config (google-services.json became the
+     * `google_app_id` string, the resource FirebaseApp itself starts from). Without it the
+     * push plugin's register() throws on the plugin thread and takes the app down, so the
+     * page asks first.
+     */
+    @SuppressLint("DiscouragedApi")
+    private fun pushReady(): Boolean =
+        context.resources.getIdentifier("google_app_id", "string", context.packageName) != 0
 
     /** All nine wire names, each true or false. */
     private fun sourcesJson(enabled: Set<Source>): JSObject {
