@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { mayPush } from './push-rules.ts';
+import { hasPushDevice, mayPush } from './push-rules.ts';
 
 const now = new Date('2026-09-30T06:00:00Z');
 const headsup = { urgency: 'urgent' as const, createdAt: '2026-09-30T01:00:00Z', pushedAt: null, snoozedUntil: null, status: 'new' };
@@ -33,4 +33,15 @@ test('never twice, never when seen, snoozed, stale or unwanted', () => {
   assert.equal(mayPush({ ...headsup, createdAt: '2026-09-29T05:59:00Z' }, context, now), false, 'over 24 hours old');
   assert.equal(mayPush(headsup, { ...context, notificationsEnabled: false }, now), false);
   assert.equal(mayPush(headsup, { ...context, hasDevice: false }, now), false);
+});
+
+test('a person has a push device through a web subscription or, with FCM set up, an active phone token', () => {
+  assert.equal(hasPushDevice({ webSubscriptions: 1, phoneTokens: 0, fcmConfigured: false }), true);
+  assert.equal(hasPushDevice({ webSubscriptions: 0, phoneTokens: 1, fcmConfigured: true }), true);
+  assert.equal(hasPushDevice({ webSubscriptions: 2, phoneTokens: 3, fcmConfigured: true }), true);
+  assert.equal(hasPushDevice({ webSubscriptions: 0, phoneTokens: 0, fcmConfigured: true }), false);
+});
+
+test('phone tokens do not count while FCM is not configured, since nothing could deliver to them', () => {
+  assert.equal(hasPushDevice({ webSubscriptions: 0, phoneTokens: 2, fcmConfigured: false }), false);
 });

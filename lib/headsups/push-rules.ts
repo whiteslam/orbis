@@ -16,3 +16,12 @@ export function mayPush(
   if (context.pushesToday >= PUSHES_PER_DAY) return false;
   return context.localMinutes >= QUIET_UNTIL && context.localMinutes < QUIET_FROM;
 }
+
+/**
+ * Whether pushToUser has anywhere to send for this person: a web subscription, or
+ * an active phone with a token while FCM is set up. Without FCM a phone token is
+ * not deliverable, so it does not count. Pure; the scan route supplies the counts.
+ */
+export function hasPushDevice(counts: { webSubscriptions: number; phoneTokens: number; fcmConfigured: boolean }) {
+  return counts.webSubscriptions > 0 || (counts.fcmConfigured && counts.phoneTokens > 0);
+}

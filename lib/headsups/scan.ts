@@ -7,12 +7,13 @@ import { routineSlipping, type RoutineEventRow, type RoutineRow } from '@/lib/he
 import { planFinished, stepsDown, type PlanRow, type StepDay } from '@/lib/headsups/checks/health';
 import { addDays } from '@/lib/headsups/dates';
 import { AI_WORDED_PER_DAY, dueForScan, localNow, mergeAction, pruneBefore, runChecks, staleIds } from '@/lib/headsups/plan';
-import { mayPush } from '@/lib/headsups/push-rules';
+import { hasPushDevice, mayPush } from '@/lib/headsups/push-rules';
 import { wordFinding } from '@/lib/headsups/word';
 import { SCAN_KINDS, type Finding, type HeadsupKind } from '@/lib/headsups/types';
 import { localDate } from '@/lib/locale/dates';
 import { getPersonZonesAdmin, personZoneAdmin } from '@/lib/locale/repository';
 import { zoneForPerson } from '@/lib/locale/person';
+import { fcmConfigured } from '@/lib/notifications/fcm';
 import { pushToUser } from '@/lib/notifications/push';
 import { admittedUserIds } from '@/lib/security/admission';
 
@@ -216,15 +217,17 @@ async function routineStillSlipping(admin: Admin, headsup: WaitingHeadsup) {
 
 /** Pushes one heads-up if the person's rules let it out now. */
 async function pushOne(admin: Admin, headsup: WaitingHeadsup, now: Date): Promise<'sent' | 'held' | 'skipped'> {
-  const [prefs, devices] = await Promise.all([
+  const [prefs, devices, phones] = await Promise.all([
     admin.from('notification_preferences').select('enabled,timezone').eq('user_id', headsup.user_id).maybeSingle(),
     admin.from('push_subscriptions').select('endpoint', { count: 'exact', head: true }).eq('user_id', headsup.user_id),
+    // The same phones pushToUser would send to: this person's, with a token, not revoked.
+    admin.from('devices').select('id', { count: 'exact', head: true }).eq('user_id', headsup.user_id).not('push_token', 'is', null).is('revoked_at', null),
   ]);
   const clock = localNow(now, await personZoneAdmin(admin, headsup.user_id, prefs.data?.timezone));
   const { count: pushesToday } = await admin.from('notification_log').select('id', { count: 'exact', head: true }).eq('user_id', headsup.user_id).eq('slot', 'headsup').eq('local_date', clock.date);
   const allowed = mayPush(
     { urgency: headsup.urgency, createdAt: headsup.created_at, pushedAt: headsup.pushed_at, snoozedUntil: headsup.snoozed_until, status: headsup.status },
-    { pushesToday: pushesToday ?? 0, localMinutes: clock.minutes, notificationsEnabled: Boolean(prefs.data?.enabled), hasDevice: (devices.count ?? 0) > 0 },
+    { pushesToday: pushesToday ?? 0, localMinutes: clock.minutes, notificationsEnabled: Boolean(prefs.data?.enabled), hasDevice: hasPushDevice({ webSubscriptions: devices.count ?? 0, phoneTokens: phones.count ?? 0, fcmConfigured: fcmConfigured() }) },
     now,
   );
   if (!allowed) return 'held';
