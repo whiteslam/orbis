@@ -6,7 +6,8 @@ import { isMissingTable } from '@/lib/supabase/errors';
 import type { SocialPlatformId, SocialSession } from '@/lib/social/meta';
 
 export type SocialConnectionStatus = {
-  platform: SocialPlatformId;
+  // YouTube shares the table but not the Meta sign-in, so it is not a SocialPlatformId.
+  platform: SocialPlatformId | 'youtube';
   username: string | null;
   status: 'connected' | 'reconnect_required';
   expiresAt: string | null;
@@ -28,7 +29,7 @@ export async function getSocialConnections(userId: string): Promise<{ ready: boo
         // needing a reconnect rather than as connected but broken.
         const expired = row.expires_at ? new Date(row.expires_at).getTime() <= Date.now() : false;
         return {
-          platform: row.platform as SocialPlatformId,
+          platform: row.platform as SocialConnectionStatus['platform'],
           username: row.username,
           status: expired || row.status === 'reconnect_required' ? 'reconnect_required' : 'connected',
           expiresAt: row.expires_at,

@@ -32,3 +32,19 @@ test('anything unrecognised shows nothing rather than a made-up message', () => 
 test('the reason from the URL is cut short, since anyone can put text in a link', () => {
   assert.ok(socialConnectNotice('instagram-failed', 'x'.repeat(500))!.text.length < 220);
 });
+test('youtube-no-channel says the Google account has no YouTube channel', () => {
+  assert.deepEqual(socialConnectNotice('youtube-no-channel', null), { tone: 'error', text: 'That Google account has no YouTube channel. Create one at youtube.com, then connect again.' });
+});
+test('youtube-connected gives a success tone', () => {
+  assert.deepEqual(socialConnectNotice('youtube-connected', null), { tone: 'success', text: 'YouTube connected.' });
+});
+test('YouTube setup problems name the Google keys and the HTTPS need', () => {
+  assert.match(socialConnectNotice('youtube-not-configured', null)!.text, /GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+  assert.match(socialConnectNotice('youtube-needs-https', null)!.text, /Google needs an HTTPS address/);
+  assert.equal(socialConnectNotice('youtube-cancelled', null)!.tone, 'info');
+});
+test('a YouTube failure shows Orbis’s own reason, cut short', () => {
+  assert.equal(socialConnectNotice('youtube-failed', null)!.text, 'YouTube could not be connected. Try again.');
+  assert.equal(socialConnectNotice('youtube-failed', 'Google didn’t give Orbis offline access.')!.text, 'YouTube could not be connected. Google didn’t give Orbis offline access.');
+  assert.ok(socialConnectNotice('youtube-failed', 'x'.repeat(500))!.text.length < 220);
+});

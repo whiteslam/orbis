@@ -63,6 +63,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'lib/social/ai-credit.ts',
   'lib/social/connections.ts',
   'lib/storage/signed-upload.ts',
+  'lib/youtube/connection.ts',
 ];
 
 /** The repo-relative module a specifier points at, without extension, or null for a package. */

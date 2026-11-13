@@ -108,6 +108,7 @@ Counts: 44 files. 38 ok, 2 switched to RLS, 4 need an owner decision. A 45th fil
 | `lib/social/connections.ts` | Social platform sessions (encrypted tokens). | one person | no (tokens) | ok |
 | `lib/social/ai-credit.ts` | `consume_social_ai_request` RPC (the daily Social AI quota: drafts, Orbis promotion posts, new images). Moved here from `app/social/actions.ts`, which now uses only the session. | the signed-in person | no | ok |
 | `lib/storage/signed-upload.ts` | Signs uploads into, reads back and removes files from the staging bucket, which deliberately has no user policy. Claims each staged path once in `staged_upload_claims`. | the signed-in uploader | yes: the file they just uploaded, read once to parse it for their own request | needs owner decision: reading it with the session would need a select-own Storage policy on the staging bucket. With no policy, a leaked upload token can't be used to read or list files. Recommend keeping it. |
+| `lib/youtube/connection.ts` | YouTube connection: stores and reads the encrypted refresh token in `social_connections` (no browser grants). | one person | no (tokens) | ok |
 
 ### Type-only importers (not on the allowlist)
 
