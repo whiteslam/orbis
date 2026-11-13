@@ -11,7 +11,7 @@ function ago(iso: string | null) {
   return Math.abs(minutes) < 60 ? AGO.format(minutes, 'minute') : AGO.format(Math.round(minutes / 60), 'hour');
 }
 
-const LINE: Record<WorkerPresence, string> = {
+export const WORKER_LINE: Record<WorkerPresence, string> = {
   none: 'Shorts are made by a small worker on a PC of yours, using Claude Code and the faceless-shorts skill. Once it runs, you can queue and approve shorts from any device, your phone included.',
   setup: 'Your Shorts PC is running the worker, but the skill isn’t ready yet.',
   offline: 'Your Shorts PC is offline. New shorts wait in the queue until it’s back.',
@@ -28,7 +28,7 @@ export function WorkerStrip({ presence, worker }: Readonly<{ presence: WorkerPre
       <p className="sh-worker-line" aria-live="polite">
         <i aria-hidden="true" />
         <span>
-          {LINE[presence]}
+          {WORKER_LINE[presence]}
           {presence === 'offline' && seen && <> Last seen {seen}.</>}
         </span>
       </p>

@@ -9,6 +9,7 @@ import { PostDrawer } from '@/components/social/post-drawer';
 import { AiDraftDialog } from '@/components/social/ai-draft-dialog';
 import { SocialInsights } from '@/components/social/social-insights';
 import { ShortsView } from '@/components/shorts/shorts-view';
+import { useShortsData } from '@/components/shorts/use-shorts-data';
 import { loadSocialMonthAction } from '@/app/social/actions';
 import { PERIOD_PATTERN, todayIn, monthName, monthSummary, periodOfDate, shiftMonth } from '@/lib/social/month';
 import { SOCIAL_FORMATS, SOCIAL_STATUS_LABEL, type SocialFormat, type SocialPost, type SocialStatus } from '@/lib/social/types';
@@ -55,6 +56,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
   const [selected, setSelected] = useState<string | null>(() => todayIn(timeZone));
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [isLoading, startLoading] = useTransition();
+  const shorts = useShortsData();
   const top = useScrollTop(screen.name === 'post' ? `post-${screen.post?.id ?? 'new'}` : screen.name);
   const today = todayIn(timeZone);
 
@@ -154,7 +156,7 @@ export function SocialScreen({ initial, hasProfile, connectNotice, clearConnectN
       <span ref={top} hidden />
       <FieldHead title="Social" subtitle="Faceless shorts, made on your PC, queued from anywhere" />
       {areaSwitch}
-      <ShortsView />
+      <ShortsView data={shorts} />
     </div>
   );
 
