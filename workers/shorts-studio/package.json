@@ -1,5 +1,8 @@
 {
   "name": "orbis-shorts-studio",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "import-youtube-queue": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/import-youtube-queue.ts"
+  }
 }
