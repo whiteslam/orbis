@@ -22,10 +22,15 @@ import type { BriefPortfolio } from '@/lib/home/portfolio';
 import { briefReady, type WeatherPhase } from '@/lib/home/brief-gate';
 import type { FocusTarget } from '@/lib/focus/types';
 import { composeNote, partOfDay, type HomeNote } from '@/lib/home/note';
-import { formatWhen, localParts } from '@/lib/locale/dates';
+import { formatWhen, localDate, localParts } from '@/lib/locale/dates';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { trainingForToday } from '@/lib/home/training';
-import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday } from '@/lib/routines/today';
+import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday, settledToday } from '@/lib/routines/today';
+import { GlassView } from '@/components/today/glass-view';
+import { ViewBoundary } from '@/components/today/view-boundary';
+import { useDesktop } from '@/components/today/use-desktop';
+import { glassActivity, restOfToday } from '@/lib/home/glass';
+import { readTodayView, TODAY_VIEW_KEY, type TodayView } from '@/lib/home/today-view';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SetupStep } from '@/lib/focus/setup';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -76,6 +81,29 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   }, []);
   const today = formatWhen(new Date(), loc, 'dayLong');
 
+  // Desktop only: Classic (this page as it always was) or Glass, remembered per
+  // browser. Read after mounting, so the server and first render are Classic.
+  const desktop = useDesktop();
+  const [view, setView] = useState<TodayView>('classic');
+  useEffect(() => {
+    let saved: TodayView = 'classic';
+    try {
+      saved = readTodayView(window.localStorage.getItem(TODAY_VIEW_KEY));
+    } catch {
+      // Storage blocked (a private window): Classic.
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setView(saved);
+  }, []);
+  const chooseView = (next: TodayView) => {
+    setView(next);
+    try {
+      window.localStorage.setItem(TODAY_VIEW_KEY, next);
+    } catch {
+      // Storage blocked: the choice holds for this visit only.
+    }
+  };
+
 
   // The daily investing line. Holdings come from the broker, so Home asks for
   // them the way it asks for the weather, and simply has no card until they land.
@@ -97,6 +125,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   // becomes due while Home is open should start showing without a reload.
   const due = routinesToday(routines, new Date(), timeZone);
   const current = currentRoutine(due);
+  const settled = settledToday(due);
   const composed = composeNote({
     finance: financeSummary,
     portfolio,
@@ -137,34 +166,33 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       .then((result) => { if (sentKey.current === key && result.state === 'ok' && typeof result.caption === 'string') setWritten(result.caption); });
   }, [aiBriefEnabled, dataKey, ready, weather]);
 
-  return (
-    <div className="screen-body field td">
-      <header className="fd-top">
-        {/* The date is rendered in the person's own zone on both sides, but the day can turn between them. */}
-        <div className="fd-brand">
-          <OrbisMark size={26} />
-          <p className="fd-date" suppressHydrationWarning>{today}</p>
-        </div>
-        <div className="fd-top-actions">
-          <NotificationsButton />
-          <ThemeToggle />
-          <SettingsButton />
-        </div>
-      </header>
+  const routineCheck = current && canAnswer(current) ? <RoutineCheck current={current} /> : null;
+  const gmailNoticeLine = gmailNotice && (
+    <output className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`}>
+      <span>{gmailNoticeText(gmailNotice)}</span>
+      <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
+    </output>
+  );
+  const foot = (
+    <div className="td-foot">
+      <SetupChecklist steps={setup} />
+      <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
+    </div>
+  );
 
-      <PasskeyPrompt />
-
-      {/* Home reads like a morning paper. The brief leads, set large, with the
-          one thing due now right under it; then the day at a glance (weather,
-          steps, spend) as one ruled strip. What needs you (heads-ups, Career,
-          mail) shares the page's one surface; the news is the magazine below,
-          and the reminders about Orbis itself sit at the foot. */}
+  // Home reads like a morning paper. The brief leads, set large, with the
+  // one thing due now right under it; then the day at a glance (weather,
+  // steps, spend) as one ruled strip. What needs you (heads-ups, Career,
+  // mail) shares the page's one surface; the news is the magazine below,
+  // and the reminders about Orbis itself sit at the foot.
+  const classic = (
+    <>
       <div className="td-lead">
         <FocusNote note={brief} />
 
         {/* The brief says what is due; this records what happened to it. */}
         {/* answerRoutineAction revalidates '/', so the page re-renders with the answer on its own. */}
-        {current && canAnswer(current) && <RoutineCheck current={current} />}
+        {routineCheck}
       </div>
 
       <div className="td-glance">
@@ -178,12 +206,7 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       <div className="td-desk">
         <Headsups onAction={openHeadsup} />
         <CareerRow openTab={openTab} />
-        {gmailNotice && (
-          <output className={`finance-notice ${gmailNotice === 'connected' ? 'success' : 'error'}`}>
-            <span>{gmailNoticeText(gmailNotice)}</span>
-            <button type="button" onClick={clearGmailNotice} aria-label="Dismiss message">×</button>
-          </output>
-        )}
+        {gmailNoticeLine}
         <ImportantMail />
       </div>
 
@@ -192,10 +215,54 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
         <NewsCard />
       </div>
 
-      <div className="td-foot">
-        <SetupChecklist steps={setup} />
-        <p className="fd-note">Orbis only uses what you connect or upload. Nothing above is inferred about you.</p>
-      </div>
+      {foot}
+    </>
+  );
+
+  const glass = desktop && view === 'glass';
+  return (
+    <div className="screen-body field td">
+      <header className="fd-top">
+        {/* The date is rendered in the person's own zone on both sides, but the day can turn between them. */}
+        <div className="fd-brand">
+          <OrbisMark size={26} />
+          <p className="fd-date" suppressHydrationWarning>{today}</p>
+        </div>
+        <div className="fd-top-actions">
+          {desktop && (
+            <div className="tg-switch" role="radiogroup" aria-label="Today view">
+              {(['classic', 'glass'] as const).map((option) => (
+                <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
+                  {option === 'classic' ? 'Classic' : 'Glass'}
+                </button>
+              ))}
+            </div>
+          )}
+          <NotificationsButton />
+          <ThemeToggle />
+          <SettingsButton />
+        </div>
+      </header>
+
+      <PasskeyPrompt />
+
+      {glass ? (
+        <ViewBoundary fallback={classic}>
+          <GlassView
+            brief={brief}
+            today={today}
+            portfolio={portfolio}
+            activity={glassActivity({ latest: stepsSummary.latest, today: localDate(new Date(), timeZone), done: settled.done, total: settled.total })}
+            rest={restOfToday(due)}
+            onWeather={setWeather}
+            onPhase={setWeatherPhase}
+            openTab={openTab}
+            openHeadsup={openHeadsup}
+            extras={<>{routineCheck}{gmailNoticeLine}{foot}</>}
+          />
+        </ViewBoundary>
+      ) : classic}
     </div>
   );
 }
+

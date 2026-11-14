@@ -9,7 +9,7 @@ import type { StepsSummary } from '@/lib/health/types';
 import { localDate, localParts } from '@/lib/locale/dates';
 import { formatMoney } from '@/lib/locale/money';
 
-const STEP_GOAL = 10_000;
+import { STEP_GOAL } from '@/lib/home/glass';
 
 /** Truthful only if `latest` really is today's count — steps import can lag, so the
  *  aria-label says which day it's reporting instead of always claiming "today". */
