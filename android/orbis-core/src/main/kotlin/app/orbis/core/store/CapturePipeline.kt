@@ -60,12 +60,12 @@ class CapturePipeline(private val port: StorePort) {
         /**
          * Masked text made safe for the server: NUL removed, lone surrogates replaced with
          * U+FFFD (the server refuses both), then cut to [MAX_CONTENT_CHARS] without splitting a
-         * surrogate pair. May be empty.
+         * surrogate pair. May be empty. [max] is the cut length (the server's limit by default).
          */
-        fun signalContent(masked: String): String {
-            val out = StringBuilder(minOf(masked.length, MAX_CONTENT_CHARS + 1))
+        fun signalContent(masked: String, max: Int = MAX_CONTENT_CHARS): String {
+            val out = StringBuilder(minOf(masked.length, max + 1))
             var i = 0
-            while (i < masked.length && out.length < MAX_CONTENT_CHARS + 1) {
+            while (i < masked.length && out.length < max + 1) {
                 val c = masked[i]
                 when {
                     c == '\u0000' -> i++
@@ -83,9 +83,9 @@ class CapturePipeline(private val port: StorePort) {
                     }
                 }
             }
-            if (out.length > MAX_CONTENT_CHARS) {
-                out.setLength(MAX_CONTENT_CHARS)
-                if (out[MAX_CONTENT_CHARS - 1].isHighSurrogate()) out.setLength(MAX_CONTENT_CHARS - 1)
+            if (out.length > max) {
+                out.setLength(max)
+                if (max > 0 && out[max - 1].isHighSurrogate()) out.setLength(max - 1)
             }
             return out.toString()
         }

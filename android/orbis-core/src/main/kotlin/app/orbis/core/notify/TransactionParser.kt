@@ -22,11 +22,16 @@ object TransactionParser {
         RegexOption.IGNORE_CASE,
     )
     private val EXPENSE = Regex(
-        """\b(debited|debit|spent|purchase|paid|withdrawn|deducted|charged|pos txn|card transaction)\b""",
+        """\b(debited|debit|spent|purchase|paid|sent|withdrawn|deducted|charged|pos txn|card transaction)\b""",
         RegexOption.IGNORE_CASE,
     )
     private val INCOME = Regex(
         """\b(credited|credit|refund(?:ed)?|received|deposited|reversal)\b""",
+        RegexOption.IGNORE_CASE,
+    )
+    // Ruling R-T3b: "Avl bal Rs 12,000" is the account balance, not a second payment.
+    private val BALANCE = Regex(
+        """\b(?:(?:avl|avail|available)\.?\s*(?:bal|balance)\b|bal(?:ance)?\b\s*(?:is\s*)?[:\-]?\s*(?:rs\.?|inr|₹))""",
         RegexOption.IGNORE_CASE,
     )
     private val SEGMENT_SPLIT = Regex("""\n+|;|(?<!\d),\s*|(?<=[.!?])\s+(?=[^\d\s])""")
@@ -56,7 +61,7 @@ object TransactionParser {
 
     fun parse(text: String): ParsedTransaction? {
         val candidates = SEGMENT_SPLIT.split(text.take(MAX_INPUT))
-            .map { it.trim() }
+            .map { dropBalance(it).trim() }
             .filter { it.isNotEmpty() }
             .map { parseSegment(it) }
             .filter { it.amounts.isNotEmpty() || it.direction != null }
@@ -71,6 +76,12 @@ object TransactionParser {
             direction = direction,
             merchant = parseMerchant(candidate.text),
         )
+    }
+
+    /** Cuts a balance clause, and the amount after it, off the end of a segment. */
+    private fun dropBalance(segment: String): String {
+        val m = BALANCE.find(segment) ?: return segment
+        return segment.substring(0, m.range.first)
     }
 
     private fun currencyFor(match: String): String? = when {

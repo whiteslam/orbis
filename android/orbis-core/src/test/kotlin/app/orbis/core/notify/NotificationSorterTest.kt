@@ -12,6 +12,19 @@ import org.junit.Test
 class NotificationSorterTest {
     private fun sort(pkg: String?, text: String) = NotificationSorter.sort(pkg, text, Masking.mask(text))
 
+    private fun assertNoLoneSurrogates(s: String) {
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (c.isHighSurrogate() && i + 1 < s.length && s[i + 1].isLowSurrogate()) {
+                i += 2
+                continue
+            }
+            assertFalse("lone surrogate at $i", c.isSurrogate())
+            i++
+        }
+    }
+
     @Test
     fun `a bank alert is a transaction`() {
         val s = sort(null, "Rs.1,250.00 debited from A/c XX1234 on 14-11-26 to SWIGGY. Not you? Call 1800")!!
@@ -43,6 +56,21 @@ class NotificationSorterTest {
         val c = JSONObject(s.content)
         assertEquals("Asha", c.getString("who"))
         assertEquals("com.whatsapp", c.getString("app"))
+    }
+
+    @Test
+    fun `who is the first line that is not the missed call line`() {
+        val g = sort("com.google.android.dialer", "Missed call\nAsha")!!
+        assertEquals("Asha", JSONObject(g.content).getString("who"))
+        val w = sort("com.whatsapp", "Asha\nMissed voice call")!!
+        assertEquals("Asha", JSONObject(w.content).getString("who"))
+    }
+
+    @Test
+    fun `a missed call with no name has no who`() {
+        val s = sort("com.android.dialer", "Missed call")!!
+        assertEquals("missed_contact", s.kind)
+        assertFalse(JSONObject(s.content).has("who"))
     }
 
     @Test
@@ -81,9 +109,55 @@ class NotificationSorterTest {
     fun `one time codes are recognised`() {
         assertTrue(NotificationSorter.isOneTimeCode("123456 is your OTP for login"))
         assertTrue(NotificationSorter.isOneTimeCode("Use code 4821 to sign in"))
-        assertTrue(NotificationSorter.isOneTimeCode("Your verification code is here"))
+        assertTrue(NotificationSorter.isOneTimeCode("Your passcode is 482193"))
+        assertTrue(NotificationSorter.isOneTimeCode("Your verification code: 55821"))
         assertFalse(NotificationSorter.isOneTimeCode("Rs 1,250 debited"))
         assertFalse(NotificationSorter.isOneTimeCode("Zip code: please call us"))
+    }
+
+    @Test
+    fun `a safety footer is not a code, and the payment is still sorted`() {
+        val text = "Rs 500 debited from A/c XX12 to SWIGGY. Never share your OTP."
+        assertFalse(NotificationSorter.isOneTimeCode(text))
+        assertEquals("transaction", sort("com.bank", text)!!.kind)
+    }
+
+    @Test
+    fun `amounts and ids near the word code are not codes`() {
+        assertFalse(NotificationSorter.isOneTimeCode("Rs.12000.00 debited, ref code HDFC0001234"))
+        assertFalse(NotificationSorter.isOneTimeCode("INR 2500 sent, use code to claim cashback"))
+        assertFalse(NotificationSorter.isOneTimeCode("Use code on Rs 2500 order"))
+        assertFalse(NotificationSorter.isOneTimeCode("Code applied: \$4500 off"))
+        assertFalse(NotificationSorter.isOneTimeCode("Use code for 12,5000.75 today"))
+    }
+
+    @Test
+    fun `an emoji pair at the cut is kept whole`() {
+        val text = "delivered " + "x".repeat(989) + "😀tail"
+        assertEquals('\uD83D', text[999])
+        val s = sort("com.shop", text)!!
+        val t = JSONObject(s.content).getString("text")
+        assertNoLoneSurrogates(t)
+        assertNoLoneSurrogates(s.content)
+        assertEquals(999, t.length)
+    }
+
+    @Test
+    fun `a lone surrogate in the text becomes a replacement character`() {
+        val text = "delivered \uD83D alone \uDE00 too"
+        val s = sort("com.shop", text)!!
+        val t = JSONObject(s.content).getString("text")
+        assertNoLoneSurrogates(t)
+        assertTrue(t.contains('�'))
+    }
+
+    @Test
+    fun `control characters are shortened so the content fits`() {
+        val text = "delivered " + "\u0001".repeat(1000)
+        val s = sort("com.shop", text)!!
+        assertEquals("package", s.kind)
+        assertTrue(s.content.length <= 4000)
+        assertTrue(JSONObject(s.content).getString("text").startsWith("delivered "))
     }
 
     @Test
