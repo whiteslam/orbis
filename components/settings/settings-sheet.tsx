@@ -2,19 +2,20 @@
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Inter } from 'next/font/google';
-import { Bell, ChevronLeft, ChevronRight, Clock, Eye, HardDrive, Lock, Plug, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Clock, Globe, LayoutGrid, Lock, Plug, Smartphone, Sparkles, UserRound, UserCog, X, type LucideIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
 import { AppIntegrations } from '@/components/settings/app-integrations';
 import { HeadsupSettings } from '@/components/settings/headsup-settings';
 import { HomeBriefSetting } from '@/components/settings/home-brief-setting';
-import { HomeCityEditor, Integrations } from '@/components/settings/integrations';
+import { HomeCityEditor } from '@/components/settings/integrations';
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { PrivacyCenter } from '@/components/settings/privacy-center';
-import { ProfileEditor } from '@/components/settings/profile-editor';
+import { ProfileEditor, RegionSettings, TabSettings } from '@/components/settings/profile-editor';
 import { RoutineSettings } from '@/components/settings/routine-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
 import { keepTabInside } from '@/components/shell/dialog-focus';
+import { useNativeApp } from '@/components/native/use-native';
 import { DESKTOP_QUERY, isDesktop } from '@/lib/shell/desktop';
 import { aiAllowed } from '@/lib/ai/consent';
 import { SETTINGS_CATEGORIES, SETTINGS_SECTIONS, type SettingsSection } from '@/lib/shell/tabs';
@@ -69,7 +70,7 @@ function usePhonePages() {
 }
 
 // Each section's glyph in the index, drawn in the Orbis ring's colours (app/styles/page-settings.css).
-const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, security: Lock, privacy: Eye, data: HardDrive };
+const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, region: Globe, tabs: LayoutGrid, security: Lock, privacy: Smartphone, data: UserCog };
 
 type Hint = { text: string; warn?: boolean };
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -189,6 +190,8 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
     setPage(pageFor(section));
   }
   const phone = usePhonePages();
+  // Phone access is the Android app's: on the web it only says to install the app, so the list leaves it out.
+  const native = useNativeApp();
   const paged = phone && page !== null;
 
   useEffect(() => {
@@ -272,39 +275,47 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
 
   const notice = googleNotice ? GOOGLE_NOTICE[googleNotice] ?? GOOGLE_NOTICE.error : null;
   const profile = data.personalProfile.profile;
-  // Gmail and Groww are already in the list above as account connections.
-  const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
   const hints = sectionHints(data);
   const who = [profile?.preferredName.trim(), profile?.role.trim()].filter(Boolean).join(', ');
 
   // Every section, keyed so the sheet stacks them in the index's category order (SETTINGS_CATEGORIES).
   const groups: Record<SettingsSection, ReactNode> = {
     you: (
-      <Group id="you" shown={shown} note="Your name, role and city.">
+      <Group id="you" shown={shown}>
         <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
-        {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
       </Group>
     ),
     security: (
-      <Group id="security" shown={shown} note="Lock Orbis on this device.">
+      <Group id="security" shown={shown}>
         <SecuritySettings />
       </Group>
     ),
     notifications: (
-      <Group id="notifications" shown={shown} note="When Orbis checks in with you.">
+      <Group id="notifications" shown={shown}>
         <NotificationSettings settings={data.notificationSettings} />
+        <h3 className="fd-label st-sub">Heads-ups</h3>
+        <HeadsupSettings />
       </Group>
     ),
     day: (
-      <Group id="day" shown={shown} note="The fixed times in your day.">
+      <Group id="day" shown={shown}>
         <RoutineSettings summary={data.routines} editId={editRoutineId} />
       </Group>
     ),
     ai: (
       <Group id="ai" shown={shown} note="Nothing goes to an AI until this is on.">
         <HomeBriefSetting preferences={data.aiPreferences} />
-        <h3 className="fd-label st-sub">Heads-ups</h3>
-        <HeadsupSettings />
+      </Group>
+    ),
+    region: (
+      <Group id="region" shown={shown}>
+        <RegionSettings />
+        {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
+      </Group>
+    ),
+    tabs: (
+      <Group id="tabs" shown={shown}>
+        <TabSettings />
       </Group>
     ),
     connections: (
@@ -320,8 +331,6 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
           <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
           <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
         </div>
-        <p className="fd-note tight st-subnote">Services</p>
-        <Integrations items={dataServices} heading={false} />
       </Group>
     ),
     privacy: (
@@ -369,7 +378,7 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
             <div key={category.id} className="st-cat" role="group" aria-labelledby={`settings-cat-${category.id}`}>
               <h2 className="st-cat-h" id={`settings-cat-${category.id}`}>{category.label}</h2>
               <div className="st-cat-list">
-                {category.sections.map((id) => {
+                {category.sections.filter((id) => id !== 'privacy' || native).map((id) => {
                   const Icon = GLYPH[id];
                   const hint = hints[id];
                   return (

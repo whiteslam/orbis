@@ -6,7 +6,7 @@
 
 export type TabId = 'today' | 'money' | 'health' | 'journal' | 'social' | 'career';
 export type MoneyView = 'spending' | 'investments';
-export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'security' | 'privacy' | 'data';
+export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'region' | 'tabs' | 'security' | 'privacy' | 'data';
 
 export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -17,30 +17,30 @@ export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'career', label: 'Career' },
 ];
 
-export type SettingsCategory = 'account' | 'preferences' | 'apps' | 'privacy';
+export type SettingsCategory = 'account' | 'preferences' | 'apps';
 
 /**
  * Settings' sections, grouped the way Instagram's or YouTube's settings are:
- * who you are, how Orbis behaves for you, what it is connected to, and what it
- * can see and keeps. The labels stay as they are, since copy across the app
- * points at them ("Settings → What Orbis can see").
+ * you and your account, how Orbis behaves for you, and what it is connected to.
+ * Copy elsewhere points at these labels ("Settings → Phone access"); rename them together.
  */
 export const SETTINGS_CATEGORIES: ReadonlyArray<{ id: SettingsCategory; label: string; sections: readonly SettingsSection[] }> = [
-  { id: 'account', label: 'Your account', sections: ['you', 'security'] },
-  { id: 'preferences', label: 'Preferences', sections: ['notifications', 'day', 'ai'] },
-  { id: 'apps', label: 'Connected apps', sections: ['connections'] },
-  { id: 'privacy', label: 'Privacy and data', sections: ['privacy', 'data'] },
+  { id: 'account', label: 'You', sections: ['you', 'security', 'data'] },
+  { id: 'preferences', label: 'Preferences', sections: ['notifications', 'day', 'ai', 'region', 'tabs'] },
+  { id: 'apps', label: 'Apps and devices', sections: ['connections', 'privacy'] },
 ];
 
 const SECTION_COPY: Record<SettingsSection, { label: string; description: string }> = {
-  you: { label: 'You', description: 'Your name, what you do, your home city' },
-  security: { label: 'Security', description: 'Device PIN and locking Orbis' },
-  notifications: { label: 'Notifications', description: 'Four daily check-ins and their times' },
-  day: { label: 'Your day', description: 'Routines and their times' },
-  ai: { label: 'AI & privacy', description: 'The AI switch, the brief, heads-ups' },
-  connections: { label: 'Connections', description: 'Google, banks, social apps, services' },
-  privacy: { label: 'What Orbis can see', description: 'What Orbis reads on your phone' },
-  data: { label: 'Your data', description: 'Download, delete, sign out' },
+  you: { label: 'Profile', description: 'Name, role, about you' },
+  security: { label: 'Security', description: 'PIN and lock' },
+  data: { label: 'Account', description: 'Sign out, export, delete' },
+  notifications: { label: 'Notifications', description: 'Check-ins and heads-ups' },
+  day: { label: 'Routines', description: 'Fixed times in your day' },
+  ai: { label: 'AI', description: 'AI switch and the brief' },
+  region: { label: 'Region', description: 'Time zone, currency, home city' },
+  tabs: { label: 'Tabs', description: 'Which tabs show' },
+  connections: { label: 'Connected apps', description: 'Google, Health, social apps' },
+  privacy: { label: 'Phone access', description: 'What the Android app reads' },
 };
 
 /** Every section, in its category's order: the order the index lists them and the sheet stacks them. */

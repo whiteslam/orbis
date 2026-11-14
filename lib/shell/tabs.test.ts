@@ -9,10 +9,10 @@ describe('TABS', () => {
 });
 
 describe('SETTINGS_SECTIONS', () => {
-  it('lists the eight sections in category order, the order the sheet shows them', () => {
-    expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(['you', 'security', 'notifications', 'day', 'ai', 'connections', 'privacy', 'data']);
-    // The labels are what copy across the app points at ("Settings → What Orbis can see"), so they hold.
-    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['You', 'Security', 'Notifications', 'Your day', 'AI & privacy', 'Connections', 'What Orbis can see', 'Your data']);
+  it('lists the ten sections in category order, the order the sheet shows them', () => {
+    expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(['you', 'security', 'data', 'notifications', 'day', 'ai', 'region', 'tabs', 'connections', 'privacy']);
+    // The labels are what copy across the app points at ("Settings → Phone access"), so they hold.
+    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['Profile', 'Security', 'Account', 'Notifications', 'Routines', 'AI', 'Region', 'Tabs', 'Connected apps', 'Phone access']);
   });
 
   it('gives every section a short one-line description', () => {
@@ -22,21 +22,21 @@ describe('SETTINGS_SECTIONS', () => {
     }
   });
 
-  it('puts the privacy center with Your data, under Privacy and data', () => {
-    expect(SETTINGS_SECTIONS.find((section) => section.id === 'privacy')).toMatchObject({ label: 'What Orbis can see', category: 'privacy' });
-    expect(SETTINGS_SECTIONS.find((section) => section.id === 'data')?.category).toBe('privacy');
+  it('puts Phone access with Connected apps, and Account with Profile', () => {
+    expect(SETTINGS_SECTIONS.find((section) => section.id === 'privacy')).toMatchObject({ label: 'Phone access', category: 'apps' });
+    expect(SETTINGS_SECTIONS.find((section) => section.id === 'data')).toMatchObject({ label: 'Account', category: 'account' });
   });
 });
 
 describe('SETTINGS_CATEGORIES', () => {
-  it('names four categories, in order', () => {
-    expect(SETTINGS_CATEGORIES.map((category) => category.label)).toEqual(['Your account', 'Preferences', 'Connected apps', 'Privacy and data']);
+  it('names three categories, in order', () => {
+    expect(SETTINGS_CATEGORIES.map((category) => category.label)).toEqual(['You', 'Preferences', 'Apps and devices']);
   });
 
   it('holds every section exactly once, in the order SETTINGS_SECTIONS lists them', () => {
     const flat = SETTINGS_CATEGORIES.flatMap((category) => category.sections);
     expect(flat).toEqual(SETTINGS_SECTIONS.map((section) => section.id));
-    expect(new Set(flat).size).toBe(8);
+    expect(new Set(flat).size).toBe(10);
     for (const category of SETTINGS_CATEGORIES) {
       expect(category.sections.length).toBeGreaterThan(0);
       for (const id of category.sections) expect(SETTINGS_SECTIONS.find((section) => section.id === id)?.category).toBe(category.id);

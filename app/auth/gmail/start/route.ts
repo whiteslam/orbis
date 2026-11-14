@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       path: '/auth/gmail',
       maxAge: 10 * 60,
     });
-    // ?return=settings brings the user back to Settings → Connections; a send
+    // ?return=settings brings the user back to Settings → Connected apps; a send
     // request goes back to the Career tab, where it was pressed.
     let returnTo: GoogleReturn | null = null;
     if (send) returnTo = 'career';

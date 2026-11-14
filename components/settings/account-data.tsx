@@ -26,7 +26,7 @@ function SocialHistory() {
 
   return (
     <div className="fd-source" style={{ display: 'block' }}>
-      <div><strong>Social post history</strong><p>Every earlier version of your social posts. Your posts themselves stay as they are.</p></div>
+      <div><strong>Social post history</strong><p>Old versions of your posts. The posts stay.</p></div>
       {!confirming && (
         <div className="fd-act">
           <button className="fd-link alert" type="button" onClick={() => { setMessage(null); setConfirming(true); }}><Trash2 size={13} aria-hidden="true" /> Delete social post history</button>
@@ -74,7 +74,7 @@ function DeleteAccount() {
     <div className="fd-source" style={{ display: 'block' }}>
       <div>
         <strong>Delete account</strong>
-        <p>Deletes your account and everything in it for good: your journal, money, health, routines, social posts, notes and uploaded files. Connected apps are disconnected first. This can’t be undone, so export your data before you do this if you want a copy.</p>
+        <p>Deletes your account and everything in it, for good. Export first if you want a copy.</p>
       </div>
       {!open && (
         <div className="fd-act">
@@ -144,7 +144,7 @@ function ExportData() {
 
   return (
     <form className="fd-source" style={{ display: 'block' }} onSubmit={exportData} aria-label="Export my data">
-      <div><strong>Your data</strong><p>Download everything Orbis holds for you as a JSON file. Stored files are listed, and you can save them from where they live in Orbis.</p></div>
+      <div><strong>Export</strong><p>Download everything as a JSON file.</p></div>
       {needsPassword && (
         <label className="fd-field wide" htmlFor="export-password">
           Password{' '}

@@ -11,19 +11,19 @@ import { safeAction } from '@/lib/client/safe-action';
 const PLATFORMS = [
   {
     id: 'instagram', name: 'Instagram', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/instagram/start', handle: '@',
-    notConfigured: 'Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.',
+    notConfigured: 'Not available yet.',
     expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
     confirm: 'Disconnect Instagram? Posts you already published stay as they are.',
   },
   {
     id: 'threads', name: 'Threads', detail: 'Publish planned posts, read-only otherwise', href: '/auth/social/threads/start', handle: '@',
-    notConfigured: 'Set THREADS_APP_ID and THREADS_APP_SECRET.',
+    notConfigured: 'Not available yet.',
     expired: 'The token has expired. Meta tokens last about 60 days and cannot be renewed once they lapse.',
     confirm: 'Disconnect Threads? Posts you already published stay as they are.',
   },
   {
     id: 'youtube', name: 'YouTube', detail: 'Upload your shorts on a schedule', href: '/auth/youtube/start', handle: '',
-    notConfigured: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+    notConfigured: 'Not available yet.',
     expired: 'Google stopped accepting Orbis’s access. Connect again.',
     confirm: 'Disconnect YouTube? Videos already on your channel stay there. Queued shorts wait until you connect again.',
   },
@@ -81,10 +81,10 @@ export function SocialConnections({ connections, ready, configured }: Readonly<{
               </span>
             </div>
 
-            {!ready && <p className="fd-note tight">Apply the social connections migration in Supabase to link these.</p>}
+            {!ready && <p className="fd-note tight">These aren’t available yet.</p>}
             {ready && !isConfigured && (
               <p className="fd-note tight">
-                Not configured on this server. {platform.notConfigured}
+                {platform.notConfigured}
               </p>
             )}
             {expired && <p className="fd-note tight">{platform.expired}</p>}

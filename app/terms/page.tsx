@@ -91,7 +91,7 @@ export default function TermsPage() {
 
         <h2>Termination</h2>
         <p>
-          You can stop using {SITE_NAME} and delete your account at any time from <strong>Settings → Your data →
+          You can stop using {SITE_NAME} and delete your account at any time from <strong>Settings → Account →
           Delete account</strong>, or the <Link href="/delete-account">delete-account page</Link>. You can export a copy
           of your data first. We may suspend or end access to protect the service or other users, such as for abuse
           or a security risk.

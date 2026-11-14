@@ -58,7 +58,7 @@ const STALE_AFTER_HIDDEN_MS = 60_000;
 export default function AppShell({ userId, financeSummary, contextNotes, fitnessPersona, personalProfile, stepsSummary, homeLocation, integrations, journal, notificationSettings, appConnections, healthLibrary, savedWorkbookAdvice, savedPortfolioAdvice, aiPreferences, routines, socialMonth, socialConnections, socialIsOwner = false }: Readonly<{ userId: string; financeSummary: FinanceSummary; contextNotes: { ready: boolean; notes: ContextNote[] }; fitnessPersona: FitnessPersonaSummary; personalProfile: PersonalProfileSummary; stepsSummary: StepsSummary; homeLocation: HomeLocation; integrations: Integration[]; journal: JournalSummary; notificationSettings: NotificationSettings; appConnections: AppConnections; healthLibrary: LibraryState; savedWorkbookAdvice: SavedWorkbookAdvice | null; savedPortfolioAdvice: SavedPortfolioAdvice | null; aiPreferences: AiPreferences; routines: RoutinesSummary; socialMonth: SocialMonth & { period: string }; socialConnections: SettingsSocial; socialIsOwner?: boolean }>) {
   const router = useRouter();
   // The tab asked for (a tap, a link, a card), and the one shown: Today stands
-  // in for a module this person switched off (Settings → You).
+  // in for a module this person switched off (Settings → Tabs).
   const [asked, setTab] = useState<TabId>('today');
   const { modules } = usePersonSettings();
   const tabs = useMemo(() => visibleTabs(modules), [modules]);

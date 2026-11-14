@@ -98,7 +98,7 @@ export function AiDraftDialog({ period, hasProfile, onClose, onDrafted }: Readon
 
         <label className="fd-check fd-toggle">
           <input type="checkbox" checked={useProfile} disabled={isPending || !hasProfile} onChange={(event) => setUseProfile(event.currentTarget.checked)} />
-          <span>Use my profile to personalise{hasProfile ? '' : ' (fill in Settings → You first)'}</span>
+          <span>Use my profile to personalise{hasProfile ? '' : ' (fill in Settings → Profile first)'}</span>
         </label>
         <p className="fd-note tight">
           {useProfile

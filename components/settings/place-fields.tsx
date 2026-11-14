@@ -5,7 +5,7 @@ import { canonicalTimeZone, type ModuleId } from '@/lib/locale/person';
 import { currencyOptions, timeZoneOptions } from '@/lib/locale/options';
 import { MODULES } from '@/lib/shell/modules';
 
-// Shared by onboarding and Settings → You, so the two ask the same way.
+// Shared by onboarding and Settings → Region and Tabs, so the two ask the same way.
 
 /** Every time zone, as a plain list; the server checks the choice again. */
 export function TimeZoneSelect({ id, value, onChange, disabled }: Readonly<{ id: string; value: string; onChange: (value: string) => void; disabled?: boolean }>) {
@@ -53,7 +53,7 @@ export function ModuleChoices({ idPrefix, value, onChange, disabled }: Readonly<
           <span><strong>{module.label}</strong><small>{module.detail}</small></span>
         </label>
       ))}
-      <p className="fd-note tight">Today is always there. Switching one off only hides its tab. You can change these any time in Settings → You.</p>
+      <p className="fd-note tight">Today is always there. Turning a tab off only hides it. Change this any time in Settings → Tabs.</p>
     </fieldset>
   );
 }

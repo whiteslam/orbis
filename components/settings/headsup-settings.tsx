@@ -39,7 +39,7 @@ export function HeadsupSettings() {
           </label>
         ))}
       </div>
-      <p className="fd-note tight">Orbis checks these once a day and puts anything worth knowing on Today. The checks run inside Orbis; with AI on, only the numbers behind a heads-up are sent to be worded.</p>
+      <p className="fd-note tight">Checked once a day. Anything worth knowing shows on Today.</p>
       <div className="fd-act">
         <button type="button" disabled={isPending} onClick={() => startTransition(async () => {
           const result = await safeAction(clearHeadsupsAction)();

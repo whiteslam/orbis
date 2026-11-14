@@ -61,7 +61,7 @@ export type AppConnections = {
   brokerSetupMessages: Partial<Record<BrokerId, string>>;
 };
 
-// Account-level connections the user links themselves (Settings → Connections).
+// Account-level connections the user links themselves (Settings → Connected apps).
 export async function getAppConnections(userId: string, email: string | null): Promise<AppConnections> {
   const result: AppConnections = { google: null, brokers: {}, brokerSetupMessages: {} };
   try {
@@ -152,7 +152,7 @@ function growwIntegration(growwRow: ConnectionRow | null, email: string | null):
   const owner = growwOwnerEmail();
   if (growwRow) {
     const ok = growwRow.status === 'connected';
-    return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: growwRow.last_sync_at, usage: null };
+    return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only', state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connected apps', lastSyncAt: growwRow.last_sync_at, usage: null };
   }
   if (growwConfigured() && owner && email === owner) {
     return { id: 'groww', label: 'Groww', purpose: 'Holdings · read-only · server keys', state: 'connected', detail: null, lastSyncAt: null, usage: null };
@@ -162,9 +162,9 @@ function growwIntegration(growwRow: ConnectionRow | null, email: string | null):
 
 function gmailIntegration(gmail: ConnectionRow | null): Integration {
   const base = { id: 'gmail', label: 'Gmail', purpose: 'Important mail on Today · read-only', usage: null };
-  if (!gmail) return { ...base, state: 'not_configured', detail: 'Connect in Settings → Connections', lastSyncAt: null };
+  if (!gmail) return { ...base, state: 'not_configured', detail: 'Connect in Settings → Connected apps', lastSyncAt: null };
   const ok = gmail.status === 'connected';
-  return { ...base, state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connections', lastSyncAt: gmail.last_sync_at ?? null };
+  return { ...base, state: ok ? 'connected' : 'attention', detail: ok ? null : 'Reconnect in Settings → Connected apps', lastSyncAt: gmail.last_sync_at ?? null };
 }
 
 function providerIntegration(provider: (typeof PROVIDERS)[number], { statusRows, usageRows }: IntegrationRows): Integration {

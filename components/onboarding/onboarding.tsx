@@ -17,7 +17,7 @@ const STEPS = [
   { title: 'What should Orbis call you?', lead: 'Used in your brief and greetings. You can leave it blank and add it later.' },
   { title: 'Where are you?', lead: 'Orbis plans your day in this time zone and shows money in this currency.' },
   { title: 'What do you want to keep track of?', lead: 'Each one is a tab. Switch any off to hide its tab.' },
-  { title: 'Use AI features?', lead: 'You can change this any time in Settings → AI & privacy.' },
+  { title: 'Use AI features?', lead: 'You can change this any time in Settings → AI.' },
 ];
 
 /**

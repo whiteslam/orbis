@@ -28,7 +28,7 @@ export async function saveNotificationPreferencesAction(input: NotificationPrefe
   if (!auth) return { success: false, message: 'Sign in again to update notifications.' };
   if (!input || typeof input !== 'object' || typeof input.enabled !== 'boolean' || !input.slots) return { success: false, message: 'These settings are invalid.' };
 
-  // The zone is the person's own (Settings → You, user_settings); one sent from
+  // The zone is the person's own (Settings → Region, user_settings); one sent from
   // the page is ignored, so a stale form can't move it back. It is copied here
   // for older readers. If settings couldn't be read, the saved copy is left as it is.
   const settings = await getPersonSettings(auth.userId);

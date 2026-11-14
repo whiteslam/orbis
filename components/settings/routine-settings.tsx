@@ -31,7 +31,7 @@ export function RoutineSettings({ summary, editId = null }: Readonly<{ summary: 
   const flexibleHint = useId();
 
   if (summary.state !== 'ready') {
-    return <p className="fd-note">{summary.state === 'setup' ? 'Apply the routines migration in Supabase to set up your day.' : 'Your routines could not be loaded. Try again shortly.'}</p>;
+    return <p className="fd-note">{summary.state === 'setup' ? 'Routines aren’t available yet.' : 'Couldn’t load your routines. Try again shortly.'}</p>;
   }
 
   function run(action: () => Promise<{ success: boolean; message: string }>) {
@@ -163,7 +163,7 @@ export function RoutineSettings({ summary, editId = null }: Readonly<{ summary: 
       )}
 
       {!active.length && !open && (
-        <p className="fd-note"><Clock size={12} aria-hidden="true" /> Add the times your day already has, like a 7 pm gym session or breakfast at 8. The brief then knows what to ask you about.</p>
+        <p className="fd-note"><Clock size={12} aria-hidden="true" /> Add fixed times, like gym at 7 pm. The brief asks about them.</p>
       )}
       {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}
     </div>

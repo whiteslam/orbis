@@ -1,4 +1,4 @@
-// The words and small rules behind Settings → What Orbis can see
+// The words and small rules behind Settings → Phone access
 // (components/settings/privacy-center.tsx). Pure and client-safe, so it is tested
 // in Node: the phone's codes (wire names, drop reasons) never reach the screen raw.
 
