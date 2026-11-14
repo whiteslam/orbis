@@ -5,7 +5,7 @@
 // OWNER_USER_ID only.
 
 import { createClient } from '@supabase/supabase-js';
-import { AUTOPILOT_COLUMNS, autopilotOptions, pickStoryTopic, readAutopilotRow } from '../../../lib/shorts/autopilot.ts';
+import { AUTOPILOT_COLUMNS, AUTOPILOT_COLUMNS_ONE_STYLE, autopilotOptions, pickStyle, pickTopic, readAutopilotRow } from '../../../lib/shorts/autopilot.ts';
 import type { ShortPlan } from '../../../lib/shorts/plan.ts';
 import { decideStart, type ShelfCount } from '../../../lib/shorts/shelf.ts';
 import type { Delivery, Destination } from '../../../lib/shorts/types.ts';
@@ -17,7 +17,7 @@ export type BuildWindow = { windowStart: string; windowEnd: string; timezone: st
 
 export interface AutopilotDb {
   /** Starts the next autopilot short when the shelf, the window and the day's cap allow. Null when nothing was started. */
-  startNext(owner: string, now: Date): Promise<{ topic: string; destination: Destination } | null>;
+  startNext(owner: string, now: Date): Promise<{ topic: string; destination: Destination; style: string } | null>;
   /** The build window, or null when the autopilot is off or not set up. */
   window(owner: string): Promise<BuildWindow | null>;
   /** Moves an autopilot short from plan_ready straight on to building, as Approve does. */
@@ -67,7 +67,9 @@ export function createAutopilotDb(url: string, key: string): AutopilotDb {
 
   /** The autopilot row, or null when its table or columns aren't there yet. */
   async function readRow(owner: string) {
-    const { data: row, error } = await db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', owner).maybeSingle();
+    let { data: row, error } = await db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', owner).maybeSingle();
+    // Before the styles column (202611140004): the one style it had, so bedtime stories carry on.
+    if (error && missing(error)) ({ data: row, error } = await db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS_ONE_STYLE).eq('user_id', owner).maybeSingle());
     if (error) {
       if (missing(error)) return null;
       check(error, 'Reading the autopilot');
@@ -135,25 +137,31 @@ export function createAutopilotDb(url: string, key: string): AutopilotDb {
       if (taken !== true) return null;
       const today = decision.today;
 
+      // Whose turn: the chosen style the autopilot used longest ago.
+      const { data: lately, error: latelyError } = await db.from('shorts_jobs').select('style')
+        .eq('user_id', owner).eq('options->>autopilot', 'true').order('created_at', { ascending: false }).limit(20);
+      check(latelyError, 'Reading the autopilot’s recent shorts');
+      const chosen = pickStyle(autopilot.styles, (lately ?? []).map((one) => String(one.style)));
+
       const [{ data: style, error: styleError }, { data: recent, error: recentError }] = await Promise.all([
-        db.from('shorts_styles').select('default_voice,seconds_min,seconds_max').eq('slug', autopilot.style).maybeSingle(),
-        db.from('shorts_jobs').select('topic').eq('user_id', owner).eq('style', autopilot.style).order('created_at', { ascending: false }).limit(150),
+        db.from('shorts_styles').select('default_voice,seconds_min,seconds_max').eq('slug', chosen).maybeSingle(),
+        db.from('shorts_jobs').select('topic').eq('user_id', owner).eq('style', chosen).order('created_at', { ascending: false }).limit(150),
       ]);
       check(styleError, 'Reading the autopilot’s style');
       check(recentError, 'Reading recent shorts');
-      if (!style) throw new Error(`The autopilot’s style "${autopilot.style}" isn’t installed on this PC.`);
+      if (!style) throw new Error(`The autopilot’s style "${chosen}" isn’t installed on this PC.`);
 
-      const topic = pickStoryTopic((recent ?? []).map((one) => String(one.topic)), today);
+      const topic = pickTopic(chosen, (recent ?? []).map((one) => String(one.topic)), today);
       // Halfway through the style's length: a full story without running long.
       const seconds = Math.round(((style.seconds_min as number) + (style.seconds_max as number)) / 2);
       const { error: insertError } = await db.from('shorts_jobs').insert({
         user_id: owner,
-        style: autopilot.style,
+        style: chosen,
         topic,
         options: autopilotOptions(String(style.default_voice), seconds, decision.destination),
       });
       check(insertError, 'Queueing the autopilot’s short');
-      return { topic, destination: decision.destination };
+      return { topic, destination: decision.destination, style: chosen };
     },
 
     async approve(job, plan) {

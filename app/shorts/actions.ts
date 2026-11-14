@@ -20,7 +20,7 @@ import type { JobStatus, ShortJob } from '@/lib/shorts/types';
 import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/view';
 import { getPersonSettings } from '@/lib/locale/repository';
 import { isMissingTable } from '@/lib/supabase/errors';
-import { AUTOPILOT_COLUMNS, AUTOPILOT_STYLE, defaultAutopilot, readAutopilotInput, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
+import { AUTOPILOT_COLUMNS, AUTOPILOT_COLUMNS_ONE_STYLE, defaultAutopilot, readAutopilotInput, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
 import { activeQueueFor, getSchedule, hasActiveQueue, listQueue, scheduledSince, tablesReady } from '@/lib/youtube/repository';
 import { getYouTubeConnection } from '@/lib/youtube/connection';
 import { youtubeThumbnail } from '@/lib/youtube/posted-files';
@@ -197,10 +197,17 @@ type AutopilotState = { autopilot: Autopilot; ready: boolean };
 /** The table, or only the shelf migration's columns (42703 from a select), aren't there yet. */
 const autopilotMissing = (error: { code?: string }) => isMissingTable(error) || error.code === '42703';
 
+/** The row, with the styles column when it is there (202611140004), else as the earlier migrations left it. */
+async function readAutopilot(db: ShortsDb, userId: string) {
+  const all = await db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', userId).maybeSingle();
+  if (!all.error || all.error.code !== '42703') return { ...all, hasStyles: true };
+  return { ...(await db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS_ONE_STYLE).eq('user_id', userId).maybeSingle()), hasStyles: false };
+}
+
 export async function loadAutopilotAction(): Promise<Result<AutopilotState>> {
   return asUser<AutopilotState>('The autopilot couldn’t be loaded. Try again in a little while.', async (me) => {
     const { timeZone } = await getPersonSettings(me.userId);
-    const { data, error } = await me.db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', me.userId).maybeSingle();
+    const { data, error } = await readAutopilot(me.db, me.userId);
     if (error) {
       if (autopilotMissing(error)) return ok({ autopilot: defaultAutopilot(timeZone), ready: false });
       throw error;
@@ -216,18 +223,23 @@ export async function saveAutopilotAction(input: unknown): Promise<Result<Autopi
   return asUser('The autopilot couldn’t be saved. Try again in a little while.', async (me) => {
     const { timeZone } = await getPersonSettings(me.userId);
     // The service role writes: people only read their row. The day's start count is the worker's and is left as it is.
-    const { error } = await createAdminClient().from('shorts_autopilot').upsert(
-      {
-        user_id: me.userId, enabled: form.enabled, start_time: form.windowStart, window_end: form.windowEnd,
-        shelf_days: form.shelfDays, destinations: form.destinations, timezone: timeZone, style: AUTOPILOT_STYLE,
-      },
-      { onConflict: 'user_id' },
-    );
+    const row = {
+      user_id: me.userId, enabled: form.enabled, start_time: form.windowStart, window_end: form.windowEnd,
+      shelf_days: form.shelfDays, destinations: form.destinations, timezone: timeZone, style: form.styles[0],
+    };
+    const admin = createAdminClient();
+    let { error } = await admin.from('shorts_autopilot').upsert({ ...row, styles: form.styles }, { onConflict: 'user_id' });
+    // Before the styles column (PGRST204 from a write): bedtime stories alone still save.
+    if (error?.code === 'PGRST204') {
+      // One style fits in `style` alone; taking turns between two needs the column.
+      if (form.styles.length > 1) return fail('Making two kinds needs the latest autopilot migration in Supabase (202611140004).');
+      ({ error } = await admin.from('shorts_autopilot').upsert(row, { onConflict: 'user_id' }));
+    }
     if (error) {
       if (autopilotMissing(error)) return fail('The autopilot needs its migrations in Supabase first (202611140001 and 202611140002).');
       throw error;
     }
-    const { data } = await me.db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', me.userId).maybeSingle();
+    const { data } = await readAutopilot(me.db, me.userId);
     return ok(readAutopilotRow(data, timeZone));
   });
 }

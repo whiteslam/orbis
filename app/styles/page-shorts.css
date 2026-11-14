@@ -286,3 +286,9 @@ a.so-action { text-decoration: none; }
 .sh-health-row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .sh-health-warn dd { color: var(--sys-amber); font-weight: 600; }
 .sh-health-bad dd { color: var(--sys-red); font-weight: 600; }
+
+/* What the autopilot makes: toggle chips, like the YouTube days. */
+.sh-auto-kinds { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; }
+.sh-auto-kinds button { height: 38px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.sh-auto-kinds button[aria-pressed="true"] { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.sh-auto-kinds button:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }

@@ -121,7 +121,7 @@ async function main() {
           log('autopilot', error instanceof Error ? error.message : error);
           return null;
         });
-        if (started) log(`Autopilot queued (${started.destination}): ${started.topic}`);
+        if (started) log(`Autopilot queued (${started.style} for ${started.destination}): ${started.topic}`);
       }
       if (mode === 'paused') { mode = 'idle'; note = null; await db.heartbeat(cfg.owner, mode, note); }
 
