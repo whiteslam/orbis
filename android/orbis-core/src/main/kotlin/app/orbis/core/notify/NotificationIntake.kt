@@ -36,4 +36,21 @@ class NotificationIntake(
             logFailure("capture failed: ${e.javaClass.name}")
         }
     }
+
+    companion object {
+        /**
+         * Runs [read], which copies the facts out of the Android notification, and returns null
+         * if it throws. Reading the extras can unparcel an app's custom objects and throw (e.g.
+         * BadParcelableException on Android 12 and older); uncaught on the main thread, that
+         * would kill the app every time the notification is posted again. Logs the exception's
+         * class name only, never the text.
+         */
+        inline fun readSafely(logFailure: (String) -> Unit, read: () -> NotificationFacts): NotificationFacts? =
+            try {
+                read()
+            } catch (e: Exception) {
+                logFailure("read failed: ${e.javaClass.name}")
+                null
+            }
+    }
 }

@@ -49,4 +49,18 @@ class NotificationIntakeTest {
         assertTrue(thrown)
         assertTrue(logged.isEmpty())
     }
+
+    @Test fun `a notification whose extras cannot be read is logged by class name and skipped`() {
+        val facts = NotificationIntake.readSafely({ logged += it }) {
+            throw IllegalStateException("secret notification text")
+        }
+        assertEquals(null, facts)
+        assertEquals(listOf("read failed: java.lang.IllegalStateException"), logged)
+        assertTrue(logged.none { it.contains("secret") })
+    }
+
+    @Test fun `a notification that reads cleanly is passed through`() {
+        assertEquals(facts, NotificationIntake.readSafely({ logged += it }) { facts })
+        assertTrue(logged.isEmpty())
+    }
 }

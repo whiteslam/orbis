@@ -42,18 +42,9 @@ class OrbisNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
-        val extras = sbn.notification.extras
-        val facts = NotificationFacts(
-            key = sbn.key,
-            packageName = sbn.packageName,
-            title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
-            text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
-            bigText = extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString(),
-            postTime = sbn.postTime,
-            ongoing = sbn.isOngoing,
-            groupSummary = (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0,
-            otherProfile = sbn.user != Process.myUserHandle(),
-        )
+        // Everything read from the notification is inside readSafely: an app's bad extras must
+        // not crash Orbis (this runs on the main thread, outside the coroutine's catch).
+        val facts = NotificationIntake.readSafely({ Log.w(TAG, it) }) { factsOf(sbn) } ?: return
         val context = applicationContext
         scope.launch {
             NotificationIntake(
@@ -65,6 +56,21 @@ class OrbisNotificationListener : NotificationListenerService() {
                 logFailure = { Log.w(TAG, it) },
             ).handle(facts)
         }
+    }
+
+    private fun factsOf(sbn: StatusBarNotification): NotificationFacts {
+        val extras = sbn.notification.extras
+        return NotificationFacts(
+            key = sbn.key,
+            packageName = sbn.packageName,
+            title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
+            text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
+            bigText = extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString(),
+            postTime = sbn.postTime,
+            ongoing = sbn.isOngoing,
+            groupSummary = (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0,
+            otherProfile = sbn.user != Process.myUserHandle(),
+        )
     }
 
     private companion object {
