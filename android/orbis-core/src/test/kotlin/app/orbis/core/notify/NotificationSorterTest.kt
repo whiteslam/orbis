@@ -39,6 +39,28 @@ class NotificationSorterTest {
         assertTrue(c.getString("text").contains("debited"))
     }
 
+    // UPI apps put half the payment in the title and half in the body.
+    @Test
+    fun `a UPI payment split across title and body is a transaction`() {
+        val gpay = JSONObject(sort("com.google.android.apps.nbu.paisa.user", "Payment received\n₹500 credited to your account")!!.content)
+        assertEquals("500.00", gpay.getString("amount"))
+        assertEquals("INR", gpay.getString("currency"))
+        assertEquals("income", gpay.getString("direction"))
+
+        val phonepe = sort("com.phonepe.app", "Received ₹500 from Asha\nCredited to HDFC Bank a/c")!!
+        assertEquals("transaction", phonepe.kind)
+        val p = JSONObject(phonepe.content)
+        assertEquals("500.00", p.getString("amount"))
+        assertEquals("income", p.getString("direction"))
+        assertTrue(p.isNull("merchant"))
+
+        // The merchant rule takes the words after "to", up to "UPI": Swiggy.
+        val paytm = JSONObject(sort("net.one97.paytm", "Paid ₹250 to Swiggy\nUPI ref 123456789012")!!.content)
+        assertEquals("250.00", paytm.getString("amount"))
+        assertEquals("expense", paytm.getString("direction"))
+        assertEquals("Swiggy", paytm.getString("merchant"))
+    }
+
     @Test
     fun `the app is kept and a missing merchant is null`() {
         val s = sort("com.bank", "Rs 500 paid to 9876543210")!!

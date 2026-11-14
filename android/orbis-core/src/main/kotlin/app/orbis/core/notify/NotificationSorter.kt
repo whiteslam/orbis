@@ -104,7 +104,7 @@ object NotificationSorter {
                 ?.takeIf { it.isNotEmpty() }
             return build("missed_contact", app, maskedText, if (who == null) emptyMap() else mapOf("who" to who))
         }
-        TransactionParser.parse(rawText)?.let { t ->
+        parsePayment(rawText)?.let { t ->
             val merchant = t.merchant
                 ?.let { CapturePipeline.signalContent(Masking.mask(it), MAX_MERCHANT) }
                 ?.takeIf { it.isNotEmpty() }
@@ -123,6 +123,20 @@ object NotificationSorter {
         }
         if (packageName in JOB_APPS && CAREER.containsMatchIn(rawText)) return build("career", app, maskedText, emptyMap())
         return null
+    }
+
+    /**
+     * A notification's text is its title line, then its body. UPI apps split a payment across the
+     * two ("Payment received" / "₹500 credited to your account"), and the parser counts each line
+     * as its own candidate, so the whole text is ambiguous. Try the body first, then the title,
+     * then the whole text; the first that parses wins.
+     */
+    private fun parsePayment(rawText: String): ParsedTransaction? {
+        val newline = rawText.indexOf('\n')
+        if (newline < 0) return TransactionParser.parse(rawText)
+        return TransactionParser.parse(rawText.substring(newline + 1))
+            ?: TransactionParser.parse(rawText.substring(0, newline))
+            ?: TransactionParser.parse(rawText)
     }
 
     /** Builds the JSON, shortening `text` until the whole content is at most 4,000 characters. */
