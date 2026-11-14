@@ -17,6 +17,29 @@ export const SOURCE_LABELS: Record<Source, string> = {
   location: 'Location',
 };
 
+// Only these sources read anything in this version; the others are listed so people see what is coming.
+export const READY: ReadonlySet<Source> = new Set<Source>(['test', 'notifications']);
+
+export type TurnOnWords = { title: string; read: string; kept: string; goes: string; next: string };
+
+/** What turning a source on means, said before it happens. Every READY source has an entry. */
+export const TURN_ON_WORDS: Partial<Record<Source, TurnOnWords>> = {
+  test: {
+    title: 'Turn on Test source?',
+    read: 'Only the made-up items you send from Try it below. Nothing else on this phone.',
+    kept: 'Each item, in Orbis’s encrypted store, for 30 days.',
+    goes: 'A short, encrypted signal, with codes and passwords masked.',
+    next: 'Nothing else needs setting up.',
+  },
+  notifications: {
+    title: 'Read your notifications',
+    read: 'The title and text of notifications that arrive on this phone. Blocked apps and contacts are skipped, and banking apps start blocked. Bank and UPI text messages are read unless you block the sender.',
+    kept: 'The text stays on this phone, encrypted, for 30 days. Card and account numbers are hidden first, and one-time codes are never kept.',
+    goes: 'Only what Orbis sorts out leaves the phone, encrypted: payments for you to review in Money, deliveries, missed calls and job mail.',
+    next: 'Next, Android asks you to give Orbis notification access. If it says the setting is restricted, open App info for Orbis, tap the menu, and choose Allow restricted settings.',
+  },
+};
+
 const WIRE_NAMES: ReadonlySet<string> = new Set(SOURCES);
 
 /** True for the nine wire names only. */

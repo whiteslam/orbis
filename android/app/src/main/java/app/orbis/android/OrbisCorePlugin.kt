@@ -1,10 +1,13 @@
 package app.orbis.android
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import androidx.webkit.WebViewFeature
 import app.orbis.core.rules.CapturedItem
 import app.orbis.core.rules.Decision
@@ -233,6 +236,27 @@ class OrbisCorePlugin : Plugin() {
         withContext(Dispatchers.Main) {
             val activity = activity ?: throw Rejection(PluginInput.NO_ACTIVITY)
             CoreController.openAppInfo(activity)
+        }
+        null
+    }
+
+    /** Whether Android has given Orbis notification access (the listener only runs once it has). */
+    @PluginMethod
+    fun notificationAccess(call: PluginCall) = handle(call) {
+        val granted = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+        JSObject().put("granted", granted)
+    }
+
+    @PluginMethod
+    fun openNotificationAccess(call: PluginCall) = handle(call) {
+        withContext(Dispatchers.Main) {
+            val activity = activity ?: throw Rejection(PluginInput.NO_ACTIVITY)
+            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                activity.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                throw Rejection(PluginInput.FAILED)
+            }
         }
         null
     }

@@ -83,6 +83,8 @@ interface OrbisCoreNative {
   setPushToken(options: { token: string }): Promise<void>;
   openBatterySettings(): Promise<void>;
   openAppInfo(): Promise<void>;
+  notificationAccess(): Promise<{ granted: boolean }>;
+  openNotificationAccess(): Promise<void>;
 }
 
 export interface OrbisCorePlugin {
@@ -106,6 +108,10 @@ export interface OrbisCorePlugin {
   setPushToken(options: { token: string }): Promise<void>;
   openBatterySettings(): Promise<void>;
   openAppInfo(): Promise<void>;
+  /** Whether Android has given Orbis notification access (the Notifications source reads nothing without it). */
+  notificationAccess(): Promise<{ granted: boolean }>;
+  /** Opens Android's Notification access screen, where the person gives it. */
+  openNotificationAccess(): Promise<void>;
 }
 
 const native = registerPlugin<OrbisCoreNative>('OrbisCore');
@@ -129,4 +135,6 @@ export const OrbisCore: OrbisCorePlugin = {
   setPushToken: (options) => native.setPushToken(options),
   openBatterySettings: () => native.openBatterySettings(),
   openAppInfo: () => native.openAppInfo(),
+  notificationAccess: () => native.notificationAccess(),
+  openNotificationAccess: () => native.openNotificationAccess(),
 };

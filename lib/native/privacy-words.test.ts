@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { SOURCES } from '@/lib/device/sources';
-import { activityWords, addToList, blockedFirst, isSource, lastSeenWords, pauseState, SOURCE_LABELS, syncWords, toggleBlocked } from './privacy-words';
+import { activityWords, addToList, blockedFirst, isSource, lastSeenWords, pauseState, READY, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from './privacy-words';
 
 test('every wire name has a plain label, and only wire names are sources', () => {
   for (const source of SOURCES) assert.ok(SOURCE_LABELS[source].length > 0, source);
@@ -89,4 +89,22 @@ test('this phone’s sync reads as one plain line: when, what is waiting, and wh
   assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: 'constructor' }, now), 'Not synced yet · Couldn’t sync: constructor');
   // A blank reason is no reason.
   assert.equal(syncWords({ lastSyncAt: null, pendingSignals: 0, lastSyncError: ' ' }, now), 'Not synced yet');
+});
+
+test('notifications has its own turn-on words', () => {
+  const words = TURN_ON_WORDS.notifications;
+  assert.ok(words);
+  assert.equal(words.title, 'Read your notifications');
+  for (const field of [words.title, words.read, words.kept, words.goes, words.next]) assert.ok(field.trim().length > 0);
+  assert.match(words.next, /Allow restricted settings/);
+});
+
+test('every READY source has turn-on words', () => {
+  assert.ok(READY.has('test'));
+  assert.ok(READY.has('notifications'));
+  for (const source of READY) {
+    const words = TURN_ON_WORDS[source];
+    assert.ok(words, source);
+    for (const field of Object.values(words)) assert.ok(field.trim().length > 0, source);
+  }
 });

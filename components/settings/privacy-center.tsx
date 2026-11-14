@@ -11,14 +11,12 @@ import { batteryHelp } from '@/lib/native/battery-help';
 import { linkThisPhone, pushPlugin } from '@/lib/native/link-phone';
 import { OrbisCore, type ActivityEntry, type CoreStatus, type LauncherApp, type Privacy, type TestCaptureResult } from '@/lib/native/orbis-core';
 import { pauseUntil, type PauseChoice } from '@/lib/native/pause';
-import { activityWords, addToList, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, reasonWords, SOURCE_LABELS, syncWords, toggleBlocked } from '@/lib/native/privacy-words';
+import { activityWords, addToList, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, READY, reasonWords, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from '@/lib/native/privacy-words';
 
 type Message = { text: string; success: boolean } | null;
 
 const destructive = { background: 'var(--fd-alert)', color: 'var(--fd-alert-ink)' } as const;
 const UNREACHABLE = 'Couldn’t reach this phone’s Orbis service. Try again.';
-// Only the Test source reads anything in this version; the others are listed so people see what is coming.
-const READY: ReadonlySet<Source> = new Set<Source>(['test']);
 const APPS_SHOWN = 8;
 const ACTIVITY_SHOWN = 10;
 
@@ -316,16 +314,19 @@ function PhoneLinkNotice({ userId, registered, onLinked }: Readonly<{ userId: st
   );
 }
 
-/** What turning a source on means, said before it happens. Only the Test source reads anything yet. */
+/** What turning a source on means, said before it happens (the words are in TURN_ON_WORDS). */
 function TurnOnSheet({ source, busy, onConfirm, onCancel }: Readonly<{ source: Source; busy: boolean; onConfirm: () => void; onCancel: () => void }>) {
+  const words = TURN_ON_WORDS[source];
+  if (!words) return null;
   return (
     <fieldset className="st-cell pv-sheet" aria-label={`Turn on ${SOURCE_LABELS[source]}`}>
       <div className="fd-source" style={{ display: 'block' }}>
-        <div><strong>Turn on {SOURCE_LABELS[source]}?</strong></div>
+        <div><strong>{words.title}</strong></div>
         <ul className="pv-points">
-          <li><b>What is read:</b> only the made-up items you send from Try it below. Nothing else on this phone.</li>
-          <li><b>Kept on this phone:</b> each item, in Orbis’s encrypted store, for 30 days.</li>
-          <li><b>Sent to the server:</b> a short, encrypted signal, with codes and passwords masked.</li>
+          <li><b>What is read:</b> {words.read}</li>
+          <li><b>Kept on this phone:</b> {words.kept}</li>
+          <li><b>Sent to the server:</b> {words.goes}</li>
+          <li>{words.next}</li>
           <li>You can turn it off any time. That deletes what Orbis kept from it.</li>
         </ul>
         <div className="fd-act">
@@ -343,18 +344,46 @@ function Sources({ status, onStatus, notifications, onChanged }: Readonly<{ stat
   const [message, setMessage] = useState<Message>(null);
   const [isPending, startTransition] = useTransition();
   const anyOn = SOURCES.some((source) => status.sources[source]);
+  // Whether Android has given Orbis notification access; null until checked or when it couldn't be.
+  const [access, setAccess] = useState<boolean | null>(null);
+  const notificationsOn = status.sources.notifications;
+
+  // While Notifications is on, check access now and on every return from Android's settings screen.
+  useEffect(() => {
+    if (!notificationsOn) return;
+    const check = () => OrbisCore.notificationAccess().then(({ granted }) => setAccess(granted), () => setAccess(null));
+    const onReturn = () => { if (document.visibilityState === 'visible') check(); };
+    check();
+    document.addEventListener('visibilitychange', onReturn);
+    return () => document.removeEventListener('visibilitychange', onReturn);
+  }, [notificationsOn]);
 
   function turnOn(source: Source) {
     setMessage(null);
     startTransition(async () => {
       try {
         onStatus(await OrbisCore.setSource({ source, enabled: true }));
-        setAsking(null);
-        setMessage({ text: `${SOURCE_LABELS[source]} is on.`, success: true });
       } catch {
         setMessage({ text: UNREACHABLE, success: false });
+        return;
       }
+      setAsking(null);
+      // Turned on is not the same as able to read: Notifications also needs Android's own access.
+      let needsAccess = false;
+      if (source === 'notifications') {
+        try {
+          const { granted } = await OrbisCore.notificationAccess();
+          setAccess(granted);
+          needsAccess = !granted;
+        } catch { /* it is on; the check runs again when the person returns */ }
+      }
+      setMessage({ text: needsAccess ? `${SOURCE_LABELS[source]} is on. Give Orbis notification access below so it can start reading.` : `${SOURCE_LABELS[source]} is on.`, success: true });
     });
+  }
+
+  function openAccess() {
+    setMessage(null);
+    OrbisCore.openNotificationAccess().catch(() => setMessage({ text: 'That settings page couldn’t be opened. Open it from Android Settings → Notifications → Notification access.', success: false }));
   }
 
   function turnOff(source: Source) {
@@ -404,6 +433,16 @@ function Sources({ status, onStatus, notifications, onChanged }: Readonly<{ stat
         })}
       </div>
       <p className="fd-note tight">Nothing is read until you turn it on.{!status.registered && ' Sources can be turned on once this phone is added to your account.'}</p>
+      {notificationsOn && access === false && (
+        <div className="st-cell">
+          <div className="fd-source" style={{ display: 'block' }}>
+            <div><strong>Notifications</strong><p>Orbis can’t read notifications yet.</p></div>
+            <div className="fd-act">
+              <button type="button" className="pf-pill primary" onClick={openAccess}>Open notification access</button>
+            </div>
+          </div>
+        </div>
+      )}
       {anyOn && notifications === false && <p className="fd-note tight">Turn on notifications for this phone in Notifications above, so “Orbis is active” shows while it reads.</p>}
       {asking && <TurnOnSheet source={asking} busy={isPending} onConfirm={() => turnOn(asking)} onCancel={() => setAsking(null)} />}
       {turningOff && (
