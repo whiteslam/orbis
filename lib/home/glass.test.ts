@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { glassActivity, restOfToday, STEP_GOAL } from './glass.ts';
+import { glassActivity, restOfToday, skyFor, STEP_GOAL } from './glass.ts';
 import type { RoutineEvent, RoutineToday } from '../routines/types.ts';
 
 test('STEP_GOAL is 10,000', () => {
@@ -59,4 +59,12 @@ test('restOfToday keeps upcoming unanswered routines in order, at most 4', () =>
     { id: 'd', name: 'Fourth', time: '20:00' },
   ]);
   assert.equal(restOfToday(list, 2).length, 2);
+});
+
+test('skyFor picks night first, then rain, cloud and clear', () => {
+  assert.equal(skyFor({ isDay: false, rainingNow: true, weatherCode: 61 }), 'night');
+  assert.equal(skyFor({ isDay: true, rainingNow: true, weatherCode: 61 }), 'rain');
+  assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 3 }), 'cloud');
+  assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 48 }), 'cloud');
+  assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 0 }), 'clear');
 });

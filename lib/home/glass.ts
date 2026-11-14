@@ -34,3 +34,13 @@ export function restOfToday(due: RoutineToday[], max = 4): Array<{ id: string; n
     .slice(0, max)
     .map((d) => ({ id: d.routine.id, name: d.routine.title, time: d.routine.atTime }));
 }
+
+export type Sky = 'night' | 'rain' | 'cloud' | 'clear';
+
+/** The Glass weather widget's tint: night first, then rain falling now, then cloud or fog (WMO 1–48), else clear. */
+export function skyFor(weather: { isDay: boolean; rainingNow: boolean; weatherCode: number }): Sky {
+  if (!weather.isDay) return 'night';
+  if (weather.rainingNow) return 'rain';
+  if (weather.weatherCode >= 1 && weather.weatherCode <= 48) return 'cloud';
+  return 'clear';
+}

@@ -80,7 +80,10 @@ function Headline({ article, line, lead }: Readonly<{ article: NewsArticle; line
  * market. Sits under the brief and the mail. The headlines come from NewsData;
  * the one-line reasons and the sector reading are a model's, and say so.
  */
-export function NewsCard() {
+export function NewsCard({ variant = 'magazine' }: Readonly<{
+  /** 'magazine' is Classic's news section; 'glass' is the Glass view's top story and market read widgets. */
+  variant?: 'magazine' | 'glass';
+}> = {}) {
   const loc = usePersonLocale();
   const [state, setState] = useState<State>(() => (lastDigest && Date.now() - lastDigest.at < CLIENT_TTL_MS ? { status: 'ready', digest: lastDigest.digest } : { status: 'loading' }));
 
@@ -98,6 +101,8 @@ export function NewsCard() {
       });
     return () => { live = false; };
   }, []);
+
+  if (variant === 'glass') return <GlassNews state={state} />;
 
   if (state.status === 'loading') {
     return <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news…</output>;
@@ -169,5 +174,53 @@ export function NewsCard() {
         {analysis ? 'Reasons and market read are written by AI from the headlines. A reading of the news, not investment advice.' : 'Headlines via NewsData.'}
       </p>
     </section>
+  );
+}
+
+/**
+ * The Glass view's news: the top story and, when there is one, the market read,
+ * as two widgets placed by the Glass grid. Nothing at all when the news can't be had.
+ */
+function GlassNews({ state }: Readonly<{ state: State }>) {
+  const loc = usePersonLocale();
+  if (state.status === 'loading') {
+    return <output className="tg-panel tg-story tg-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Reading today’s news…</output>;
+  }
+  if (state.status === 'error' || state.digest.state !== 'ok') return null;
+  const { digest } = state;
+  const lead = digest.articles[0];
+  const analysis = digest.analysis;
+  return (
+    <>
+      {analysis && (
+        <section className="tg-panel tg-market" aria-labelledby="tg-market-title">
+          <h2 id="tg-market-title">Market read</h2>
+          <p className="tg-market-summary">{analysis.market.summary}</p>
+          {analysis.market.sectors.length > 0 && (
+            <ul>
+              {analysis.market.sectors.map((sector) => {
+                const outlook = OUTLOOK[sector.outlook];
+                const Icon = outlook.icon;
+                return (
+                  <li key={sector.sector} className={`is-${sector.outlook}`}>
+                    <b><Icon size={13} strokeWidth={2.4} aria-hidden="true" />{sector.sector}<span className="sr-only"> {outlook.label}</span></b>
+                    <span>{sector.why}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+      {lead && (
+        <a className="tg-panel tg-story" href={lead.url} target="_blank" rel="noopener noreferrer">
+          <NewsPhoto article={lead} />
+          <span className="tg-story-text">
+            <span className="tg-story-title">{lead.title}</span>
+            <span className="tg-story-meta" suppressHydrationWarning>{lead.source}, {ago(lead.publishedAt, loc)}</span>
+          </span>
+        </a>
+      )}
+    </>
   );
 }

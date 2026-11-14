@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Cloud, LoaderCircle, MapPin } from 'lucide-react';
 import type { BriefWeather } from '@/lib/home/weather';
 import type { WeatherPhase } from '@/lib/home/brief-gate';
+import { skyFor } from '@/lib/home/glass';
+import { curveLabels, curvePoints } from '@/lib/home/hours';
 
 type WeatherResponse = BriefWeather & { place: string | null; stale: boolean };
 
@@ -44,7 +46,13 @@ function rainNote(weather: BriefWeather) {
   return null;
 }
 
-export function WeatherCard({ onWeather, onPhase, openPersonal }: Readonly<{ onWeather: (weather: BriefWeather | null) => void; onPhase?: (phase: WeatherPhase) => void; openPersonal: () => void }>) {
+export function WeatherCard({ onWeather, onPhase, openPersonal, variant = 'line' }: Readonly<{
+  onWeather: (weather: BriefWeather | null) => void;
+  onPhase?: (phase: WeatherPhase) => void;
+  openPersonal: () => void;
+  /** 'line' is Classic's one line of weather; 'glass' is the Glass view's tall widget. */
+  variant?: 'line' | 'glass';
+}>) {
   const [state, setState] = useState<State>(() => (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS ? lastResult.state : { status: 'loading' }));
 
   useEffect(() => {
@@ -88,6 +96,8 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: Readonly<{ onW
   // once, with the weather if there is any, rather than once before and once after.
   useEffect(() => { onPhase?.(state.status); }, [onPhase, state.status]);
 
+  if (variant === 'glass') return <GlassWeather state={state} openPersonal={openPersonal} />;
+
   // Weather is a line of text on Home, not a card: one number and the two facts
   // that change what you'd do about it.
   if (state.status === 'loading') {
@@ -121,6 +131,51 @@ export function WeatherCard({ onWeather, onPhase, openPersonal }: Readonly<{ onW
           <span>{place}</span>
         </p>
       </div>
+    </section>
+  );
+}
+
+const CURVE_WIDTH = 420;
+const CURVE_HEIGHT = 70;
+
+/** The Glass view's weather: a tall frosted widget tinted by the sky, with the next hours as a curve. */
+function GlassWeather({ state, openPersonal }: Readonly<{ state: State; openPersonal: () => void }>) {
+  if (state.status !== 'ready') {
+    let body;
+    if (state.status === 'loading') body = <output className="fd-weather-quiet"><LoaderCircle className="workbook-spinner" size={14} /> Checking the weather…</output>;
+    else if (state.status === 'needs-city') {
+      body = (
+        <button type="button" className="fd-weather-quiet fd-weather-button" onClick={openPersonal}>
+          <MapPin size={14} aria-hidden="true" /> Allow location, or set your home city, for local weather.
+        </button>
+      );
+    } else body = <p className="fd-weather-quiet"><Cloud size={14} aria-hidden="true" /> {state.message}</p>;
+    return <section className="tg-weather" data-sky="clear" aria-label="Weather">{body}</section>;
+  }
+
+  const { weather, place } = state;
+  const rain = rainNote(weather);
+  // Entries cached before hourly temperatures existed have no hours: no curve then.
+  const hours = weather.hours ?? [];
+  const points = curvePoints(hours, CURVE_WIDTH, CURVE_HEIGHT);
+  const first = hours[0];
+  const last = hours.at(-1);
+  return (
+    <section className="tg-weather" data-sky={skyFor(weather)} aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
+      <p className="tg-weather-place">{place}, {weather.condition.toLowerCase()}</p>
+      <p className="tg-weather-temp">{weather.temperature}°</p>
+      <p className="tg-weather-meta">Feels {weather.feelsLike}°, humidity {weather.humidity}%, wind {weather.windSpeed} km/h</p>
+      {points.length > 0 && first && last && (
+        <div className="tg-curve">
+          <svg viewBox={`0 0 ${CURVE_WIDTH} ${CURVE_HEIGHT}`} preserveAspectRatio="none" role="img" aria-label={`Temperature over the next hours, from ${first.temperature}° to ${last.temperature}°`}>
+            <polyline points={points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')} fill="none" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <div className="tg-curve-labels">
+            {curveLabels(hours).map((hour) => <span key={hour.hour}>{hour.hour} <b>{hour.temperature}°</b></span>)}
+          </div>
+        </div>
+      )}
+      {rain && <p className="tg-weather-rain">{rain[0].toUpperCase()}{rain.slice(1)}.</p>}
     </section>
   );
 }
