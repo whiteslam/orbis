@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-const { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, readTransactionSignal, reviewLine } = await import('@/lib/finance/phone-review');
+const { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, readTransactionSignal, reviewLine, toPhoneTransactionView } = await import('@/lib/finance/phone-review');
 const { encryptForUser } = await import('@/lib/crypto/user-keys');
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -216,5 +216,18 @@ describe('reviewLine', () => {
 
   it('uses the payment’s own currency', () => {
     expect(reviewLine({ ...payment, currency: 'USD', amount: 12.5 }, 'en-US', 'INR', 'UTC').title).toBe('Swiggy, $12.50');
+  });
+
+  it('keeps paise on a fractional amount and none on a whole one', () => {
+    expect(reviewLine({ ...payment, amount: 1250.5 }, 'en-IN', 'INR', 'Asia/Kolkata').title).toContain('₹1,250.50');
+    expect(reviewLine({ ...payment, amount: 1250 }, 'en-IN', 'INR', 'Asia/Kolkata').title).toBe('Swiggy, ₹1,250');
+  });
+});
+
+describe('toPhoneTransactionView', () => {
+  it('never carries the notification text', () => {
+    const view = toPhoneTransactionView({ signalId: SIGNAL, amount: 1250, currency: 'INR', direction: 'expense', merchant: 'Swiggy', occurredAt: '2026-11-14T08:00:00Z', text: 'Rs 1250.00 spent at SWIGGY a/c XX1234' });
+    expect(Object.keys(view).sort()).toEqual(['amount', 'currency', 'direction', 'merchant', 'occurredAt', 'signalId']);
+    expect(JSON.stringify(view)).not.toContain('XX1234');
   });
 });

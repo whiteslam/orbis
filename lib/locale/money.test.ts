@@ -28,3 +28,8 @@ test('formatMoney: matches lib/finance/money.ts for en-IN', () => {
 test('formatMoney: invalid currency falls back to code and amount', () => {
   assert.equal(formatMoney(5, 'XYZ1', 'en-IN'), 'XYZ1 5');
 });
+
+test('formatMoney: exact decimals keep paise only when the amount has them', () => {
+  assert.equal(formatMoney(1250.5, 'INR', 'en-IN', { decimals: 'exact' }), '₹1,250.50');
+  assert.equal(formatMoney(1250, 'INR', 'en-IN', { decimals: 'exact' }), '₹1,250');
+});

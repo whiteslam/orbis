@@ -5,8 +5,7 @@ import { Check, LoaderCircle } from 'lucide-react';
 import { acceptPhoneTransactionAction, dismissPhoneTransactionAction, loadPhoneTransactionsAction } from '@/app/finance/phone-review-actions';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/lib/finance/manual';
-import { reviewLine } from '@/lib/finance/phone-review-line';
-import type { PhoneTransaction } from '@/lib/finance/phone-review';
+import { reviewLine, type PhoneTransactionView } from '@/lib/finance/phone-review-line';
 import { safeAction } from '@/lib/client/safe-action';
 
 type Busy = { signalId: string; action: 'add' | 'dismiss' } | null;
@@ -18,7 +17,7 @@ type Busy = { signalId: string; action: 'add' | 'dismiss' } | null;
  */
 export function PhoneReview() {
   const loc = usePersonLocale();
-  const [items, setItems] = useState<PhoneTransaction[]>([]);
+  const [items, setItems] = useState<PhoneTransactionView[]>([]);
   const [categories, setCategories] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<Busy>(null);
   const [failure, setFailure] = useState<{ signalId: string; message: string } | null>(null);
@@ -33,7 +32,7 @@ export function PhoneReview() {
 
   if (!items.length) return null;
 
-  async function run(item: PhoneTransaction, action: 'add' | 'dismiss') {
+  async function run(item: PhoneTransactionView, action: 'add' | 'dismiss') {
     if (busy) return;
     setBusy({ signalId: item.signalId, action });
     setFailure(null);

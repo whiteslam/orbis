@@ -11,7 +11,7 @@ import { isUuid } from '@/lib/validate/id';
 // 'transaction'), encrypted. Money shows them for review; accepting one saves an
 // ordinary transaction and removes the signal. Nothing here logs a signal's content.
 
-export { reviewLine } from '@/lib/finance/phone-review-line';
+export { reviewLine, toPhoneTransactionView, type PhoneTransactionView } from '@/lib/finance/phone-review-line';
 
 export type PhoneTransaction = {
   signalId: string;

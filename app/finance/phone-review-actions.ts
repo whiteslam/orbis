@@ -2,17 +2,18 @@
 
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUserId } from '@/lib/auth/session';
-import { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, type AcceptPhoneTransactionInput, type PhoneTransaction } from '@/lib/finance/phone-review';
+import { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, type AcceptPhoneTransactionInput } from '@/lib/finance/phone-review';
+import { toPhoneTransactionView, type PhoneTransactionView } from '@/lib/finance/phone-review-line';
 import { createClient } from '@/lib/supabase/server';
 
 type Result = { success: boolean; message: string };
 
 /** Payments the phone read that are waiting for review. Empty when signed out or when they can't be loaded. */
-export async function loadPhoneTransactionsAction(): Promise<PhoneTransaction[]> {
+export async function loadPhoneTransactionsAction(): Promise<PhoneTransactionView[]> {
   const userId = await getAuthenticatedUserId();
   if (!userId) return [];
   try {
-    return await listPhoneTransactions(await createClient(), userId);
+    return (await listPhoneTransactions(await createClient(), userId)).map(toPhoneTransactionView);
   } catch {
     return [];
   }

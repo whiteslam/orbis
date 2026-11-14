@@ -2,11 +2,12 @@
 
 /**
  * `decimals: 'auto'` (default) shows no decimals when compact or at 1000 and over, otherwise two.
- * `decimals: 0` always shows whole units. An unknown currency falls back to "CODE amount".
+ * `decimals: 0` always shows whole units. `decimals: 'exact'` shows whole units for a whole amount and
+ * both decimals for a fractional one, whatever its size (what a ledger row would say). An unknown currency falls back to "CODE amount".
  */
-export function formatMoney(amount: number, currency: string, locale: string, opts: { compact?: boolean; decimals?: 'auto' | 0 } = {}): string {
+export function formatMoney(amount: number, currency: string, locale: string, opts: { compact?: boolean; decimals?: 'auto' | 'exact' | 0 } = {}): string {
   const compact = opts.compact ?? false;
-  const whole = compact || opts.decimals === 0 || amount >= 1000;
+  const whole = compact || opts.decimals === 0 || (opts.decimals === 'exact' ? Number.isInteger(amount) : amount >= 1000);
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
