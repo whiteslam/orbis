@@ -193,24 +193,35 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
  * Before Retry puts a failed row back in the queue: if it kept an upload session,
  * ask that session whether YouTube already has the whole video. 'published' means
  * it did, and the row is now marked published; 'requeue' means upload it again,
- * as Retry always has. Any doubt (no session, no sign-in, no answer) is 'requeue'.
+ * as Retry always has (no session, or the session answered without the video).
+ * When the session can't be asked at all, the row is left as it is, session kept:
+ * 'reconnect' (no YouTube sign-in) or 'unavailable' (Google or storage didn't answer).
  */
-export async function settleFailedRow(admin: Admin, userId: string, id: string, deps: { fetch?: typeof fetch } = {}): Promise<'published' | 'requeue'> {
+export async function settleFailedRow(
+  admin: Admin,
+  userId: string,
+  id: string,
+  deps: { fetch?: typeof fetch } = {},
+): Promise<'published' | 'requeue' | 'reconnect' | 'unavailable'> {
   const fetchImpl = deps.fetch ?? timedFetch;
   const row = await failedRow(admin, userId, id);
   if (!row?.uploadUrl || !ownPath(userId, row.videoPath)) return 'requeue';
 
   const refreshToken = await getYouTubeRefreshToken(admin, userId);
-  if (!refreshToken) return 'requeue';
+  if (!refreshToken) return 'reconnect';
   let accessToken: string;
   try {
     accessToken = await mintAccessToken(refreshToken, fetchImpl);
-  } catch {
-    return 'requeue';
+  } catch (error) {
+    if (error instanceof YouTubeAuthError && error.reconnect) {
+      await markYouTubeReconnect(admin, userId);
+      return 'reconnect';
+    }
+    return 'unavailable';
   }
 
   const signed = await signVideo(admin, row.videoPath);
-  if (!('url' in signed)) return 'requeue';
+  if (!('url' in signed)) return 'unavailable';
 
   const answer = await askSession(row.uploadUrl, accessToken, row, {
     readRange: rangeReader(signed.url, fetchImpl),

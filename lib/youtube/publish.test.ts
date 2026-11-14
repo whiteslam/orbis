@@ -537,13 +537,32 @@ test('settling a failed row without a session asks to requeue without calling an
   assert.equal(calls.length, 0);
 });
 
-test('settling when Google refuses the token asks to requeue', async () => {
+// Without a sign-in the old session can't be asked, and it may hold the whole
+// video: Retry must keep it rather than requeue (which would upload it again).
+test('settling when Google refuses the token can’t tell, and asks for a reconnect', async () => {
   state.failedRow = failedWithSession();
   state.mint = async () => { throw new YouTubeAuthError('Google stopped accepting Orbis’s access. Connect again.', true); };
   const { fetchImpl, calls } = settleFetch(() => Response.json({ id: 'yt-1' }, { status: 200 }));
-  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'requeue');
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'reconnect');
   assert.equal(calls.length, 0);
   assert.deepEqual(state.settled, []);
+});
+
+test('settling with no refresh token asks for a reconnect too', async () => {
+  state.failedRow = failedWithSession();
+  state.refreshToken = null;
+  const { fetchImpl } = settleFetch(answer503);
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'reconnect');
+});
+
+test('settling when Google can’t be reached or the video won’t sign can’t tell either', async () => {
+  state.failedRow = failedWithSession();
+  state.mint = async () => { throw new TypeError('fetch failed'); };
+  const { fetchImpl } = settleFetch(answer503);
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'unavailable');
+  state.mint = null;
+  state.signed = 'failed';
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'unavailable');
 });
 
 test('an uploading row that holds an error is still picked by Post now', async () => {

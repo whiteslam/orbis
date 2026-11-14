@@ -173,6 +173,8 @@ export async function removeQueueItemAction(id: unknown): Promise<Result<QueueIt
 
 /** A failed video goes back to the front of the queue with fresh attempts. */
 const ALREADY_POSTED = 'It had already posted to YouTube, so it wasn’t uploaded again.';
+const RETRY_RECONNECT = 'Connect YouTube again, then Retry. YouTube may already have this video, so Orbis checks before uploading it again.';
+const RETRY_UNAVAILABLE = 'YouTube couldn’t be checked just now, so the video wasn’t queued again. Try again in a little while.';
 
 /**
  * Puts a failed video back at the front of the queue. First, if it kept an upload
@@ -183,7 +185,11 @@ export async function retryQueueItemAction(id: unknown): Promise<Result<{ queue:
   if (!isUuid(id)) return INVALID;
   return asUser<{ queue: QueueItem[]; message: string | null }>('The video couldn’t be retried. Try again in a little while.', async (me) => {
     const admin = createAdminClient();
-    if ((await settleFailedRow(admin, me.userId, id)) === 'published') return ok({ queue: await listQueue(admin, me.userId), message: ALREADY_POSTED });
+    const settled = await settleFailedRow(admin, me.userId, id);
+    if (settled === 'published') return ok({ queue: await listQueue(admin, me.userId), message: ALREADY_POSTED });
+    // The old upload can't be asked, and it may hold the whole video: keep it rather than upload again.
+    if (settled === 'reconnect') return fail(RETRY_RECONNECT);
+    if (settled === 'unavailable') return fail(RETRY_UNAVAILABLE);
     if (!(await retryFailed(admin, me.userId, id))) return fail(MOVED);
     return ok({ queue: await listQueue(admin, me.userId), message: null });
   });
