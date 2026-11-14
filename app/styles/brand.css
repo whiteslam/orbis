@@ -306,8 +306,8 @@ body { font-weight: 400; }
 /* ─── Logo ─────────────────────────────────────────────────────────────
    A conic-gradient ring and a hole div at 45% — never an SVG stroke. The ring
    is masked so the hole is genuinely see-through on any surface; the hole div
-   marks the 45% and stays transparent. The marketing sheet squares the mark per
-   context; those rules are overridden here at the same specificity. */
+   marks the 45% and stays transparent. The mask cuts only the hole, so the
+   outer circle is this border-radius: nothing else may set one on the mark. */
 .orbis-mark,
 .mkt-brand .orbis-mark,
 .wl-brand .orbis-mark {
