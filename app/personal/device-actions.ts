@@ -1,6 +1,6 @@
 'use server';
 
-// Settings → What Orbis can see: the person's phones, and what Orbis kept from each
+// Settings → Phone access: the person's phones, and what Orbis kept from each
 // source on the server. The cookie client only, so row-level security scopes every
 // read and write to the signed-in person; the same signed-in and unlocked checks
 // as app/personal/actions.ts.

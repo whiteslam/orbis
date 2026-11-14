@@ -49,18 +49,28 @@ a.so-action { text-decoration: none; }
 .sh-status.is-done { background: var(--fd-wash); box-shadow: none; color: var(--fd-accent); }
 .sh-status.is-failed { background: var(--fd-alert-wash); box-shadow: none; color: var(--fd-alert); }
 
-/* The board: style sheets as picture cards, two to a row on a phone. */
-.sh-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
-.sh-style { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; overflow: hidden; border: 0; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
-.sh-style:hover { box-shadow: inset 0 0 0 1px var(--so-accent); transform: translateY(-2px); }
-.sh-style:focus-visible, .sh-tile:focus-visible, .sh-open-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+/* The board: style sheets as big picture cards, one to a row on a phone, two
+   on a wider screen, three on the desktop. Each card is the pick button with
+   the "i" (about) button beside it, not inside it. */
+.sh-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.sh-style { position: relative; overflow: hidden; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); transition: transform .18s ease, box-shadow .18s ease; }
+.sh-style:has(.sh-style-pick:hover) { box-shadow: inset 0 0 0 1px var(--so-accent); transform: translateY(-2px); }
+.sh-style-pick { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sh-style-pick:focus-visible, .sh-style-info:focus-visible, .sh-style-close:focus-visible, .sh-tile:focus-visible, .sh-open-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-style-pick:focus-visible { outline-offset: -2px; }
+.sh-style-info { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-veil); -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); box-shadow: inset 0 0 0 1px var(--fd-rule), 0 2px 10px rgba(0,0,0,.18); color: var(--fd-ink); cursor: pointer; transition: color .15s ease, box-shadow .15s ease; }
+.sh-style-info:hover { color: var(--so-accent); box-shadow: inset 0 0 0 1px var(--so-accent), 0 2px 10px rgba(0,0,0,.18); }
 .sh-sheet { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--fd-rule); }
 .sh-sheet.is-large { aspect-ratio: auto; max-height: 520px; object-fit: contain; border-radius: var(--r-xl); }
 .sh-sheet.is-empty { display: grid; place-items: center; color: var(--fd-faint); }
-.sh-style-body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; }
-.sh-style-name { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--fd-ink); font-size: 14.5px; font-weight: 750; letter-spacing: -.01em; }
-.sh-style-for { color: var(--fd-soft); font-size: 12.5px; line-height: 1.35; }
-.sh-style-len { color: var(--fd-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.sh-style-body { display: flex; flex: 1; flex-direction: column; gap: 5px; padding: 14px 16px 16px; }
+.sh-style-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--fd-ink); font-size: 17px; font-weight: 750; letter-spacing: -.015em; }
+.sh-style-for { color: var(--fd-soft); font-size: 13.5px; line-height: 1.4; }
+.sh-style-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: auto; padding-top: 6px; }
+.sh-style-len { color: var(--fd-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sh-style-time { display: inline-flex; align-items: center; gap: 5px; color: var(--fd-faint); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sh-style-time.is-measured { color: var(--fd-soft); }
+.sh-style-time svg { flex: none; }
 .sh-badge { flex: none; padding: 2px 7px; border-radius: var(--r-pill); background: var(--fd-wash); color: var(--fd-accent); font-size: 10.5px; font-weight: 750; }
 .sh-badge.is-3d { background: var(--so-accent-wash); color: var(--so-accent); }
 
@@ -71,6 +81,15 @@ a.so-action { text-decoration: none; }
 .sh-facts div { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
 .sh-facts dt { color: var(--fd-faint); font-weight: 600; }
 .sh-facts dd { margin: 0; color: var(--fd-ink); }
+/* A style's details from its "i" button: a modal <dialog>, a bottom sheet on a
+   phone and a centred card on a wider screen (as the YouTube sheet). */
+.sh-style-dialog { box-sizing: border-box; width: 100%; max-width: 100%; max-height: min(92dvh, 860px); margin: auto 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 22px 22px 0 0; background: var(--fd-veil); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 -1px 0 var(--fd-rule), 0 -20px 60px rgba(0,0,0,.35); color: var(--fd-ink); }
+.sh-style-dialog::backdrop { background: rgba(0,0,0,.5); }
+.sh-style-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sh-style-dialog-head .sh-h { display: flex; align-items: center; gap: 10px; margin: 0; }
+.sh-style-close { display: grid; flex: none; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); cursor: pointer; }
+.sh-style-close:hover { color: var(--fd-ink); }
+.sh-detail.is-compact .sh-sheet.is-large { max-height: min(46dvh, 420px); }
 .sh-intake { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
 .sh-intake textarea, .sh-plan textarea, .sh-ask textarea { min-height: 72px; padding: 10px 12px; line-height: 1.5; resize: vertical; }
 .sh-intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -123,6 +142,9 @@ a.so-action { text-decoration: none; }
 .sh-player { width: min(100%, 340px); align-self: center; overflow: hidden; border-radius: 22px; background: #000; aspect-ratio: 9 / 16; }
 .sh-player video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .sh-player-wait { display: grid; place-items: center; height: 100%; color: #fff; }
+.sh-player-posted { position: relative; display: block; height: 100%; color: #fff; text-decoration: none; }
+.sh-player-posted img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+.sh-player-posted span { position: absolute; inset: auto 16px 18px; font-size: 14px; line-height: 1.4; font-weight: 600; }
 .sh-result-side { min-width: 0; }
 .sh-result-side .sh-actions { margin-top: 0; }
 .sh-post { display: grid; gap: 14px; margin: 18px 0 0; }
@@ -141,19 +163,89 @@ a.so-action { text-decoration: none; }
 .sh-tile-title { position: absolute; inset: auto 0 0; padding: 26px 8px 8px; background: linear-gradient(transparent, rgba(0,0,0,.78)); color: #fff; font-size: 11.5px; font-weight: 700; line-height: 1.3; text-align: left; }
 .sh-tile-len { position: absolute; top: 6px; right: 6px; padding: 2px 6px; border-radius: var(--r-pill); background: rgba(0,0,0,.6); color: #fff; font-size: 10.5px; font-weight: 700; }
 
+/* YouTube: the status line, the queue in posting order, the schedule and what's
+   posted. Rows are a 9:16 cover, the words, and ↑/↓ on the right. */
+.sh-yt { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.sh-yt-part { min-width: 0; }
+.sh-yt-h { display: flex; align-items: baseline; margin: 0 0 4px; color: var(--fd-soft); font-size: 13px; font-weight: 700; letter-spacing: -.005em; }
+.sh-yt-status { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.sh-yt-status p { margin: 0; color: var(--fd-soft); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.sh-yt-status b { color: var(--fd-ink); font-weight: 700; }
+.sh-yt-status .sh-yt-sub { margin: 0; }
+.sh-yt-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; font-size: 13px; }
+.sh-yt-banner .fd-link { display: inline-flex; align-items: center; min-height: 36px; font-size: 13px; font-weight: 700; }
+.sh-yt-list { margin: 0; padding: 0; list-style: none; }
+.sh-yt-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--fd-rule); }
+.sh-yt-row:first-child { border-top: 0; }
+.sh-yt-cover { display: grid; place-items: center; width: 40px; aspect-ratio: 9 / 16; border-radius: 8px; background: #111; color: rgba(255,255,255,.7); object-fit: cover; }
+.sh-yt-main { display: flex; flex-direction: column; min-width: 0; }
+.sh-yt-title { display: -webkit-box; overflow: hidden; color: var(--fd-ink); font-size: 14px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.sh-yt-meta { margin-top: 3px; color: var(--fd-faint); font-size: 12px; line-height: 1.45; }
+.sh-yt-meta .fd-link { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; font-size: 12px; }
+.sh-yt-error { margin-top: 4px; color: var(--fd-alert); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.sh-yt-sub { display: block; margin-top: 6px; color: var(--fd-faint); font-size: 12px; line-height: 1.5; }
+.sh-yt-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; }
+.sh-yt-tools .fd-link { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; font-size: 13px; }
+.sh-yt-tools .fd-link:disabled { opacity: .45; cursor: default; }
+.sh-yt-ask { color: var(--fd-soft); font-size: 13px; }
+.sh-yt-post { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fd-btn); color: var(--fd-btn-ink); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.sh-yt-post:disabled { opacity: .45; cursor: default; }
+.sh-yt-order { display: flex; flex-direction: column; }
+.sh-yt-schedule { display: flex; flex-direction: column; gap: 12px; max-width: 420px; }
+.sh-yt-schedule .sh-actions { margin-top: 0; }
+.sh-yt-time { max-width: 180px; }
+.sh-yt-times { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.sh-yt-legend { padding: 0; margin-bottom: 2px; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.sh-yt-time-row { display: flex; align-items: center; gap: 6px; }
+.sh-yt-time-input { width: 180px; max-width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: inherit; font: inherit; font-size: 15px; }
+.sh-yt-time-input:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-yt-add-time { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; }
+.sh-yt-days { display: flex; gap: 6px; }
+.sh-yt-days button { flex: 1 1 0; min-width: 0; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.sh-yt-days button[aria-pressed="true"] { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
+.sh-yt-pause { display: flex; align-items: center; gap: 10px; min-height: 40px; color: var(--fd-ink); font-size: 14px; font-weight: 600; cursor: pointer; }
+.sh-yt-schedule .sh-yt-sub { margin: 0; }
+.sh-yt-days button:focus-visible, .sh-yt-post:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+/* On a finished short: where it stands on YouTube, in place of the button. */
+.sh-yt-state { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: var(--r-pill); background: var(--fd-wash); color: var(--fd-accent); font-size: 13px; font-weight: 650; }
+
+/* The Add to YouTube sheet: a modal <dialog>, a bottom sheet on a phone and a
+   centred card on a wider screen. */
+.sh-yt-sheet { box-sizing: border-box; width: 100%; max-width: 100%; max-height: min(92dvh, 820px); margin: auto 0 0; padding: 20px 16px calc(18px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 22px 22px 0 0; background: var(--fd-veil); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 -1px 0 var(--fd-rule), 0 -20px 60px rgba(0,0,0,.35); color: var(--fd-ink); }
+.sh-yt-sheet::backdrop { background: rgba(0,0,0,.5); }
+.sh-yt-form { display: flex; flex-direction: column; gap: 14px; }
+.sh-yt-form .sh-h { display: flex; align-items: center; gap: 8px; margin: 0; }
+.sh-yt-form .sh-h svg { color: var(--so-accent); }
+.sh-yt-form textarea { min-height: 120px; resize: vertical; }
+.sh-yt-label { display: flex; align-items: baseline; gap: 6px; }
+.sh-yt-label .sh-optional { margin-left: 0; }
+.sh-yt-count { margin-left: auto; color: var(--fd-faint); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sh-yt-count.is-over { color: var(--fd-alert); font-weight: 750; }
+.sh-yt-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sh-yt-kids { margin-top: 0; color: var(--fd-ink); font-size: 14px; }
+.sh-yt-form .sh-actions { margin-top: 2px; }
+@media (min-width: 600px) {
+  .sh-yt-sheet { width: min(560px, calc(100% - 48px)); margin: auto; padding: 24px 24px 22px; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--fd-rule), 0 24px 70px rgba(0,0,0,.4); }
+  .sh-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sh-style-dialog { width: min(640px, calc(100% - 48px)); margin: auto; padding: 22px 24px; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--fd-rule), 0 24px 70px rgba(0,0,0,.4); }
+}
+
 @media (max-width: 380px) {
   .sh-intake-grid { grid-template-columns: minmax(0, 1fr); }
   .sh-library { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sh-yt-pair { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sh-style { transition: none; }
-  .sh-style:hover { transform: none; }
+  .sh-style, .sh-style-info { transition: none; }
+  .sh-style:has(.sh-style-pick:hover) { transform: none; }
   .sh-worker.is-busy i { animation: none; }
 }
 
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
-  .stage[data-desktop] .sh-board { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .stage[data-desktop] .sh-board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .stage[data-desktop] .sh-style-dialog { width: min(920px, calc(100% - 96px)); }
+  .stage[data-desktop] .sh-detail.is-compact .sh-sheet.is-large { max-height: min(64dvh, 560px); }
   .stage[data-desktop] .sh-library { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .stage[data-desktop] .sh-detail { flex-direction: row; align-items: flex-start; gap: 28px; }
   .stage[data-desktop] .sh-detail .sh-sheet.is-large { width: 58%; }
@@ -161,4 +253,36 @@ a.so-action { text-decoration: none; }
   .stage[data-desktop] .sh-result { flex-direction: row; align-items: flex-start; gap: 32px; }
   .stage[data-desktop] .sh-player { flex: none; align-self: flex-start; }
   .stage[data-desktop] .sh-result-side { flex: 1; }
+  /* YouTube: the queue and what's posted on the left, the schedule beside them. */
+  .stage[data-desktop] .sh-yt { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); align-items: start; gap: 22px 40px; }
+  .stage[data-desktop] .sh-yt > :first-child, .stage[data-desktop] .sh-yt > .fd-msg { grid-column: 1 / -1; }
+  .stage[data-desktop] .sh-yt-queue, .stage[data-desktop] .sh-yt-posted { grid-column: 1; }
+  .stage[data-desktop] .sh-yt-sched { grid-column: 2; grid-row: 2 / span 2; }
 }
+
+/* ─── Autopilot: the daily bedtime story (components/shorts/autopilot-card.tsx) ─── */
+.sh-auto { display: flex; flex-direction: column; gap: 12px; max-width: 520px; }
+.sh-auto-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); cursor: pointer; }
+.sh-auto-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: color-mix(in srgb, var(--so-accent) 16%, transparent); color: var(--so-accent); }
+.sh-auto-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sh-auto-text b { font-size: 15px; font-weight: 650; }
+.sh-auto-text span { color: var(--fd-soft); font-size: 13px; }
+.sh-auto-row input[type="checkbox"]:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-auto-time { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.sh-auto-time .fd-field { max-width: 200px; }
+.sh-auto-time .sh-yt-sub { flex-basis: 100%; margin: 0; }
+.sh-auto-window { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+.sh-auto-window .fd-field { max-width: 160px; }
+.sh-auto-days .sh-auto-days-input { display: flex; align-items: center; gap: 8px; }
+.sh-auto-days select { width: auto; min-width: 64px; }
+.sh-auto-post { display: flex; align-items: center; gap: 10px; padding: 8px 0; color: var(--fd-soft); font-size: 14px; }
+.sh-auto-post b { color: var(--fd-ink); font-weight: 600; }
+
+/* ─── Health: is the chain working? (components/shorts/health-card.tsx) ─── */
+.sh-health { margin: 0; max-width: 520px; padding: 6px 16px; border-radius: 16px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.sh-health-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 9px 0; font-size: 14px; }
+.sh-health-row + .sh-health-row { border-top: 1px solid var(--fd-rule); }
+.sh-health-row dt { color: var(--fd-soft); }
+.sh-health-row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.sh-health-warn dd { color: var(--sys-amber); font-weight: 600; }
+.sh-health-bad dd { color: var(--sys-red); font-weight: 600; }

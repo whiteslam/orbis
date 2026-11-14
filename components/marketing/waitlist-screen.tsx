@@ -24,7 +24,7 @@ const TRUST = [
 ] as const;
 
 // What a person controls, each a real setting today: connections are
-// read-only, each can be removed (Settings → Connections), the AI has its own
+// read-only, each can be removed (Settings → Connected apps), the AI has its own
 // switch (Settings → AI), and export and deletion live in Settings → Account.
 const CONTROLS = [
   [ShieldCheck, 'Every connection is read-only.'],

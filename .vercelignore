@@ -3,6 +3,6 @@
 .vercel/
 node_modules/
 .next/
-Excelsheet.pdf
-android/
-native/
+/Excelsheet.pdf
+/android/
+/native/

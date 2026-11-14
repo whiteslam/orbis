@@ -3,6 +3,7 @@
 // whether the PC worker is there. Pure and client-safe.
 
 import type { JobStatus, ShortEvent, ShortJob, ShortOptions, ShortStyle, WorkerPresence, WorkerState } from '@/lib/shorts/types';
+import { localParts, monthStartUtc } from '@/lib/locale/dates';
 
 export const LIMITS = { inFlight: 3, perMonth: 30, topic: 300, endLine: 80, feedback: 1000 } as const;
 
@@ -64,12 +65,10 @@ export function limitRefusal(inFlight: number, thisMonth: number): string | null
   return null;
 }
 
-const IST_OFFSET_MS = 330 * 60_000;
-
-/** The first moment of this month in India, as an ISO instant. */
-export function monthStartIst(now: Date): string {
-  const india = new Date(now.getTime() + IST_OFFSET_MS);
-  return new Date(Date.UTC(india.getUTCFullYear(), india.getUTCMonth(), 1) - IST_OFFSET_MS).toISOString();
+/** The first moment of this month in the person's own zone, as an ISO instant. */
+export function monthStartIn(now: Date, timeZone: string): string {
+  const { year, month } = localParts(now, timeZone);
+  return monthStartUtc(year, month, timeZone);
 }
 
 /** What the live view has, plus what a poll brought: each event once, in order. */

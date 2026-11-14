@@ -5,6 +5,9 @@ import type { ShortPlan } from '@/lib/shorts/plan';
 export type JobStatus = 'queued' | 'planning' | 'plan_ready' | 'building' | 'done' | 'failed' | 'cancelled';
 export type JobStage = 'plan' | 'build';
 
+/** A platform autopilot shorts are made for. */
+export type Destination = 'youtube' | 'instagram';
+
 export type ShortOptions = {
   seconds: number;
   /** A Kokoro voice id, e.g. am_michael. */
@@ -14,6 +17,10 @@ export type ShortOptions = {
   music: 'bed' | 'none';
   /** The last line or handle, optional. */
   endLine: string;
+  /** Started by the daily autopilot: its plan is approved and the video queued for YouTube without a person. */
+  autopilot?: boolean;
+  /** Where an autopilot short is posted; missing means YouTube (made before destinations existed). */
+  destination?: Destination;
 };
 
 /** Storage paths in the `shorts` bucket. */

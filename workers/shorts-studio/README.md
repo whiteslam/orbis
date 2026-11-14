@@ -79,6 +79,30 @@ The service stops when you log out. To keep it running after you log out: `login
 - **Claude Code signed out or out of usage:** the job fails with a clear note, and the worker waits 30 minutes before taking the next one.
 - **Project folders stay on this PC.** Later revisions will re-render from them.
 
+## Moving YouTube publishing into Orbis
+
+Orbis now posts to YouTube itself, so the old PC publisher (`~/faceless-shorts/publisher/yt.py` and its timer) can retire. One script moves its queue over, once:
+
+```bash
+cd workers/shorts-studio
+npm run import-youtube-queue              # dry run: prints the plan, writes nothing
+npm run import-youtube-queue -- --apply   # uploads the videos and adds them to the Orbis queue
+```
+
+It uses the same `~/.config/orbis-shorts/.env`, skips anything already published or already queued, and is safe to run again. The full order of steps (migration, Google settings, Connect YouTube, the live check, and only then switching the timer off) is in `docs/ops/youtube-owner-actions.md`.
+
+## Autopilot: bedtime stories made overnight
+
+Turn it on in **Social → Shorts → Autopilot** (needs `supabase/migrations/202611140001_shorts_autopilot.sql` and `202611140002_shorts_shelf.sql`). Between the **Build between** times you set (your own time zone; 23:00–07:00 by default), this worker builds **one short at a time** until the YouTube queue holds **Keep ready** days of posts (`lib/shorts/shelf.ts`). For each one it:
+
+1. picks a fresh Cozy Tales topic, never one used in your recent shorts (`lib/shorts/autopilot.ts`);
+2. queues it, plans it and **approves the plan itself**;
+3. builds it and **adds the finished video to the YouTube queue**, using your Cozy Tales preset (made for kids by default, as YouTube requires for children's videos).
+
+Your YouTube schedule then posts them. A build that fails is replaced with a new topic, but no more than your posts a day + 1 start in one day, so a broken build can't loop. Nothing is built for YouTube while it isn't connected or needs connecting again.
+
+Autopilot shorts waiting outside the window stay queued until the next night; shorts you queue yourself are made at any time. **The PC must stay awake during the window** (set suspend to never). Autopilot shorts don't count toward your 30 a month.
+
 ## Tests
 
 ```bash

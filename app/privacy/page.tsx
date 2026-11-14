@@ -148,11 +148,11 @@ export default function PrivacyPage() {
 
         <h2>How AI uses your data</h2>
         <p>
-          AI is off until you turn it on, in <strong>Settings → AI &amp; privacy</strong>. While it is off, nothing is
+          AI is off until you turn it on, in <strong>Settings → AI</strong>. While it is off, nothing is
           sent to any AI provider and {SITE_NAME} uses its own wording. You can turn it off again at any time.
         </p>
         <p>
-          When it is on, each feature sends only what it needs, and only when it runs. Settings → AI &amp; privacy
+          When it is on, each feature sends only what it needs, and only when it runs. Settings → AI
           lists this feature by feature. In short:
         </p>
         <ul>
@@ -233,10 +233,10 @@ export default function PrivacyPage() {
         <h2>Your rights</h2>
         <p>Under the DPDP Act you can:</p>
         <ul>
-          <li><strong>See your data and get a copy.</strong> Use <strong>Settings → Your data → Export my data</strong> for a file with everything {SITE_NAME} holds for you. Stored files are listed in it, and you can save them from where they live in the app. Connection tokens are left out.</li>
+          <li><strong>See your data and get a copy.</strong> Use <strong>Settings → Account → Export my data</strong> for a file with everything {SITE_NAME} holds for you. Stored files are listed in it, and you can save them from where they live in the app. Connection tokens are left out.</li>
           <li><strong>Correct it.</strong> Edit most things directly in the app. If you cannot, contact us {contact}.</li>
-          <li><strong>Erase it.</strong> Use <strong>Settings → Your data → Delete account</strong> or the <Link href="/delete-account">delete-account page</Link>. If you cannot sign in, contact us {contact}.</li>
-          <li><strong>Withdraw consent.</strong> Turn AI off in Settings → AI &amp; privacy, or disconnect any connection in Settings. Both stop at once.</li>
+          <li><strong>Erase it.</strong> Use <strong>Settings → Account → Delete account</strong> or the <Link href="/delete-account">delete-account page</Link>. If you cannot sign in, contact us {contact}.</li>
+          <li><strong>Withdraw consent.</strong> Turn AI off in Settings → AI, or disconnect any connection in Settings. Both stop at once.</li>
           <li><strong>Name a nominee.</strong> You can nominate someone to use these rights for you if you die or cannot act. Contact us {contact} to set this up.</li>
           <li><strong>Raise a grievance.</strong> See below.</li>
         </ul>

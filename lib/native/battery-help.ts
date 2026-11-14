@@ -1,5 +1,5 @@
 // How to keep Orbis running on each phone maker's Android, for the "Keep Orbis
-// running" row in Settings → What Orbis can see. Many makers stop background apps
+// running" row in Settings → Phone access. Many makers stop background apps
 // beyond what stock Android does, and each hides the switch in its own place.
 
 export type BatteryHelp = { brand: string; steps: string[] };

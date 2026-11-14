@@ -17,13 +17,19 @@ const NOTICE: Partial<Record<PersonalDataState, string>> = {
   unavailable: 'Your profile could not be loaded. Refresh and try again.',
 };
 
-/** Settings → You: the profile, then where you are and which tabs you use. */
+/** Settings → Profile: your name, what you do, and more about you. Region and Tabs are their own pages. */
 export function ProfileEditor({ state, profile }: Readonly<{ state: PersonalDataState; profile: PersonalProfile | null }>) {
-  return <>
-    <ProfileDetails state={state} profile={profile} />
-    <h3 className="fd-label st-sub">Place and tabs</h3>
-    <PlaceAndModules />
-  </>;
+  return <ProfileDetails state={state} profile={profile} />;
+}
+
+/** Settings → Region: time zone and currency. */
+export function RegionSettings() {
+  return <PlaceAndModules part="region" />;
+}
+
+/** Settings → Tabs: which tabs show. */
+export function TabSettings() {
+  return <PlaceAndModules part="tabs" />;
 }
 
 function ProfileDetails({ state, profile }: Readonly<{ state: PersonalDataState; profile: PersonalProfile | null }>) {
@@ -64,7 +70,7 @@ function ProfileDetails({ state, profile }: Readonly<{ state: PersonalDataState;
       </dl>
       {profile.aboutMe.trim()
         ? <p className="fd-prose">{profile.aboutMe.trim()}</p>
-        : <p className="fd-note">Nothing written under “more about me” yet. That is the part Orbis leans on most.</p>}
+        : <p className="fd-note">Add a few lines about you; Orbis leans on them most.</p>}
       <div className="fd-act pf-act">
         <button type="button" onClick={() => setEditing(true)}>Edit</button>
         <button className="fd-link alert" type="button" disabled={blocked} onClick={() => startTransition(async () => show(await safeAction(deletePersonalProfileAction)()))}>{pending ? 'Removing…' : 'Remove'}</button>
@@ -97,8 +103,11 @@ function ProfileDetails({ state, profile }: Readonly<{ state: PersonalDataState;
 
 type Place = { timeZone: string; currency: string; modules: ModuleId[] };
 
-/** Time zone, currency and the tabs to show, saved together through saveSettings. Language stays as it is. */
-function PlaceAndModules() {
+/**
+ * Time zone and currency (Region), or the tabs to show (Tabs). Both save through saveSettings,
+ * which takes all three: the part not on this page is sent as it is saved. Language stays as it is.
+ */
+function PlaceAndModules({ part }: Readonly<{ part: 'region' | 'tabs' }>) {
   const router = useRouter();
   const settings = usePersonSettings();
   const saved: Place = { timeZone: settings.timeZone, currency: settings.currency, modules: settings.modules };
@@ -116,28 +125,36 @@ function PlaceAndModules() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedKey]);
 
-  const changed = `${draft.timeZone}|${draft.currency}|${draft.modules.join(',')}` !== savedKey;
+  const changed = part === 'region'
+    ? draft.timeZone !== settings.timeZone || draft.currency !== settings.currency
+    : draft.modules.join(',') !== settings.modules.join(',');
   // Settings couldn't be read, so the form shows defaults; saving them would overwrite the real ones.
   const unreadable = settings.onboardedAt === ONBOARDED_UNKNOWN;
 
-  return <form className="fd-form" aria-label="Place and tabs" onSubmit={(event) => {
+  return <form className="fd-form" aria-label={part === 'region' ? 'Region' : 'Tabs'} onSubmit={(event) => {
     event.preventDefault();
     if (unreadable) return;
     setMessage('');
     startTransition(async () => {
-      const result = await safeAction(saveSettings)({ ...draft, locale: settings.locale });
+      // Only this page's part changes; the other is sent exactly as it is saved.
+      const next = part === 'region'
+        ? { timeZone: draft.timeZone, currency: draft.currency, modules: settings.modules }
+        : { timeZone: settings.timeZone, currency: settings.currency, modules: draft.modules };
+      const result = await safeAction(saveSettings)({ ...next, locale: settings.locale });
       setMessage(result.message);
       setSuccess(result.success);
       if (result.success) router.refresh();
     });
   }}>
-    <TimeZoneSelect id="settings-zone" value={draft.timeZone} onChange={(timeZone) => setDraft({ ...draft, timeZone })} disabled={pending} />
-    <CurrencySelect id="settings-currency" value={draft.currency} onChange={(currency) => setDraft({ ...draft, currency })} disabled={pending} locale={settings.locale} />
-    <ModuleChoices idPrefix="settings-module" value={draft.modules} onChange={(modules) => setDraft({ ...draft, modules })} disabled={pending} />
+    {part === 'region' && <>
+      <TimeZoneSelect id="settings-zone" value={draft.timeZone} onChange={(timeZone) => setDraft({ ...draft, timeZone })} disabled={pending} />
+      <CurrencySelect id="settings-currency" value={draft.currency} onChange={(currency) => setDraft({ ...draft, currency })} disabled={pending} locale={settings.locale} />
+    </>}
+    {part === 'tabs' && <ModuleChoices idPrefix="settings-module" value={draft.modules} onChange={(modules) => setDraft({ ...draft, modules })} disabled={pending} />}
     <div className="fd-act">
       <button type="submit" disabled={pending || !changed || unreadable}>{pending ? 'Saving…' : 'Save'}</button>
     </div>
-    {unreadable && <p className="fd-note tight">Your settings couldn’t be loaded, so they can’t be saved right now. Refresh and try again.</p>}
+    {unreadable && <p className="fd-note tight">Couldn’t load your settings. Refresh and try again.</p>}
     <div role="status">{message && <p className={`fd-msg ${success ? 'ok' : 'bad'}`}>{message}</p>}</div>
   </form>;
 }

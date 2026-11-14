@@ -50,7 +50,7 @@ export function HomeBriefSetting({ preferences }: Readonly<{ preferences: AiPref
       <label className="pf-master">
         <span>
           <strong><Sparkles size={13} aria-hidden="true" /> Let Orbis write the brief</strong>
-          <small>This month’s spending total and top category, your routines and the weather are sent to the AI provider to be written up. Never your transactions, emails or documents.</small>
+          <small>Sends this month’s total and top category, your routines and the weather. Never transactions, emails or documents.</small>
         </span>
         <input type="checkbox" role="switch" aria-label="Let Orbis write the brief" checked={enabled} onChange={(event) => toggle(event.currentTarget.checked)} disabled={isPending || blocked} />
       </label>
@@ -58,8 +58,8 @@ export function HomeBriefSetting({ preferences }: Readonly<{ preferences: AiPref
       {!reason && preferences.state === 'ready' && (
         <p className="fd-note">
           {enabled
-            ? 'Rewritten when the numbers behind it change, not on a timer, so it costs one request per real change. Turn this off and nothing is sent.'
-            : 'Off. The brief is composed on your device from the same numbers, and nothing leaves it.'}
+            ? 'Rewritten only when those numbers change.'
+            : 'Off. The brief is written on your device and nothing is sent.'}
         </p>
       )}
       {message && <output className={`gmail-review-message ${message.success ? 'success' : ''}`}>{message.text}</output>}

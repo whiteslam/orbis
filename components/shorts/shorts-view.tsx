@@ -7,6 +7,9 @@ import { JobCard, StatusChip } from '@/components/shorts/job-card';
 import { LibraryGrid } from '@/components/shorts/library';
 import { StyleBoard, StyleDetail } from '@/components/shorts/style-board';
 import { WorkerStrip } from '@/components/shorts/worker-strip';
+import { YouTubePanel } from '@/components/shorts/youtube-panel';
+import { AutopilotCard } from '@/components/shorts/autopilot-card';
+import { HealthCard } from '@/components/shorts/health-card';
 import type { ShortsData } from '@/components/shorts/use-shorts-data';
 import { IN_FLIGHT, LIMITS, limitRefusal } from '@/lib/shorts/rules';
 
@@ -45,7 +48,10 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
       <div className="sh-view">
         {back}
         {job
-          ? <JobCard key={job.id} initial={job} styleName={styleOf(job.style)?.name ?? job.style} onChanged={upsert} onDeleted={() => { drop(job.id); setScreen({ name: 'home' }); }} />
+          ? <JobCard
+              key={job.id} initial={job} styleName={styleOf(job.style)?.name ?? job.style} youtube={view.youtube[job.id] ?? null}
+              onChanged={upsert} onDeleted={() => { drop(job.id); setScreen({ name: 'home' }); }} onQueued={() => void load()}
+            />
           : <p className="fd-msg bad">That short isn’t there any more.</p>}
       </div>
     );
@@ -61,7 +67,7 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
         {style ? (
           <>
             <h2 className="sh-h">{style.name}</h2>
-            <StyleDetail style={style} />
+            <StyleDetail style={style} jobs={view.jobs} />
             <Intake style={style} voices={view.worker?.voices ?? []} disabledReason={blocked} onQueued={(job) => { upsert(job); setScreen({ name: 'job', id: job.id }); }} />
           </>
         ) : <p className="fd-msg bad">That style isn’t available any more.</p>}
@@ -74,6 +80,11 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
 
   return (
     <div className="sh-view">
+      <section className="sh-section" aria-labelledby="sh-health-h">
+        <h2 id="sh-health-h" className="sh-h">How it’s running</h2>
+        <HealthCard />
+      </section>
+
       {open.length > 0 && (
         <section className="sh-section" aria-label="On the go">
           <h2 className="sh-h">On the go <span className="so-count">{open.length}</span></h2>
@@ -96,18 +107,28 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
 
       <section className="sh-section" aria-label="Pick a style">
         <h2 className="sh-h">Pick a style</h2>
-        <StyleBoard styles={view.styles} onPick={(slug) => setScreen({ name: 'style', slug })} />
+        <StyleBoard styles={view.styles} jobs={view.jobs} onPick={(slug) => setScreen({ name: 'style', slug })} />
       </section>
 
       {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}
       {(view.presence === 'none' || view.presence === 'offline' || view.presence === 'setup') && <WorkerStrip presence={view.presence} worker={view.worker} />}
+
+      <section className="sh-section" aria-labelledby="sh-auto-h">
+        <h2 id="sh-auto-h" className="sh-h">Autopilot</h2>
+        <AutopilotCard />
+      </section>
+
+      <section className="sh-section" aria-labelledby="sh-youtube-h">
+        <h2 id="sh-youtube-h" className="sh-h">YouTube</h2>
+        <YouTubePanel onChanged={() => void load()} />
+      </section>
 
       <section className="sh-section" aria-label="Your shorts">
         <h2 className="sh-h">Your shorts <span className="so-count">{done.length}</span></h2>
         <LibraryGrid jobs={done} covers={view.covers} onOpen={(id) => setScreen({ name: 'job', id })} />
       </section>
 
-      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis; nothing is posted for you.</p>
+      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis. Only shorts in your YouTube queue are posted.</p>
     </div>
   );
 }

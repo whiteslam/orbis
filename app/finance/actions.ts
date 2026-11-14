@@ -23,10 +23,12 @@ export async function disconnectGmailAction(): Promise<FinanceActionState> {
     revalidatePath('/active');
     return {
       success: true,
-      revocationFailed: !result.revoked,
+      revocationFailed: !result.revoked && !result.sharedWithYouTube,
       message: result.revoked
         ? 'Gmail has been disconnected.'
-        : 'Gmail was removed from Orbis. Google could not confirm token revocation, so you can also remove Orbis in your Google account security settings.',
+        : result.sharedWithYouTube
+          ? 'Gmail was removed from Orbis. YouTube still uses the same Google access, so it was left in place. Removing Orbis in your Google account settings would also disconnect YouTube.'
+          : 'Gmail was removed from Orbis. Google could not confirm token revocation, so you can also remove Orbis in your Google account security settings.',
     };
   } catch {
     revalidatePath('/active');

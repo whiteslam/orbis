@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       .is('revoked_at', null);
     if (countError) throw countError;
     if ((count ?? 0) >= MAX_ACTIVE_DEVICES) {
-      return Response.json({ error: `You have ${MAX_ACTIVE_DEVICES} phones signed in. Remove one in Settings → What Orbis can see.` }, { status: 409, headers: NO_STORE });
+      return Response.json({ error: `You have ${MAX_ACTIVE_DEVICES} phones signed in. Remove one in Settings → Phone access.` }, { status: 409, headers: NO_STORE });
     }
 
     const secret = newDeviceSecret();

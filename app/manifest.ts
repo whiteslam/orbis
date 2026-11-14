@@ -18,10 +18,10 @@ export default function manifest(): MetadataRoute.Manifest {
     // app's own address. start_url stays '/', which redirects whoever is signed
     // in, so the installed app still opens straight into Orbis.
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/orbis-ring-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/orbis-ring-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/orbis-ring-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/orbis-ring-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

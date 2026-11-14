@@ -1,4 +1,4 @@
-// When a pause from Settings → What Orbis can see ends, as the epoch milliseconds
+// When a pause from Settings → Phone access ends, as the epoch milliseconds
 // OrbisCore.pause({ until }) takes. Pure, so the "tomorrow" rule is tested.
 
 import { PAUSED_FOREVER } from './orbis-core';

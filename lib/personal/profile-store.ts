@@ -4,7 +4,7 @@ import type { SignedInSession } from '@/lib/auth/session';
 import { parsePersonalProfile } from '@/lib/personal/profile-input';
 
 /**
- * The one save for a personal profile: Settings → You and onboarding's name
+ * The one save for a personal profile: Settings → Profile and onboarding's name
  * both come through here. Checks the input, then writes the whole row.
  */
 export async function savePersonalProfile(supabase: SignedInSession['supabase'], userId: string, value: unknown): Promise<{ success: boolean; message: string }> {

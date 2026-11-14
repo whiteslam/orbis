@@ -44,14 +44,14 @@ function otherDevicesNote(count: number) {
   return ` On for ${count} other device${plural}.`;
 }
 
-/** The parts of the preferences this form edits. The zone is the person's own (Settings → You), never edited here. */
+/** The parts of the preferences this form edits. The zone is the person's own (Settings → Region), never edited here. */
 function editable(prefs: NotificationPreferences) {
   return JSON.stringify({ enabled: prefs.enabled, slots: prefs.slots });
 }
 
 /**
  * Times are kept in the person's own zone. The form starts again when that
- * zone changes (Settings → You saved a new one), so it never holds an old one.
+ * zone changes (Settings → Region saved a new one), so it never holds an old one.
  */
 export function NotificationSettings({ settings }: Readonly<{ settings: Settings }>) {
   const { timeZone } = usePersonLocale();
@@ -141,7 +141,7 @@ function NotificationForm({ settings, timeZone }: Readonly<{ settings: Settings;
   return (
     <div className="pf-notify">
       <label className="pf-master">
-        <span><strong>Daily notifications</strong><small>Four short check-ins a day, written from your own data.</small></span>
+        <span><strong>Daily notifications</strong><small>Four short check-ins a day.</small></span>
         <input type="checkbox" role="switch" aria-label="Daily notifications" checked={prefs.enabled} onChange={(event) => setPrefs({ ...prefs, enabled: event.currentTarget.checked })} disabled={isPending} />
       </label>
 
@@ -158,7 +158,7 @@ function NotificationForm({ settings, timeZone }: Readonly<{ settings: Settings;
           );
         })}
       </div>
-      <p className="fd-note tight">Times are in {timeZone.replaceAll('_', ' ')}. Change it in Settings → You.</p>
+      <p className="fd-note tight">Times are in {timeZone.replaceAll('_', ' ')} (Settings → Region).</p>
       {dirty && <div className="fd-act"><button type="button" onClick={() => run(() => safeAction(saveNotificationPreferencesAction)(prefs))} disabled={isPending}>{isPending ? 'Saving…' : 'Save notification settings'}</button></div>}
 
       {nativeApp && <PhoneNotifications push={phonePush} run={run} isPending={isPending} />}

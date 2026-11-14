@@ -25,6 +25,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/api/headsups/scan/route.ts',
   'app/api/notifications/dispatch/route.ts',
   'app/api/research/weekly/route.ts',
+  'app/api/social/youtube/publish/route.ts',
   'app/auth/callback/route.ts',
   'app/career/actions.ts',
   'app/headsups/actions.ts',
@@ -34,6 +35,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'app/personal/notification-actions.ts',
   'app/research/actions.ts',
   'app/shorts/actions.ts',
+  'app/shorts/youtube-actions.ts',
   'app/waitlist/actions.ts',
   'lib/account/delete.ts',
   'lib/ai/consent-store.ts',
@@ -63,6 +65,7 @@ export const ADMIN_CLIENT_ALLOWLIST: readonly string[] = [
   'lib/social/ai-credit.ts',
   'lib/social/connections.ts',
   'lib/storage/signed-upload.ts',
+  'lib/youtube/connection.ts',
 ];
 
 /** The repo-relative module a specifier points at, without extension, or null for a package. */

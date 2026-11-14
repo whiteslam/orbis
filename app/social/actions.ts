@@ -351,7 +351,7 @@ export async function draftMonthWithAiAction(input: DraftMonthInput): Promise<Re
   let profile: { preferredName: string; role: string; aboutMe: string } | null = null;
   if (useProfile) {
     const summary = await getPersonalProfile(userId);
-    if (!summary.profile) return { success: false, message: 'Your profile is empty. Fill in Settings → You, or untick "Use my profile".' };
+    if (!summary.profile) return { success: false, message: 'Your profile is empty. Fill in Settings → Profile, or untick "Use my profile".' };
     profile = summary.profile;
   }
 

@@ -1,5 +1,6 @@
 // What the Shorts screens receive from their server actions. Client-safe.
 
+import type { QueueStatus } from '@/lib/youtube/types';
 import type { ShortEvent, ShortJob, ShortStyle, WorkerPresence, WorkerState } from '@/lib/shorts/types';
 
 export type Result<T> = { success: true; data: T } | { success: false; message: string };
@@ -15,6 +16,8 @@ export type ShortsView = {
   covers: Record<string, string>;
   /** Shorts started this month (India), against LIMITS.perMonth. */
   monthUsed: number;
+  /** Where a short stands in the YouTube queue (waiting, uploading, on YouTube), by job id. Empty when YouTube isn’t set up. */
+  youtube: Record<string, { status: QueueStatus; youtubeId: string | null }>;
 };
 
 export type JobDetail = {

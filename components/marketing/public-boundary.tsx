@@ -12,14 +12,17 @@ export function PublicBoundary({ onRetry }: Readonly<{ onRetry?: () => void }>) 
   return (
     <div className="wl-shell">
       <main className="wl-main">
-        <section className="wl-hero">
-          <h1>Something went wrong.</h1>
-          <p className="wl-lede">This page didn’t load. Nothing was lost. Try again in a moment.</p>
-          <div className="wl-boundary-act">
-            {onRetry && <button type="button" className="wl-submit" onClick={onRetry}>Try again</button>}
-            {/* A real navigation, not a client route change: whatever failed may be the router itself. */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a className="wl-text-button" href="/">Go back</a>
+        {/* The landing hero's frame and column (.wl-hero-copy), without its eclipse. */}
+        <section className="wl-hero wl-boundary">
+          <div className="wl-hero-copy">
+            <h1>Something went wrong.</h1>
+            <p className="wl-lede">This page didn’t load. Nothing was lost. Try again in a moment.</p>
+            <div className="wl-boundary-act">
+              {onRetry && <button type="button" className="wl-submit" onClick={onRetry}>Try again</button>}
+              {/* A real navigation, not a client route change: whatever failed may be the router itself. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a className="wl-text-button" href="/">Go back</a>
+            </div>
           </div>
         </section>
       </main>

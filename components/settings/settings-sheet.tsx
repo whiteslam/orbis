@@ -1,22 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, ChevronRight, Clock, Eye, HardDrive, Lock, Plug, Sparkles, UserRound, X, type LucideIcon } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Inter } from 'next/font/google';
+import { Bell, ChevronLeft, ChevronRight, Clock, Globe, LayoutGrid, Lock, Plug, Smartphone, Sparkles, UserRound, UserCog, X, type LucideIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountData } from '@/components/settings/account-data';
 import { AppIntegrations } from '@/components/settings/app-integrations';
 import { HeadsupSettings } from '@/components/settings/headsup-settings';
 import { HomeBriefSetting } from '@/components/settings/home-brief-setting';
-import { HomeCityEditor, Integrations } from '@/components/settings/integrations';
+import { HomeCityEditor } from '@/components/settings/integrations';
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { PrivacyCenter } from '@/components/settings/privacy-center';
-import { ProfileEditor } from '@/components/settings/profile-editor';
+import { ProfileEditor, RegionSettings, TabSettings } from '@/components/settings/profile-editor';
 import { RoutineSettings } from '@/components/settings/routine-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
 import { keepTabInside } from '@/components/shell/dialog-focus';
-import { isDesktop } from '@/lib/shell/desktop';
+import { useNativeApp } from '@/components/native/use-native';
+import { DESKTOP_QUERY, isDesktop } from '@/lib/shell/desktop';
 import { aiAllowed } from '@/lib/ai/consent';
-import { SETTINGS_SECTIONS, type SettingsSection } from '@/lib/shell/tabs';
+import { SETTINGS_CATEGORIES, SETTINGS_SECTIONS, type SettingsSection } from '@/lib/shell/tabs';
 import type { AiPreferences } from '@/lib/ai/preferences';
 import type { StepsSummary } from '@/lib/health/types';
 import type { NotificationSettings as NotificationSettingsData } from '@/lib/notifications/preferences';
@@ -46,10 +48,29 @@ export type SettingsData = {
   stepsSummary: StepsSummary;
 };
 
-const LABEL = Object.fromEntries(SETTINGS_SECTIONS.map((section) => [section.id, section.label])) as Record<SettingsSection, string>;
+const SECTION = Object.fromEntries(SETTINGS_SECTIONS.map((section) => [section.id, section])) as Record<SettingsSection, (typeof SETTINGS_SECTIONS)[number]>;
 
-// Each section's glyph in the index; its colour comes from app/styles/page-settings.css.
-const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, security: Lock, privacy: Eye, data: HardDrive };
+// Apple's own face wherever there is one (-apple-system in page-settings.css); Inter, the
+// nearest open match to SF Pro, on Android, Windows and Linux. Self-hosted by next/font.
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+
+/** The section a phone opens on: the list itself when Settings is opened plainly (the avatar opens 'you'). */
+const pageFor = (section: SettingsSection): SettingsSection | null => (section === 'you' ? null : section);
+
+/** True below the desktop breakpoint, where Settings is a stack of pages (the list, then one section). */
+function usePhonePages() {
+  const [phone, setPhone] = useState(() => !isDesktop());
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const update = () => setPhone(!isDesktop());
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return phone;
+}
+
+// Each section's glyph in the index, drawn in the Orbis ring's colours (app/styles/page-settings.css).
+const GLYPH: Record<SettingsSection, LucideIcon> = { you: UserRound, connections: Plug, ai: Sparkles, notifications: Bell, day: Clock, region: Globe, tabs: LayoutGrid, security: Lock, privacy: Smartphone, data: UserCog };
 
 type Hint = { text: string; warn?: boolean };
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -103,11 +124,12 @@ function pushIn(section: SettingsSection) {
   target.animate([{ opacity: 0.4, transform: 'translateX(28%)' }, { opacity: 1, transform: 'none' }], { duration, easing });
 }
 
-// `shown` marks the section picked in the list; only the desktop layout hides the rest (app/styles/desktop.css).
+// `shown` marks the section picked in the list; the rest are hidden on the desktop (app/styles/desktop.css)
+// and, on the phone, whenever a section is open as its own page (app/styles/page-settings.css).
 function Group({ id, shown, note, children }: Readonly<{ id: SettingsSection; shown: SettingsSection; note?: string; children: ReactNode }>) {
   return (
-    <section className="pf-group st-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} data-shown={shown === id || undefined}>
-      <h2 className="fd-label st-h" id={`settings-${id}-title`}>{LABEL[id]}</h2>
+    <section className="pf-group st-group" id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} data-shown={shown === id || undefined} data-category={SECTION[id].category}>
+      <h2 className="fd-label st-h" id={`settings-${id}-title`} tabIndex={-1}>{SECTION[id].label}</h2>
       {note && <p className="fd-note tight st-lede">{note}</p>}
       {children}
     </section>
@@ -155,16 +177,46 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
   data: SettingsData;
 }>) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const pagedRef = useRef(false);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // The section on show in the desktop list: where Settings was opened, then whatever is picked.
   const [shown, setShown] = useState(section);
+  // The phone's open page: null is the list. The desktop always shows the list beside `shown`.
+  const [page, setPage] = useState<SettingsSection | null>(() => pageFor(section));
   const [openedAt, setOpenedAt] = useState(section);
   if (openedAt !== section) {
     setOpenedAt(section);
     setShown(section);
+    setPage(pageFor(section));
+  }
+  const phone = usePhonePages();
+  // Phone access is the Android app's: on the web it only says to install the app, so the list leaves it out.
+  const native = useNativeApp();
+  const paged = phone && page !== null;
+
+  useEffect(() => {
+    if (!phone) jumpTo(section);
+  }, [section, phone]);
+  // A page opens at its top, and going back opens the list at its top, as pushed pages do.
+  useEffect(() => {
+    if (phone) dialogRef.current?.scrollTo({ top: 0 });
+  }, [page, phone]);
+
+  function openPage(id: SettingsSection, tapped: boolean) {
+    setShown(id);
+    setPage(id);
+    if (!phone) jumpTo(id);
+    requestAnimationFrame(() => {
+      // On the phone the list is gone, so focus moves to the page's own title, for keyboards and screen readers.
+      if (phone) document.getElementById(`settings-${id}-title`)?.focus({ preventScroll: true });
+      if (tapped) pushIn(id);
+    });
   }
 
-  useEffect(() => jumpTo(section), [section]);
+  function back() {
+    setPage(null);
+    requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
+  }
   // What Orbis can see reads the phone list (and, in the app, the phone itself) as it
   // mounts, so it mounts only once its section is on screen, not on every Settings open.
   const privacySeen = useSeen('privacy', shown);
@@ -178,8 +230,11 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
   // caller (like Today's setup checklist) asked to open.
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    headingRef.current?.focus({ preventScroll: true });
+    // Opened straight onto a page (the phone), the list's title isn't there: start on the page's own.
+    (headingRef.current ?? document.getElementById(`settings-${section}-title`))?.focus({ preventScroll: true });
     return () => opener?.focus({ preventScroll: true });
+    // Once, as Settings opens: a later change of section is a page change, not a reopen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -203,102 +258,144 @@ export function SettingsSheet({ userId, section, onClose, openHealth, googleNoti
       // Ask Orbis can be open over Settings; it owns Escape while it is, so a
       // question in progress there isn't lost to Settings closing underneath it.
       if (document.querySelector('.talk-sheet')) return;
+      // On the phone, Escape steps back from a page to the list first, as Back does.
+      if (pagedRef.current) {
+        setPage(null);
+        return;
+      }
       onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    pagedRef.current = paged;
+  }, [paged]);
+
   const notice = googleNotice ? GOOGLE_NOTICE[googleNotice] ?? GOOGLE_NOTICE.error : null;
   const profile = data.personalProfile.profile;
-  // Gmail and Groww are already in the list above as account connections.
-  const dataServices = data.integrations.filter((item) => item.id !== 'groww' && item.id !== 'gmail');
   const hints = sectionHints(data);
   const who = [profile?.preferredName.trim(), profile?.role.trim()].filter(Boolean).join(', ');
+
+  // Every section, keyed so the sheet stacks them in the index's category order (SETTINGS_CATEGORIES).
+  const groups: Record<SettingsSection, ReactNode> = {
+    you: (
+      <Group id="you" shown={shown}>
+        <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
+      </Group>
+    ),
+    security: (
+      <Group id="security" shown={shown}>
+        <SecuritySettings />
+      </Group>
+    ),
+    notifications: (
+      <Group id="notifications" shown={shown}>
+        <NotificationSettings settings={data.notificationSettings} />
+        <h3 className="fd-label st-sub">Heads-ups</h3>
+        <HeadsupSettings />
+      </Group>
+    ),
+    day: (
+      <Group id="day" shown={shown}>
+        <RoutineSettings summary={data.routines} editId={editRoutineId} />
+      </Group>
+    ),
+    ai: (
+      <Group id="ai" shown={shown} note="Nothing goes to an AI until this is on.">
+        <HomeBriefSetting preferences={data.aiPreferences} />
+      </Group>
+    ),
+    region: (
+      <Group id="region" shown={shown}>
+        <RegionSettings />
+        {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
+      </Group>
+    ),
+    tabs: (
+      <Group id="tabs" shown={shown}>
+        <TabSettings />
+      </Group>
+    ),
+    connections: (
+      <Group id="connections" shown={shown} note="Read-only. Disconnect any time.">
+        {notice && (
+          <output className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`}>
+            <span>{notice.text}</span>
+            <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
+          </output>
+        )}
+        {/* One inset grouped cell for every app, as a row each. */}
+        <div className="st-cell st-apps">
+          <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
+          <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
+        </div>
+      </Group>
+    ),
+    privacy: (
+      <Group id="privacy" shown={shown} note="Nothing is read until you turn it on.">
+        {privacySeen && <PrivacyCenter userId={userId} />}
+      </Group>
+    ),
+    data: (
+      <Group id="data" shown={shown}>
+        <div className="st-cell st-data">
+          <div className="fd-source pf-account">
+            <div><strong>This device</strong><p>Your data stays in your account.</p></div>
+            <SignOutButton variant="text" />
+          </div>
+          <AccountData />
+        </div>
+      </Group>
+    ),
+  };
 
   return (
     <>
       {/* The desktop's veil behind the dialog; a press on it closes Settings. Hidden on the phone. */}
       <div className="settings-veil" aria-hidden="true" onClick={onClose} />
-      <dialog open ref={dialogRef} className="settings-sheet field pf-screen" aria-modal="true" aria-label="Settings">
+      <dialog open ref={dialogRef} className={`settings-sheet field pf-screen ${inter.variable}`} aria-modal="true" aria-label="Settings" data-pages={phone || undefined} data-page={paged ? page : undefined}>
         {/* Drag down from here to close (the shared sheet motion); phone only. */}
         <div className="sheet-grabber" aria-hidden="true" />
         <header className="settings-head">
-          <div className="st-title">
-            <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
-            {who && <p className="st-who">{who}</p>}
-          </div>
+          {paged ? (
+            <button type="button" className="st-back" onClick={back}><ChevronLeft size={20} aria-hidden="true" /><span>Settings</span></button>
+          ) : (
+            <div className="st-title">
+              <h1 ref={headingRef} tabIndex={-1}>Settings</h1>
+              {who && <p className="st-who">{who}</p>}
+            </div>
+          )}
           <button type="button" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
         </header>
         {/* Not a <nav>: the bottom nav must stay the only navigation landmark. */}
-        {/* The index: every section as a row, with where it stands. On a desktop it is the list down the left. */}
+        {/* The index: every section as a row, with what it holds and where it stands, under its category's
+            heading (Your account, Preferences, …), as Instagram's and YouTube's settings group theirs.
+            On a desktop it is the list down the left. */}
         <fieldset className="settings-jump st-index" aria-label="Settings sections">
-          {SETTINGS_SECTIONS.map((item) => {
-            const Icon = GLYPH[item.id];
-            const hint = hints[item.id];
-            return (
-              <button key={item.id} className="st-row" data-section={item.id} type="button" aria-current={shown === item.id || undefined} onClick={(event) => { setShown(item.id); jumpTo(item.id); if (event.detail > 0) pushIn(item.id); }}>
-                <span className="st-glyph" aria-hidden="true"><Icon size={16} strokeWidth={2} /></span>
-                <span className="st-row-label">{item.label}</span>
-                {hint && <small className={hint.warn ? 'st-row-hint warn' : 'st-row-hint'}>{hint.text}</small>}
-                <ChevronRight className="st-chev" size={16} aria-hidden="true" />
-              </button>
-            );
-          })}
+          {SETTINGS_CATEGORIES.map((category) => (
+            <div key={category.id} className="st-cat" role="group" aria-labelledby={`settings-cat-${category.id}`}>
+              <h2 className="st-cat-h" id={`settings-cat-${category.id}`}>{category.label}</h2>
+              <div className="st-cat-list">
+                {category.sections.filter((id) => id !== 'privacy' || native).map((id) => {
+                  const Icon = GLYPH[id];
+                  const hint = hints[id];
+                  return (
+                    <button key={id} className="st-row" data-section={id} type="button" aria-current={(!phone && shown === id) || undefined} onClick={(event) => openPage(id, event.detail > 0)}>
+                      <span className="st-glyph" aria-hidden="true"><Icon size={16} strokeWidth={2} /></span>
+                      <span className="st-row-label">{SECTION[id].label}</span>
+                      {hint && <small className={hint.warn ? 'st-row-hint warn' : 'st-row-hint'}>{hint.text}</small>}
+                      <ChevronRight className="st-chev" size={16} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </fieldset>
 
-        <Group id="you" shown={shown} note="The name Orbis calls you, what you do, and where you are.">
-          <ProfileEditor key={profile ? 'profile-saved' : 'profile-empty'} state={data.personalProfile.state} profile={profile} />
-          {data.homeLocation.state !== 'setup' && <HomeCityEditor location={data.homeLocation} />}
-        </Group>
-
-        <Group id="connections" shown={shown} note="Everything Orbis reads from. Every connection is read-only, and you can disconnect at any time.">
-          {notice && (
-            <output className={`fd-msg pf-dismiss ${notice.success ? 'ok' : 'bad'}`}>
-              <span>{notice.text}</span>
-              <button type="button" onClick={clearGoogleNotice} aria-label="Dismiss message"><X size={14} aria-hidden="true" /></button>
-            </output>
-          )}
-          {/* One inset grouped cell for every app, as a row each. */}
-          <div className="st-cell st-apps">
-            <AppIntegrations connections={data.appConnections} stepsSummary={data.stepsSummary} openHealth={openHealth} />
-            <SocialConnections connections={data.socialConnections.items} ready={data.socialConnections.ready} configured={data.socialConnections.configured} />
-          </div>
-          <p className="fd-note tight st-subnote">Services Orbis uses for weather, rates, prices and AI.</p>
-          <Integrations items={dataServices} heading={false} />
-        </Group>
-
-        <Group id="ai" shown={shown} note="One switch for every AI feature. Nothing is sent to an AI provider until it is on.">
-          <HomeBriefSetting preferences={data.aiPreferences} />
-          <h3 className="fd-label st-sub">Heads-ups</h3>
-          <HeadsupSettings />
-        </Group>
-
-        <Group id="notifications" shown={shown}>
-          <NotificationSettings settings={data.notificationSettings} />
-        </Group>
-
-        <Group id="day" shown={shown} note="The times your day already has. Today leads with whatever is due, and records what you say happened to it.">
-          <RoutineSettings summary={data.routines} editId={editRoutineId} />
-        </Group>
-
-        <Group id="security" shown={shown}>
-          <SecuritySettings />
-        </Group>
-
-        <Group id="privacy" shown={shown} note="What Orbis reads on your phone, and what it keeps. Nothing is read until you turn it on.">
-          {privacySeen && <PrivacyCenter userId={userId} />}
-        </Group>
-
-        <Group id="data" shown={shown}>
-          <div className="st-cell st-data">
-            <div className="fd-source pf-account">
-              <div><strong>This device</strong><p>Sign out of Orbis here. Your data stays in your account.</p></div>
-              <SignOutButton variant="text" />
-            </div>
-            <AccountData />
-          </div>
-        </Group>
+        {SETTINGS_SECTIONS.map((item) => <Fragment key={item.id}>{groups[item.id]}</Fragment>)}
       </dialog>
     </>
   );

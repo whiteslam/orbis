@@ -70,7 +70,9 @@ export async function countInFlight(db: ShortsDb, userId: string): Promise<numbe
 }
 
 export async function countSince(db: ShortsDb, userId: string, sinceIso: string): Promise<number> {
-  const { count, error } = await db.from('shorts_jobs').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceIso);
+  // The daily autopilot's shorts don't count: at one a day they would use up the person's own month.
+  const { count, error } = await db.from('shorts_jobs').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceIso)
+    .or('options->>autopilot.is.null,options->>autopilot.neq.true');
   if (error) throw failed(error, LOAD_MESSAGE);
   return count ?? 0;
 }

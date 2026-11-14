@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appHref, hashFor, openingFromUrl, SETTINGS_SECTIONS, TABS } from '@/lib/shell/tabs';
+import { appHref, hashFor, openingFromUrl, SETTINGS_CATEGORIES, SETTINGS_SECTIONS, TABS } from '@/lib/shell/tabs';
 
 describe('TABS', () => {
   it('lists the six tabs in order, one name each', () => {
@@ -9,14 +9,38 @@ describe('TABS', () => {
 });
 
 describe('SETTINGS_SECTIONS', () => {
-  it('lists the eight sections in the order the sheet shows them', () => {
-    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['You', 'Connections', 'AI & privacy', 'Notifications', 'Your day', 'Security', 'What Orbis can see', 'Your data']);
+  it('lists the ten sections in category order, the order the sheet shows them', () => {
+    expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(['you', 'security', 'data', 'notifications', 'day', 'ai', 'region', 'tabs', 'connections', 'privacy']);
+    // The labels are what copy across the app points at ("Settings → Phone access"), so they hold.
+    expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual(['Profile', 'Security', 'Account', 'Notifications', 'Routines', 'AI', 'Region', 'Tabs', 'Connected apps', 'Phone access']);
   });
 
-  it('has the privacy center, right after Security', () => {
-    const at = SETTINGS_SECTIONS.findIndex((section) => section.id === 'privacy');
-    expect(SETTINGS_SECTIONS[at]).toEqual({ id: 'privacy', label: 'What Orbis can see' });
-    expect(SETTINGS_SECTIONS[at - 1].id).toBe('security');
+  it('gives every section a short one-line description', () => {
+    for (const section of SETTINGS_SECTIONS) {
+      expect(section.description.trim()).not.toBe('');
+      expect(section.description.length).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it('puts Phone access with Connected apps, and Account with Profile', () => {
+    expect(SETTINGS_SECTIONS.find((section) => section.id === 'privacy')).toMatchObject({ label: 'Phone access', category: 'apps' });
+    expect(SETTINGS_SECTIONS.find((section) => section.id === 'data')).toMatchObject({ label: 'Account', category: 'account' });
+  });
+});
+
+describe('SETTINGS_CATEGORIES', () => {
+  it('names three categories, in order', () => {
+    expect(SETTINGS_CATEGORIES.map((category) => category.label)).toEqual(['You', 'Preferences', 'Apps and devices']);
+  });
+
+  it('holds every section exactly once, in the order SETTINGS_SECTIONS lists them', () => {
+    const flat = SETTINGS_CATEGORIES.flatMap((category) => category.sections);
+    expect(flat).toEqual(SETTINGS_SECTIONS.map((section) => section.id));
+    expect(new Set(flat).size).toBe(10);
+    for (const category of SETTINGS_CATEGORIES) {
+      expect(category.sections.length).toBeGreaterThan(0);
+      for (const id of category.sections) expect(SETTINGS_SECTIONS.find((section) => section.id === id)?.category).toBe(category.id);
+    }
   });
 });
 

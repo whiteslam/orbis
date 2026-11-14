@@ -53,7 +53,7 @@ function useDevices() {
 }
 
 /**
- * Settings → What Orbis can see. Inside the Android app it is where people choose
+ * Settings → Phone access. Inside the Android app it is where people choose
  * what Orbis reads on this phone, and test it; on the web it lists the phones and
  * deletes what Orbis kept on the server.
  *

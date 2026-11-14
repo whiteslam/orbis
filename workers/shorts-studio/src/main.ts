@@ -3,6 +3,8 @@
 // Checks the skill is set up, publishes the style catalog and voices, then
 // takes the owner's queued shorts one at a time. See ../README.md.
 
+import { inWindow } from '../../../lib/shorts/shelf.ts';
+import { createAutopilotDb, type BuildWindow } from './autopilot.ts';
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +16,7 @@ import { parseStyle, parseVoices, STYLE_ORDER, type StyleMeta } from './styles.t
 
 const HEARTBEAT_MS = 30_000;
 const SWEEP_MS = 5 * 60_000;
+const AUTOPILOT_CHECK_MS = 60_000;
 const SETUP_RETRY_MS = 10 * 60_000;
 const ATTENTION_PAUSE_MS = 30 * 60_000;
 
@@ -91,7 +94,11 @@ async function main() {
   await db.heartbeat(cfg.owner, mode, null, voices);
   const beat = setInterval(() => { void db.heartbeat(cfg.owner, mode, note).catch((error: unknown) => log('heartbeat', error)); }, HEARTBEAT_MS);
 
-  const deps: RunDeps = { db, cfg, claude: runClaude, exec, is3d: (style) => threeD.has(style) };
+  const autopilot = createAutopilotDb(cfg.url, cfg.key);
+  const deps: RunDeps = { db, cfg, claude: runClaude, exec, is3d: (style) => threeD.has(style), autopilot };
+  let lastAutopilotCheck = 0;
+  // The build window, read with each autopilot check: null while the autopilot is off.
+  let buildWindow: BuildWindow | null = null;
   let lastSweep = Date.now();
   let pausedUntil = 0;
 
@@ -103,9 +110,24 @@ async function main() {
         if (stale) log(`Marked ${stale} silent short(s) as failed.`);
       }
       if (Date.now() < pausedUntil) { await sleep(cfg.pollMs); continue; }
+      // Once a minute: should the autopilot start its next short? It is queued like any other and taken below.
+      if (Date.now() - lastAutopilotCheck > AUTOPILOT_CHECK_MS) {
+        lastAutopilotCheck = Date.now();
+        buildWindow = await autopilot.window(cfg.owner).catch((error: unknown) => {
+          log('autopilot', error instanceof Error ? error.message : error);
+          return buildWindow;
+        });
+        const started = await autopilot.startNext(cfg.owner, new Date()).catch((error: unknown) => {
+          log('autopilot', error instanceof Error ? error.message : error);
+          return null;
+        });
+        if (started) log(`Autopilot queued (${started.destination}): ${started.topic}`);
+      }
       if (mode === 'paused') { mode = 'idle'; note = null; await db.heartbeat(cfg.owner, mode, note); }
 
-      const job = await db.nextJob(cfg.owner);
+      // Autopilot shorts are built only in the night window; a short the owner queued is taken any time.
+      const autopilotNow = !buildWindow || inWindow(buildWindow.windowStart, buildWindow.windowEnd, new Date(), buildWindow.timezone);
+      const job = await db.nextJob(cfg.owner, { autopilot: autopilotNow });
       if (!job || !(await db.claim(job))) { await sleep(cfg.pollMs); continue; }
 
       mode = 'busy';

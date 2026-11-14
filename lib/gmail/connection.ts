@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isMissingTable } from '@/lib/supabase/errors';
 import { decryptRefreshToken } from '@/lib/gmail/crypto';
 import { GoogleOAuthError, refreshGoogleAccessToken, revokeGoogleToken } from '@/lib/gmail/oauth';
 
@@ -66,14 +67,28 @@ export async function disconnectGmail(userId: string) {
     .maybeSingle();
 
   if (readError) throw new Error('Gmail could not be disconnected.');
-  if (!connection) return { revoked: true };
+  if (!connection) return { revoked: true, sharedWithYouTube: false };
+
+  // YouTube uses the same Google client, and Google keeps one grant per account
+  // per client: revoking it here would also kill YouTube's refresh token. So the
+  // grant is only withdrawn when YouTube isn't connected; the row goes either way.
+  const { data: youtube, error: youtubeError } = await admin
+    .from('social_connections')
+    .select('platform')
+    .eq('user_id', userId)
+    .eq('platform', 'youtube')
+    .maybeSingle();
+  // A read that fails for any reason but a missing table counts as "connected", the safe answer.
+  const sharedWithYouTube = youtubeError ? !isMissingTable(youtubeError) : Boolean(youtube);
 
   let revoked = false;
-  try {
-    const refreshToken = decryptRefreshToken(connection.refresh_token_encrypted);
-    revoked = await revokeGoogleToken(refreshToken);
-  } catch {
-    // Local removal remains the priority if the token is already invalid or Google is unavailable.
+  if (!sharedWithYouTube) {
+    try {
+      const refreshToken = decryptRefreshToken(connection.refresh_token_encrypted);
+      revoked = await revokeGoogleToken(refreshToken);
+    } catch {
+      // Local removal remains the priority if the token is already invalid or Google is unavailable.
+    }
   }
 
   const { error: deleteError } = await admin
@@ -83,5 +98,5 @@ export async function disconnectGmail(userId: string) {
     .eq('user_id', userId);
 
   if (deleteError) throw new Error('Gmail could not be disconnected.');
-  return { revoked };
+  return { revoked, sharedWithYouTube };
 }

@@ -13,7 +13,7 @@ type Result = { success: boolean; message: string };
 
 const NOT_SAVED = 'Your settings could not be saved. Try again.';
 
-/** Settings → You: time zone, currency, language and modules. */
+/** Settings → Region and Tabs: time zone, currency, language and modules. */
 export async function saveSettings(input: { timeZone: string; currency: string; locale: string; modules: ModuleId[] }): Promise<Result> {
   const auth = await requireUser();
   if (!auth) return { success: false, message: 'Sign in again to save your settings.' };
@@ -28,7 +28,7 @@ export async function saveSettings(input: { timeZone: string; currency: string; 
 
 /**
  * The end of first-run onboarding: the name (through the same save as
- * Settings → You), the AI switch, then the settings row stamped onboarded.
+ * Settings → Region and Tabs), the AI switch, then the settings row stamped onboarded.
  * The stamp goes last, so a step that fails leaves the person on onboarding to
  * try again rather than half set up. Language isn't asked yet: a new row gets
  * the default and an existing one keeps its own.

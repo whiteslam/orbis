@@ -24,7 +24,8 @@ export type EventKind = 'status' | 'step' | 'log' | 'qa';
 export type WorkerMode = 'idle' | 'busy' | 'paused' | 'setup';
 
 export interface WorkerDb {
-  nextJob(owner: string): Promise<JobRow | null>;
+  /** The oldest queued job. With autopilot false, autopilot shorts wait (outside the night window). */
+  nextJob(owner: string, opts: { autopilot: boolean }): Promise<JobRow | null>;
   claim(job: JobRow): Promise<boolean>;
   event(job: JobRow, kind: EventKind, content: string): Promise<void>;
   finishPlan(job: JobRow, plan: ShortPlan): Promise<boolean>;
@@ -62,8 +63,10 @@ export function createWorkerDb(url: string, key: string): WorkerDb {
   }
 
   return {
-    async nextJob(owner) {
-      const { data, error } = await db.from('shorts_jobs').select(JOB_COLUMNS).eq('user_id', owner).eq('status', 'queued').order('created_at', { ascending: true }).limit(1);
+    async nextJob(owner, opts) {
+      let query = db.from('shorts_jobs').select(JOB_COLUMNS).eq('user_id', owner).eq('status', 'queued');
+      if (!opts.autopilot) query = query.or('options->>autopilot.is.null,options->>autopilot.neq.true');
+      const { data, error } = await query.order('created_at', { ascending: true }).limit(1);
       check(error, 'Reading the queue');
       return (data?.[0] as JobRow | undefined) ?? null;
     },

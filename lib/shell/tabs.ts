@@ -6,7 +6,7 @@
 
 export type TabId = 'today' | 'money' | 'health' | 'journal' | 'social' | 'career';
 export type MoneyView = 'spending' | 'investments';
-export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'security' | 'privacy' | 'data';
+export type SettingsSection = 'you' | 'connections' | 'ai' | 'notifications' | 'day' | 'region' | 'tabs' | 'security' | 'privacy' | 'data';
 
 export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -17,16 +17,35 @@ export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'career', label: 'Career' },
 ];
 
-export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
-  { id: 'you', label: 'You' },
-  { id: 'connections', label: 'Connections' },
-  { id: 'ai', label: 'AI & privacy' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'day', label: 'Your day' },
-  { id: 'security', label: 'Security' },
-  { id: 'privacy', label: 'What Orbis can see' },
-  { id: 'data', label: 'Your data' },
+export type SettingsCategory = 'account' | 'preferences' | 'apps';
+
+/**
+ * Settings' sections, grouped the way Instagram's or YouTube's settings are:
+ * you and your account, how Orbis behaves for you, and what it is connected to.
+ * Copy elsewhere points at these labels ("Settings → Phone access"); rename them together.
+ */
+export const SETTINGS_CATEGORIES: ReadonlyArray<{ id: SettingsCategory; label: string; sections: readonly SettingsSection[] }> = [
+  { id: 'account', label: 'You', sections: ['you', 'security', 'data'] },
+  { id: 'preferences', label: 'Preferences', sections: ['notifications', 'day', 'ai', 'region', 'tabs'] },
+  { id: 'apps', label: 'Apps and devices', sections: ['connections', 'privacy'] },
 ];
+
+const SECTION_COPY: Record<SettingsSection, { label: string; description: string }> = {
+  you: { label: 'Profile', description: 'Name, role, about you' },
+  security: { label: 'Security', description: 'PIN and lock' },
+  data: { label: 'Account', description: 'Sign out, export, delete' },
+  notifications: { label: 'Notifications', description: 'Check-ins and heads-ups' },
+  day: { label: 'Routines', description: 'Fixed times in your day' },
+  ai: { label: 'AI', description: 'AI switch and the brief' },
+  region: { label: 'Region', description: 'Time zone, currency, home city' },
+  tabs: { label: 'Tabs', description: 'Which tabs show' },
+  connections: { label: 'Connected apps', description: 'Google, Health, social apps' },
+  privacy: { label: 'Phone access', description: 'What the Android app reads' },
+};
+
+/** Every section, in its category's order: the order the index lists them and the sheet stacks them. */
+export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string; description: string; category: SettingsCategory }> =
+  SETTINGS_CATEGORIES.flatMap((category) => category.sections.map((id) => ({ id, ...SECTION_COPY[id], category: category.id })));
 
 export type Opening = { tab: TabId; money?: MoneyView; settings?: SettingsSection };
 
