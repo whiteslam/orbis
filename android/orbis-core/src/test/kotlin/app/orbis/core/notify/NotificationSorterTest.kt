@@ -123,6 +123,21 @@ class NotificationSorterTest {
     }
 
     @Test
+    fun `a card or account ending near an OTP footer is not a code, and the payment is sorted`() {
+        val card = "Rs 500 spent on card ending 1234 at AMAZON. Never share OTP"
+        val account = "Rs 500 debited from a/c **1234. Do not share OTP with anyone"
+        for (text in listOf(card, account)) {
+            assertFalse(text, NotificationSorter.isOneTimeCode(text))
+            assertEquals(text, "transaction", sort("com.bank", text)!!.kind)
+        }
+        assertFalse(NotificationSorter.isOneTimeCode("Acct XX4821 debited Rs 90. OTP never asked"))
+        assertFalse(NotificationSorter.isOneTimeCode("Account no. 482193 credited. Never share your OTP"))
+        // A real code still counts, even with an account mentioned elsewhere.
+        assertTrue(NotificationSorter.isOneTimeCode("482193 is the OTP for your card ending 1234"))
+        assertTrue(NotificationSorter.isOneTimeCode("OTP for a/c ending 1234 is 482193"))
+    }
+
+    @Test
     fun `amounts and ids near the word code are not codes`() {
         assertFalse(NotificationSorter.isOneTimeCode("Rs.12000.00 debited, ref code HDFC0001234"))
         assertFalse(NotificationSorter.isOneTimeCode("INR 2500 sent, use code to claim cashback"))

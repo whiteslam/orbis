@@ -39,15 +39,24 @@ object NotificationSorter {
     )
 
     // A one-time code is a standalone 4-8 digit number next to an OTP word or the word "code".
-    // Amounts ("Rs 2500", "$4500", "12,000.50") and ids glued to letters ("HDFC0001234") are not codes.
+    // Amounts ("Rs 2500", "$4500", "12,000.50"), ids glued to letters ("HDFC0001234") and card or
+    // account numbers ("card ending 1234") are not codes.
     private val OTP_WORD = Regex(
         """\b(otp|one[- ]time (password|code)|verification code|security code|login code|passcode|code)\b""",
         RegexOption.IGNORE_CASE,
     )
     private val CODE_RUN = Regex("""(?<![\w.,])\d{4,8}(?!\w|[.,]\d)""")
     private val CURRENCY_BEFORE = Regex("""(?:\b(?:rs\.?|inr|usd|eur|gbp)|[₹$€£])\s{0,2}$""", RegexOption.IGNORE_CASE)
+    // A card or account number ("card ending 1234", "a/c **1234", "Account no. 482193") is not
+    // a code, even with a "never share your OTP" footer next to it: the marker must come right
+    // before the number, with only spaces or punctuation between.
+    private val ACCOUNT_BEFORE = Regex(
+        """(?:\b(?:ending(?:\s+(?:in|with))?|a/c|acct|account|card|no|number)|\bx{2,}|\*)[\s:.#*-]*$""",
+        RegexOption.IGNORE_CASE,
+    )
     private const val CODE_REACH = 40
     private const val CURRENCY_REACH = 8
+    private const val ACCOUNT_REACH = 16
 
     private const val MAX_TEXT = 1_000
     private const val MAX_WHO = 200
@@ -58,7 +67,8 @@ object NotificationSorter {
         val start = run.range.first
         val end = run.range.last + 1
         val amount = CURRENCY_BEFORE.containsMatchIn(text.substring(maxOf(0, start - CURRENCY_REACH), start))
-        !amount && (
+        val account = ACCOUNT_BEFORE.containsMatchIn(text.substring(maxOf(0, start - ACCOUNT_REACH), start))
+        !amount && !account && (
             OTP_WORD.containsMatchIn(text.substring(maxOf(0, start - CODE_REACH), start)) ||
                 OTP_WORD.containsMatchIn(text.substring(end, minOf(text.length, end + CODE_REACH)))
             )
