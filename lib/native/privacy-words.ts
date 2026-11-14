@@ -36,9 +36,33 @@ export const TURN_ON_WORDS: Partial<Record<Source, TurnOnWords>> = {
     read: 'The title and text of notifications that arrive on this phone. Blocked apps and contacts are skipped, and banking apps start blocked. Bank and UPI text messages are read unless you block the sender.',
     kept: 'The text stays on this phone, encrypted, for 30 days. Card and account numbers are hidden first, and one-time codes are never kept.',
     goes: 'Only what Orbis sorts out leaves the phone, encrypted: payments for you to review in Money, deliveries, missed calls and job mail.',
-    next: 'Next, Android asks you to give Orbis notification access. If it says the setting is restricted, open App info for Orbis, tap the menu, and choose Allow restricted settings.',
+    next: 'Next, tap Open notification access and turn Orbis on in the Android screen that opens. If Android says the setting is restricted, open App info for Orbis, tap the menu, and choose Allow restricted settings.',
   },
 };
+
+/**
+ * The words for the two blocked lists. A notification shows a saved contact by name, so a
+ * blocked contact is a number or a name exactly as notifications show it; the phone keeps a
+ * number's last 10 digits, or the name in lower case.
+ */
+export const BLOCKED_LIST_WORDS = {
+  blockedContacts: {
+    title: 'Blocked contacts',
+    label: 'Phone number or name',
+    placeholder: 'e.g. 98765 43210 or Asha Rao',
+    inputMode: 'text',
+    note: 'Nothing to or from these is read. Add a phone number, or a name exactly as it shows in your notifications. Numbers are matched by their last 10 digits.',
+    refused: 'That couldn’t be added.',
+  },
+  blockedKeywords: {
+    title: 'Blocked words',
+    label: 'Word or phrase',
+    placeholder: 'e.g. salary',
+    inputMode: 'text',
+    note: 'An item that contains one of these is never kept.',
+    refused: 'That couldn’t be added.',
+  },
+} as const;
 
 const WIRE_NAMES: ReadonlySet<string> = new Set(SOURCES);
 

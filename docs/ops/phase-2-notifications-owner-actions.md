@@ -38,8 +38,8 @@ What only you can do to turn on "Orbis reads your notifications" on your phone. 
 
 6. **Block the sender and check the next text is ignored.**
    1. Look at how the test text showed up on your phone: it is under a phone number, a saved contact name or, for a real bank, a name like `AX-HDFCBK`. That is the sender. Block exactly what you see, in Settings, Phone access:
-      - a phone number goes in **Blocked contacts** (the box is made for phone numbers; it also matches a sender name typed exactly as shown);
-      - a name goes in **Blocked words**. A blocked word matches any part of the sender or of the text, so `HDFCBK` blocks `AX-HDFCBK`.
+      - a phone number, or a name exactly as it shows (a saved contact, or `AX-HDFCBK`), goes in **Blocked contacts**;
+      - or put part of the name in **Blocked words**. A blocked word matches any part of the sender or of the text, so `HDFCBK` blocks `AX-HDFCBK`.
    2. Send another test text from the same sender.
    3. After the next sync, nothing new appears under "From your phone, to review".
 

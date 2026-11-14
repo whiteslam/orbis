@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { SOURCES } from '@/lib/device/sources';
-import { activityWords, addToList, blockedFirst, isSource, lastSeenWords, pauseState, READY, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from './privacy-words';
+import { activityWords, addToList, BLOCKED_LIST_WORDS, blockedFirst, isSource, lastSeenWords, pauseState, READY, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from './privacy-words';
 
 test('every wire name has a plain label, and only wire names are sources', () => {
   for (const source of SOURCES) assert.ok(SOURCE_LABELS[source].length > 0, source);
@@ -107,4 +107,20 @@ test('every READY source has turn-on words', () => {
     assert.ok(words, source);
     for (const field of Object.values(words)) assert.ok(field.trim().length > 0, source);
   }
+});
+
+test('the notifications turn-on words name the button the person taps', () => {
+  const words = TURN_ON_WORDS.notifications;
+  assert.ok(words);
+  assert.match(words.next, /tap Open notification access/);
+  assert.doesNotMatch(words.next, /Android asks you/);
+});
+
+test('blocked contacts take a number or a name as it shows in notifications', () => {
+  const words = BLOCKED_LIST_WORDS.blockedContacts;
+  assert.match(words.note, /name exactly as it shows in your notifications/);
+  assert.match(words.label, /name/i);
+  assert.doesNotMatch(words.refused, /phone number/, 'a name is not refused for not being a number');
+  assert.equal(words.inputMode, 'text', 'a name needs letters on the keyboard');
+  assert.equal(BLOCKED_LIST_WORDS.blockedKeywords.title, 'Blocked words');
 });

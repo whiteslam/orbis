@@ -89,6 +89,15 @@ class NotificationSorterTest {
     }
 
     @Test
+    fun `missed call from a name on one line gives who`() {
+        val s = sort("com.google.android.dialer", "Missed call from Asha")!!
+        assertEquals("missed_contact", s.kind)
+        assertEquals("Asha", JSONObject(s.content).getString("who"))
+        val t = sort("com.android.dialer", "Missed call\n2 missed calls from Asha")!!
+        assertEquals("Asha", JSONObject(t.content).getString("who"))
+    }
+
+    @Test
     fun `a missed call with no name has no who`() {
         val s = sort("com.android.dialer", "Missed call")!!
         assertEquals("missed_contact", s.kind)

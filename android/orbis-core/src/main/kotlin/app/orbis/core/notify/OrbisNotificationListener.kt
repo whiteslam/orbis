@@ -1,6 +1,9 @@
 package app.orbis.core.notify
 
 import android.app.Notification
+import android.app.Person
+import android.os.Build
+import android.os.Bundle
 import android.os.Process
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -70,10 +73,44 @@ class OrbisNotificationListener : NotificationListenerService() {
             ongoing = sbn.isOngoing,
             groupSummary = (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0,
             otherProfile = sbn.user != Process.myUserHandle(),
+            handles = if (extras == null) emptyList() else handlesOf(extras),
         )
+    }
+
+    /**
+     * The people a notification carries besides its title, for the blocked-contact check: phone
+     * numbers from `tel:` people (EXTRA_PEOPLE_LIST on Android 9+, EXTRA_PEOPLE before), those
+     * people's names, and the sender of each messaging-style message. Runs inside readSafely.
+     */
+    @Suppress("DEPRECATION") // the typed getters arrived in API 33; minSdk is 24
+    private fun handlesOf(extras: Bundle): List<String> {
+        val out = mutableListOf<String>()
+        fun person(p: Person?) {
+            if (p == null) return
+            p.name?.toString()?.let(out::add)
+            NotificationReader.phoneFromUri(p.uri)?.let(out::add)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            extras.getParcelableArrayList<Person>(Notification.EXTRA_PEOPLE_LIST)?.forEach(::person)
+        }
+        extras.getStringArray(Notification.EXTRA_PEOPLE)?.forEach { uri ->
+            NotificationReader.phoneFromUri(uri)?.let(out::add)
+        }
+        extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.forEach { message ->
+            val bundle = message as? Bundle ?: return@forEach
+            bundle.getCharSequence(MESSAGE_SENDER)?.toString()?.let(out::add)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                person(bundle.getParcelable(MESSAGE_SENDER_PERSON) as? Person)
+            }
+        }
+        return out
     }
 
     private companion object {
         const val TAG = "OrbisNotifications"
+
+        // Notification.MessagingStyle.Message's bundle keys (not public constants).
+        const val MESSAGE_SENDER = "sender"
+        const val MESSAGE_SENDER_PERSON = "sender_person"
     }
 }

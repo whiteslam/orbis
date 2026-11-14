@@ -12,11 +12,14 @@ data class Sorted(val kind: String, val content: String)
  * call or job mail. Everything else returns null and is only kept as a plain item.
  */
 object NotificationSorter {
-    private val DIALERS = setOf(
+    /** Phone apps: their caller is in the text ("Missed call" / "Asha"), not the title. */
+    internal val PHONE_DIALERS = setOf(
         "com.google.android.dialer",
         "com.samsung.android.dialer",
         "com.android.dialer",
         "com.android.server.telecom",
+    )
+    private val DIALERS = PHONE_DIALERS + setOf(
         "com.whatsapp",
         "com.whatsapp.w4b",
     )
@@ -29,6 +32,8 @@ object NotificationSorter {
     )
 
     private val MISSED_CALL = Regex("""\bmissed (voice |video )?call""", RegexOption.IGNORE_CASE)
+    // "Missed call from Asha", "2 missed calls from +91 98765 43210": the caller is after "from".
+    private val MISSED_FROM = Regex("""\bmissed (?:voice |video )?calls?\s+from\s+(.+)$""", RegexOption.IGNORE_CASE)
     private val PACKAGE = Regex(
         """\b(out for delivery|delivered|shipped|dispatched|arriving (today|tomorrow)|order (has been )?(placed|confirmed))\b""",
         RegexOption.IGNORE_CASE,
@@ -78,6 +83,16 @@ object NotificationSorter {
     private const val MAX_MERCHANT = 80
     private const val MAX_APP = 200
 
+    /**
+     * The caller one line of a missed call names: the line itself ("Asha"), or what follows
+     * "missed call from"; null for a blank line or one that only says "Missed call".
+     */
+    internal fun callerOn(line: String): String? {
+        val t = line.trim()
+        MISSED_FROM.find(t)?.let { return it.groupValues[1].trim().takeIf(String::isNotEmpty) }
+        return t.takeIf { it.isNotEmpty() && !MISSED_CALL.containsMatchIn(it) }
+    }
+
     fun isOneTimeCode(text: String): Boolean = CODE_RUN.findAll(text).any { run ->
         val start = run.range.first
         val end = run.range.last + 1
@@ -98,8 +113,7 @@ object NotificationSorter {
         val app = packageName?.let { CapturePipeline.signalContent(it, MAX_APP) }
 
         if (packageName in DIALERS && MISSED_CALL.containsMatchIn(rawText)) {
-            val who = maskedText.lineSequence().map { it.trim() }
-                .firstOrNull { it.isNotEmpty() && !MISSED_CALL.containsMatchIn(it) }
+            val who = maskedText.lineSequence().mapNotNull(::callerOn).firstOrNull()
                 ?.let { CapturePipeline.signalContent(it, MAX_WHO) }
                 ?.takeIf { it.isNotEmpty() }
             return build("missed_contact", app, maskedText, if (who == null) emptyMap() else mapOf("who" to who))

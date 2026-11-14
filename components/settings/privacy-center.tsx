@@ -11,7 +11,7 @@ import { batteryHelp } from '@/lib/native/battery-help';
 import { linkThisPhone, pushPlugin } from '@/lib/native/link-phone';
 import { OrbisCore, type ActivityEntry, type CoreStatus, type LauncherApp, type Privacy, type TestCaptureResult } from '@/lib/native/orbis-core';
 import { pauseUntil, type PauseChoice } from '@/lib/native/pause';
-import { activityWords, addToList, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, READY, reasonWords, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from '@/lib/native/privacy-words';
+import { activityWords, addToList, BLOCKED_LIST_WORDS, blockedFirst, lastSeenWords, MAX_ITEM_CHARS, pauseState, READY, reasonWords, SOURCE_LABELS, syncWords, toggleBlocked, TURN_ON_WORDS } from '@/lib/native/privacy-words';
 
 type Message = { text: string; success: boolean } | null;
 
@@ -529,28 +529,9 @@ function BlockedApps({ privacy, apps, onPrivacy }: Readonly<{ privacy: Privacy; 
   );
 }
 
-const LISTS = {
-  blockedContacts: {
-    title: 'Blocked contacts',
-    label: 'Phone number',
-    placeholder: 'e.g. 98765 43210',
-    inputMode: 'tel',
-    note: 'Nothing to or from these numbers is read. Numbers are matched by their last 10 digits.',
-    refused: 'That doesn’t look like a phone number.',
-  },
-  blockedKeywords: {
-    title: 'Blocked words',
-    label: 'Word or phrase',
-    placeholder: 'e.g. salary',
-    inputMode: 'text',
-    note: 'An item that contains one of these is never kept.',
-    refused: 'That couldn’t be added.',
-  },
-} as const;
-
 /** Blocked contacts or blocked words: a row each, and a field to add one. */
 function BlockedList({ kind, privacy, onPrivacy }: Readonly<{ kind: 'blockedContacts' | 'blockedKeywords'; privacy: Privacy; onPrivacy: (privacy: Privacy) => void }>) {
-  const words = LISTS[kind];
+  const words = BLOCKED_LIST_WORDS[kind];
   const items = privacy[kind];
   const [draft, setDraft] = useState('');
   const [message, setMessage] = useState<Message>(null);

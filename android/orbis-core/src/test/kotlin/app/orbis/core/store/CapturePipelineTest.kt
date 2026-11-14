@@ -1,5 +1,7 @@
 package app.orbis.core.store
 
+import app.orbis.core.notify.NotificationFacts
+import app.orbis.core.notify.NotificationReader
 import app.orbis.core.rules.CapturedItem
 import app.orbis.core.rules.DefaultBlocklist
 import app.orbis.core.rules.Decision
@@ -250,6 +252,71 @@ class CapturePipelineTest {
         assertEquals(0, port.raw.size)
         assertEquals(0, port.signals.size)
         assertEquals(listOf("BLOCKED_CONTACT"), port.ledger.map { it.reason })
+    }
+
+    // Spec §2 anti-goal 1: a blocked contact's notifications are never read. These go through the
+    // reader, as the listener does, so the contacts are the ones a real notification gives.
+    private fun notification(pkg: String, title: String?, text: String?, handles: List<String> = emptyList()) =
+        NotificationReader.toItem(
+            NotificationFacts("k", pkg, title, text, null, occurred, false, false, false, handles),
+            "app.orbis.android",
+        )!!
+
+    private fun assertOnlyTheLedger(port: FakePort, d: Decision, vararg secrets: String) {
+        assertEquals(Decision.Drop(DropReason.BLOCKED_CONTACT), d)
+        assertEquals(0, port.raw.size)
+        assertEquals(0, port.signals.size)
+        assertEquals(
+            listOf(LedgerEntry(at = now, source = Source.NOTIFICATIONS, decision = LedgerEntry.DROPPED, reason = "BLOCKED_CONTACT")),
+            port.ledger,
+        )
+        val dump = port.everything().joinToString("\n") { it.toString() }.lowercase()
+        for (s in secrets) assertFalse("stored data contains '$s'", dump.contains(s.lowercase()))
+    }
+
+    @Test
+    fun aBlockedNumbersMissedCallWritesNothingButTheLedger() = runBlocking {
+        val port = FakePort()
+        val s = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("98765 43210")))
+        val d = CapturePipeline(port).capture(
+            notification("com.google.android.dialer", "Missed call", "+91 98765 43210"), s, now,
+        )
+        assertOnlyTheLedger(port, d, "98765", "3210", "missed")
+    }
+
+    @Test
+    fun aBlockedSavedNamesWhatsAppMessageWritesNothingButTheLedger() = runBlocking {
+        val port = FakePort()
+        val s = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("Asha")))
+        val d = CapturePipeline(port).capture(notification("com.whatsapp", "Asha", "See you at 6"), s, now)
+        assertOnlyTheLedger(port, d, "asha", "see you")
+    }
+
+    @Test
+    fun aBlockedSendersGroupMessageWritesNothingButTheLedger() = runBlocking {
+        val s = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("Asha")))
+        // Older WhatsApp: "Group: Sender" in the title.
+        val titled = FakePort()
+        assertOnlyTheLedger(
+            titled,
+            CapturePipeline(titled).capture(notification("com.whatsapp", "Family: Asha", "Dinner at 8"), s, now),
+            "asha", "dinner",
+        )
+        // Newer: the group as the title, the sender in the message list (the listener's handles).
+        val messaging = FakePort()
+        assertOnlyTheLedger(
+            messaging,
+            CapturePipeline(messaging).capture(notification("com.whatsapp", "Family", "Dinner at 8", listOf("Asha")), s, now),
+            "asha", "dinner",
+        )
+    }
+
+    @Test
+    fun aBlockedCallersMissedCallFromOneLineWritesNothingButTheLedger() = runBlocking {
+        val port = FakePort()
+        val s = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("Asha")))
+        val d = CapturePipeline(port).capture(notification("com.google.android.dialer", "Missed call from Asha", null), s, now)
+        assertOnlyTheLedger(port, d, "asha")
     }
 
     @Test
