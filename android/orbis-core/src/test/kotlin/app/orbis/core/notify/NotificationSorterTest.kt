@@ -82,6 +82,26 @@ class NotificationSorterTest {
     fun `a delivery is a package`() {
         assertEquals("package", sort("com.amazon.mShop.android.shopping", "Your package was delivered")!!.kind)
         assertEquals("package", sort(null, "Order has been placed")!!.kind)
+        assertEquals("package", sort("in.amazon.mShop.android.shopping", "Your Amazon order has been shipped")!!.kind)
+        // Bank and courier texts arrive through Messages, so it stays allowed.
+        assertEquals("package", sort("com.google.android.apps.messaging", "Your parcel is out for delivery")!!.kind)
+    }
+
+    @Test
+    fun `delivery words with no shipment are not a package`() {
+        assertNull(sort("com.whatsapp", "Amma\nThe baby was delivered this morning"))
+        assertNull(sort("com.google.android.apps.messaging", "The baby was delivered this morning"))
+        assertNull(sort("com.example.news", "Speech delivered at the summit"))
+    }
+
+    @Test
+    fun `a chat app is never a package, even about an order`() {
+        for (chat in listOf(
+            "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger",
+            "org.thoughtcrime.securesms", "com.instagram.android", "com.facebook.orca",
+        )) {
+            assertNull(chat, sort(chat, "Asha\nYour order was delivered, it's at the door"))
+        }
     }
 
     @Test
@@ -148,7 +168,7 @@ class NotificationSorterTest {
 
     @Test
     fun `an emoji pair at the cut is kept whole`() {
-        val text = "delivered " + "x".repeat(989) + "😀tail"
+        val text = "Order delivered " + "x".repeat(983) + "😀tail"
         assertEquals('\uD83D', text[999])
         val s = sort("com.shop", text)!!
         val t = JSONObject(s.content).getString("text")
@@ -159,7 +179,7 @@ class NotificationSorterTest {
 
     @Test
     fun `a lone surrogate in the text becomes a replacement character`() {
-        val text = "delivered \uD83D alone \uDE00 too"
+        val text = "Order delivered \uD83D alone \uDE00 too"
         val s = sort("com.shop", text)!!
         val t = JSONObject(s.content).getString("text")
         assertNoLoneSurrogates(t)
@@ -168,11 +188,11 @@ class NotificationSorterTest {
 
     @Test
     fun `control characters are shortened so the content fits`() {
-        val text = "delivered " + "\u0001".repeat(1000)
+        val text = "Order delivered " + "\u0001".repeat(1000)
         val s = sort("com.shop", text)!!
         assertEquals("package", s.kind)
         assertTrue(s.content.length <= 4000)
-        assertTrue(JSONObject(s.content).getString("text").startsWith("delivered "))
+        assertTrue(JSONObject(s.content).getString("text").startsWith("Order delivered "))
     }
 
     @Test

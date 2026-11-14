@@ -33,6 +33,21 @@ object NotificationSorter {
         """\b(out for delivery|delivered|shipped|dispatched|arriving (today|tomorrow)|order (has been )?(placed|confirmed))\b""",
         RegexOption.IGNORE_CASE,
     )
+    // A delivery word alone is not a delivery ("the baby was delivered"): a shipment must be named.
+    private val SHIPMENT = Regex(
+        """\b(orders?|packages?|parcels?|shipments?|awb|tracking|consignments?)\b""",
+        RegexOption.IGNORE_CASE,
+    )
+    // Personal chat is never sorted as a delivery, so its text never leaves the phone that way.
+    // Messages stays allowed: bank and courier texts arrive through it.
+    private val CHAT_APPS = setOf(
+        "com.whatsapp",
+        "com.whatsapp.w4b",
+        "org.telegram.messenger",
+        "org.thoughtcrime.securesms",
+        "com.instagram.android",
+        "com.facebook.orca",
+    )
     private val CAREER = Regex(
         """\b(interview|recruiter|shortlisted|hiring|offer letter|job (offer|opening|application)|application (received|update|status))\b""",
         RegexOption.IGNORE_CASE,
@@ -103,7 +118,9 @@ object NotificationSorter {
                 ),
             )
         }
-        if (PACKAGE.containsMatchIn(rawText)) return build("package", app, maskedText, emptyMap())
+        if (packageName !in CHAT_APPS && PACKAGE.containsMatchIn(rawText) && SHIPMENT.containsMatchIn(rawText)) {
+            return build("package", app, maskedText, emptyMap())
+        }
         if (packageName in JOB_APPS && CAREER.containsMatchIn(rawText)) return build("career", app, maskedText, emptyMap())
         return null
     }
