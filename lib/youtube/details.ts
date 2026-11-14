@@ -32,8 +32,12 @@ const CATEGORY_BY_STYLE: Record<string, string> = {
 
 const PRIVACIES: readonly Privacy[] = ['public', 'unlisted', 'private'];
 
+// Styles made for children. YouTube requires uploads aimed at children to say so (COPPA), so
+// these start with "made for kids" on; the person can still change it on the style's preset.
+const KIDS_STYLES = new Set(['cozy-tales']);
+
 export function defaultPreset(style: string): Preset {
-  return { style, privacy: 'public', categoryId: CATEGORY_BY_STYLE[style] ?? '24', madeForKids: false, tags: [] };
+  return { style, privacy: 'public', categoryId: CATEGORY_BY_STYLE[style] ?? '24', madeForKids: KIDS_STYLES.has(style), tags: [] };
 }
 
 const ANGLES = /[<>]/g;

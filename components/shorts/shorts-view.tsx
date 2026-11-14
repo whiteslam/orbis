@@ -8,6 +8,7 @@ import { LibraryGrid } from '@/components/shorts/library';
 import { StyleBoard, StyleDetail } from '@/components/shorts/style-board';
 import { WorkerStrip } from '@/components/shorts/worker-strip';
 import { YouTubePanel } from '@/components/shorts/youtube-panel';
+import { AutopilotCard } from '@/components/shorts/autopilot-card';
 import type { ShortsData } from '@/components/shorts/use-shorts-data';
 import { IN_FLIGHT, LIMITS, limitRefusal } from '@/lib/shorts/rules';
 
@@ -106,6 +107,11 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
       {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}
       {(view.presence === 'none' || view.presence === 'offline' || view.presence === 'setup') && <WorkerStrip presence={view.presence} worker={view.worker} />}
 
+      <section className="sh-section" aria-labelledby="sh-auto-h">
+        <h2 id="sh-auto-h" className="sh-h">Autopilot</h2>
+        <AutopilotCard />
+      </section>
+
       <section className="sh-section" aria-labelledby="sh-youtube-h">
         <h2 id="sh-youtube-h" className="sh-h">YouTube</h2>
         <YouTubePanel onChanged={() => void load()} />
@@ -116,7 +122,7 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
         <LibraryGrid jobs={done} covers={view.covers} onOpen={(id) => setScreen({ name: 'job', id })} />
       </section>
 
-      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis. Nothing is posted until you add it to your YouTube queue.</p>
+      <p className="fd-note">{view.monthUsed} of {LIMITS.perMonth} shorts started this month. Videos are made on your Shorts PC and stored privately in Orbis. Only shorts in your YouTube queue are posted.</p>
     </div>
   );
 }

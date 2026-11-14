@@ -91,6 +91,16 @@ npm run import-youtube-queue -- --apply   # uploads the videos and adds them to 
 
 It uses the same `~/.config/orbis-shorts/.env`, skips anything already published or already queued, and is safe to run again. The full order of steps (migration, Google settings, Connect YouTube, the live check, and only then switching the timer off) is in `docs/ops/youtube-owner-actions.md`.
 
+## Autopilot: a daily bedtime story
+
+Turn it on in **Social → Shorts → Autopilot** (needs `supabase/migrations/202611140001_shorts_autopilot.sql`). Then, once a day after the start time you set (your own time zone), this worker:
+
+1. picks a fresh Cozy Tales topic, never one used in your recent shorts (`lib/shorts/autopilot.ts`);
+2. queues it, plans it and **approves the plan itself**;
+3. builds it and **adds the finished video to the YouTube queue**, using your Cozy Tales preset (made for kids by default, as YouTube requires for children's videos).
+
+Your YouTube schedule then posts it. The PC has to be on for the day's short to be made; a day it is off is skipped, not made twice later. Autopilot shorts don't count toward your 30 a month.
+
 ## Tests
 
 ```bash

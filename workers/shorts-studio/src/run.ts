@@ -3,6 +3,7 @@
 // what it may do, turns its stream into progress, checks what it left behind
 // and is the only thing that uploads.
 
+import { isAutopilotJob, type AutopilotDb } from './autopilot.ts';
 import { existsSync } from 'node:fs';
 import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -21,6 +22,8 @@ export type RunOutcome = 'plan_ready' | 'done' | 'failed' | 'cancelled' | 'atten
 export type RunDeps = {
   db: WorkerDb;
   cfg: Config;
+  /** The daily autopilot: approves its own shorts' plans and queues them for YouTube. Absent in tests. */
+  autopilot?: AutopilotDb;
   claude: (run: ClaudeRun) => Promise<ClaudeOutcome>;
   /** Extra arguments before Claude's own (tests run a fake through node). */
   claudePrefix?: string[];
@@ -117,6 +120,11 @@ export async function runJob(job: JobRow, deps: RunDeps): Promise<RunOutcome> {
     }
     if (!checked.ok) throw new Stop('failed', `The plan didn’t pass its checks: ${checked.errors.slice(0, 3).join(' ')}`);
     if (!(await db.finishPlan(job, checked.plan))) return 'cancelled';
+    // The autopilot's own short doesn't wait for a person: its plan goes straight on to the build.
+    if (deps.autopilot && isAutopilotJob(job) && (await deps.autopilot.approve(job, checked.plan))) {
+      await emit('status', 'Plan approved by autopilot. Building next');
+      return 'plan_ready';
+    }
     await emit('status', 'Plan ready for you');
     return 'plan_ready';
   }
@@ -161,6 +169,16 @@ export async function runJob(job: JobRow, deps: RunDeps): Promise<RunOutcome> {
     const done: Delivery = { ...delivery, seconds: checked.seconds, files };
     if (!(await db.finishBuild(job, done))) return 'cancelled';
     await emit('status', 'Your short is ready');
+    if (deps.autopilot && isAutopilotJob(job)) {
+      // The short is done either way; a queue problem is said in its log, never a failed short.
+      try {
+        const queued = await deps.autopilot.queueForYouTube(job, done);
+        const said = { queued: 'Added to the YouTube queue', already: 'Already in the YouTube queue', unavailable: 'YouTube posting isn’t set up, so it wasn’t queued' }[queued];
+        await emit('step', said);
+      } catch (error) {
+        await emit('log', `Couldn’t add it to the YouTube queue: ${error instanceof Error ? error.message : 'unknown error'}. Add it from the short.`);
+      }
+    }
     return 'done';
   }
 

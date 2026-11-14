@@ -19,6 +19,8 @@ import { canApprove, canCancel, canDelete, canRetry, cleanTopic, IN_FLIGHT, LIMI
 import type { JobStatus, ShortJob } from '@/lib/shorts/types';
 import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/view';
 import { getPersonSettings } from '@/lib/locale/repository';
+import { isMissingTable } from '@/lib/supabase/errors';
+import { AUTOPILOT_STYLE, defaultAutopilot, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
 import { activeQueueFor, hasActiveQueue } from '@/lib/youtube/repository';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
@@ -177,5 +179,44 @@ export async function loadFilesAction(jobId: unknown): Promise<Result<ShortFiles
     const video = url(files.video);
     if (!video) return fail('The video couldn’t be opened. Try again in a little while.');
     return ok({ video, share: url(files.share), cover: url(files.cover), sheet: url(files.sheet) });
+  });
+}
+
+/** The daily autopilot as saved, and whether its table is there yet (the autopilot migration). */
+type AutopilotState = { autopilot: Autopilot; ready: boolean };
+
+export async function loadAutopilotAction(): Promise<Result<AutopilotState>> {
+  return asUser<AutopilotState>('The autopilot couldn’t be loaded. Try again in a little while.', async (me) => {
+    const { timeZone } = await getPersonSettings(me.userId);
+    const { data, error } = await me.db.from('shorts_autopilot').select('enabled,style,start_time,timezone,last_run_on').eq('user_id', me.userId).maybeSingle();
+    if (error) {
+      if (isMissingTable(error)) return ok({ autopilot: defaultAutopilot(timeZone), ready: false });
+      throw error;
+    }
+    return ok({ autopilot: readAutopilotRow(data, timeZone), ready: true });
+  });
+}
+
+const START_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Turns the autopilot on or off and sets when each day's short starts, on the person's own clock. */
+export async function saveAutopilotAction(input: unknown): Promise<Result<Autopilot>> {
+  const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
+  if (typeof raw.enabled !== 'boolean' || typeof raw.startTime !== 'string' || !START_TIME.test(raw.startTime)) return fail('Pick a start time.');
+  const enabled = raw.enabled;
+  const startTime = raw.startTime;
+  return asUser('The autopilot couldn’t be saved. Try again in a little while.', async (me) => {
+    const { timeZone } = await getPersonSettings(me.userId);
+    // The service role writes: people only read their row. last_run_on is the worker's and is left as it is.
+    const { error } = await createAdminClient().from('shorts_autopilot').upsert(
+      { user_id: me.userId, enabled, start_time: startTime, timezone: timeZone, style: AUTOPILOT_STYLE },
+      { onConflict: 'user_id' },
+    );
+    if (error) {
+      if (isMissingTable(error)) return fail('The autopilot needs its migration in Supabase first (202611140001_shorts_autopilot.sql).');
+      throw error;
+    }
+    const { data } = await me.db.from('shorts_autopilot').select('enabled,style,start_time,timezone,last_run_on').eq('user_id', me.userId).maybeSingle();
+    return ok(readAutopilotRow(data, timeZone));
   });
 }

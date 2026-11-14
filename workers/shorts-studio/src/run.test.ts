@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude } from './claude.ts';
 import type { Config } from './config.ts';
+import type { AutopilotDb } from './autopilot.ts';
 import type { EventKind, JobRow, WorkerDb } from './db.ts';
 import { projectName, runJob, type RunDeps } from './run.ts';
 import type { ShortPlan } from '../../../lib/shorts/plan.ts';
@@ -118,4 +119,44 @@ test('a signed-out Claude Code pauses the worker', async () => {
   const db = memoryDb('planning');
   assert.equal(await runJob(job, deps(db)), 'attention');
   assert.match(db.error ?? '', /needs attention on your PC/);
+});
+
+function fakeAutopilot(approves = true, queue: 'queued' | 'already' | 'unavailable' | Error = 'queued') {
+  const calls: string[] = [];
+  const autopilot: AutopilotDb = {
+    async startIfDue() { return null; },
+    async approve() { calls.push('approve'); return approves; },
+    async queueForYouTube() { calls.push('queue'); if (queue instanceof Error) throw queue; return queue; },
+  };
+  return { autopilot, calls };
+}
+
+test('an autopilot short approves its own plan; anyone else’s waits for the owner', async () => {
+  const { job, deps } = setup('plan');
+  const auto = { ...job, options: { ...job.options, autopilot: true } };
+  const db = memoryDb('planning');
+  const { autopilot, calls } = fakeAutopilot();
+  assert.equal(await runJob(auto, { ...deps(db), autopilot }), 'plan_ready');
+  assert.deepEqual(calls, ['approve']);
+  assert.equal(db.events.at(-1)?.content, 'Plan approved by autopilot. Building next');
+
+  const other = fakeAutopilot();
+  const db2 = memoryDb('planning');
+  assert.equal(await runJob(job, { ...deps(db2), autopilot: other.autopilot }), 'plan_ready');
+  assert.deepEqual(other.calls, []);
+  assert.equal(db2.events.at(-1)?.content, 'Plan ready for you');
+});
+
+test('a finished autopilot short goes to the YouTube queue, and a queue problem never fails the short', async () => {
+  for (const [queue, said] of [['queued', 'Added to the YouTube queue'], [new Error('boom'), 'Couldn’t add it to the YouTube queue: boom. Add it from the short.']] as const) {
+    const { job, project, deps } = setup('build', PLAN);
+    mkdirSync(project, { recursive: true });
+    writeFileSync(join(project, 'script.json'), JSON.stringify({ title: 'Old', lead: 0.4, lines: [] }));
+    const auto = { ...job, options: { ...job.options, autopilot: true } };
+    const db = memoryDb('building');
+    const { autopilot, calls } = fakeAutopilot(true, queue);
+    assert.equal(await runJob(auto, { ...deps(db), autopilot }), 'done');
+    assert.deepEqual(calls, ['queue']);
+    assert.equal(db.events.at(-1)?.content, said);
+  }
 });

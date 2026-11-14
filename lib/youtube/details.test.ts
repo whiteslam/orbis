@@ -80,8 +80,13 @@ describe('defaultPreset', () => {
       unknown: '24',
     };
     for (const [style, category] of Object.entries(expected)) {
-      expect(defaultPreset(style)).toMatchObject({ style, categoryId: category, privacy: 'public', madeForKids: false });
+      expect(defaultPreset(style)).toMatchObject({ style, categoryId: category, privacy: 'public', madeForKids: style === 'cozy-tales' });
     }
+  });
+
+  it('marks the children’s bedtime style as made for kids, as YouTube requires', () => {
+    expect(defaultPreset('cozy-tales').madeForKids).toBe(true);
+    expect(defaultPreset('deep-dive').madeForKids).toBe(false);
   });
 });
 

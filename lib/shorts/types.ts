@@ -14,6 +14,8 @@ export type ShortOptions = {
   music: 'bed' | 'none';
   /** The last line or handle, optional. */
   endLine: string;
+  /** Started by the daily autopilot: its plan is approved and the video queued for YouTube without a person. */
+  autopilot?: boolean;
 };
 
 /** Storage paths in the `shorts` bucket. */
