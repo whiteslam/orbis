@@ -56,9 +56,13 @@
   --fd-chip: var(--wl-chip);
   --fd-wash: var(--wl-wash);
   --fd-alert: var(--brand-red);
+  /* One measure for header, hero, sections and footer. Wide enough to use a
+     desktop screen edge to edge, with the sign-in page's side gutter. */
+  --wl-max: 1920px;
+  --wl-gutter: clamp(24px, 3.4vw, 64px);
   position: relative; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--fd-field); color: var(--fd-ink); color-scheme: dark;
 }
-.wl-header { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 1120px; margin: 0 auto; padding: max(22px, env(safe-area-inset-top, 0px)) 24px 0; }
+.wl-header { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-sizing: border-box; width: 100%; max-width: var(--wl-max); margin: 0 auto; padding: max(22px, env(safe-area-inset-top, 0px)) var(--wl-gutter) 0; }
 .wl-brand { display: flex; align-items: center; gap: 10px; }
 .wl-brand .orbis-mark { border-radius: 10px; }
 .wl-brand strong { font-size: 17px; font-weight: 700; letter-spacing: -.04em; }
@@ -71,9 +75,9 @@
 .wl-login:focus-visible, .wl-join-link:focus-visible { outline: 2px solid var(--on-fill); outline-offset: 2px; }
 .wl-main { flex: 1 0 auto; width: 100%; }
 
-.wl-hero { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: min(92svh, 860px); padding: 104px 0 72px; }
+.wl-hero { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 100vh; min-height: 100svh; padding: 104px 0 72px; box-sizing: border-box; }
 .wl-backdrop { position: absolute; inset: 0; z-index: 0; }
-.wl-hero-copy { position: relative; z-index: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.wl-hero-copy { position: relative; z-index: 1; box-sizing: border-box; width: 100%; max-width: var(--wl-max); margin: 0 auto; padding: 0 var(--wl-gutter); }
 .wl-hero-copy > * { max-width: 34rem; }
 /* Large and light, white on the picture: the headline is the one place the
    page gets to be quiet and big. Weight 300 resolves to the system's own Light
@@ -132,11 +136,11 @@
 
 /* ─── Below the hero (Hallmark redesign, 2026-11-12) ─────────────────────
    The product, then the promise, then the door again. One container width
-   (1120px) and one split (5 to 6 columns) for all three sections, so they
+   (--wl-max) and one split (5 to 6 columns) for all three sections, so they
    line up under the hero copy. The sample brief is the one picture; the
    privacy band is set off by a lightness step, not by rules or boxes. Heads
    take the hero's light display voice at section size. */
-.wl-wrap { box-sizing: border-box; width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.wl-wrap { box-sizing: border-box; width: 100%; max-width: var(--wl-max); margin: 0 auto; padding: 0 var(--wl-gutter); }
 .wl-brief-grid, .wl-private-grid, .wl-close-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; }
 .wl-brief h2, .wl-private h2, .wl-close h2 { margin: 0; min-width: 0; color: var(--on-fill); font-size: clamp(2.5rem, 1.5rem + 2.8vw, 3.5rem); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; overflow-wrap: break-word; }
 
@@ -186,7 +190,7 @@
 .wl-close h2 { max-width: 12ch; }
 .wl-close-form { min-width: 0; scroll-margin-top: 96px; }
 
-.wl-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; box-sizing: border-box; width: 100%; max-width: 1120px; margin: 0 auto; padding: 28px 24px max(32px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fd-rule); }
+.wl-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; box-sizing: border-box; width: 100%; max-width: var(--wl-max); margin: 0 auto; padding: 28px var(--wl-gutter) max(32px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fd-rule); }
 .wl-footer-brand { display: inline-flex; align-items: center; gap: 10px; }
 .wl-footer-brand .orbis-mark { border-radius: 8px; }
 .wl-footer-brand strong { color: var(--fd-ink); font-size: 15px; font-weight: 700; letter-spacing: -.04em; }
@@ -195,6 +199,14 @@
 .wl-footer a:hover { color: var(--fd-ink); text-decoration: underline; }
 .wl-footer p { margin: 0; color: var(--fd-faint); font-size: 12.5px; }
 
+/* A wide desktop: the hero copy grows with the screen so it holds its half
+   of the page beside the eclipse instead of sitting small in the corner. */
+@media (min-width: 1400px) {
+  .wl-hero-copy > * { max-width: 40rem; }
+  .wl-hero h1 { max-width: 44rem; font-size: clamp(4rem, 1rem + 3vw, 4.75rem); }
+  .wl-lede { max-width: 34rem; font-size: 1.05rem; }
+  .wl-card { max-width: 38rem; }
+}
 @media (max-width: 899px) {
   .wl-brief-grid, .wl-private-grid, .wl-close-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   /* On a phone the picture follows the lede, before the two items. */
