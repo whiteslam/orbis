@@ -27,5 +27,17 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Exported because the system binds to it; BIND_NOTIFICATION_LISTENER_SERVICE means only the
+             system can. The person still has to switch it on in Notification access. -->
+        <service
+            android:name="app.orbis.core.notify.OrbisNotificationListener"
+            android:label="Orbis"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

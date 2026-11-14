@@ -72,6 +72,9 @@ class OrbisStore internal constructor(context: Context) : Closeable {
     /** The saved privacy settings, or the defaults (every source off, default blocklist). */
     suspend fun settings(): PrivacySettings = io { readSettings(db()) }
 
+    /** Whether [source] is switched on, from the same settings read [capture] uses. */
+    suspend fun sourceEnabled(source: Source): Boolean = settings().enabled.contains(source)
+
     suspend fun saveSettings(settings: PrivacySettings) = io { writeSettings(db(), settings) }
 
     /**

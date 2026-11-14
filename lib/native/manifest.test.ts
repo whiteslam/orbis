@@ -53,6 +53,16 @@ function mergedPlayManifests(): string[] {
   return files;
 }
 
+// The full merge, libraries included. merged_manifest (singular) holds only the app's own manifest.
+function mergedManifests(): string[] {
+  const files: string[] = [];
+  for (const kind of MERGED_DIRS.filter((dir) => dir !== 'merged_manifest')) {
+    const dir = `${INTERMEDIATES}/${kind}`;
+    if (existsSync(join(root, dir))) files.push(...manifestsUnder(dir));
+  }
+  return files;
+}
+
 test('the main manifest exists', () => {
   assert.ok(existsSync(join(root, MAIN)), `${MAIN} is missing`);
 });
@@ -92,6 +102,25 @@ test('the merged play manifests contain no forbidden permission', (context) => {
     const xml = read(file);
     for (const permission of FORBIDDEN) {
       assert.ok(!mentions(xml, permission), `${file} contains ${permission}`);
+    }
+  }
+});
+
+test('both flavours declare the notification listener behind BIND_NOTIFICATION_LISTENER_SERVICE', (context) => {
+  const files = mergedManifests();
+  if (files.length === 0) {
+    context.skip('no Gradle output: run `cd android && ./gradlew assemblePlayDebug assembleDirectDebug`');
+    return;
+  }
+  for (const flavour of ['play', 'direct']) {
+    const own = files.filter((file) => file.split('/').some((part) => part === `${flavour}Debug`));
+    assert.ok(own.length > 0, `no merged ${flavour} manifest: run assemble${flavour[0].toUpperCase()}${flavour.slice(1)}Debug`);
+    for (const file of own) {
+      const xml = read(file);
+      const service = xml.match(/<service\s[^>]*OrbisNotificationListener[^>]*>[\s\S]*?<\/service>/)?.[0];
+      assert.ok(service, `${file} does not declare OrbisNotificationListener`);
+      assert.match(service, /android:permission="android\.permission\.BIND_NOTIFICATION_LISTENER_SERVICE"/, `${file}: listener is not behind the bind permission`);
+      assert.match(service, /android\.service\.notification\.NotificationListenerService/, `${file}: listener has no intent filter`);
     }
   }
 });
