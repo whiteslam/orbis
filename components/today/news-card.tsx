@@ -195,6 +195,15 @@ function GlassNews({ state }: Readonly<{ state: State }>) {
   const analysis = digest.analysis;
   return (
     <>
+      {lead && (
+        <a className="tg-panel tg-story" href={lead.url} target="_blank" rel="noopener noreferrer">
+          <NewsPhoto article={lead} />
+          <span className="tg-story-text">
+            <span className="tg-story-title">{lead.title}</span>
+            <span className="tg-story-meta" suppressHydrationWarning>{lead.source}, {ago(lead.publishedAt, loc)}</span>
+          </span>
+        </a>
+      )}
       {analysis && (
         <section className="tg-panel tg-market" aria-labelledby="tg-market-title">
           <h2 id="tg-market-title">Market read</h2>
@@ -214,15 +223,6 @@ function GlassNews({ state }: Readonly<{ state: State }>) {
             </ul>
           )}
         </section>
-      )}
-      {lead && (
-        <a className="tg-panel tg-story" href={lead.url} target="_blank" rel="noopener noreferrer">
-          <NewsPhoto article={lead} />
-          <span className="tg-story-text">
-            <span className="tg-story-title">{lead.title}</span>
-            <span className="tg-story-meta" suppressHydrationWarning>{lead.source}, {ago(lead.publishedAt, loc)}</span>
-          </span>
-        </a>
       )}
     </>
   );

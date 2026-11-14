@@ -1,4 +1,6 @@
-# Today views: a glass view beside the default (desktop only)
+# Today views: a glass view beside the default
+
+> **Changed 2026-11-14:** the owner asked for Glass "for mobile view and desktop view", so the switch and Glass now show on phones too (this replaces the desktop-only rule below). Glass runs the full width on desktop as two wrapping rows (`app/styles/page-today-glass.css`), checked against the Hallmark rules.
 
 Date: 2026-11-13 · Status: **approved by the owner 2026-11-13** ("okey do it for only web view not for mobile view at all") · Mockups: canvas https://claude.ai/artifact/KadT7C3Cy6pjgQm7cdz6xQ, page "Round 2 (rich)", artboard R2·01 Glass · Widget board.
 

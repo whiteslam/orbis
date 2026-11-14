@@ -19,13 +19,13 @@ import { clockLabel } from '@/lib/routines/types';
 
 const RING_RADIUS = 34;
 
-/** One ring of the activity widget: a track and an arc for `share` (0–1). */
+/** One ring of the activity widget: a track and an arc for `share` (0–1). No arc at 0: a round cap would draw a dot. */
 function Ring({ share, radius, className }: Readonly<{ share: number; radius: number; className: string }>) {
   const length = 2 * Math.PI * radius;
   return (
     <>
       <circle className="tg-ring-track" cx="44" cy="44" r={radius} />
-      <circle className={className} cx="44" cy="44" r={radius} strokeDasharray={`${share * length} ${length}`} transform="rotate(-90 44 44)" />
+      {share > 0 && <circle className={className} cx="44" cy="44" r={radius} strokeDasharray={`${share * length} ${length}`} transform="rotate(-90 44 44)" />}
     </>
   );
 }
@@ -35,9 +35,8 @@ function Ring({ share, radius, className }: Readonly<{ share: number; radius: nu
  * the same data as Classic, as frosted widgets over the glow wallpaper. A widget
  * whose data is missing is left out, never filled in.
  */
-export function GlassView({ brief, today, portfolio, activity, rest, onWeather, onPhase, openTab, openHeadsup, extras }: Readonly<{
+export function GlassView({ brief, portfolio, activity, rest, onWeather, onPhase, openTab, openHeadsup, extras }: Readonly<{
   brief: HomeNote;
-  today: string;
   portfolio: BriefPortfolio | null;
   activity: ReturnType<typeof glassActivity>;
   rest: ReturnType<typeof restOfToday>;
@@ -55,15 +54,14 @@ export function GlassView({ brief, today, portfolio, activity, rest, onWeather, 
 
   return (
     <div className="tg">
+      {/* The date is already in the header, on the phone and on desktop. */}
       <div className="tg-lead">
         <FocusNote note={brief} />
-        <p className="tg-date" suppressHydrationWarning>{today}</p>
       </div>
 
-      <div className="tg-grid">
-        <div className="tg-area-weather">
-          <WeatherCard variant="glass" onWeather={onWeather} onPhase={onPhase} openPersonal={() => openTab('personal')} />
-        </div>
+      {/* The day's tiles, then the reads: two rows that wrap (app/styles/page-today-glass.css). */}
+      <div className="tg-tiles">
+        <WeatherCard variant="glass" onWeather={onWeather} onPhase={onPhase} openPersonal={() => openTab('personal')} />
 
         {showPortfolio && (
           <button type="button" className="tg-panel tg-portfolio" onClick={() => openTab('invest')}>
@@ -95,7 +93,9 @@ export function GlassView({ brief, today, portfolio, activity, rest, onWeather, 
             </ul>
           </section>
         )}
+      </div>
 
+      <div className="tg-reads">
         <NewsCard variant="glass" />
 
         {/* Heads-ups and important mail draw nothing when empty; so does this panel then (:empty). */}

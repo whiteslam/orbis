@@ -28,7 +28,6 @@ import { trainingForToday } from '@/lib/home/training';
 import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday, settledToday } from '@/lib/routines/today';
 import { GlassView } from '@/components/today/glass-view';
 import { ViewBoundary } from '@/components/today/view-boundary';
-import { useDesktop } from '@/components/today/use-desktop';
 import { glassActivity, restOfToday } from '@/lib/home/glass';
 import { readTodayView, TODAY_VIEW_KEY, type TodayView } from '@/lib/home/today-view';
 import type { RoutinesSummary } from '@/lib/routines/types';
@@ -88,7 +87,6 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
 
   // Desktop only: Classic (this page as it always was) or Glass, remembered per
   // browser. Read after mounting, so the server and first render are Classic.
-  const desktop = useDesktop();
   // savedView is only set after the first read, never during hydration, so the
   // first render still matches the server; coming back to Today then skips the flash of Classic.
   const [view, setView] = useState<TodayView>(() => savedView ?? 'classic');
@@ -229,9 +227,9 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
     </>
   );
 
-  const glass = desktop && view === 'glass';
+  const glass = view === 'glass';
   return (
-    <div className="screen-body field td">
+    <div className={`screen-body field td${glass ? ' td-glass' : ''}`}>
       <header className="fd-top">
         {/* The date is rendered in the person's own zone on both sides, but the day can turn between them. */}
         <div className="fd-brand">
@@ -246,17 +244,15 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
       </header>
 
       {/* Its own row, not in .fd-top: the desktop layout hides that bar (app/styles/desktop.css). */}
-      {desktop && (
-        <div className="tg-switch-row">
-          <div className="tg-switch" role="radiogroup" aria-label="Today view">
-            {(['classic', 'glass'] as const).map((option) => (
-              <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
-                {option === 'classic' ? 'Classic' : 'Glass'}
-              </button>
-            ))}
-          </div>
+      <div className="tg-switch-row">
+        <div className="tg-switch" role="radiogroup" aria-label="Today view">
+          {(['classic', 'glass'] as const).map((option) => (
+            <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
+              {option === 'classic' ? 'Classic' : 'Glass'}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       <PasskeyPrompt />
 
@@ -264,7 +260,6 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
         <ViewBoundary fallback={classic}>
           <GlassView
             brief={brief}
-            today={today}
             portfolio={portfolio}
             activity={glassActivity({ latest: stepsSummary.latest, today: localDate(new Date(), timeZone), done: settled.done, total: settled.total })}
             rest={restOfToday(due)}
