@@ -94,7 +94,7 @@ function KeptRow({ source, phonesOn }: Readonly<{ source: Source; phonesOn: numb
   function remove() {
     setMessage(null);
     startTransition(async () => {
-      const result = await safeAction(deleteSourceData)(source);
+      const result = await safeAction(deleteSourceData)(source); // the web has no phone in hand, so every phone's
       setMessage({ text: result.message, success: result.success });
       if (result.success) setConfirming(false);
     });
@@ -114,7 +114,7 @@ function KeptRow({ source, phonesOn }: Readonly<{ source: Source; phonesOn: numb
         <fieldset aria-label={`Confirm deleting what Orbis kept from ${SOURCE_LABELS[source]}`}>
           <p className="fd-msg">Deletes what Orbis kept on the server from this source. To stop reading it, turn it off in the app.</p>
           <div className="fd-act">
-            <button type="button" style={destructive} disabled={isPending} onClick={remove}>{isPending ? 'Deleting…' : 'Delete'}</button>
+            <button type="button" style={destructive} disabled={isPending} onClick={remove}>{isPending ? 'Deleting…' : 'Delete from all your phones'}</button>
             <button type="button" className="ghost" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</button>
           </div>
         </fieldset>
@@ -368,7 +368,10 @@ function Sources({ status, onStatus, notifications, onChanged }: Readonly<{ stat
         return;
       }
       setTurningOff(null);
-      const result = await safeAction(deleteSourceData)(source);
+      // Only this phone's rows. With no device id it must not fall back to every phone's.
+      const result = status.deviceId
+        ? await safeAction(deleteSourceData)(source, status.deviceId)
+        : { success: false, message: 'This phone isn’t added to your account yet.' };
       setMessage(result.success
         ? { text: `${SOURCE_LABELS[source]} is off. What Orbis kept from it is deleted.`, success: true }
         : { text: `${SOURCE_LABELS[source]} is off and its items on this phone are deleted, but the server’s copy wasn’t. ${result.message}`, success: false });

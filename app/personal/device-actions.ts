@@ -103,17 +103,27 @@ export async function revokeDevice(deviceId: string): Promise<Result> {
 
 /**
  * Deletes what Orbis kept on the server from one source: its signals and its
- * activity counts, on every phone. It does not switch the source off on any phone;
- * only the phone can do that, and until it does, its next sync can add more.
+ * activity counts. With a device id (a phone turning the source off) only that
+ * phone's rows go; with none (the web, no phone in hand) every phone's go. It does
+ * not switch the source off on any phone; only the phone can do that, and until it
+ * does, its next sync can add more.
  * A table that isn't set up yet holds nothing, so there is nothing to delete from it.
  */
-export async function deleteSourceData(source: Source): Promise<Result> {
+export async function deleteSourceData(source: Source, deviceId?: string): Promise<Result> {
   const auth = await authenticatedClient();
   if (!auth) return { success: false, message: 'Sign in again to delete this.' };
   if (!(SOURCES as readonly unknown[]).includes(source)) return { success: false, message: 'That source is invalid.' };
-  const signals = await auth.supabase.from('signals').delete().eq('user_id', auth.userId).eq('source', source);
+  if (deviceId !== undefined) {
+    const owned = await auth.supabase.from('devices').select('id').eq('id', deviceId).eq('user_id', auth.userId).maybeSingle();
+    if (owned.error || !owned.data) return { success: false, message: 'That phone isn’t linked to your account.' };
+  }
+  let signalsQuery = auth.supabase.from('signals').delete().eq('user_id', auth.userId).eq('source', source);
+  if (deviceId !== undefined) signalsQuery = signalsQuery.eq('device_id', deviceId);
+  const signals = await signalsQuery;
   if (signals.error && !phoneTablesMissing(signals.error)) return { success: false, message: 'It could not be deleted. Try again in a little while.' };
-  const ledger = await auth.supabase.from('activity_ledger').delete().eq('user_id', auth.userId).eq('source', source);
+  let ledgerQuery = auth.supabase.from('activity_ledger').delete().eq('user_id', auth.userId).eq('source', source);
+  if (deviceId !== undefined) ledgerQuery = ledgerQuery.eq('device_id', deviceId);
+  const ledger = await ledgerQuery;
   if (ledger.error && !phoneTablesMissing(ledger.error)) return { success: false, message: 'It could not all be deleted. Try again in a little while.' };
   return { success: true, message: 'Deleted what Orbis kept on the server from this source.' };
 }
