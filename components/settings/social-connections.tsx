@@ -7,6 +7,7 @@ import { disconnectSocialAction } from '@/app/social/connection-actions';
 import type { SocialConnectionStatus } from '@/lib/social/connections';
 import { BrandMark } from '@/components/settings/brand-mark';
 import { safeAction } from '@/lib/client/safe-action';
+import { GOOGLE_RECONNECT_HINT } from '@/lib/providers/google-hint';
 
 const PLATFORMS = [
   {
@@ -24,7 +25,7 @@ const PLATFORMS = [
   {
     id: 'youtube', name: 'YouTube', detail: 'Upload your shorts on a schedule', href: '/auth/youtube/start', handle: '',
     notConfigured: 'Not available yet.',
-    expired: 'Google stopped accepting Orbis’s access. Connect again.',
+    expired: `Google ended Orbis’s access, so YouTube needs connecting again. ${GOOGLE_RECONNECT_HINT}`,
     confirm: 'Disconnect YouTube? Videos already on your channel stay there. Queued shorts wait until you connect again.',
   },
 ] as const;

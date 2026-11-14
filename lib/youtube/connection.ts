@@ -43,7 +43,7 @@ export async function saveYouTubeConnection(
     throw new YouTubeAuthError('Google didn’t give Orbis offline access. Connect again and allow access.');
   }
 
-  const { error } = await admin.from('social_connections').upsert({
+  const values = {
     user_id: userId,
     platform: 'youtube',
     access_token_encrypted: encryptCredential(tokens.accessToken),
@@ -52,7 +52,11 @@ export async function saveYouTubeConnection(
     username: [...channel.title.trim()].slice(0, TITLE_MAX).join(''),
     expires_at: null,
     status: 'connected',
-  }, { onConflict: 'user_id,platform' });
+  };
+  // connected_at tells a 7-day Google expiry from other disconnects. Before its
+  // migration (202611140002), the connection is saved without it.
+  let { error } = await admin.from('social_connections').upsert({ ...values, connected_at: new Date().toISOString() }, { onConflict: 'user_id,platform' });
+  if (error?.code === 'PGRST204' || error?.code === '42703') ({ error } = await admin.from('social_connections').upsert(values, { onConflict: 'user_id,platform' }));
   if (error) throw new Error(beforeMigration(error) ? APPLY_MIGRATION : 'That connection could not be saved.');
 }
 

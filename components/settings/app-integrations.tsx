@@ -9,6 +9,7 @@ import { BrokerConnectForm } from '@/components/money/broker-card';
 import { BROKERS, type BrokerId, type BrokerMeta } from '@/lib/invest/brokers';
 import type { StepsSummary } from '@/lib/health/types';
 import type { AppConnections } from '@/lib/providers/status';
+import { GOOGLE_RECONNECT_HINT } from '@/lib/providers/google-hint';
 import { safeAction } from '@/lib/client/safe-action';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { formatWhen } from '@/lib/locale/dates';
@@ -62,6 +63,7 @@ function GoogleApp({ google, isPending, run }: Readonly<{ google: AppConnections
         {google && (googleNeedsReconnect || !google.calendar) && <a className="fd-button" href="/auth/gmail/start?return=settings">{googleNeedsReconnect ? 'Reconnect Google' : 'Add Calendar access'}</a>}
         {google && <button className="fd-link alert" type="button" disabled={isPending} onClick={() => run('Disconnect Google? Orbis will stop reading your important mail and Calendar.', safeAction(disconnectGmailAction))}><Unplug size={13} aria-hidden="true" /> Disconnect</button>}
       </div>
+      {googleNeedsReconnect && <p className="fd-note tight">Google ended Orbis’s access, so Gmail and Calendar need connecting again. {GOOGLE_RECONNECT_HINT}</p>}
     </article>
   );
 }

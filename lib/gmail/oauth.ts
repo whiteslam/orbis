@@ -165,7 +165,10 @@ export async function saveGmailConnection(userId: string, account: { sub: string
   };
 
   // Google can grant a subset of scopes (e.g. Gmail without Calendar); remember which.
-  let { error } = await admin.from('gmail_connections').upsert({ ...values, granted_scopes: grantedScopes }, { onConflict: 'user_id' });
+  // connected_at tells a 7-day Google expiry from other disconnects (202611140002).
+  // Before either column's migration, the connection is saved without them.
+  let { error } = await admin.from('gmail_connections').upsert({ ...values, granted_scopes: grantedScopes, connected_at: values.updated_at }, { onConflict: 'user_id' });
+  if (error?.code === 'PGRST204' || error?.code === '42703') ({ error } = await admin.from('gmail_connections').upsert({ ...values, granted_scopes: grantedScopes }, { onConflict: 'user_id' }));
   if (error?.code === 'PGRST204' || error?.code === '42703') ({ error } = await admin.from('gmail_connections').upsert(values, { onConflict: 'user_id' }));
 
   if (error) throw new Error('Gmail connection could not be saved. Apply the finance database migration and try again.');

@@ -10,6 +10,7 @@ import { YouTubeSheet } from '@/components/shorts/youtube-sheet';
 import { safeAction } from '@/lib/client/safe-action';
 import type { Result } from '@/lib/shorts/view';
 import { MAX_POST_TIMES, type QueueItem, type Schedule, type VideoDetails, type YouTubePanel as Panel } from '@/lib/youtube/types';
+import { GOOGLE_RECONNECT_HINT } from '@/lib/providers/google-hint';
 
 const CONNECT_HREF = '/auth/youtube/start';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -61,7 +62,7 @@ function StatusLine({ panel, held }: Readonly<Loaded>) {
   if (connection.status === 'reconnect_required') {
     return (
       <div className="fd-msg bad sh-yt-banner" role="alert">
-        <span>YouTube stopped accepting Orbis’s access. Nothing posts until you connect again.</span>
+        <span>Google ended Orbis’s access, so YouTube needs connecting again. {GOOGLE_RECONNECT_HINT}</span>
         <a className="fd-link alert" href={CONNECT_HREF}>Connect again</a>
       </div>
     );

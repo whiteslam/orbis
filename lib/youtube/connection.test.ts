@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 vi.mock('server-only', () => ({}));
 
 type Row = Record<string, unknown>;
-const state: { stored: Row | null; gmail: Row | null; upserts: Row[]; deleted: boolean; failDelete: boolean; readError: { code: string } | null } = { stored: null, gmail: null, upserts: [], deleted: false, failDelete: false, readError: null };
+const state: { stored: Row | null; gmail: Row | null; upserts: Row[]; upsertErrors: { code: string }[]; deleted: boolean; failDelete: boolean; readError: { code: string } | null } = { stored: null, gmail: null, upserts: [], upsertErrors: [], deleted: false, failDelete: false, readError: null };
 
 // Just enough of the Supabase query builder for this file: a single row per person.
 function fakeAdmin() {
@@ -17,6 +17,7 @@ function fakeAdmin() {
       if (op === 'upsert') state.upserts.push(payload!);
       if (op === 'update' && state.stored) state.stored = { ...state.stored, ...payload };
       if (op === 'delete' && !state.failDelete) state.deleted = true;
+      if (op === 'upsert') return resolve({ error: state.upsertErrors.shift() ?? null });
       resolve({ error: op === 'delete' && state.failDelete ? { message: 'no' } : null });
     };
     return chain;
@@ -41,7 +42,7 @@ const admin = () => fakeAdmin() as unknown as Admin;
 
 beforeEach(() => {
   process.env.CREDENTIAL_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
-  state.stored = null; state.gmail = null; state.upserts = []; state.deleted = false; state.failDelete = false; state.readError = null; revoked.length = 0;
+  state.stored = null; state.gmail = null; state.upserts = []; state.upsertErrors = []; state.deleted = false; state.failDelete = false; state.readError = null; revoked.length = 0;
 });
 
 test('saving stores both tokens encrypted, the channel id, a trimmed title and no expiry', async () => {
@@ -55,6 +56,22 @@ test('saving stores both tokens encrypted, the channel id, a trimmed title and n
   assert.equal(row.status, 'connected');
   assert.equal(decryptCredential(row.access_token_encrypted as string), 'at');
   assert.equal(decryptCredential(row.refresh_token_encrypted as string), 'rt');
+  assert.equal(typeof row.connected_at, 'string');
+});
+
+test('saving stamps connected_at with the time of the connect', async () => {
+  const before = Date.now();
+  await saveYouTubeConnection('u1', { id: 'UC1', title: 'T' }, { accessToken: 'at', refreshToken: 'rt' });
+  const stamped = Date.parse(state.upserts[0]!.connected_at as string);
+  assert.ok(stamped >= before && stamped <= Date.now());
+});
+
+test('before the connected_at column exists, it saves again without it', async () => {
+  state.upsertErrors = [{ code: '42703' }];
+  await saveYouTubeConnection('u1', { id: 'UC1', title: 'T' }, { accessToken: 'at', refreshToken: 'rt' });
+  assert.equal(state.upserts.length, 2);
+  assert.equal('connected_at' in state.upserts[1]!, false);
+  assert.equal(state.upserts[1]!.status, 'connected');
 });
 
 test('with no new refresh token, the stored one is kept for the same channel', async () => {

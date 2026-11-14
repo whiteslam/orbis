@@ -13,6 +13,7 @@ Design: `docs/superpowers/specs/2026-11-13-youtube-publishing-design.md`.
    - Under Authorized redirect URIs, make sure `https://orbis-starter.vercel.app/auth/youtube/callback` is there. Add it if not, and save.
    - Then the OAuth consent screen (Google Auth Platform), **Data access**: Add or remove scopes, and add both YouTube scopes, `https://www.googleapis.com/auth/youtube.upload` and `https://www.googleapis.com/auth/youtube.readonly`. Save. (You may need step 3 first for them to appear in the list; you can also paste them in by hand.)
    - Google hasn’t verified Orbis for these scopes, so when you connect (step 5) Google may show a **“Google hasn’t verified this app”** screen. That is expected for your own app: choose **Advanced**, then **Go to … (unsafe)** (with the app’s name), and carry on. If the app’s publishing status is Testing, the Google account that owns the channel must be listed under Test users (Audience).
+   - **Publishing status must be In production** (Google Auth Platform → Audience). In Testing, Google ends every connection after 7 days, so YouTube and Gmail ask to be connected again about once a week.
    - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` must be set where Orbis is deployed (Vercel). They already are, because Gmail uses them. YouTube uses the same two values, so there is nothing new to add.
 
 3. **Enable the YouTube Data API v3.** In the same project `orbis-512912`: APIs & Services, Library, search "YouTube Data API v3", Enable. Without it, Connect works but every upload is refused.
