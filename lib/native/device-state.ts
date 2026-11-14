@@ -17,6 +17,16 @@ export function shouldResetDevice(status: Pick<CoreStatus, 'registered' | 'userI
   return status.userId === signedInUserId ? 'none' : 'reset-then-register';
 }
 
+/**
+ * True when a phone holds another person's credential and this person has just
+ * signed in, so it must be wiped now, even before Orbis is unlocked.
+ * Used by components/native/native-account-guard.tsx. `null` means no phone status
+ * (e.g. it could not be read), which leaves the phone alone.
+ */
+export function wipeAtSignIn(status: Pick<CoreStatus, 'registered' | 'userId'> | null, signedInUserId: string): boolean {
+  return status !== null && shouldResetDevice(status, signedInUserId) === 'reset-then-register';
+}
+
 const MAX_NAME_CHARS = 60;
 
 /** The body POSTed to /api/device/register: the phone's model as its name, the build's flavour and version. */

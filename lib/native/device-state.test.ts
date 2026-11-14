@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { getPhoneLink, isSigningOut, registerBody, registerFailure, resetPhoneLink, setPhoneLink, setSigningOut, shouldResetDevice, subscribePhoneLink } from './device-state';
+import { getPhoneLink, isSigningOut, registerBody, registerFailure, resetPhoneLink, setPhoneLink, setSigningOut, shouldResetDevice, subscribePhoneLink, wipeAtSignIn } from './device-state';
 
 const ME = '7f1c2d3e-0000-4000-8000-000000000001';
 const SOMEONE_ELSE = '7f1c2d3e-0000-4000-8000-000000000002';
@@ -72,4 +72,14 @@ test('signing out is a flag the linking honours until it is cleared', () => {
   assert.equal(isSigningOut(), true);
   setSigningOut(false);
   assert.equal(isSigningOut(), false);
+});
+
+test('wipeAtSignIn: a phone registered to someone else is wiped', () => {
+  assert.equal(wipeAtSignIn({ registered: true, userId: 'old' }, 'new'), true);
+});
+
+test('wipeAtSignIn: the same person, an unregistered phone, or no phone at all is left alone', () => {
+  assert.equal(wipeAtSignIn({ registered: true, userId: 'me' }, 'me'), false);
+  assert.equal(wipeAtSignIn({ registered: false, userId: null }, 'me'), false);
+  assert.equal(wipeAtSignIn(null, 'me'), false);
 });

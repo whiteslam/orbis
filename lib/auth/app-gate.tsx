@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
+import { NativeAccountGuard } from '@/components/native/native-account-guard';
 import { LockScreen } from '@/components/security/lock-screen';
 import { PinSetup } from '@/components/security/pin-setup';
 import { accessAllowed } from '@/lib/security/access';
@@ -44,9 +45,9 @@ export async function appGate(): Promise<AppGate> {
   // While locked, load nothing personal: only the lock screen is rendered.
   // The two checks are independent, so neither waits for the other.
   const [pinStatus, unlocked] = await Promise.all([getPinStatus(userId), isAppUnlocked(data.claims)]);
-  if (!unlocked) return { open: false, render: <LockScreen pinStatus={pinStatus} /> };
+  if (!unlocked) return { open: false, render: <><NativeAccountGuard userId={userId} /><LockScreen pinStatus={pinStatus} /></> };
   // A device PIN is required before Orbis opens; 'unavailable' (migration not applied) skips it rather than blocking.
-  if (pinStatus === 'none' || pinStatus === 'locked') return { open: false, render: <PinSetup reset={pinStatus === 'locked'} /> };
+  if (pinStatus === 'none' || pinStatus === 'locked') return { open: false, render: <><NativeAccountGuard userId={userId} /><PinSetup reset={pinStatus === 'locked'} /></> };
 
   return { open: true, userId, email };
 }
