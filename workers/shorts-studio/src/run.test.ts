@@ -124,7 +124,8 @@ test('a signed-out Claude Code pauses the worker', async () => {
 function fakeAutopilot(approves = true, queue: 'queued' | 'already' | 'unavailable' | Error = 'queued') {
   const calls: string[] = [];
   const autopilot: AutopilotDb = {
-    async startIfDue() { return null; },
+    async startNext() { return null; },
+    async window() { return null; },
     async approve() { calls.push('approve'); return approves; },
     async queueForYouTube() { calls.push('queue'); if (queue instanceof Error) throw queue; return queue; },
   };
