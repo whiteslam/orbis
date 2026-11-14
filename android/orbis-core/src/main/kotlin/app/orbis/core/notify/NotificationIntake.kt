@@ -10,12 +10,15 @@ import kotlin.coroutines.cancellation.CancellationException
  * scheduling) is logged by class name and swallowed: the listener runs for every notification, and
  * an exception escaping its coroutine would kill the whole app process. The message is never
  * logged, as it could carry notification text.
+ *
+ * [capture] gets the item and its [NotificationReader.digest]; it returns null when the store had
+ * already kept that notification (see `OrbisStore.captureNotification`).
  */
 class NotificationIntake(
     private val ownPackage: String,
     private val recent: RecentKeys,
     private val sourceEnabled: suspend () -> Boolean,
-    private val capture: suspend (CapturedItem) -> Decision,
+    private val capture: suspend (CapturedItem, String) -> Decision?,
     private val syncNow: () -> Unit,
     private val logFailure: (String) -> Unit,
 ) {
@@ -23,8 +26,11 @@ class NotificationIntake(
         try {
             if (!sourceEnabled()) return
             val item = NotificationReader.toItem(facts, ownPackage) ?: return
-            if (!recent.firstTime(facts.key, item.text)) return
-            val decision = capture(item)
+            val digest = NotificationReader.digest(facts)
+            if (recent.contains(digest)) return
+            val decision = capture(item, digest)
+            // Only after the capture finished: one that failed is tried again if it is posted again.
+            recent.remember(digest)
             if (decision is Decision.Keep &&
                 NotificationSorter.sort(item.packageName, item.text, item.text)?.kind == "transaction"
             ) {

@@ -12,6 +12,7 @@ import app.orbis.core.rules.Source
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,6 +32,15 @@ class CapturePipelineTest {
 
         override suspend fun insertDropped(entry: LedgerEntry) {
             ledger += entry
+        }
+
+        /** Digests of notifications already kept, as the seen_notification table holds them. */
+        val seen = mutableMapOf<String, Long>()
+
+        override suspend fun seen(digest: String): Boolean = digest in seen
+
+        override suspend fun markSeen(digest: String, at: Long) {
+            seen.putIfAbsent(digest, at)
         }
 
         fun everything(): List<Any> = raw + signals + ledger
@@ -258,7 +268,7 @@ class CapturePipelineTest {
     // reader, as the listener does, so the contacts are the ones a real notification gives.
     private fun notification(pkg: String, title: String?, text: String?, handles: List<String> = emptyList()) =
         NotificationReader.toItem(
-            NotificationFacts("k", pkg, title, text, null, occurred, false, false, false, handles),
+            NotificationFacts("k", pkg, title, text, null, occurred, occurred, false, false, false, handles),
             "app.orbis.android",
         )!!
 
@@ -351,5 +361,59 @@ class CapturePipelineTest {
         val ids = port.signals.map { it.id }
         assertEquals(3, ids.toSet().size)
         for (id in ids) assertTrue(id, uuid.matches(id))
+    }
+
+    // Review Focus #1: after a reboot, apps post their unread notifications again. The store
+    // remembers each kept notification's digest, so an unread bank text is one transaction.
+    private val bankText = "AX-HDFCBK\n$payment"
+    private val digest = "a".repeat(64)
+
+    @Test
+    fun aNotificationPostedAgainIsReadOnce() = runBlocking {
+        val port = FakePort()
+        val pipeline = CapturePipeline(port)
+        val bank = item(Source.NOTIFICATIONS, pkg = "com.google.android.apps.messaging", contacts = listOf("AX-HDFCBK"), text = bankText)
+
+        assertTrue(pipeline.captureOnce(bank, digest, settings, now) is Decision.Keep)
+        assertEquals(mapOf(digest to now), port.seen)
+        // A new pipeline (a new process) over the same store: nothing more is written.
+        assertNull(CapturePipeline(port).captureOnce(bank, digest, settings, now + 1))
+        assertEquals(1, port.raw.size)
+        assertEquals(1, port.signals.size)
+        assertEquals(1, port.ledger.size)
+        // A different notification is read.
+        assertTrue(pipeline.captureOnce(bank, "b".repeat(64), settings, now) is Decision.Keep)
+        assertEquals(2, port.signals.size)
+    }
+
+    @Test
+    fun aNotificationsSignalIdComesFromItsDigest() = runBlocking {
+        val bank = item(Source.NOTIFICATIONS, pkg = "com.google.android.apps.messaging", text = bankText)
+        val first = FakePort().also { CapturePipeline(it).captureOnce(bank, digest, settings, now) }.signals.single()
+        // Even if the phone forgot the digest, the same notification gets the same id, so the
+        // server's "on conflict do nothing" keeps one.
+        val again = FakePort().also { CapturePipeline(it).captureOnce(bank, digest, settings, now + 5) }.signals.single()
+        assertEquals(first.id, again.id)
+        assertEquals(CapturePipeline.signalIdFor(digest), first.id)
+        assertTrue(first.id, uuid.matches(first.id))
+        assertNotEquals(first.id, CapturePipeline.signalIdFor("b".repeat(64)))
+        // Without a digest (the test source), every signal still gets a fresh random id.
+        val port = FakePort()
+        repeat(2) { CapturePipeline(port).capture(item(text = "same words"), settings, now) }
+        assertEquals(2, port.signals.map { it.id }.toSet().size)
+    }
+
+    @Test
+    fun aDroppedNotificationLeavesNoDigest() = runBlocking {
+        val port = FakePort()
+        val pipeline = CapturePipeline(port)
+        val blocked = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("AX-HDFCBK")))
+        val bank = item(Source.NOTIFICATIONS, pkg = "com.google.android.apps.messaging", contacts = listOf("AX-HDFCBK"), text = bankText)
+        assertEquals(Decision.Drop(DropReason.BLOCKED_CONTACT), pipeline.captureOnce(bank, digest, blocked, now))
+        val code = item(Source.NOTIFICATIONS, pkg = "com.google.android.apps.messaging", text = "123456 is your OTP")
+        assertEquals(Decision.Drop(DropReason.ONE_TIME_CODE), pipeline.captureOnce(code, "c".repeat(64), settings, now))
+        // Nothing about a dropped item is kept, not even its digest.
+        assertTrue(port.seen.isEmpty())
+        assertEquals(0, port.raw.size)
     }
 }

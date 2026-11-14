@@ -3,6 +3,7 @@ package app.orbis.core.notify
 import app.orbis.core.rules.Source
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -18,11 +19,12 @@ class NotificationReaderTest {
         text: String? = "See you at 6",
         bigText: String? = null,
         postTime: Long = 1_000L,
+        whenTime: Long = 900L,
         ongoing: Boolean = false,
         groupSummary: Boolean = false,
         otherProfile: Boolean = false,
         handles: List<String> = emptyList(),
-    ) = NotificationFacts(key, packageName, title, text, bigText, postTime, ongoing, groupSummary, otherProfile, handles)
+    ) = NotificationFacts(key, packageName, title, text, bigText, postTime, whenTime, ongoing, groupSummary, otherProfile, handles)
 
     private fun contacts(f: NotificationFacts) = NotificationReader.toItem(f, own)!!.contacts
 
@@ -89,18 +91,47 @@ class NotificationReaderTest {
         assertEquals("Asha\nshort", NotificationReader.toItem(facts(bigText = null, text = "short"), own)!!.text)
     }
 
-    @Test fun `the same key and text is read once`() {
-        val keys = RecentKeys()
-        assertTrue(keys.firstTime("k1", "hello"))
-        assertFalse(keys.firstTime("k1", "hello"))
-        assertTrue(keys.firstTime("k1", "hello again"))
-        assertTrue(keys.firstTime("k2", "hello"))
+    @Test fun `a remembered digest is known until it is pushed out`() {
+        val keys = RecentKeys(capacity = 2)
+        assertFalse(keys.contains("a"))
+        keys.remember("a")
+        assertTrue(keys.contains("a"))
+        keys.remember("b"); keys.remember("c")
+        assertFalse("the oldest is forgotten past the capacity", keys.contains("a"))
+        assertTrue(keys.contains("b"))
     }
 
-    @Test fun `the oldest key is forgotten past the capacity`() {
-        val keys = RecentKeys(capacity = 2)
-        keys.firstTime("a", "x"); keys.firstTime("b", "x"); keys.firstTime("c", "x")
-        assertTrue(keys.firstTime("a", "x"))
+    // The digest is what the store remembers across restarts, so a notification an app posts
+    // again after a reboot (same key, same `when`, same words) is read once.
+    @Test fun `the digest is the same for the same notification posted again`() {
+        val first = NotificationReader.digest(facts(postTime = 1_000L, whenTime = 500L))
+        assertEquals(first, NotificationReader.digest(facts(postTime = 9_999L, whenTime = 500L)))
+        assertTrue(first, Regex("^[0-9a-f]{64}$").matches(first))
+    }
+
+    @Test fun `the digest changes with the app, key, when or words`() {
+        val base = facts(whenTime = 500L)
+        val digests = listOf(
+            base,
+            base.copy(packageName = "com.whatsapp.w4b"),
+            base.copy(key = "k2"),
+            base.copy(whenTime = 501L),
+            base.copy(title = "Asha R"),
+            base.copy(text = "See you at 7"),
+            base.copy(bigText = "See you at 6, at the gate"),
+        ).map(NotificationReader::digest)
+        assertEquals(digests.size, digests.toSet().size)
+    }
+
+    @Test fun `the digest's fields can't run into each other`() {
+        assertNotEquals(
+            NotificationReader.digest(facts(title = "ab", text = "c")),
+            NotificationReader.digest(facts(title = "a", text = "bc")),
+        )
+        assertNotEquals(
+            NotificationReader.digest(facts(key = "k1", title = "2")),
+            NotificationReader.digest(facts(key = "k12", title = "")),
+        )
     }
 
     @Test fun `another profile is marked`() {

@@ -64,6 +64,18 @@ data class Kv(
     override fun toString(): String = "Kv(key=$key, value=<hidden>)"
 }
 
+/**
+ * A notification already kept: its `NotificationReader.digest` (64 hex characters, no words) and
+ * when it was captured (epoch ms). Apps post unread notifications again after a reboot; this is
+ * how the same one is read once. Written only for kept items, pruned with raw items (30 days).
+ * Added in database version 2.
+ */
+@Entity(tableName = "seen_notification", indices = [Index("at")])
+data class SeenNotification(
+    @PrimaryKey val digest: String,
+    val at: Long,
+)
+
 /** Sources are stored by their wire name, so renaming an enum constant can't break old rows. */
 class Converters {
     @TypeConverter

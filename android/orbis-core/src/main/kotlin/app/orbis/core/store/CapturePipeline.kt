@@ -19,7 +19,23 @@ import java.util.UUID
  * - Drop: only `LedgerEntry(at, source, "dropped", reason)`. No package, contact or text.
  */
 class CapturePipeline(private val port: StorePort) {
-    suspend fun capture(item: CapturedItem, settings: PrivacySettings, now: Long): Decision {
+    suspend fun capture(item: CapturedItem, settings: PrivacySettings, now: Long): Decision =
+        store(item, settings, now, digest = null)
+
+    /**
+     * [capture] for a posted notification with its `NotificationReader.digest`, read once: null,
+     * with nothing written, when that digest was already kept. A kept one's digest is remembered
+     * (in the caller's transaction, with its rows) and names its signal ([signalIdFor]). A dropped
+     * one leaves no digest: nothing about a dropped item is stored.
+     */
+    suspend fun captureOnce(item: CapturedItem, digest: String, settings: PrivacySettings, now: Long): Decision? {
+        if (port.seen(digest)) return null
+        val decision = store(item, settings, now, digest)
+        if (decision is Decision.Keep) port.markSeen(digest, now)
+        return decision
+    }
+
+    private suspend fun store(item: CapturedItem, settings: PrivacySettings, now: Long, digest: String?): Decision {
         val decision = PrivacyRules.decide(item, settings, now)
         when (decision) {
             is Decision.Drop -> port.insertDropped(
@@ -45,7 +61,7 @@ class CapturePipeline(private val port: StorePort) {
                     }
                     NotificationSorter.sort(item.packageName, item.text, masked)?.let {
                         PendingSignal(
-                            id = UUID.randomUUID().toString(),
+                            id = digest?.let(::signalIdFor) ?: UUID.randomUUID().toString(),
                             source = item.source,
                             kind = it.kind,
                             occurredAt = item.occurredAt,
@@ -80,6 +96,14 @@ class CapturePipeline(private val port: StorePort) {
 
         /** The signal kind for a source: `test_item`, `notifications_item`, ... */
         fun kindFor(source: Source): String = "${source.wire}_item"
+
+        /**
+         * A notification's signal id: a name-based (version 3) UUID of its digest, lowercase. The
+         * same notification always gets the same id, so if the phone ever reads it twice, the
+         * server's "on conflict do nothing" on (user_id, id) keeps one signal (a second guard
+         * behind the seen_notification table).
+         */
+        fun signalIdFor(digest: String): String = UUID.nameUUIDFromBytes(digest.toByteArray(Charsets.UTF_8)).toString()
 
         /**
          * Masked text made safe for the server: NUL removed, lone surrogates replaced with

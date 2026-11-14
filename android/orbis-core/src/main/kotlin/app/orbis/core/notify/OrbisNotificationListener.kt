@@ -54,7 +54,7 @@ class OrbisNotificationListener : NotificationListenerService() {
                 ownPackage = context.packageName,
                 recent = recent,
                 sourceEnabled = { OrbisStore.get(context).sourceEnabled(Source.NOTIFICATIONS) },
-                capture = { OrbisStore.get(context).capture(it) },
+                capture = { item, digest -> OrbisStore.get(context).captureNotification(item, digest) },
                 syncNow = { SyncScheduler.now(context) },
                 logFailure = { Log.w(TAG, it) },
             ).handle(facts)
@@ -70,6 +70,7 @@ class OrbisNotificationListener : NotificationListenerService() {
             text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
             bigText = extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString(),
             postTime = sbn.postTime,
+            whenTime = sbn.notification.`when`,
             ongoing = sbn.isOngoing,
             groupSummary = (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0,
             otherProfile = sbn.user != Process.myUserHandle(),

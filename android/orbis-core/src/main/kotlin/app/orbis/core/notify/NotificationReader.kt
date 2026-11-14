@@ -4,12 +4,14 @@ import app.orbis.core.rules.CapturedItem
 import app.orbis.core.rules.PrivacyRules
 import app.orbis.core.rules.Source
 import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 
 /**
  * The parts of a posted notification Orbis looks at, copied out of the Android object so this
  * stays pure. [handles] are the people the listener found in the notification's extras: numbers
  * from `tel:` people and senders of messaging-style messages. They only feed the blocked-contact
- * check (and the raw item's contact keys).
+ * check (and the raw item's contact keys). [whenTime] is the notification's own `when`, which an
+ * app keeps when it posts the same notification again (after a reboot, say); [postTime] is not.
  */
 data class NotificationFacts(
     val key: String,
@@ -18,6 +20,7 @@ data class NotificationFacts(
     val text: String?,
     val bigText: String?,
     val postTime: Long,
+    val whenTime: Long,
     val ongoing: Boolean,
     val groupSummary: Boolean,
     val otherProfile: Boolean,
@@ -26,6 +29,19 @@ data class NotificationFacts(
 
 object NotificationReader {
     private const val TEL = "tel:"
+
+    /**
+     * A fingerprint of one notification, for the store to remember it was read: SHA-256 (64
+     * lowercase hex characters) over the app, the notification's key, its `when` and its words.
+     * Each field goes in as its length, NUL, the field, so no two field lists give the same input.
+     * The post time is left out on purpose: it changes every time the app posts it again.
+     */
+    fun digest(f: NotificationFacts): String {
+        val fields = listOf(f.packageName, f.key, f.whenTime.toString(), f.title.orEmpty(), (f.bigText ?: f.text).orEmpty())
+        val input = fields.joinToString("") { "${it.length}\u0000$it\u0000" }
+        val hash = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
+        return hash.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
 
     /**
      * The item to run through the privacy rules, or null for what is never read: Orbis's own
@@ -98,16 +114,23 @@ object NotificationReader {
 }
 
 /**
- * Remembers the last [capacity] notifications (key plus text) so one that is posted again with
- * the same words, as apps do when they refresh a notification, is read once. Least recently seen
- * goes first. Not thread-safe on its own: calls are synchronised.
+ * The [NotificationReader.digest]s of the last [capacity] notifications this process handled, so
+ * one an app refreshes with the same words skips the store. Only a cheap first filter: it is empty
+ * after a restart, so the store's seen_notification table is the real guard. Least recently seen
+ * goes first. Calls are synchronised.
  */
 class RecentKeys(private val capacity: Int = 200) {
     private val seen = object : LinkedHashMap<String, Unit>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > capacity
     }
 
-    /** True the first time [key] with [text] is seen (and remembers it), false after that. */
+    /** Whether [digest] was remembered (and is still among the last [capacity]). */
     @Synchronized
-    fun firstTime(key: String, text: String): Boolean = seen.put(key + text.hashCode(), Unit) == null
+    fun contains(digest: String): Boolean = seen[digest] != null
+
+    /** Remembers [digest]. Call it only once the notification was handled. */
+    @Synchronized
+    fun remember(digest: String) {
+        seen[digest] = Unit
+    }
 }

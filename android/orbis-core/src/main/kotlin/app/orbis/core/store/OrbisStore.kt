@@ -67,6 +67,17 @@ class OrbisStore internal constructor(context: Context) : Closeable {
         db.withTransaction { pipeline.capture(item, readSettings(db), now) }
     }
 
+    /**
+     * [capture] for a posted notification, once: returns null and writes nothing when the
+     * notification with this `NotificationReader.digest` was already kept, even before a reboot.
+     * The check, the writes and the remembered digest are one transaction, so two posts of the
+     * same notification racing each other keep it once.
+     */
+    suspend fun captureNotification(item: CapturedItem, digest: String, now: Long = System.currentTimeMillis()): Decision? = io {
+        val db = db()
+        db.withTransaction { pipeline.captureOnce(item, digest, readSettings(db), now) }
+    }
+
     // --- settings ---------------------------------------------------------------------------
 
     /** The saved privacy settings, or the defaults (every source off, default blocklist). */
@@ -94,7 +105,8 @@ class OrbisStore internal constructor(context: Context) : Closeable {
     /**
      * Turns a source on or off. Turning it off deletes its raw items, pending signals and local
      * ledger rows: the server's copy of its counts is deleted at the same time, and a ledger kept
-     * here would be sent again (up to [LEDGER_SYNC_DAYS] days of it) on the next sync.
+     * here would be sent again (up to [LEDGER_SYNC_DAYS] days of it) on the next sync. Turning
+     * notifications off also forgets which notifications were read.
      */
     suspend fun setSourceEnabled(source: Source, on: Boolean): PrivacySettings = io {
         val db = db()
@@ -106,6 +118,7 @@ class OrbisStore internal constructor(context: Context) : Closeable {
                 db.rawItems().deleteBySource(source)
                 db.signals().deleteBySource(source)
                 db.ledger().deleteBySource(source)
+                if (source == Source.NOTIFICATIONS) db.seen().deleteAll()
             }
             next
         }
@@ -180,11 +193,15 @@ class OrbisStore internal constructor(context: Context) : Closeable {
 
     // --- retention --------------------------------------------------------------------------
 
-    /** Drops raw items older than 30 days, ledger rows older than 90 days and outbox items past the 5,000 newest. */
+    /**
+     * Drops raw items and seen-notification digests older than 30 days, ledger rows older than
+     * 90 days and outbox items past the 5,000 newest.
+     */
     suspend fun prune(now: Long = System.currentTimeMillis()) = io {
         val db = db()
         db.withTransaction {
             db.rawItems().deleteCapturedBefore(now - RAW_RETENTION_MS)
+            db.seen().deleteBefore(now - RAW_RETENTION_MS)
             db.ledger().deleteBefore(now - LEDGER_RETENTION_MS)
             db.signals().trim(OUTBOX_CAP)
         }
@@ -233,7 +250,7 @@ class OrbisStore internal constructor(context: Context) : Closeable {
     // --- wipe -------------------------------------------------------------------------------
 
     /**
-     * Deletes every row of every table: raw items, outbox, ledger and all small values, which
+     * Deletes every row of every table: raw items, outbox, ledger, seen notifications and all small values, which
      * includes the credential, last sync and any signed-out reason. Settings go back to their
      * defaults. A caller that wants to keep a value (e.g. `signedOutReason`) writes it afterwards.
      */
@@ -256,6 +273,7 @@ class OrbisStore internal constructor(context: Context) : Closeable {
             db.signals().deleteAll()
             db.ledger().deleteAll()
             db.kv().deleteAll()
+            db.seen().deleteAll()
             true
         }
     }
@@ -286,6 +304,12 @@ class OrbisStore internal constructor(context: Context) : Closeable {
 
         override suspend fun insertDropped(entry: LedgerEntry) {
             db().ledger().insert(entry)
+        }
+
+        override suspend fun seen(digest: String): Boolean = db().seen().exists(digest)
+
+        override suspend fun markSeen(digest: String, at: Long) {
+            db().seen().insert(SeenNotification(digest, at))
         }
     }
 

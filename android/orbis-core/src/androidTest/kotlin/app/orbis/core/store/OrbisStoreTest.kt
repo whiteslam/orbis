@@ -2,6 +2,8 @@ package app.orbis.core.store
 
 import android.content.Context
 import androidx.room.withTransaction
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.orbis.core.rules.CapturedItem
@@ -13,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -155,7 +158,7 @@ class OrbisStoreTest {
     fun wipeEmptiesEveryTableAndTheCredential() = runBlocking {
         store.saveSettings(
             PrivacySettings(
-                enabled = setOf(Source.TEST),
+                enabled = setOf(Source.TEST, Source.NOTIFICATIONS),
                 blockedPackages = setOf("com.secret.bank"),
                 blockedContacts = setOf("9876543210"),
                 blockedKeywords = listOf("hush"),
@@ -164,16 +167,17 @@ class OrbisStoreTest {
         store.capture(item(text = "kept one"))
         store.capture(item(text = "dropped hush"))
         store.capture(item(text = "dropped app", pkg = "com.secret.bank"))
+        store.captureNotification(item(Source.NOTIFICATIONS, text = "a notification", pkg = "com.example.chat"), "d".repeat(64))
         store.pause(now + day)
         store.saveCredential(DeviceCredential("7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0001", "s".repeat(43), "user-1", "https://example.test"))
         store.setLastSync(now)
         store.kvPut(OrbisStore.SIGNED_OUT_REASON, "revoked")
         assertTrue(tableCounts().values.all { it > 0 })
-        assertEquals(setOf("raw_item", "pending_signal", "ledger_entry", "kv"), tableCounts().keys)
+        assertEquals(setOf("raw_item", "pending_signal", "ledger_entry", "kv", "seen_notification"), tableCounts().keys)
 
         store.wipe()
 
-        assertEquals(mapOf("raw_item" to 0, "pending_signal" to 0, "ledger_entry" to 0, "kv" to 0), tableCounts())
+        assertEquals(mapOf("raw_item" to 0, "pending_signal" to 0, "ledger_entry" to 0, "kv" to 0, "seen_notification" to 0), tableCounts())
         assertNull(store.credential())
         assertNull(store.lastSync())
         assertNull(store.kvGet(OrbisStore.SIGNED_OUT_REASON))
@@ -192,7 +196,9 @@ class OrbisStoreTest {
         val old = DeviceCredential("7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0001", "o".repeat(43), "user-1", "https://example.test")
         val fresh = DeviceCredential("7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0002", "n".repeat(43), "user-1", "https://example.test")
         store.setSourceEnabled(Source.TEST, true)
+        store.setSourceEnabled(Source.NOTIFICATIONS, true)
         store.capture(item(text = "kept one"))
+        store.captureNotification(item(Source.NOTIFICATIONS, text = "a notification", pkg = "com.example.chat"), "d".repeat(64))
         store.saveCredential(fresh)
 
         // A 401 for the old credential, after the new one was saved: nothing is wiped.
@@ -200,12 +206,13 @@ class OrbisStoreTest {
         assertFalse(store.wipeIf(fresh.copy(secret = "x".repeat(43))))
         assertEquals(fresh, store.credential())
         assertEquals(1, store.pendingCount())
+        assertEquals(1, store.db().seen().count())
         assertTrue(Source.TEST in store.settings().enabled)
 
         // For the saved one: every table is emptied, as wipe() does.
         store.setLastSync(now)
         assertTrue(store.wipeIf(fresh))
-        assertEquals(mapOf("raw_item" to 0, "pending_signal" to 0, "ledger_entry" to 0, "kv" to 0), tableCounts())
+        assertEquals(mapOf("raw_item" to 0, "pending_signal" to 0, "ledger_entry" to 0, "kv" to 0, "seen_notification" to 0), tableCounts())
         assertNull(store.credential())
         assertNull(store.lastSync())
         assertEquals(PrivacySettings(), store.settings())
@@ -378,5 +385,94 @@ class OrbisStoreTest {
         val key = ByteArray(32) { it.toByte() }
         val expected = "x'" + (0 until 32).joinToString("") { "%02x".format(it) } + "'"
         assertArrayEquals(expected.toByteArray(Charsets.US_ASCII), KeyManager.rawKey(key))
+    }
+
+    // Review Focus #1: an app posts its unread notifications again after a reboot. The digest
+    // is in the encrypted store, so the same bank text is still one transaction.
+    @Test
+    fun aNotificationIsReadOnceAcrossARestart() = runBlocking {
+        store.setSourceEnabled(Source.NOTIFICATIONS, true)
+        val bank = item(Source.NOTIFICATIONS, text = "AX-HDFCBK\nRs 500 debited from a/c XX12 to SWIGGY", pkg = "com.google.android.apps.messaging")
+        val digest = "e".repeat(64)
+        assertTrue(store.captureNotification(bank, digest) is Decision.Keep)
+
+        reopen()
+        assertNull(store.captureNotification(bank, digest))
+        assertEquals(1, store.db().rawItems().count())
+        assertEquals(1, store.recentActivity(10).size)
+        val signal = store.pendingBatch(10).single()
+        assertEquals("transaction", signal.kind)
+        assertEquals(CapturePipeline.signalIdFor(digest), signal.id)
+    }
+
+    @Test
+    fun twoPostsOfOneNotificationRacingKeepItOnce() = runBlocking {
+        store.setSourceEnabled(Source.NOTIFICATIONS, true)
+        val bank = item(Source.NOTIFICATIONS, text = "AX-HDFCBK\nRs 500 debited from a/c XX12 to SWIGGY", pkg = "com.google.android.apps.messaging")
+        val decisions = (0 until 20).map { async(Dispatchers.IO) { store.captureNotification(bank, "f".repeat(64)) } }.awaitAll()
+        assertEquals(1, decisions.count { it is Decision.Keep })
+        assertEquals(1, store.db().rawItems().count())
+        assertEquals(1, store.pendingCount())
+    }
+
+    @Test
+    fun pruneAndTurningNotificationsOffForgetReadNotifications() = runBlocking {
+        store.setSourceEnabled(Source.NOTIFICATIONS, true)
+        val chat = item(Source.NOTIFICATIONS, text = "Asha\nsee you", pkg = "com.example.chat")
+        store.captureNotification(chat, "1".repeat(64), now = now - 31 * day)
+        store.captureNotification(chat, "2".repeat(64), now = now)
+        store.prune(now)
+        assertEquals(1, store.db().seen().count())
+        assertNull(store.captureNotification(chat, "2".repeat(64)))
+
+        store.setSourceEnabled(Source.NOTIFICATIONS, false)
+        assertEquals(0, store.db().seen().count())
+    }
+
+    // A phone on version 1 keeps everything it had when the app updates to version 2.
+    @Test
+    fun aVersionOneStoreMigratesAndKeepsItsRows() = runBlocking {
+        store.close()
+        context.deleteDatabase(OrbisDatabase.NAME)
+        System.loadLibrary("sqlcipher")
+        val v1 = SupportOpenHelperFactory(KeyManager(context).passphrase()).create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbFile.absolutePath)
+                .callback(object : SupportSQLiteOpenHelper.Callback(1) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = VERSION_1_SQL.forEach(db::execSQL)
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                })
+                .build(),
+        )
+        v1.writableDatabase.execSQL(
+            "INSERT INTO pending_signal (id, source, kind, occurredAt, content, createdAt) " +
+                "VALUES ('7b0f6c1e-3a52-4c8e-9d41-2f6a8b1c0009', 'test', 'test_item', 1, 'kept across the update', 2)",
+        )
+        v1.close()
+
+        store = OrbisStore(context)
+        assertEquals("kept across the update", store.pendingBatch(10).single().content)
+        assertEquals(0, store.db().seen().count())
+        store.setSourceEnabled(Source.NOTIFICATIONS, true)
+        val chat = item(Source.NOTIFICATIONS, text = "Asha\nsee you", pkg = "com.example.chat")
+        assertTrue(store.captureNotification(chat, "3".repeat(64)) is Decision.Keep)
+        assertNull(store.captureNotification(chat, "3".repeat(64)))
+    }
+
+    private companion object {
+        /** Version 1's tables, from schemas/.../1.json, with Room's setup rows. */
+        val VERSION_1_SQL = listOf(
+            "CREATE TABLE IF NOT EXISTS `raw_item` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `source` TEXT NOT NULL, `packageName` TEXT, `contactKeys` TEXT NOT NULL, `text` TEXT NOT NULL, `occurredAt` INTEGER NOT NULL, `capturedAt` INTEGER NOT NULL)",
+            "CREATE INDEX IF NOT EXISTS `index_raw_item_source` ON `raw_item` (`source`)",
+            "CREATE INDEX IF NOT EXISTS `index_raw_item_capturedAt` ON `raw_item` (`capturedAt`)",
+            "CREATE TABLE IF NOT EXISTS `pending_signal` (`id` TEXT NOT NULL, `source` TEXT NOT NULL, `kind` TEXT NOT NULL, `occurredAt` INTEGER NOT NULL, `content` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            "CREATE INDEX IF NOT EXISTS `index_pending_signal_source` ON `pending_signal` (`source`)",
+            "CREATE INDEX IF NOT EXISTS `index_pending_signal_createdAt` ON `pending_signal` (`createdAt`)",
+            "CREATE TABLE IF NOT EXISTS `ledger_entry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `source` TEXT NOT NULL, `decision` TEXT NOT NULL, `reason` TEXT)",
+            "CREATE INDEX IF NOT EXISTS `index_ledger_entry_at` ON `ledger_entry` (`at`)",
+            "CREATE TABLE IF NOT EXISTS `kv` (`key` TEXT NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`key`))",
+            "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+            "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'aa69cd45fcebebf85f931b9c9c89c0cb')",
+        )
     }
 }

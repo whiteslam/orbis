@@ -29,7 +29,11 @@ interface RawItemDao {
 
 @Dao
 interface PendingSignalDao {
-    @Insert
+    /**
+     * A notification's id comes from its digest, so the same notification read again (its digest
+     * pruned while its signal waits in the outbox) is the same signal: keep the one already there.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(signal: PendingSignal)
 
     /** Oldest first, so the outbox drains in order. */
@@ -90,4 +94,23 @@ interface KvDao {
 
     @Query("DELETE FROM kv")
     suspend fun deleteAll()
+}
+
+@Dao
+interface SeenNotificationDao {
+    @Query("SELECT EXISTS(SELECT 1 FROM seen_notification WHERE digest = :digest)")
+    suspend fun exists(digest: String): Boolean
+
+    /** Keeps the first time it was seen. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(row: SeenNotification)
+
+    @Query("DELETE FROM seen_notification WHERE at < :cutoff")
+    suspend fun deleteBefore(cutoff: Long)
+
+    @Query("DELETE FROM seen_notification")
+    suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM seen_notification")
+    suspend fun count(): Int
 }
