@@ -33,6 +33,8 @@ const state = vi.hoisted(() => ({
   // settleFailedRow: the failed row it reads, and what it marked published.
   failedRow: null as unknown,
   settled: [] as { id: string; youtubeId: string; privacy: string }[],
+  // Video paths whose files were removed from storage once posted.
+  removedFiles: [] as string[],
   // Rows keep what each slice saved and released, as the database would.
   persist: false,
   scheduleReadFails: false,
@@ -102,6 +104,13 @@ vi.mock('./google.ts', async () => {
   const actual = await vi.importActual<typeof import('./google.ts')>('./google.ts');
   return { ...actual, mintAccessToken: async () => (state.mint ? state.mint() : 'access') };
 });
+
+vi.mock('./posted-files.ts', () => ({
+  removePostedFiles: async (_admin: unknown, _user: string, row: { jobId: string | null; videoPath: string }) => {
+    state.removedFiles.push(row.videoPath);
+    return true;
+  },
+}));
 
 vi.mock('./video-file.ts', () => ({
   signVideo: async (_admin: unknown, path: string) => {
@@ -189,6 +198,7 @@ beforeEach(() => {
   state.now = NOW.toISOString();
   state.failedRow = null;
   state.settled = [];
+  state.removedFiles = [];
   state.persist = false;
   state.scheduleReadFails = false;
   state.lastReadFails = false;
@@ -372,6 +382,19 @@ test('Post now on a row already uploading resumes it', async () => {
   assert.deepEqual(state.uploads, [{ bytesSent: 8, uploadUrl: 'https://upload/x' }]);
 });
 
+test('a posted video’s files leave storage; one that isn’t posted keeps them', async () => {
+  state.uploading = 'row-1';
+  state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
+  state.outcome = { kind: 'done', youtubeId: 'yt1', privacy: 'public' };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'published');
+  assert.deepEqual(state.removedFiles, [`${USER}/job/video.mp4`]);
+
+  state.removedFiles = [];
+  state.outcome = { kind: 'partial' };
+  assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'partial');
+  assert.deepEqual(state.removedFiles, []);
+});
+
 test('a published video stays published when recording the time fails', async () => {
   state.uploading = 'row-1';
   state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8 }));
@@ -514,6 +537,7 @@ test('settling a failed row whose session finished marks it published and never 
   assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'published');
   assert.deepEqual(state.settled, [{ id: 'row-1', youtubeId: 'yt-1', privacy: 'unlisted' }]);
   assert.equal(state.recorded, 1);
+  assert.deepEqual(state.removedFiles, [`${USER}/job/video.mp4`]);
   const youtube = calls.filter((call) => !call.url.startsWith('https://storage/'));
   assert.deepEqual(youtube.map((call) => `${call.method} ${call.range}`), ['PUT bytes */1000']);
   assert.equal(youtube.some((call) => call.body), false);

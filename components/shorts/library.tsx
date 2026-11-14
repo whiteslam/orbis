@@ -110,8 +110,11 @@ export function ShortResult({ job, youtube = null, onDeleted, onQueued }: Readon
   const [confirming, setConfirming] = useState(false);
   const [youtubeProblem, setYouTubeProblem] = useState<string | null>(null);
   const delivery = job.delivery;
+  // Once YouTube has it, the files leave storage to free the space; the details stay.
+  const posted = youtube?.status === 'published';
 
   useEffect(() => {
+    if (posted) return;
     let live = true;
     void safeAction(loadFilesAction)(job.id).then((result) => {
       if (!live) return;
@@ -119,7 +122,7 @@ export function ShortResult({ job, youtube = null, onDeleted, onQueued }: Readon
       else setProblem(result.message);
     });
     return () => { live = false; };
-  }, [job.id]);
+  }, [job.id, posted]);
 
   async function remove() {
     setDeleting(true);
@@ -136,7 +139,13 @@ export function ShortResult({ job, youtube = null, onDeleted, onQueued }: Readon
   return (
     <section className="sh-result" aria-label="Your short">
       <div className="sh-player">
-        {files ? (
+        {posted ? (
+          <a className="sh-player-posted" href={`https://youtube.com/shorts/${youtube?.youtubeId ?? ''}`} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {youtube?.youtubeId && <img src={`https://i.ytimg.com/vi/${youtube.youtubeId}/hqdefault.jpg`} alt="" loading="lazy" />}
+            <span>Posted on YouTube. Its files were removed here to free space; watch it there.</span>
+          </a>
+        ) : files ? (
           <video src={files.video} poster={files.cover ?? undefined} controls playsInline preload="metadata" aria-label={delivery.title} />
         ) : (
           <div className="sh-player-wait">{problem ? null : <LoaderCircle className="workbook-spinner" size={22} aria-label="Loading the video" />}</div>

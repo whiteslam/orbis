@@ -16,6 +16,7 @@ import { getYouTubeConnection } from '@/lib/youtube/connection';
 import { buildDetails, cleanDetails } from '@/lib/youtube/details';
 import { youtubeConfigured } from '@/lib/youtube/google';
 import { readMove, readSchedule } from '@/lib/youtube/input';
+import { youtubeThumbnail } from '@/lib/youtube/posted-files';
 import { publishSlice, settleFailedRow } from '@/lib/youtube/publish';
 import {
   getPreset, getSchedule, insertQueued, listPosted, listQueue, moveQueued, removeQueued, retryFailed, saveSchedule, scheduledSince,
@@ -105,6 +106,11 @@ export async function loadYouTubePanelAction(): Promise<Result<YouTubePanel>> {
     for (const item of mine) {
       const url = item.coverPath ? signed.get(item.coverPath) : undefined;
       if (url) covers[item.id] = url;
+    }
+    // A posted video's files are removed once YouTube has it: YouTube's own thumbnail stands in.
+    for (const item of posted) {
+      const thumbnail = youtubeThumbnail(item.youtubeId);
+      if (thumbnail) covers[item.id] = thumbnail;
     }
     return ok({ configured, ready: true, connection, schedule, queue, posted, covers, next: nextLine(schedule, queue, postedToday, now) });
   });

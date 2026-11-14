@@ -23,6 +23,7 @@ import { isMissingTable } from '@/lib/supabase/errors';
 import { AUTOPILOT_COLUMNS, AUTOPILOT_STYLE, defaultAutopilot, readAutopilotInput, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
 import { activeQueueFor, getSchedule, hasActiveQueue, listQueue, scheduledSince, tablesReady } from '@/lib/youtube/repository';
 import { getYouTubeConnection } from '@/lib/youtube/connection';
+import { youtubeThumbnail } from '@/lib/youtube/posted-files';
 import { dayStart, nextSlot } from '@/lib/youtube/schedule';
 import { shortsHealth, type HealthInput, type HealthLine } from '@/lib/shorts/health';
 
@@ -75,7 +76,12 @@ export async function loadShortsViewAction(): Promise<Result<ShortsView>> {
       if (url) covers[job.id] = url;
     }
     // A YouTube problem never breaks Shorts: without the tables this is {}.
-    const youtube = await activeQueueFor(admin, me.userId, jobs.filter((job) => job.status === 'done').map((job) => job.id)).catch(() => ({}));
+    const youtube: Awaited<ReturnType<typeof activeQueueFor>> = await activeQueueFor(admin, me.userId, jobs.filter((job) => job.status === 'done').map((job) => job.id)).catch(() => ({}));
+    // A posted short's files are removed once YouTube has it: YouTube's own thumbnail stands in.
+    for (const [jobId, state] of Object.entries(youtube)) {
+      const thumbnail = state.status === 'published' ? youtubeThumbnail(state.youtubeId) : null;
+      if (thumbnail) covers[jobId] = thumbnail;
+    }
     return ok({
       presence: workerPresence(worker, new Date()),
       worker,

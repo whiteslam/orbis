@@ -4,6 +4,7 @@ import type { createAdminClient } from '@/lib/supabase/admin';
 import { getYouTubeRefreshToken, markYouTubeReconnect, recordYouTubePublish } from '@/lib/youtube/connection';
 import { MAX_ATTEMPTS } from '@/lib/youtube/details';
 import { mintAccessToken, YouTubeAuthError } from '@/lib/youtube/google';
+import { removePostedFiles } from '@/lib/youtube/posted-files';
 import {
   failedRow, getSchedule, listQueue, release, saveUpload, scheduledSince, setHold, settlePublished, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
 } from '@/lib/youtube/repository';
@@ -185,6 +186,8 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
       } catch (error) {
         console.error('Could not record the YouTube publish time', error);
       }
+      // YouTube has it now: free the space. The details stay. Never throws.
+      await removePostedFiles(admin, userId, row);
     }
   }
 }
@@ -237,6 +240,7 @@ export async function settleFailedRow(
   } catch (error) {
     console.error('Could not record the YouTube publish time', error);
   }
+  await removePostedFiles(admin, userId, row);
   return 'published';
 }
 
