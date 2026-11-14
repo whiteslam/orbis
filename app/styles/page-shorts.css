@@ -268,3 +268,9 @@ a.so-action { text-decoration: none; }
 .sh-auto-time { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
 .sh-auto-time .fd-field { max-width: 200px; }
 .sh-auto-time .sh-yt-sub { flex-basis: 100%; margin: 0; }
+.sh-auto-window { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+.sh-auto-window .fd-field { max-width: 160px; }
+.sh-auto-days .sh-auto-days-input { display: flex; align-items: center; gap: 8px; }
+.sh-auto-days select { width: auto; min-width: 64px; }
+.sh-auto-post { display: flex; align-items: center; gap: 10px; padding: 8px 0; color: var(--fd-soft); font-size: 14px; }
+.sh-auto-post b { color: var(--fd-ink); font-weight: 600; }

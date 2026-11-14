@@ -5,6 +5,7 @@ import { LoaderCircle, MoonStar } from 'lucide-react';
 import { loadAutopilotAction, saveAutopilotAction } from '@/app/shorts/actions';
 import { safeAction } from '@/lib/client/safe-action';
 import type { Autopilot } from '@/lib/shorts/autopilot';
+import type { Destination } from '@/lib/shorts/types';
 
 /** "18:00" as the person reads times, e.g. "6:00 PM". */
 const timeLabel = (time: string) => {
@@ -12,22 +13,32 @@ const timeLabel = (time: string) => {
   return new Date(2000, 0, 1, hour, minute).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 };
 
+const TIME = /^\d{2}:\d{2}$/;
+const DAYS = [1, 2, 3, 4, 5, 6, 7];
+
+type Form = { enabled: boolean; windowStart: string; windowEnd: string; shelfDays: number; destinations: Destination[] };
+
+const formOf = (autopilot: Autopilot): Form => ({
+  enabled: autopilot.enabled,
+  windowStart: autopilot.windowStart,
+  windowEnd: autopilot.windowEnd,
+  shelfDays: autopilot.shelfDays,
+  destinations: autopilot.destinations,
+});
+
 /**
- * Social → Shorts: the daily bedtime story. When it is on, the Shorts PC starts one
- * Cozy Tales short a day from the start time, with a fresh topic, approves its plan
- * itself and puts the video in the YouTube queue, which posts on its own schedule.
+ * Social → Shorts: bedtime stories on autopilot. When it is on, the Shorts PC makes
+ * Cozy Tales shorts one at a time inside the build window, until the YouTube queue
+ * holds the days of posts asked for. Each plan is approved by the autopilot itself,
+ * and the YouTube schedule posts the videos.
  */
 export function AutopilotCard() {
   const [loaded, setLoaded] = useState<{ autopilot: Autopilot; ready: boolean } | null>(null);
-  const [enabled, setEnabled] = useState(false);
-  const [startTime, setStartTime] = useState('09:00');
+  const [form, setForm] = useState<Form | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
-  const take = useCallback((autopilot: Autopilot) => {
-    setEnabled(autopilot.enabled);
-    setStartTime(autopilot.startTime);
-  }, []);
+  const take = useCallback((autopilot: Autopilot) => setForm(formOf(autopilot)), []);
 
   useEffect(() => {
     void (async () => {
@@ -38,17 +49,19 @@ export function AutopilotCard() {
     })();
   }, [take]);
 
-  if (!loaded) {
+  if (!loaded || !form) {
     return message
       ? <p className="fd-msg bad">{message.text}</p>
       : <p className="sh-loading"><LoaderCircle className="workbook-spinner" size={16} aria-hidden="true" /> Loading…</p>;
   }
-  if (!loaded.ready) return <p className="sh-empty">The daily story needs the autopilot migration in Supabase first.</p>;
+  if (!loaded.ready) return <p className="sh-empty">The autopilot needs its migrations in Supabase first (202611140001 and 202611140002).</p>;
 
   const saved = loaded.autopilot;
-  const changed = enabled !== saved.enabled || startTime !== saved.startTime;
+  const changed = form.windowStart !== saved.windowStart || form.windowEnd !== saved.windowEnd || form.shelfDays !== saved.shelfDays;
+  const valid = TIME.test(form.windowStart) && TIME.test(form.windowEnd);
+  const set = (patch: Partial<Form>) => setForm({ ...form, ...patch });
 
-  async function save(next: { enabled: boolean; startTime: string }) {
+  async function save(next: Form) {
     setSaving(true);
     setMessage(null);
     const result = await safeAction(saveAutopilotAction)(next);
@@ -56,7 +69,7 @@ export function AutopilotCard() {
     if (!result.success) return setMessage({ text: result.message, ok: false });
     setLoaded({ autopilot: result.data, ready: true });
     take(result.data);
-    setMessage({ text: result.data.enabled ? 'On. A new story starts every day.' : 'Off.', ok: true });
+    setMessage({ text: result.data.enabled ? 'On. Stories are made overnight.' : 'Off.', ok: true });
   }
 
   return (
@@ -64,36 +77,57 @@ export function AutopilotCard() {
       <label className="sh-auto-row">
         <span className="sh-auto-icon" aria-hidden="true"><MoonStar size={18} /></span>
         <span className="sh-auto-text">
-          <b>Daily bedtime story</b>
-          <span>A new Cozy Tales short every day, posted by your YouTube schedule.</span>
+          <b>Bedtime stories on autopilot</b>
+          <span>Made overnight on your Shorts PC and posted by your YouTube schedule.</span>
         </span>
         <input
           type="checkbox"
           role="switch"
-          checked={enabled}
+          checked={form.enabled}
           disabled={saving}
-          aria-label="Daily bedtime story"
+          aria-label="Bedtime stories on autopilot"
           onChange={(event) => {
-            const next = event.currentTarget.checked;
-            setEnabled(next);
-            void save({ enabled: next, startTime });
+            // The switch saves at once, with the window and days as last saved.
+            const next = { ...formOf(saved), enabled: event.currentTarget.checked };
+            setForm(next);
+            void save(next);
           }}
         />
       </label>
-      {enabled && (
+      {form.enabled && (
         <div className="sh-auto-time">
-          <label className="fd-field">
-            Start making it at
-            <input type="time" value={startTime} required onChange={(event) => setStartTime(event.currentTarget.value)} />
+          <div className="sh-auto-window" role="group" aria-label="Build between">
+            <label className="fd-field">
+              Build between
+              <input type="time" value={form.windowStart} required onChange={(event) => set({ windowStart: event.currentTarget.value })} />
+            </label>
+            <label className="fd-field">
+              and
+              <input type="time" value={form.windowEnd} required onChange={(event) => set({ windowEnd: event.currentTarget.value })} />
+            </label>
+          </div>
+          <label className="fd-field sh-auto-days">
+            Keep ready
+            <span className="sh-auto-days-input">
+              <select value={form.shelfDays} onChange={(event) => set({ shelfDays: Number(event.currentTarget.value) })}>
+                {DAYS.map((days) => <option key={days} value={days}>{days}</option>)}
+              </select>
+              {form.shelfDays === 1 ? 'day' : 'days'}
+            </span>
+          </label>
+          <label className="sh-auto-post">
+            <span>Post to <b>YouTube</b></span>
+            {/* YouTube is the only place to post until Instagram arrives, so it stays on. */}
+            <input type="checkbox" role="switch" checked={form.destinations.includes('youtube')} disabled aria-label="Post to YouTube" readOnly />
           </label>
           {changed && (
-            <button type="button" className="so-action" disabled={saving || !/^\d{2}:\d{2}$/.test(startTime)} onClick={() => void save({ enabled, startTime })}>
+            <button type="button" className="so-action" disabled={saving || !valid} onClick={() => void save(form)}>
               {saving && <LoaderCircle className="workbook-spinner" size={15} aria-hidden="true" />}
               <span>Save</span>
             </button>
           )}
           <p className="sh-yt-sub">
-            {saved.lastRunOn ? `Last started ${saved.lastRunOn}. ` : ''}Starts at {timeLabel(saved.startTime)} when your Shorts PC is on. Each takes about 20 minutes.
+            Builds one at a time between {timeLabel(saved.windowStart)} and {timeLabel(saved.windowEnd)} while your Shorts PC is awake, until {saved.shelfDays} {saved.shelfDays === 1 ? 'day' : 'days'} of posts are ready.
           </p>
         </div>
       )}

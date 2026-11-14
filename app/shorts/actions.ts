@@ -20,7 +20,7 @@ import type { JobStatus, ShortJob } from '@/lib/shorts/types';
 import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/view';
 import { getPersonSettings } from '@/lib/locale/repository';
 import { isMissingTable } from '@/lib/supabase/errors';
-import { AUTOPILOT_STYLE, defaultAutopilot, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
+import { AUTOPILOT_COLUMNS, AUTOPILOT_STYLE, defaultAutopilot, readAutopilotInput, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
 import { activeQueueFor, hasActiveQueue } from '@/lib/youtube/repository';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
@@ -182,41 +182,43 @@ export async function loadFilesAction(jobId: unknown): Promise<Result<ShortFiles
   });
 }
 
-/** The daily autopilot as saved, and whether its table is there yet (the autopilot migration). */
+/** The autopilot as saved, and whether its table and columns are there yet (both autopilot migrations). */
 type AutopilotState = { autopilot: Autopilot; ready: boolean };
+
+/** The table, or only the shelf migration's columns (42703 from a select), aren't there yet. */
+const autopilotMissing = (error: { code?: string }) => isMissingTable(error) || error.code === '42703';
 
 export async function loadAutopilotAction(): Promise<Result<AutopilotState>> {
   return asUser<AutopilotState>('The autopilot couldn’t be loaded. Try again in a little while.', async (me) => {
     const { timeZone } = await getPersonSettings(me.userId);
-    const { data, error } = await me.db.from('shorts_autopilot').select('enabled,style,start_time,timezone,last_run_on').eq('user_id', me.userId).maybeSingle();
+    const { data, error } = await me.db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', me.userId).maybeSingle();
     if (error) {
-      if (isMissingTable(error)) return ok({ autopilot: defaultAutopilot(timeZone), ready: false });
+      if (autopilotMissing(error)) return ok({ autopilot: defaultAutopilot(timeZone), ready: false });
       throw error;
     }
     return ok({ autopilot: readAutopilotRow(data, timeZone), ready: true });
   });
 }
 
-const START_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-/** Turns the autopilot on or off and sets when each day's short starts, on the person's own clock. */
+/** Turns the autopilot on or off and sets its build window, days to keep ready and where it posts, on the person's own clock. */
 export async function saveAutopilotAction(input: unknown): Promise<Result<Autopilot>> {
-  const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
-  if (typeof raw.enabled !== 'boolean' || typeof raw.startTime !== 'string' || !START_TIME.test(raw.startTime)) return fail('Pick a start time.');
-  const enabled = raw.enabled;
-  const startTime = raw.startTime;
+  const form = readAutopilotInput(input);
+  if (!form) return fail('Check the build window and the days to keep ready.');
   return asUser('The autopilot couldn’t be saved. Try again in a little while.', async (me) => {
     const { timeZone } = await getPersonSettings(me.userId);
-    // The service role writes: people only read their row. last_run_on is the worker's and is left as it is.
+    // The service role writes: people only read their row. The day's start count is the worker's and is left as it is.
     const { error } = await createAdminClient().from('shorts_autopilot').upsert(
-      { user_id: me.userId, enabled, start_time: startTime, timezone: timeZone, style: AUTOPILOT_STYLE },
+      {
+        user_id: me.userId, enabled: form.enabled, start_time: form.windowStart, window_end: form.windowEnd,
+        shelf_days: form.shelfDays, destinations: form.destinations, timezone: timeZone, style: AUTOPILOT_STYLE,
+      },
       { onConflict: 'user_id' },
     );
     if (error) {
-      if (isMissingTable(error)) return fail('The autopilot needs its migration in Supabase first (202611140001_shorts_autopilot.sql).');
+      if (autopilotMissing(error)) return fail('The autopilot needs its migrations in Supabase first (202611140001 and 202611140002).');
       throw error;
     }
-    const { data } = await me.db.from('shorts_autopilot').select('enabled,style,start_time,timezone,last_run_on').eq('user_id', me.userId).maybeSingle();
+    const { data } = await me.db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', me.userId).maybeSingle();
     return ok(readAutopilotRow(data, timeZone));
   });
 }
