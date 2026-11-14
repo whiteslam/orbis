@@ -7,6 +7,7 @@ import { CurrencyCard } from '@/components/money/currency-card';
 import { LedgerAmount, TransactionList } from '@/components/money/transaction-list';
 import { FieldHead, useScrollTop } from '@/components/field/field';
 import { MoneyIn } from '@/components/money/money-in';
+import { PhoneReview } from '@/components/money/phone-review';
 import { PartLoading } from '@/components/shell/loading';
 import type { FinanceSummary } from '@/lib/finance/types';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -142,6 +143,7 @@ export function SpendingScreen({ summary, switcher, intent = null }: Readonly<{ 
       <span ref={top} hidden />
       <FieldHead title="Money" />{switcher}
       {notices}
+      <PhoneReview />
 
       {/* The page reads as a ledger: the month's figure on one sheet with its
           shape and where it went, then the transactions by day. What came in

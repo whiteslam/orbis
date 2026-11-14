@@ -278,6 +278,26 @@
 .mn-mix .invest-bar i { border-radius: var(--r-pill); }
 .mn-mix .invest-bar strong { font-size: 13.5px; }
 
+/* ─── From your phone, to review: payments read from notifications ─── */
+.pr { margin: 18px 0 6px; padding: 14px 16px 6px; border-radius: 22px; background: var(--fd-card); box-shadow: inset 0 0 0 1px var(--fd-rule); }
+.pr-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.pr-row { display: grid; gap: 10px; padding: 14px 0; border-top: 1px solid var(--fd-rule); }
+.pr-row:first-child { border-top: 0; }
+.pr-copy { display: grid; gap: 3px; min-width: 0; }
+.pr-title { color: var(--fd-ink); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.pr-meta { color: var(--fd-faint); font-size: 12.5px; }
+.pr-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pr-select { flex: 1 1 140px; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--fd-rule); border-radius: 12px; background: var(--fd-card); color: var(--fd-ink); font: inherit; font-size: 14px; font-weight: 500; }
+.pr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--r-pill); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.pr-add { background: var(--fd-btn); color: var(--fd-btn-ink); }
+.pr-skip { background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-ink); }
+.pr-btn:disabled, .pr-select:disabled { opacity: .5; cursor: not-allowed; }
+.pr-select:focus-visible, .pr-btn:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.pr-msg { margin: 0; padding: 10px 13px; border-radius: 12px; background: var(--fd-alert-wash); color: var(--fd-alert); font-size: 12.5px; line-height: 1.5; }
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
+  .stage[data-desktop] .pr { max-width: 760px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mn-screen .mn-add, .mn-ledger .finance-transaction-delete, .mn-holdings .groww-actions .groww-disconnect { transition: none; }
   .mn-screen .mn-add:active { transform: none; }

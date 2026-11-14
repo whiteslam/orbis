@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-const { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, readTransactionSignal } = await import('@/lib/finance/phone-review');
+const { acceptPhoneTransaction, dismissPhoneTransaction, listPhoneTransactions, readTransactionSignal, reviewLine } = await import('@/lib/finance/phone-review');
 const { encryptForUser } = await import('@/lib/crypto/user-keys');
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -194,5 +194,27 @@ describe('dismissPhoneTransaction', () => {
   it('refuses a bad id', async () => {
     expect((await dismissPhoneTransaction(db, USER, 'x')).success).toBe(false);
     expect(fake.calls).toEqual([]);
+  });
+});
+
+describe('reviewLine', () => {
+  const payment = { signalId: SIGNAL, amount: 1250, currency: 'INR', direction: 'expense' as const, merchant: 'Swiggy', occurredAt: '2026-11-14T08:00:00Z', text: '' };
+
+  it('formats amount, merchant and day', () => {
+    expect(reviewLine(payment, 'en-IN', 'INR', 'Asia/Kolkata')).toEqual({ title: 'Swiggy, ₹1,250', meta: 'Spent, 14 Nov' });
+  });
+
+  it('says Payment with no merchant, and Received for income', () => {
+    expect(reviewLine({ ...payment, merchant: null, direction: 'income' }, 'en-IN', 'INR', 'Asia/Kolkata')).toEqual({ title: 'Payment, ₹1,250', meta: 'Received, 14 Nov' });
+  });
+
+  it('shows the day in the person’s time zone', () => {
+    const late = { ...payment, occurredAt: '2026-11-14T20:00:00Z' };
+    expect(reviewLine(late, 'en-IN', 'INR', 'Asia/Kolkata').meta).toBe('Spent, 15 Nov');
+    expect(reviewLine(late, 'en-IN', 'INR', 'America/Los_Angeles').meta).toBe('Spent, 14 Nov');
+  });
+
+  it('uses the payment’s own currency', () => {
+    expect(reviewLine({ ...payment, currency: 'USD', amount: 12.5 }, 'en-US', 'INR', 'UTC').title).toBe('Swiggy, $12.50');
   });
 });
