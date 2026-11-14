@@ -67,3 +67,10 @@ export const MANUAL_NOTE_MAX_LENGTH = 500;
 export function paymentMethodLabel(value: string | null) {
   return PAYMENT_METHODS.find(([key]) => key === value)?.[1] ?? null;
 }
+
+/** Rows the person added or accepted themselves, and so may delete. Gmail rows are not theirs to remove. */
+export const DELETABLE_SOURCES = ['manual', 'phone'] as const;
+
+export function isDeletableSource(source: string) {
+  return (DELETABLE_SOURCES as readonly string[]).includes(source);
+}

@@ -6,7 +6,7 @@ export type FinanceTransactionSummary = {
   merchant: string | null;
   category: string | null;
   occurredAt: string;
-  source: 'gmail' | 'manual';
+  source: 'gmail' | 'manual' | 'phone';
   paymentMethod: string | null;
   note: string | null;
 };

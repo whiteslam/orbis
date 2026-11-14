@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Mail, PenLine, Trash2 } from 'lucide-react';
+import { Mail, PenLine, Smartphone, Trash2 } from 'lucide-react';
 import { categoryStyle } from '@/components/money/category-style';
 import { deleteManualTransactionAction } from '@/app/finance/actions';
-import { paymentMethodLabel } from '@/lib/finance/manual';
+import { isDeletableSource, paymentMethodLabel } from '@/lib/finance/manual';
 import type { FinanceTransactionSummary } from '@/lib/finance/types';
 import { safeAction } from '@/lib/client/safe-action';
 import { usePersonLocale } from '@/components/locale/person-locale';
@@ -99,14 +99,14 @@ export function TransactionList({ transactions }: Readonly<{ transactions: Finan
                     <div className="finance-transaction-copy">
                       <strong>{transaction.merchant || transaction.category || 'Transaction'}</strong>
                       <small className="finance-transaction-meta">
-                        {transaction.source === 'manual' ? <PenLine size={10} aria-label="Added manually" /> : <Mail size={10} aria-label="From Gmail" />}
+                        {transaction.source === 'manual' ? <PenLine size={10} aria-label="Added manually" /> : transaction.source === 'phone' ? <Smartphone size={10} aria-label="From your phone" /> : <Mail size={10} aria-label="From Gmail" />}
                         {[formatWhen(transaction.occurredAt, loc, 'shortTime'), details].filter(Boolean).join(' · ')}
                       </small>
                       {transaction.note && <p className="finance-transaction-note">{transaction.note}</p>}
                     </div>
                     <div className="finance-transaction-side">
                       <strong className={income ? 'income' : ''}><LedgerAmount amount={transaction.amount} currency={transaction.currency} sign={income ? '+' : ''} /></strong>
-                      {transaction.source === 'manual' && (
+                      {isDeletableSource(transaction.source) && (
                         <button type="button" className="finance-transaction-delete" onClick={() => remove(transaction)} disabled={isPending} aria-label="Delete transaction">
                           <Trash2 size={14} />{deletingId === transaction.id ? 'Deleting…' : ''}
                         </button>

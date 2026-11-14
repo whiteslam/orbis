@@ -6,7 +6,7 @@ import { getAuthenticatedUserId } from '@/lib/auth/session';
 import { isUuid } from '@/lib/validate/id';
 import { createClient } from '@/lib/supabase/server';
 import { isMissingTable } from '@/lib/supabase/errors';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
+import { DELETABLE_SOURCES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, INVESTMENT_CATEGORIES, MANUAL_NOTE_MAX_LENGTH, PAYMENT_METHODS } from '@/lib/finance/manual';
 
 export type FinanceActionState = {
   success: boolean;
@@ -172,7 +172,7 @@ export async function deleteManualTransactionAction(transactionId: string): Prom
       .delete()
       .eq('id', transactionId)
       .eq('user_id', userId)
-      .eq('source', 'manual')
+      .in('source', [...DELETABLE_SOURCES])
       .select('id')
       .maybeSingle();
     if (error || !data) return { success: false, message: 'This transaction could not be deleted. Refresh Finance and try again.' };
