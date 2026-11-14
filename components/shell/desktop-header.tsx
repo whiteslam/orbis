@@ -7,6 +7,7 @@ import { useDismiss } from '@/components/career/panel/panel-bits';
 import { SettingsButton } from '@/components/shell/settings-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Headsups } from '@/components/today/headsups';
+import { TodayViewToggle } from '@/components/today/today-view-toggle';
 import { formatWhen, localParts } from '@/lib/locale/dates';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -46,8 +47,10 @@ function HeadsupsButton({ onAction }: Readonly<{ onAction: (action: HeadsupActio
  * Settings. Hidden by app/styles/desktop.css below the breakpoint, where each
  * screen's own header does this job.
  */
-export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
+export function DesktopHeader({ name, onToday, onSearch, onHeadsup }: Readonly<{
   name: string | null;
+  /** On Today, the bar also holds its Classic/Glass switch. */
+  onToday: boolean;
   onSearch: () => void;
   onHeadsup: (action: HeadsupAction) => void;
 }>) {
@@ -68,6 +71,7 @@ export function DesktopHeader({ name, onSearch, onHeadsup }: Readonly<{
         <kbd aria-hidden="true">{mod} K</kbd>
       </button>
       <div className="dk-tools">
+        {onToday && <TodayViewToggle />}
         <HeadsupsButton onAction={onHeadsup} />
         <ThemeToggle />
         <SettingsButton />

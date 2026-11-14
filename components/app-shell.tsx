@@ -286,7 +286,7 @@ export default function AppShell({ userId, financeSummary, contextNotes, fitness
           <SettingsProvider value={settingsAccess}>
             {/* Desktop only: hidden by app/styles/desktop.css below the breakpoint, and everywhere unless data-desktop is set. */}
             <DesktopRail tabs={tabs} tab={tab} onTab={goTab} onAsk={openAskPanel} onSettings={() => setSettings('you')} />
-            <DesktopHeader name={personalProfile.profile?.preferredName ?? null} onSearch={() => setPalette(true)} onHeadsup={openHeadsup} />
+            <DesktopHeader name={personalProfile.profile?.preferredName ?? null} onToday={tab === 'today'} onSearch={() => setPalette(true)} onHeadsup={openHeadsup} />
             {screen}
             {/* Its own boundary, like the palette's: on first open only the sheet
                 waits for its code, so the app is not hidden and the button that

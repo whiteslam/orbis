@@ -1,6 +1,6 @@
 /* Hallmark · built: the project · redesign: polish · shape: app screen · theme: the project's own (fd- and brand- tokens, glow wallpaper kept) · signature: the weather card tinted by the sky */
 /* Hallmark · critique: Glass sat inside the desktop page's right column and left the window empty; now it runs the full width on two wrapping rows, and the same rows stack on a phone */
-/* Hallmark · waive 26b · the portfolio tile, the story link and the switch buttons · none of these controls is ever disabled, so there is no disabled state to draw */
+/* Hallmark · waive 26b · the portfolio tile and the story link · none of these controls is ever disabled, so there is no disabled state to draw */
 /* Hallmark · dismissed 49 · the long labels are a whole portfolio tile and the weather prompt to set a city, both full sentences inside a panel, not short button labels */
 /* Hallmark · dismissed 28a · the lazy image is the news photo below the brief and the tiles; the page's largest paint is the brief's text */
 
@@ -16,19 +16,6 @@
    Glass has no area there, so it would land in the narrow right column:
    while Glass shows, the page is one column instead. */
 .stage[data-desktop][data-tab="today"] .screen-body.td.td-glass { display: flex; flex-direction: column; align-items: stretch; gap: 24px; max-width: 1680px; }
-
-/* Classic keeps its grid; the switch takes the top of the right column, beside the passkey prompt. */
-@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
-  .stage[data-desktop][data-tab="today"] .screen-body.td:not(.td-glass) {
-    grid-template-areas:
-      "pass switch"
-      "lead desk"
-      "glance desk"
-      "foot desk"
-      "paper paper";
-  }
-  .stage[data-desktop][data-tab="today"] .td:not(.td-glass) > .tg-switch-row { grid-area: switch; align-self: start; }
-}
 
 .tg { display: flex; flex-direction: column; gap: 24px; }
 .tg-lead { max-width: 62rem; }
@@ -143,35 +130,23 @@
 
 .tg-extras { display: flex; flex-direction: column; gap: 16px; }
 
-/* The Classic | Glass switch: its own row at the top of Today (the desktop layout hides .fd-top). */
-.tg-switch-row { display: flex; justify-content: flex-end; }
-.tg-switch { display: inline-flex; padding: 4px; border-radius: 999px; border: 1px solid var(--fd-rule); background: color-mix(in srgb, var(--fd-card) 70%, transparent); }
-.tg-switch button { min-height: 36px; padding: 8px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.tg-switch button:hover { color: var(--fd-ink); }
-.tg-switch button[aria-checked="true"] { background: color-mix(in srgb, var(--fd-ink) 14%, transparent); color: var(--fd-ink); }
-
 .tg-portfolio:focus-visible,
-.tg-story:focus-visible,
-.tg-switch button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+.tg-story:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
 
 .tg-portfolio,
-.tg-story,
-.tg-switch button { transition: transform 160ms ease, background-color 160ms ease, color 160ms ease; }
+.tg-story { transition: transform 160ms ease, background-color 160ms ease, color 160ms ease; }
 .tg-portfolio:hover,
 .tg-story:hover { transform: translateY(-2px); }
 .tg-portfolio:active,
-.tg-story:active,
-.tg-switch button:active { transform: scale(0.98); }
+.tg-story:active { transform: scale(0.98); }
 
 @media (prefers-reduced-motion: reduce) {
   .tg-portfolio,
-  .tg-story,
-  .tg-switch button { transition: none; }
+  .tg-story { transition: none; }
   .tg-portfolio:hover,
   .tg-story:hover,
   .tg-portfolio:active,
-  .tg-story:active,
-  .tg-switch button:active { transform: none; }
+  .tg-story:active { transform: none; }
 }
 
 /* A phone: tighter panels and gaps; the rows already wrap to one column. */
@@ -181,5 +156,4 @@
   .tg-reads { gap: 12px; }
   .tg-panel,
   .tg-weather { padding: 16px 20px; border-radius: 24px; }
-  .tg-switch-row { justify-content: flex-start; }
 }

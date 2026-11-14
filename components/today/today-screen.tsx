@@ -29,7 +29,7 @@ import { canAnswer, currentRoutine, missedRoutines, routineState, routinesToday,
 import { GlassView } from '@/components/today/glass-view';
 import { ViewBoundary } from '@/components/today/view-boundary';
 import { glassActivity, restOfToday } from '@/lib/home/glass';
-import { readTodayView, TODAY_VIEW_KEY, type TodayView } from '@/lib/home/today-view';
+import { TodayViewToggle, useTodayView } from '@/components/today/today-view-toggle';
 import type { RoutinesSummary } from '@/lib/routines/types';
 import type { SetupStep } from '@/lib/focus/setup';
 import type { HeadsupAction } from '@/lib/headsups/types';
@@ -45,11 +45,6 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
     return fallback;
   }
 }
-
-// The Today view this visit has read or chosen. Home remounts on every tab
-// switch; keeping it here means a Glass user isn't shown Classic first each time.
-let savedView: TodayView | undefined;
-const rememberView = (view: TodayView) => { savedView = view; };
 
 // How long Home waits for the portfolio before writing the brief without it.
 const PORTFOLIO_WAIT_MS = 8_000;
@@ -85,33 +80,9 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   }, []);
   const today = formatWhen(new Date(), loc, 'dayLong');
 
-  // Desktop only: Classic (this page as it always was) or Glass, remembered per
-  // browser. Read after mounting, so the server and first render are Classic.
-  // savedView is only set after the first read, never during hydration, so the
-  // first render still matches the server; coming back to Today then skips the flash of Classic.
-  const [view, setView] = useState<TodayView>(() => savedView ?? 'classic');
-  useEffect(() => {
-    if (savedView) return;
-    let saved: TodayView = 'classic';
-    try {
-      saved = readTodayView(window.localStorage.getItem(TODAY_VIEW_KEY));
-    } catch {
-      // Storage blocked (a private window): Classic.
-    }
-    rememberView(saved);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setView(saved);
-  }, []);
-  const chooseView = (next: TodayView) => {
-    rememberView(next);
-    setView(next);
-    try {
-      window.localStorage.setItem(TODAY_VIEW_KEY, next);
-    } catch {
-      // Storage blocked: the choice holds for this visit only.
-    }
-  };
-
+  // Classic (this page as it always was) or Glass, remembered per browser and
+  // switched from the header button (TodayViewToggle).
+  const view = useTodayView();
 
   // The daily investing line. Holdings come from the broker, so Home asks for
   // them the way it asks for the weather, and simply has no card until they land.
@@ -237,22 +208,12 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
           <p className="fd-date" suppressHydrationWarning>{today}</p>
         </div>
         <div className="fd-top-actions">
+          <TodayViewToggle />
           <NotificationsButton />
           <ThemeToggle />
           <SettingsButton />
         </div>
       </header>
-
-      {/* Its own row, not in .fd-top: the desktop layout hides that bar (app/styles/desktop.css). */}
-      <div className="tg-switch-row">
-        <div className="tg-switch" role="radiogroup" aria-label="Today view">
-          {(['classic', 'glass'] as const).map((option) => (
-            <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
-              {option === 'classic' ? 'Classic' : 'Glass'}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <PasskeyPrompt />
 
