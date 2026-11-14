@@ -4,7 +4,7 @@ import android.app.Notification
 import android.os.Process
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import app.orbis.core.rules.Decision
+import android.util.Log
 import app.orbis.core.rules.Source
 import app.orbis.core.store.OrbisStore
 import app.orbis.core.sync.SyncScheduler
@@ -56,16 +56,18 @@ class OrbisNotificationListener : NotificationListenerService() {
         )
         val context = applicationContext
         scope.launch {
-            val store = OrbisStore.get(context)
-            if (!store.sourceEnabled(Source.NOTIFICATIONS)) return@launch
-            val item = NotificationReader.toItem(facts, context.packageName) ?: return@launch
-            if (!recent.firstTime(facts.key, item.text)) return@launch
-            val decision = store.capture(item)
-            if (decision is Decision.Keep &&
-                NotificationSorter.sort(item.packageName, item.text, item.text)?.kind == "transaction"
-            ) {
-                SyncScheduler.now(context)
-            }
+            NotificationIntake(
+                ownPackage = context.packageName,
+                recent = recent,
+                sourceEnabled = { OrbisStore.get(context).sourceEnabled(Source.NOTIFICATIONS) },
+                capture = { OrbisStore.get(context).capture(it) },
+                syncNow = { SyncScheduler.now(context) },
+                logFailure = { Log.w(TAG, it) },
+            ).handle(facts)
         }
+    }
+
+    private companion object {
+        const val TAG = "OrbisNotifications"
     }
 }
