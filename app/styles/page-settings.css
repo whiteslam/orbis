@@ -9,27 +9,29 @@
    Social's insights. */
 
 .settings-sheet {
-  /* iOS Settings' icon colours, from the system palette so both appearances hold. */
-  --st-you: var(--sys-tertiary);
-  --st-connections: var(--sys-blue);
-  --st-ai: color-mix(in srgb, var(--sys-blue) 45%, var(--sys-pink));
-  --st-notifications: var(--sys-red);
-  --st-day: var(--sys-amber);
-  --st-security: var(--sys-green);
-  --st-privacy: color-mix(in srgb, var(--sys-blue) 60%, var(--sys-green));
-  --st-data: var(--sys-tertiary);
+  /* Apple's system face (SF Pro) on Apple devices; Inter, its nearest open match, elsewhere
+     (loaded by next/font in settings-sheet.tsx as --font-inter). The text styles are restated
+     here because the ones on :root were resolved against the app's own stack. */
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter, system-ui), system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter, system-ui), system-ui, sans-serif;
+  --t-large-title: 700 34px/41px var(--font-display);
+  --t-title-1: 700 28px/34px var(--font-display);
+  --t-title-2: 700 22px/28px var(--font-display);
+  --t-title-3: 600 20px/25px var(--font-display);
+  --t-headline: 600 17px/22px var(--font-text);
+  --t-body: 400 17px/22px var(--font-text);
+  --t-callout: 400 16px/21px var(--font-text);
+  --t-subhead: 400 15px/20px var(--font-text);
+  --t-footnote: 400 13px/18px var(--font-text);
+  --t-caption: 400 12px/16px var(--font-text);
+  /* Every glyph in the Orbis accent, on a soft round tile like the ring mark, not iOS's rainbow squares. */
+  --st-tone: var(--tint);
   --st-gap: 32px;
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
   background: var(--sys-bg);
   color: var(--sys-label);
 }
-.settings-sheet [data-section="you"] { --st-tone: var(--st-you); }
-.settings-sheet [data-section="connections"] { --st-tone: var(--st-connections); }
-.settings-sheet [data-section="ai"] { --st-tone: var(--st-ai); }
-.settings-sheet [data-section="notifications"] { --st-tone: var(--st-notifications); }
-.settings-sheet [data-section="day"] { --st-tone: var(--st-day); }
-.settings-sheet [data-section="security"] { --st-tone: var(--st-security); }
-.settings-sheet [data-section="privacy"] { --st-tone: var(--st-privacy); }
-.settings-sheet [data-section="data"] { --st-tone: var(--st-data); }
 
 /* The grabber: drag-to-dismiss starts here (the shared motion runtime). Phone only. */
 .settings-sheet .sheet-grabber { position: absolute; top: max(6px, calc(var(--safe-top) - 8px)); left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--sys-fill); }
@@ -91,7 +93,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 /* Hairlines start at the text, as a native list's do. */
-.settings-sheet .st-row + .st-row::before { content: ""; position: absolute; top: 0; left: 57px; right: 0; border-top: .5px solid var(--sys-separator); }
+.settings-sheet .st-row + .st-row::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; border-top: .5px solid var(--sys-separator); }
 /* A row highlights while pressed, like a table cell; it does not shrink. */
 .settings-sheet .st-row:active { background: var(--sys-surface-3); transform: none; }
 /* The same for rows that hold a switch or a status: a table row never shrinks under a finger. */
@@ -101,19 +103,14 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 29px;
-  height: 29px;
-  border-radius: 7px;
-  background: var(--st-tone);
-  color: var(--on-fill);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--st-tone) 15%, transparent);
+  color: var(--st-tone);
 }
-.st-glyph svg { width: 18px; height: 18px; }
-/* You is a person, so its glyph is round, the way the account row is in iOS. */
-.settings-sheet [data-section="you"] .st-glyph { border-radius: 50%; }
-.st-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.st-row-label { min-width: 0; overflow-wrap: break-word; }
-/* What the section holds, in a line under its name. */
-.st-row-desc { min-width: 0; color: var(--sys-secondary); font: var(--t-footnote); overflow-wrap: break-word; }
+.st-glyph svg { width: 17px; height: 17px; stroke-width: 2; }
+.st-row-label { flex: 1; min-width: 0; overflow-wrap: break-word; }
 .st-row-hint { flex: 0 1 auto; min-width: 0; max-width: 46%; overflow: hidden; color: var(--sys-secondary); font: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
 .st-row-hint.warn { color: var(--sys-red); }
 .st-chev { flex: none; width: 14px; height: 14px; margin-left: -4px; color: var(--sys-tertiary); stroke-width: 3; }
@@ -130,8 +127,8 @@
   backdrop-filter: none;
   box-shadow: none;
 }
-/* The category the section sits under, as the index groups it. */
-.settings-sheet .pf-group > .st-eyebrow { margin: 0 0 2px; color: var(--sys-secondary); font: var(--t-footnote); font-weight: 600; }
+/* Focused by script when the phone opens it as a page; it is not a control, so no ring. */
+.settings-sheet .pf-group > .st-h:focus { outline: none; }
 .settings-sheet .pf-group > .st-h:not(#_) { margin: 0; color: var(--sys-label); font: var(--t-title-2); letter-spacing: -.01em; overflow-wrap: break-word; min-width: 0; }
 .settings-sheet .pf-group > .fd-note.st-lede { margin: 4px 0 0; padding: 0; color: var(--sys-secondary); font: var(--t-subhead); }
 /* A group header inside a section (Heads-ups, the services list): 13px, secondary, sentence case. */
@@ -508,11 +505,10 @@
   .stage[data-desktop] .settings-sheet .st-row[aria-current="true"]::before,
   .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] + .st-row::before { border-top-color: transparent; }
   .stage[data-desktop] .settings-sheet .st-row:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; border-radius: 14px; }
-  .stage[data-desktop] .settings-sheet .st-glyph { width: 26px; height: 26px; border-radius: 6px; }
+  .stage[data-desktop] .settings-sheet .st-glyph { width: 28px; height: 28px; }
   .stage[data-desktop] .settings-sheet .st-glyph svg { width: 16px; height: 16px; }
   .stage[data-desktop] .settings-sheet .st-row-hint { font: var(--t-subhead); }
-  .stage[data-desktop] .settings-sheet .st-row-desc { font: var(--t-caption); }
-  .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-row-desc { color: color-mix(in srgb, var(--on-tint) 82%, transparent); }
+  .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-glyph { background: color-mix(in srgb, var(--on-tint) 16%, transparent); color: var(--on-tint); }
   .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-row-hint { color: var(--on-tint); }
   .stage[data-desktop] .settings-sheet .st-chev { display: none; }
 
@@ -534,3 +530,31 @@
   .stage[data-desktop] .settings-sheet :is(.pf-act, .fd-source, .pf-app, .pf-device, .pf-city-row, .rt-settings, .pf-headsups) :is(.fd-button, button:not(.fd-link, .workbook-icon-button, .rt-row-open), .pf-pill):hover:not(:disabled) { filter: brightness(.96); }
   .stage[data-desktop] .settings-sheet .rt-row-open:hover .fd-two { color: var(--tint); }
 }
+
+/* ─── The phone: a stack of pages ───
+   settings-sheet.tsx sets data-pages below the desktop breakpoint. With no page open
+   the list is all there is; tapping a row opens that section alone, under a Back
+   button, as iOS Settings pushes a page. */
+.settings-sheet[data-pages]:not([data-page]) .pf-group.st-group { display: none; }
+.settings-sheet[data-pages][data-page] .st-index { display: none; }
+.settings-sheet[data-pages][data-page] .pf-group.st-group:not([data-shown]) { display: none; }
+.settings-sheet[data-pages][data-page] .pf-group.st-group { margin-top: 6px; }
+.settings-sheet[data-pages][data-page] .pf-group > .st-h:not(#_) { font: var(--t-large-title); letter-spacing: -.02em; }
+.settings-sheet[data-pages][data-page] .settings-head { align-items: center; }
+/* Back: tint chevron and word, the way a pushed page's back button reads; 44px to tap. */
+.settings-sheet .settings-head .st-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: auto;
+  height: 44px;
+  margin: 0 0 0 -10px;
+  padding: 0 10px 0 4px;
+  border-radius: 12px;
+  background: none;
+  color: var(--tint);
+  font: var(--t-body);
+}
+.settings-sheet .settings-head .st-back::after { content: none; }
+.settings-sheet .settings-head .st-back svg { width: 22px; height: 22px; stroke-width: 2.4; }
+.settings-sheet .settings-head .st-back:focus-visible { outline: 2px solid var(--tint); outline-offset: 0; }
