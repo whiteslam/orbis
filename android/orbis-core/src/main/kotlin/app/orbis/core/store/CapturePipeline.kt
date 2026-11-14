@@ -1,7 +1,9 @@
 package app.orbis.core.store
 
+import app.orbis.core.notify.NotificationSorter
 import app.orbis.core.rules.CapturedItem
 import app.orbis.core.rules.Decision
+import app.orbis.core.rules.DropReason
 import app.orbis.core.rules.PrivacyRules
 import app.orbis.core.rules.PrivacySettings
 import app.orbis.core.rules.Source
@@ -11,7 +13,9 @@ import java.util.UUID
  * Runs the privacy rules on a captured item and stores the result.
  *
  * - Keep: a [RawItem] (masked text, package, contact keys), a [PendingSignal] (unless its
- *   content is empty) and a "kept" ledger row.
+ *   content is empty) and a "kept" ledger row. A notification instead gets a signal only when
+ *   [NotificationSorter] recognises it (a payment, delivery, missed call, job mail), and a
+ *   one-time code is dropped (ledger row only, reason ONE_TIME_CODE).
  * - Drop: only `LedgerEntry(at, source, "dropped", reason)`. No package, contact or text.
  */
 class CapturePipeline(private val port: StorePort) {
@@ -31,18 +35,38 @@ class CapturePipeline(private val port: StorePort) {
                     occurredAt = item.occurredAt,
                     capturedAt = now,
                 )
-                val content = signalContent(masked)
-                val signal = if (content.isEmpty()) {
-                    null
+                val signal = if (item.source == Source.NOTIFICATIONS) {
+                    // A one-time code is never kept, not even masked.
+                    if (NotificationSorter.isOneTimeCode(item.text)) {
+                        port.insertDropped(
+                            LedgerEntry(at = now, source = item.source, decision = LedgerEntry.DROPPED, reason = DropReason.ONE_TIME_CODE.name),
+                        )
+                        return Decision.Drop(DropReason.ONE_TIME_CODE)
+                    }
+                    NotificationSorter.sort(item.packageName, item.text, masked)?.let {
+                        PendingSignal(
+                            id = UUID.randomUUID().toString(),
+                            source = item.source,
+                            kind = it.kind,
+                            occurredAt = item.occurredAt,
+                            content = it.content, // already safe for the server
+                            createdAt = now,
+                        )
+                    }
                 } else {
-                    PendingSignal(
-                        id = UUID.randomUUID().toString(),
-                        source = item.source,
-                        kind = kindFor(item.source),
-                        occurredAt = item.occurredAt,
-                        content = content,
-                        createdAt = now,
-                    )
+                    val content = signalContent(masked)
+                    if (content.isEmpty()) {
+                        null
+                    } else {
+                        PendingSignal(
+                            id = UUID.randomUUID().toString(),
+                            source = item.source,
+                            kind = kindFor(item.source),
+                            occurredAt = item.occurredAt,
+                            content = content,
+                            createdAt = now,
+                        )
+                    }
                 }
                 port.insertKept(raw, signal, LedgerEntry(at = now, source = item.source, decision = LedgerEntry.KEPT, reason = null))
             }

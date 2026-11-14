@@ -20,6 +20,7 @@ test('a ledger entry reads as source, kept or dropped, and the reason in plain w
   assert.equal(activityWords({ at: 1, source: 'test', decision: 'dropped', reason: 'PAUSED' }).reason, 'Orbis was paused');
   assert.equal(activityWords({ at: 1, source: 'test', decision: 'dropped', reason: 'SOURCE_OFF' }).reason, 'The source was off');
   assert.equal(activityWords({ at: 1, source: 'test', decision: 'dropped', reason: 'OTHER_PROFILE' }).reason, 'From a work or private profile');
+  assert.equal(activityWords({ at: 1, source: 'notifications', decision: 'dropped', reason: 'ONE_TIME_CODE' }).reason, 'One-time code');
 });
 
 test('an unknown reason or source never shows its raw code', () => {

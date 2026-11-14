@@ -1,6 +1,7 @@
 package app.orbis.core.store
 
 import app.orbis.core.rules.CapturedItem
+import app.orbis.core.rules.DefaultBlocklist
 import app.orbis.core.rules.Decision
 import app.orbis.core.rules.DropReason
 import app.orbis.core.rules.PrivacyRules
@@ -180,9 +181,99 @@ class CapturePipelineTest {
         assertEquals("notifications_item", CapturePipeline.kindFor(Source.NOTIFICATIONS))
         for (s in Source.values()) assertTrue(CapturePipeline.kindFor(s), kind.matches(CapturePipeline.kindFor(s)))
 
+        // The test source keeps its own kind; notifications are sorted instead (below).
         val port = FakePort()
-        CapturePipeline(port).capture(item(Source.NOTIFICATIONS, pkg = "com.example.chat", text = "hi"), settings, now)
-        assertEquals("notifications_item", port.signals.single().kind)
+        CapturePipeline(port).capture(item(Source.TEST, pkg = "com.example.chat", text = "hi"), settings, now)
+        assertEquals("test_item", port.signals.single().kind)
+    }
+
+    private val payment = "Rs 2500.00 debited from A/c XX1234 at SWIGGY on 14-11-26"
+
+    @Test
+    fun aNotificationPaymentMakesARawItemAndATransactionSignal() = runBlocking {
+        val port = FakePort()
+        val d = CapturePipeline(port).capture(
+            item(Source.NOTIFICATIONS, pkg = "com.example.sms", contacts = listOf("AX-HDFCBK"), text = payment),
+            settings, now,
+        )
+        assertTrue(d is Decision.Keep)
+        assertEquals(1, port.raw.size)
+        assertEquals(Source.NOTIFICATIONS, port.raw.single().source)
+        val signal = port.signals.single()
+        assertEquals("transaction", signal.kind)
+        assertEquals(Source.NOTIFICATIONS, signal.source)
+        assertEquals(occurred, signal.occurredAt)
+        assertEquals(now, signal.createdAt)
+        assertTrue(signal.id, uuid.matches(signal.id))
+        val json = org.json.JSONObject(signal.content)
+        assertEquals("2500.00", json.getString("amount"))
+        assertEquals("expense", json.getString("direction"))
+        assertEquals(LedgerEntry(at = now, source = Source.NOTIFICATIONS, decision = LedgerEntry.KEPT, reason = null), port.ledger.single())
+    }
+
+    @Test
+    fun anUnsortedNotificationMakesARawItemAndNoSignal() = runBlocking {
+        val port = FakePort()
+        val d = CapturePipeline(port).capture(item(Source.NOTIFICATIONS, pkg = "com.example.chat", text = "Asha: see you at 5"), settings, now)
+        assertTrue(d is Decision.Keep)
+        assertEquals(1, port.raw.size)
+        assertEquals(0, port.signals.size)
+        assertEquals(LedgerEntry.KEPT, port.ledger.single().decision)
+    }
+
+    @Test
+    fun aOneTimeCodeIsDroppedAndLeavesOnlyALedgerEntry() = runBlocking {
+        val port = FakePort()
+        val d = CapturePipeline(port).capture(
+            item(Source.NOTIFICATIONS, pkg = "com.example.sms", contacts = listOf("AX-HDFCBK"), text = "123456 is your OTP. Do not share it."),
+            settings, now,
+        )
+        assertEquals(Decision.Drop(DropReason.ONE_TIME_CODE), d)
+        assertEquals(0, port.raw.size)
+        assertEquals(0, port.signals.size)
+        assertEquals(
+            listOf(LedgerEntry(at = now, source = Source.NOTIFICATIONS, decision = LedgerEntry.DROPPED, reason = "ONE_TIME_CODE")),
+            port.ledger,
+        )
+        assertFalse(port.everything().joinToString("\n") { it.toString() }.contains("123456"))
+    }
+
+    @Test
+    fun aBlockedSendersPaymentAlertWritesNothingButTheLedger() = runBlocking {
+        val port = FakePort()
+        val s = settings.copy(blockedContacts = setOf(PrivacyRules.contactKey("AX-HDFCBK")))
+        val d = CapturePipeline(port).capture(
+            item(Source.NOTIFICATIONS, pkg = "com.example.sms", contacts = listOf("AX-HDFCBK"), text = payment),
+            s, now,
+        )
+        assertEquals(Decision.Drop(DropReason.BLOCKED_CONTACT), d)
+        assertEquals(0, port.raw.size)
+        assertEquals(0, port.signals.size)
+        assertEquals(listOf("BLOCKED_CONTACT"), port.ledger.map { it.reason })
+    }
+
+    @Test
+    fun aBlockedAppsPaymentAlertWritesNothingButTheLedger() = runBlocking {
+        val port = FakePort()
+        val s = settings.copy(blockedPackages = DefaultBlocklist.PACKAGES)
+        val d = CapturePipeline(port).capture(
+            item(Source.NOTIFICATIONS, pkg = "com.hdfcbank.android.now", text = payment),
+            s, now,
+        )
+        assertEquals(Decision.Drop(DropReason.BLOCKED_APP), d)
+        assertEquals(0, port.raw.size)
+        assertEquals(0, port.signals.size)
+        assertEquals(listOf("BLOCKED_APP"), port.ledger.map { it.reason })
+    }
+
+    @Test
+    fun theTestSourceStillMakesTestItemSignals() = runBlocking {
+        val port = FakePort()
+        // Payment-shaped text from the test source is not sorted: it keeps "test_item".
+        CapturePipeline(port).capture(item(Source.TEST, text = payment), settings, now)
+        val signal = port.signals.single()
+        assertEquals("test_item", signal.kind)
+        assertEquals(CapturePipeline.signalContent(PrivacyRules.decide(item(Source.TEST, text = payment), settings, now).let { (it as Decision.Keep).maskedText }), signal.content)
     }
 
     @Test

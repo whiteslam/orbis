@@ -32,6 +32,7 @@ const REASONS: Map<string, string> = new Map([
   ['BLOCKED_APP', 'From a blocked app'],
   ['BLOCKED_CONTACT', 'From a blocked contact'],
   ['BLOCKED_KEYWORD', 'Had a blocked word'],
+  ['ONE_TIME_CODE', 'One-time code'],
 ]);
 const OTHER_REASON = 'Left out by a rule';
 
