@@ -44,3 +44,17 @@ export function skyFor(weather: { isDay: boolean; rainingNow: boolean; weatherCo
   if (weather.weatherCode >= 1 && weather.weatherCode <= 48) return 'cloud';
   return 'clear';
 }
+
+export type SkyPhoto = Readonly<{ src: string; author: string; license: string; page: string }>;
+
+/**
+ * The photo behind the Glass weather widget for each sky, served from public/.
+ * From Wikimedia Commons (picked through Hallmark's photo library); each needs
+ * its credit shown with it, which the widget does.
+ */
+export const SKY_PHOTOS: Readonly<Record<Sky, SkyPhoto>> = {
+  clear: { src: '/today/sky/clear.jpg', author: 'Vyacheslav Argenberg', license: 'CC BY 4.0', page: 'https://commons.wikimedia.org/wiki/File:Pumori,_Nepal,_Asia.jpg' },
+  cloud: { src: '/today/sky/cloud.jpg', author: 'Jakec', license: 'CC BY-SA 3.0', page: 'https://commons.wikimedia.org/wiki/File:Cumulus_clouds_as_seen_from_an_airplane.JPG' },
+  rain: { src: '/today/sky/rain.jpg', author: 'W.carter', license: 'CC BY-SA 4.0', page: 'https://commons.wikimedia.org/wiki/File:Rain_on_a_window.jpg' },
+  night: { src: '/today/sky/night.jpg', author: 'Antoine Lamielle', license: 'CC BY-SA 4.0', page: 'https://commons.wikimedia.org/wiki/File:2017-04_Circumpolar_trails_sunset_at_La_Hague_lighthouse.jpg' },
+};

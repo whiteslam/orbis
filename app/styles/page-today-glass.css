@@ -74,6 +74,15 @@
 .tg-weather[data-sky="cloud"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-teal) 22%, var(--fd-card)) 70%, transparent); }
 .tg-weather[data-sky="rain"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-teal) 38%, var(--fd-card)) 70%, transparent); }
 .tg-weather[data-sky="night"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-violet) 34%, var(--fd-card)) 70%, transparent); }
+/* The sky's photo: under a fade of the page's own background, so the text keeps its contrast in either theme. */
+.tg-weather.has-photo { overflow: hidden; }
+.tg-weather-photo { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
+.tg-weather[data-sky="cloud"] .tg-weather-photo { object-position: center 75%; }
+.tg-weather.has-photo::after { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--sys-bg) 52%, transparent), color-mix(in srgb, var(--sys-bg) 62%, transparent) 45%, color-mix(in srgb, var(--sys-bg) 88%, transparent)); }
+.tg-weather.has-photo > :not(.tg-weather-photo) { position: relative; z-index: 1; }
+.tg-weather-credit { align-self: flex-end; margin-top: 8px; color: var(--fd-soft); font-size: 11px; text-decoration: none; }
+.tg-weather-credit:hover { color: var(--fd-ink); text-decoration: underline; }
+.tg-weather-credit:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; border-radius: 4px; }
 .tg-weather-place { margin: 0; font-size: 15px; font-weight: 600; }
 .tg-weather-temp { margin: 4px 0 0; font-size: clamp(64px, 6vw, 88px); font-weight: 300; line-height: 1; letter-spacing: -0.04em; }
 .tg-weather-meta { margin: 8px 0 0; color: var(--fd-soft); font-size: 14px; }

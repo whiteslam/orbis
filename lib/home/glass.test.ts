@@ -1,6 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { glassActivity, restOfToday, skyFor, STEP_GOAL } from './glass.ts';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { glassActivity, restOfToday, SKY_PHOTOS, skyFor, STEP_GOAL, type Sky } from './glass.ts';
 import type { RoutineEvent, RoutineToday } from '../routines/types.ts';
 
 test('STEP_GOAL is 10,000', () => {
@@ -67,4 +69,16 @@ test('skyFor picks night first, then rain, cloud and clear', () => {
   assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 3 }), 'cloud');
   assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 48 }), 'cloud');
   assert.equal(skyFor({ isDay: true, rainingNow: false, weatherCode: 0 }), 'clear');
+});
+
+test('every sky has a photo in public/ and a credit', () => {
+  const skies: Sky[] = ['night', 'rain', 'cloud', 'clear'];
+  for (const sky of skies) {
+    const photo = SKY_PHOTOS[sky];
+    assert.match(photo.src, /^\/today\/sky\/[a-z]+\.jpg$/);
+    assert.ok(existsSync(join(process.cwd(), 'public', photo.src)), `${photo.src} is missing`);
+    assert.ok(photo.author.length > 0);
+    assert.match(photo.license, /^CC /);
+    assert.match(photo.page, /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+  }
 });

@@ -1,10 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { Cloud, LoaderCircle, MapPin } from 'lucide-react';
 import type { BriefWeather } from '@/lib/home/weather';
 import type { WeatherPhase } from '@/lib/home/brief-gate';
-import { skyFor } from '@/lib/home/glass';
+import { SKY_PHOTOS, skyFor } from '@/lib/home/glass';
 import { curveLabels, curvePoints } from '@/lib/home/hours';
 import { shared } from '@/lib/client/inflight';
 
@@ -164,8 +165,12 @@ function GlassWeather({ state, openPersonal }: Readonly<{ state: State; openPers
   const points = curvePoints(hours, CURVE_WIDTH, CURVE_HEIGHT);
   const first = hours[0];
   const last = hours.at(-1);
+  const sky = skyFor(weather);
+  const photo = SKY_PHOTOS[sky];
   return (
-    <section className="tg-weather" data-sky={skyFor(weather)} aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
+    <section className="tg-weather has-photo" data-sky={sky} aria-label={`Weather: ${weather.temperature} degrees, ${weather.condition}`}>
+      {/* The sky's photo under a fade (app/styles/page-today-glass.css); the tint stays beneath it if the photo fails. */}
+      <Image className="tg-weather-photo" src={photo.src} alt="" fill sizes="(min-width: 1100px) 50vw, 100vw" />
       <p className="tg-weather-place">{place}, {weather.condition.toLowerCase()}</p>
       <p className="tg-weather-temp">{weather.temperature}°</p>
       <p className="tg-weather-meta">Feels {weather.feelsLike}°, humidity {weather.humidity}%, wind {weather.windSpeed} km/h</p>
@@ -180,6 +185,7 @@ function GlassWeather({ state, openPersonal }: Readonly<{ state: State; openPers
         </div>
       )}
       {rain && <p className="tg-weather-rain">{rain[0].toUpperCase()}{rain.slice(1)}.</p>}
+      <a className="tg-weather-credit" href={photo.page} target="_blank" rel="noopener noreferrer">Photo: {photo.author}, {photo.license}</a>
     </section>
   );
 }
