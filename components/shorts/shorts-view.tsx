@@ -65,7 +65,7 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
         {style ? (
           <>
             <h2 className="sh-h">{style.name}</h2>
-            <StyleDetail style={style} />
+            <StyleDetail style={style} jobs={view.jobs} />
             <Intake style={style} voices={view.worker?.voices ?? []} disabledReason={blocked} onQueued={(job) => { upsert(job); setScreen({ name: 'job', id: job.id }); }} />
           </>
         ) : <p className="fd-msg bad">That style isn’t available any more.</p>}
@@ -100,7 +100,7 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
 
       <section className="sh-section" aria-label="Pick a style">
         <h2 className="sh-h">Pick a style</h2>
-        <StyleBoard styles={view.styles} onPick={(slug) => setScreen({ name: 'style', slug })} />
+        <StyleBoard styles={view.styles} jobs={view.jobs} onPick={(slug) => setScreen({ name: 'style', slug })} />
       </section>
 
       {/* The Studio's live column shows the PC's state; the setup steps stay here when they're needed. */}

@@ -17,16 +17,35 @@ export const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'career', label: 'Career' },
 ];
 
-export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
-  { id: 'you', label: 'You' },
-  { id: 'connections', label: 'Connections' },
-  { id: 'ai', label: 'AI & privacy' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'day', label: 'Your day' },
-  { id: 'security', label: 'Security' },
-  { id: 'privacy', label: 'What Orbis can see' },
-  { id: 'data', label: 'Your data' },
+export type SettingsCategory = 'account' | 'preferences' | 'apps' | 'privacy';
+
+/**
+ * Settings' sections, grouped the way Instagram's or YouTube's settings are:
+ * who you are, how Orbis behaves for you, what it is connected to, and what it
+ * can see and keeps. The labels stay as they are, since copy across the app
+ * points at them ("Settings → What Orbis can see").
+ */
+export const SETTINGS_CATEGORIES: ReadonlyArray<{ id: SettingsCategory; label: string; sections: readonly SettingsSection[] }> = [
+  { id: 'account', label: 'Your account', sections: ['you', 'security'] },
+  { id: 'preferences', label: 'Preferences', sections: ['notifications', 'day', 'ai'] },
+  { id: 'apps', label: 'Connected apps', sections: ['connections'] },
+  { id: 'privacy', label: 'Privacy and data', sections: ['privacy', 'data'] },
 ];
+
+const SECTION_COPY: Record<SettingsSection, { label: string; description: string }> = {
+  you: { label: 'You', description: 'Your name, what you do, your home city' },
+  security: { label: 'Security', description: 'Device PIN and locking Orbis' },
+  notifications: { label: 'Notifications', description: 'Four daily check-ins and their times' },
+  day: { label: 'Your day', description: 'Routines and their times' },
+  ai: { label: 'AI & privacy', description: 'The AI switch, the brief, heads-ups' },
+  connections: { label: 'Connections', description: 'Google, banks, social apps, services' },
+  privacy: { label: 'What Orbis can see', description: 'What Orbis reads on your phone' },
+  data: { label: 'Your data', description: 'Download, delete, sign out' },
+};
+
+/** Every section, in its category's order: the order the index lists them and the sheet stacks them. */
+export const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string; description: string; category: SettingsCategory }> =
+  SETTINGS_CATEGORIES.flatMap((category) => category.sections.map((id) => ({ id, ...SECTION_COPY[id], category: category.id })));
 
 export type Opening = { tab: TabId; money?: MoneyView; settings?: SettingsSection };
 

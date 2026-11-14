@@ -1,6 +1,6 @@
 // What the browser sends the YouTube actions, checked before anything is saved. Pure.
 
-import type { Schedule } from './types';
+import { MAX_POST_TIMES, type Schedule } from './types';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 // A region/city name, or UTC: never an offset like "+05:30", which has no daylight-saving rules.
@@ -26,17 +26,21 @@ function isTimeZone(value: unknown): value is string {
   }
 }
 
-/** The schedule the person asked for, tidied (days sorted, each once), or null when any part is not valid. */
+/** The schedule the person asked for, tidied (times and days sorted, each once), or null when any part is not valid. */
 export function readSchedule(input: unknown): Omit<Schedule, 'holdUntil'> | null {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) return null;
   const raw = input as Record<string, unknown>;
-  if (typeof raw.postTime !== 'string' || !TIME.test(raw.postTime)) return null;
+  // postTimes is the list; a lone postTime is what older screens send.
+  const asked = Array.isArray(raw.postTimes) ? raw.postTimes : typeof raw.postTime === 'string' ? [raw.postTime] : null;
+  if (!asked || asked.length === 0 || asked.length > MAX_POST_TIMES) return null;
+  if (!asked.every((time) => typeof time === 'string' && TIME.test(time))) return null;
+  const postTimes = [...new Set(asked as string[])].sort();
   if (!Array.isArray(raw.days) || raw.days.length === 0 || raw.days.length > 7) return null;
   if (!raw.days.every((day) => Number.isInteger(day) && day >= 1 && day <= 7)) return null;
   if (!isTimeZone(raw.timezone)) return null;
   if (typeof raw.paused !== 'boolean') return null;
   const days = [...new Set(raw.days as number[])].sort((a, b) => a - b);
-  return { postTime: raw.postTime, days, timezone: raw.timezone, paused: raw.paused };
+  return { postTimes, days, timezone: raw.timezone, paused: raw.paused };
 }
 
 /** Which way to move a queue row: -1 earlier, 1 later. */

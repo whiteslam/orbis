@@ -8,7 +8,6 @@
 
 import { requireUser } from '@/lib/auth/session';
 import { getPersonSettings } from '@/lib/locale/repository';
-import { localDate } from '@/lib/locale/dates';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getJob, ShortsError, signPaths, type ShortsDb } from '@/lib/shorts/repository';
 import type { Result } from '@/lib/shorts/view';
@@ -19,11 +18,11 @@ import { youtubeConfigured } from '@/lib/youtube/google';
 import { readMove, readSchedule } from '@/lib/youtube/input';
 import { publishSlice } from '@/lib/youtube/publish';
 import {
-  getPreset, getSchedule, insertQueued, lastScheduledAt, listPosted, listQueue, moveQueued, removeQueued, retryFailed, saveSchedule,
+  getPreset, getSchedule, insertQueued, listPosted, listQueue, moveQueued, removeQueued, retryFailed, saveSchedule, scheduledSince,
   tablesReady, updateQueued, YouTubeQueueError,
 } from '@/lib/youtube/repository';
 import { defaultSchedule } from '@/lib/youtube/rows';
-import { nextSlot } from '@/lib/youtube/schedule';
+import { dayStart, nextSlot } from '@/lib/youtube/schedule';
 import type { QueueItem, Schedule, VideoDetails, YouTubePanel } from '@/lib/youtube/types';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
@@ -72,14 +71,13 @@ function slotLabel(slot: Date, timeZone: string): string {
 }
 
 /** The line under the status: what goes next and when. Null when nothing is waiting or the schedule is off. */
-function nextLine(schedule: Schedule, queue: QueueItem[], lastScheduled: string | null, now: Date): string | null {
+function nextLine(schedule: Schedule, queue: QueueItem[], postedToday: number, now: Date): string | null {
   const head = queue[0];
   if (!head) return null;
   if (head.status === 'uploading') return `Uploading · ${head.title}`;
-  const postedToday = lastScheduled !== null && localDate(lastScheduled, schedule.timezone) === localDate(now, schedule.timezone);
   const slot = nextSlot(schedule, now, postedToday);
   if (!slot) return null;
-  // A slot already past means today's was missed and nothing has gone out: it is due now.
+  // A time already past means it was missed and nothing has gone out for it: it is due now.
   return `${slot.getTime() <= now.getTime() ? 'Due now' : slotLabel(slot, schedule.timezone)} · ${head.title}`;
 }
 
@@ -92,13 +90,14 @@ export async function loadYouTubePanelAction(): Promise<Result<YouTubePanel>> {
       const zone = (await getPersonSettings(me.userId)).timeZone;
       return ok({ configured, ready: false, connection: null, schedule: defaultSchedule(zone), queue: [], posted: [], covers: {}, next: null });
     }
-    const [connection, schedule, queue, posted, lastScheduled] = await Promise.all([
+    const now = new Date();
+    const [connection, schedule, queue, posted] = await Promise.all([
       getYouTubeConnection(admin, me.userId),
       getSchedule(admin, me.userId),
       listQueue(admin, me.userId),
       listPosted(admin, me.userId),
-      lastScheduledAt(admin, me.userId),
     ]);
+    const postedToday = await scheduledSince(admin, me.userId, dayStart(now, schedule.timezone));
     // Covers by queue row id. Only paths under this person's own folder are ever signed.
     const mine = [...queue, ...posted].filter((item) => item.coverPath?.startsWith(`${me.userId}/`) && !item.coverPath.includes('..'));
     const signed = await signPaths(admin, mine.flatMap((item) => (item.coverPath ? [item.coverPath] : [])));
@@ -107,7 +106,7 @@ export async function loadYouTubePanelAction(): Promise<Result<YouTubePanel>> {
       const url = item.coverPath ? signed.get(item.coverPath) : undefined;
       if (url) covers[item.id] = url;
     }
-    return ok({ configured, ready: true, connection, schedule, queue, posted, covers, next: nextLine(schedule, queue, lastScheduled, new Date()) });
+    return ok({ configured, ready: true, connection, schedule, queue, posted, covers, next: nextLine(schedule, queue, postedToday, now) });
   });
 }
 

@@ -1,11 +1,11 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { readPresetRow, readQueueItem, readQueueRow, readScheduleRow } from './rows.ts';
+import { readPostTimes, readPresetRow, readQueueItem, readQueueRow, readScheduleRow } from './rows.ts';
 
 test('a schedule row reads the time column as HH:MM and keeps the hold', () => {
   const schedule = readScheduleRow({ post_time: '18:05:00', days: [5, 1, 1, 9], timezone: 'America/New_York', paused: true, hold_until: '2026-11-14T05:00:00+00:00' }, 'Asia/Kolkata');
-  assert.deepEqual(schedule, { postTime: '18:05', days: [1, 5], timezone: 'America/New_York', paused: true, holdUntil: '2026-11-14T05:00:00+00:00' });
-  assert.deepEqual(readScheduleRow(null, 'Europe/London'), { postTime: '18:00', days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Europe/London', paused: false, holdUntil: null });
+  assert.deepEqual(schedule, { postTimes: ['18:05'], days: [1, 5], timezone: 'America/New_York', paused: true, holdUntil: '2026-11-14T05:00:00+00:00' });
+  assert.deepEqual(readScheduleRow(null, 'Europe/London'), { postTimes: ['18:00'], days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Europe/London', paused: false, holdUntil: null });
 });
 
 test('a preset row falls back to the style defaults for anything odd', () => {
@@ -32,4 +32,11 @@ test('the screens never get the upload session, and a bad row reads as none', ()
   assert.equal('uploadUrl' in readQueueItem(row)!, false);
   assert.equal(readQueueItem({ ...row, status: 'lost' }), null);
   assert.equal(readQueueItem({ ...row, privacy: 'secret' }), null);
+});
+
+test('readScheduleRow prefers the post_times list, sorted and each once, and falls back to post_time', () => {
+  assert.deepEqual(readPostTimes(['20:00:00', '09:30:00', '20:00:00'], '18:00:00'), ['09:30', '20:00']);
+  assert.deepEqual(readPostTimes(null, '07:15:00'), ['07:15']);
+  assert.deepEqual(readPostTimes([], '07:15:00'), ['07:15']);
+  assert.deepEqual(readPostTimes(['nonsense'], null), ['18:00']);
 });

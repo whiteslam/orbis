@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FieldHead, useScrollTop } from '@/components/field/field';
 import { PostDrawer } from '@/components/social/post-drawer';
@@ -103,6 +103,17 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
     if (window.location.hash.startsWith(SHORTS_HASH)) setArea('shorts');
     if (isOwner) setAccount(readSavedAccount());
   }, [isOwner]);
+
+  // Coming back from connecting YouTube: its panel lives under Shorts, usually well below
+  // the fold, so open Shorts and bring the result into view. Otherwise it sat at the top
+  // of Posts, unseen, and a failed connect looked like the button doing nothing.
+  const noticeRef = useRef<HTMLOutputElement>(null);
+  useEffect(() => {
+    if (!connectNotice) return;
+    if (connectNotice.platform === 'youtube') openShorts();
+    requestAnimationFrame(() => noticeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectNotice]);
 
   // A reload onto #social/2026-11 opens that month rather than this one.
   useEffect(() => {
@@ -215,7 +226,7 @@ export function SocialScreen({ initial, isOwner, ownName, connectNotice, clearCo
       </div>
 
       {connectNotice && (
-        <output className={`finance-notice ${NOTICE_TONE_CLASS[connectNotice.tone]}`}>
+        <output ref={noticeRef} className={`finance-notice ${NOTICE_TONE_CLASS[connectNotice.tone]}`}>
           <span>{connectNotice.text}</span>
           <button type="button" onClick={clearConnectNotice} aria-label="Dismiss message">×</button>
         </output>

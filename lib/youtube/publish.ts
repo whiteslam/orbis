@@ -5,10 +5,10 @@ import { getYouTubeRefreshToken, markYouTubeReconnect, recordYouTubePublish } fr
 import { MAX_ATTEMPTS } from '@/lib/youtube/details';
 import { mintAccessToken, YouTubeAuthError } from '@/lib/youtube/google';
 import {
-  getSchedule, lastScheduledAt, listQueue, release, saveUpload, setHold, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
+  getSchedule, listQueue, release, saveUpload, scheduledSince, setHold, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
 } from '@/lib/youtube/repository';
 import type { QueueRowFull } from '@/lib/youtube/rows';
-import { isDue, nextDayStart } from '@/lib/youtube/schedule';
+import { dayStart, isDue, nextDayStart } from '@/lib/youtube/schedule';
 import { rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadOutcome } from '@/lib/youtube/upload';
 import { signVideo } from '@/lib/youtube/video-file';
 
@@ -48,12 +48,12 @@ async function pick(admin: Admin, userId: string, opts: SliceOptions): Promise<Q
   const uploading = await uploadingRowId(admin, userId);
   if (uploading) return takeRow(admin, userId, uploading, 'uploading');
 
-  // Strict reads: if the pause switch or the day's last post can't be read,
-  // nothing is due. A guessed default could post while paused, or twice a day.
+  // Strict reads: if the pause switch or the day's posts can't be read,
+  // nothing is due. A guessed default could post while paused, or too often.
   let due: boolean;
   try {
     const schedule = await getSchedule(admin, userId, { strict: true });
-    due = isDue(schedule, opts.now, await lastScheduledAt(admin, userId, { strict: true }));
+    due = isDue(schedule, opts.now, await scheduledSince(admin, userId, dayStart(opts.now, schedule.timezone), { strict: true }));
   } catch (error) {
     if (!(error instanceof YouTubeReadError)) throw error;
     console.error('YouTube schedule unreadable; not posting for now:', error.message);

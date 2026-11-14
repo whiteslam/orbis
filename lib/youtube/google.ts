@@ -98,13 +98,37 @@ export async function mintAccessToken(refreshToken: string, fetchImpl: typeof fe
   return payload.access_token;
 }
 
+/**
+ * Why Google refused to read the channel, in Orbis's own words. Only Google's
+ * machine-readable reason is looked at, never echoed: the commonest cause by far
+ * is the YouTube Data API not being switched on in the client's Cloud project.
+ */
+export async function channelRefusal(response: Response): Promise<string> {
+  const body = (await response.json().catch(() => ({}))) as { error?: { status?: unknown; errors?: { reason?: unknown }[]; details?: { reason?: unknown }[] } };
+  const reasons = [
+    body.error?.status,
+    ...(body.error?.errors ?? []).map((one) => one.reason),
+    ...(body.error?.details ?? []).map((one) => one.reason),
+  ].filter((one): one is string => typeof one === 'string');
+  if (reasons.some((one) => one === 'accessNotConfigured' || one === 'SERVICE_DISABLED')) {
+    return 'The YouTube Data API v3 isn’t enabled in the Google Cloud project of this sign-in client. Enable it under APIs & Services → Library, wait a minute, then connect again.';
+  }
+  if (reasons.some((one) => one === 'insufficientPermissions' || one === 'PERMISSION_DENIED' || one === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
+    return 'Google didn’t give Orbis permission to see your channel. Connect again and tick both YouTube permissions.';
+  }
+  if (reasons.some((one) => one === 'quotaExceeded' || one === 'RESOURCE_EXHAUSTED' || one === 'rateLimitExceeded')) {
+    return 'YouTube’s daily API quota for this project is used up. Try again tomorrow.';
+  }
+  return `Google could not read your YouTube channel (error ${response.status}). Try again.`;
+}
+
 /** The person's own channel, or null when the Google account has none. */
 export async function getChannel(accessToken: string, fetchImpl: typeof fetch = fetch): Promise<{ id: string; title: string } | null> {
   const response = await fetchImpl('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
     headers: { authorization: `Bearer ${accessToken}` },
     cache: 'no-store',
   });
-  if (!response.ok) throw new YouTubeAuthError('Google could not read your YouTube channel. Try again.');
+  if (!response.ok) throw new YouTubeAuthError(await channelRefusal(response));
   const payload = (await response.json().catch(() => ({}))) as { items?: { id?: unknown; snippet?: { title?: unknown } }[] };
   const channel = payload.items?.[0];
   if (!channel || typeof channel.id !== 'string' || !channel.id) return null;

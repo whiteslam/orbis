@@ -46,13 +46,13 @@ vi.mock('./repository.ts', () => ({
     if (opts?.strict) throw new state.ReadError('youtube_settings couldn’t be read');
     return { ...state.schedule, paused: false };
   },
-  // As the repository does: the later of the last scheduled publish and the last scheduled row that failed for good.
-  lastScheduledAt: async (_admin: unknown, _user: string, opts?: { strict?: boolean }) => {
+  // As the repository does: scheduled publishes and scheduled rows that failed for good, since local midnight.
+  scheduledSince: async (_admin: unknown, _user: string, since: Date, opts?: { strict?: boolean }) => {
     if (state.lastReadFails) {
       if (opts?.strict) throw new state.ReadError('youtube_queue couldn’t be read');
-      return null;
+      return 0;
     }
-    return [state.lastScheduled, state.failedScheduledAt].filter(Boolean).sort().at(-1) ?? null;
+    return [state.lastScheduled, state.failedScheduledAt].filter((at): at is string => typeof at === 'string' && Date.parse(at) >= since.getTime()).length;
   },
   listQueue: async () => state.queue,
   uploadingRowId: async () => state.uploading,
@@ -156,7 +156,7 @@ const queueRow = (over: Partial<QueueRowFull> = {}): QueueRowFull => ({
 });
 
 beforeEach(() => {
-  state.schedule = { postTime: '18:00', days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Asia/Kolkata', paused: false, holdUntil: null };
+  state.schedule = { postTimes: ['18:00'], days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Asia/Kolkata', paused: false, holdUntil: null };
   state.lastScheduled = null;
   state.queue = [];
   state.uploading = null;
@@ -183,7 +183,7 @@ beforeEach(() => {
 });
 
 test('not due and nothing uploading does nothing', async () => {
-  state.schedule.postTime = '20:00';
+  state.schedule.postTimes = ['20:00'];
   state.queue = [{ id: 'row-1', status: 'queued' }];
   state.rows.set('row-1', queueRow());
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'none');

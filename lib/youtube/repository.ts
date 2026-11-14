@@ -56,14 +56,24 @@ const detailsColumns = (details: VideoDetails) => ({
   made_for_kids: details.madeForKids,
 });
 
-const SCHEDULE_COLUMNS = 'post_time,days,timezone,paused,hold_until';
+const SCHEDULE_COLUMNS = 'post_time,post_times,days,timezone,paused,hold_until';
+// Before the post_times migration: the one time a day every schedule had.
+const SCHEDULE_COLUMNS_ONE_TIME = 'post_time,days,timezone,paused,hold_until';
+const MORE_TIMES_NEED_MIGRATION = 'More than one post time a day needs the latest YouTube migration (post_times) in Supabase. Until then, keep one time.';
+
+/** The post_times column isn't there yet: 42703 from a select, PGRST204 from a write. */
+const noTimesColumn = (error: { code?: string }) => error.code === '42703' || error.code === 'PGRST204';
 
 /**
  * The person's schedule. The first read creates it in their own time zone (R2).
  * A failed read gives the defaults, unless strict (then it throws).
  */
 export async function getSchedule(admin: Admin, userId: string, opts: ReadOptions = {}): Promise<Schedule> {
-  const read = () => admin.from('youtube_settings').select(SCHEDULE_COLUMNS).eq('user_id', userId).maybeSingle();
+  const read = async () => {
+    const all = await admin.from('youtube_settings').select(SCHEDULE_COLUMNS).eq('user_id', userId).maybeSingle();
+    if (!all.error || !noTimesColumn(all.error)) return all;
+    return admin.from('youtube_settings').select(SCHEDULE_COLUMNS_ONE_TIME).eq('user_id', userId).maybeSingle();
+  };
   const { data, error } = await read();
   if (error) {
     readFailed(error, 'youtube_settings', opts);
@@ -76,7 +86,7 @@ export async function getSchedule(admin: Admin, userId: string, opts: ReadOption
   // Two first reads at once: the second insert is ignored and both read the same row.
   const { error: insertError } = await admin
     .from('youtube_settings')
-    .upsert({ user_id: userId, post_time: fresh.postTime, days: fresh.days, timezone: fresh.timezone, paused: false }, { onConflict: 'user_id', ignoreDuplicates: true });
+    .upsert({ user_id: userId, post_time: fresh.postTimes[0], days: fresh.days, timezone: fresh.timezone, paused: false }, { onConflict: 'user_id', ignoreDuplicates: true });
   if (insertError) {
     readFailed(insertError, 'youtube_settings (create)');
     return fresh;
@@ -86,13 +96,18 @@ export async function getSchedule(admin: Admin, userId: string, opts: ReadOption
   return again.data ? readScheduleRow(again.data, timeZone) : fresh;
 }
 
-/** Saves when and whether to post. The quota hold is the publisher's alone and is left as it is. */
+/**
+ * Saves when and whether to post. post_time keeps the first time, so anything that still reads
+ * only it carries on. The quota hold is the publisher's alone and is left as it is.
+ */
 export async function saveSchedule(admin: Admin, userId: string, schedule: Omit<Schedule, 'holdUntil'>): Promise<void> {
-  const { error } = await admin.from('youtube_settings').upsert(
-    { user_id: userId, post_time: schedule.postTime, days: schedule.days, timezone: schedule.timezone, paused: schedule.paused },
-    { onConflict: 'user_id' },
-  );
-  if (error) throw failed(error);
+  const row = { user_id: userId, post_time: schedule.postTimes[0], days: schedule.days, timezone: schedule.timezone, paused: schedule.paused };
+  const { error } = await admin.from('youtube_settings').upsert({ ...row, post_times: schedule.postTimes }, { onConflict: 'user_id' });
+  if (!error) return;
+  if (!noTimesColumn(error)) throw failed(error);
+  if (schedule.postTimes.length > 1) throw new YouTubeQueueError(MORE_TIMES_NEED_MIGRATION);
+  const { error: oneTimeError } = await admin.from('youtube_settings').upsert(row, { onConflict: 'user_id' });
+  if (oneTimeError) throw failed(oneTimeError);
 }
 
 /** Nothing is due before this instant (R5). */
@@ -398,6 +413,40 @@ export async function lastScheduledAt(admin: Admin, userId: string, opts: ReadOp
   }
   if (!times.length) return null;
   return times.reduce((latest, time) => (Date.parse(time) > Date.parse(latest) ? time : latest));
+}
+
+/**
+ * How many scheduled posts used one of today's times: published rows posted by the schedule since
+ * local midnight, and its rows that failed for good since then. A manual post doesn't count. A
+ * failed query counts as none, unless strict (then it throws).
+ */
+export async function scheduledSince(admin: Admin, userId: string, since: Date, opts: ReadOptions = {}): Promise<number> {
+  const from = since.toISOString();
+  const [published, failedRows] = await Promise.all([
+    admin
+      .from('youtube_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'published')
+      .eq('posted_by', 'schedule')
+      .gte('published_at', from),
+    admin
+      .from('youtube_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'failed')
+      .eq('posted_by', 'schedule')
+      .gte('updated_at', from),
+  ]);
+  let total = 0;
+  for (const result of [published, failedRows]) {
+    if (result.error) {
+      readFailed(result.error, 'youtube_queue', opts);
+      continue;
+    }
+    total += result.count ?? 0;
+  }
+  return total;
 }
 
 const USER_CHUNK = 100;

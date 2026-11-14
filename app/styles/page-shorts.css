@@ -49,18 +49,28 @@ a.so-action { text-decoration: none; }
 .sh-status.is-done { background: var(--fd-wash); box-shadow: none; color: var(--fd-accent); }
 .sh-status.is-failed { background: var(--fd-alert-wash); box-shadow: none; color: var(--fd-alert); }
 
-/* The board: style sheets as picture cards, two to a row on a phone. */
-.sh-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
-.sh-style { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; overflow: hidden; border: 0; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
-.sh-style:hover { box-shadow: inset 0 0 0 1px var(--so-accent); transform: translateY(-2px); }
-.sh-style:focus-visible, .sh-tile:focus-visible, .sh-open-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+/* The board: style sheets as big picture cards, one to a row on a phone, two
+   on a wider screen, three on the desktop. Each card is the pick button with
+   the "i" (about) button beside it, not inside it. */
+.sh-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.sh-style { position: relative; overflow: hidden; border-radius: var(--r-xl); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); transition: transform .18s ease, box-shadow .18s ease; }
+.sh-style:has(.sh-style-pick:hover) { box-shadow: inset 0 0 0 1px var(--so-accent); transform: translateY(-2px); }
+.sh-style-pick { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sh-style-pick:focus-visible, .sh-style-info:focus-visible, .sh-style-close:focus-visible, .sh-tile:focus-visible, .sh-open-row:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-style-pick:focus-visible { outline-offset: -2px; }
+.sh-style-info { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-veil); -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); box-shadow: inset 0 0 0 1px var(--fd-rule), 0 2px 10px rgba(0,0,0,.18); color: var(--fd-ink); cursor: pointer; transition: color .15s ease, box-shadow .15s ease; }
+.sh-style-info:hover { color: var(--so-accent); box-shadow: inset 0 0 0 1px var(--so-accent), 0 2px 10px rgba(0,0,0,.18); }
 .sh-sheet { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--fd-rule); }
 .sh-sheet.is-large { aspect-ratio: auto; max-height: 520px; object-fit: contain; border-radius: var(--r-xl); }
 .sh-sheet.is-empty { display: grid; place-items: center; color: var(--fd-faint); }
-.sh-style-body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; }
-.sh-style-name { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--fd-ink); font-size: 14.5px; font-weight: 750; letter-spacing: -.01em; }
-.sh-style-for { color: var(--fd-soft); font-size: 12.5px; line-height: 1.35; }
-.sh-style-len { color: var(--fd-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.sh-style-body { display: flex; flex: 1; flex-direction: column; gap: 5px; padding: 14px 16px 16px; }
+.sh-style-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--fd-ink); font-size: 17px; font-weight: 750; letter-spacing: -.015em; }
+.sh-style-for { color: var(--fd-soft); font-size: 13.5px; line-height: 1.4; }
+.sh-style-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: auto; padding-top: 6px; }
+.sh-style-len { color: var(--fd-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sh-style-time { display: inline-flex; align-items: center; gap: 5px; color: var(--fd-faint); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sh-style-time.is-measured { color: var(--fd-soft); }
+.sh-style-time svg { flex: none; }
 .sh-badge { flex: none; padding: 2px 7px; border-radius: var(--r-pill); background: var(--fd-wash); color: var(--fd-accent); font-size: 10.5px; font-weight: 750; }
 .sh-badge.is-3d { background: var(--so-accent-wash); color: var(--so-accent); }
 
@@ -71,6 +81,15 @@ a.so-action { text-decoration: none; }
 .sh-facts div { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
 .sh-facts dt { color: var(--fd-faint); font-weight: 600; }
 .sh-facts dd { margin: 0; color: var(--fd-ink); }
+/* A style's details from its "i" button: a modal <dialog>, a bottom sheet on a
+   phone and a centred card on a wider screen (as the YouTube sheet). */
+.sh-style-dialog { box-sizing: border-box; width: 100%; max-width: 100%; max-height: min(92dvh, 860px); margin: auto 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 22px 22px 0 0; background: var(--fd-veil); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 -1px 0 var(--fd-rule), 0 -20px 60px rgba(0,0,0,.35); color: var(--fd-ink); }
+.sh-style-dialog::backdrop { background: rgba(0,0,0,.5); }
+.sh-style-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sh-style-dialog-head .sh-h { display: flex; align-items: center; gap: 10px; margin: 0; }
+.sh-style-close { display: grid; flex: none; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); cursor: pointer; }
+.sh-style-close:hover { color: var(--fd-ink); }
+.sh-detail.is-compact .sh-sheet.is-large { max-height: min(46dvh, 420px); }
 .sh-intake { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
 .sh-intake textarea, .sh-plan textarea, .sh-ask textarea { min-height: 72px; padding: 10px 12px; line-height: 1.5; resize: vertical; }
 .sh-intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -172,6 +191,12 @@ a.so-action { text-decoration: none; }
 .sh-yt-schedule { display: flex; flex-direction: column; gap: 12px; max-width: 420px; }
 .sh-yt-schedule .sh-actions { margin-top: 0; }
 .sh-yt-time { max-width: 180px; }
+.sh-yt-times { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.sh-yt-legend { padding: 0; margin-bottom: 2px; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.sh-yt-time-row { display: flex; align-items: center; gap: 6px; }
+.sh-yt-time-input { width: 180px; max-width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: inherit; font: inherit; font-size: 15px; }
+.sh-yt-time-input:focus-visible { outline: 2px solid var(--so-accent); outline-offset: 2px; }
+.sh-yt-add-time { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; }
 .sh-yt-days { display: flex; gap: 6px; }
 .sh-yt-days button { flex: 1 1 0; min-width: 0; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--fd-chip); box-shadow: inset 0 0 0 1px var(--fd-rule); color: var(--fd-soft); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
 .sh-yt-days button[aria-pressed="true"] { background: var(--fd-btn); box-shadow: none; color: var(--fd-btn-ink); }
@@ -198,6 +223,8 @@ a.so-action { text-decoration: none; }
 .sh-yt-form .sh-actions { margin-top: 2px; }
 @media (min-width: 600px) {
   .sh-yt-sheet { width: min(560px, calc(100% - 48px)); margin: auto; padding: 24px 24px 22px; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--fd-rule), 0 24px 70px rgba(0,0,0,.4); }
+  .sh-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sh-style-dialog { width: min(640px, calc(100% - 48px)); margin: auto; padding: 22px 24px; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--fd-rule), 0 24px 70px rgba(0,0,0,.4); }
 }
 
 @media (max-width: 380px) {
@@ -207,13 +234,15 @@ a.so-action { text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sh-style { transition: none; }
-  .sh-style:hover { transform: none; }
+  .sh-style, .sh-style-info { transition: none; }
+  .sh-style:has(.sh-style-pick:hover) { transform: none; }
   .sh-worker.is-busy i { animation: none; }
 }
 
 @media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (min-height: 541px) {
-  .stage[data-desktop] .sh-board { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .stage[data-desktop] .sh-board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .stage[data-desktop] .sh-style-dialog { width: min(920px, calc(100% - 96px)); }
+  .stage[data-desktop] .sh-detail.is-compact .sh-sheet.is-large { max-height: min(64dvh, 560px); }
   .stage[data-desktop] .sh-library { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .stage[data-desktop] .sh-detail { flex-direction: row; align-items: flex-start; gap: 28px; }
   .stage[data-desktop] .sh-detail .sh-sheet.is-large { width: 58%; }

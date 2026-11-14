@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 
 import { readMove, readSchedule } from './input.ts';
 
-const good = { postTime: '18:00', days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Asia/Kolkata', paused: false };
+const good = { postTimes: ['18:00'], days: [1, 2, 3, 4, 5, 6, 7], timezone: 'Asia/Kolkata', paused: false };
 
 test('readSchedule accepts Asia/Kolkata 18:00 on every day', () => {
   assert.deepEqual(readSchedule(good), good);
 });
 
 test('readSchedule refuses 24:00, a bad minute and a loose time', () => {
-  for (const postTime of ['24:00', '18:60', '6:00', '18:00:00', '', 1800, null]) {
-    assert.equal(readSchedule({ ...good, postTime }), null, String(postTime));
+  for (const time of ['24:00', '18:60', '6:00', '18:00:00', '', 1800, null]) {
+    assert.equal(readSchedule({ ...good, postTimes: [time] }), null, String(time));
   }
 });
 
@@ -47,4 +47,12 @@ test('readMove accepts only -1 and 1', () => {
   assert.equal(readMove(-1), -1);
   assert.equal(readMove(1), 1);
   for (const value of [0, 2, -2, 1.5, '1', '-1', null, undefined, true]) assert.equal(readMove(value), null, String(value));
+});
+
+test('readSchedule takes up to six times, sorted and each once, and an old single postTime', () => {
+  assert.deepEqual(readSchedule({ ...good, postTimes: ['18:00', '09:00', '18:00'] })?.postTimes, ['09:00', '18:00']);
+  assert.equal(readSchedule({ ...good, postTimes: [] }), null);
+  assert.equal(readSchedule({ ...good, postTimes: ['01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00'] }), null);
+  const legacy = { postTime: '07:30', days: good.days, timezone: good.timezone, paused: good.paused };
+  assert.deepEqual(readSchedule(legacy)?.postTimes, ['07:30']);
 });

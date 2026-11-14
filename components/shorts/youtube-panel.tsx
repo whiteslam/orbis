@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, ExternalLink, LoaderCircle, Pencil, Play, Plug, RotateCcw, Send, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, LoaderCircle, Pencil, Play, Plug, Plus, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import {
   loadYouTubePanelAction, moveQueueItemAction, postNowAction, removeQueueItemAction, retryQueueItemAction, saveScheduleAction, updateQueueItemAction,
   type PostNowState,
@@ -9,7 +9,7 @@ import {
 import { YouTubeSheet } from '@/components/shorts/youtube-sheet';
 import { safeAction } from '@/lib/client/safe-action';
 import type { Result } from '@/lib/shorts/view';
-import type { QueueItem, Schedule, VideoDetails, YouTubePanel as Panel } from '@/lib/youtube/types';
+import { MAX_POST_TIMES, type QueueItem, type Schedule, type VideoDetails, type YouTubePanel as Panel } from '@/lib/youtube/types';
 
 const CONNECT_HREF = '/auth/youtube/start';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -79,30 +79,81 @@ function StatusLine({ panel, held }: Readonly<Loaded>) {
   );
 }
 
-/** Time, days and the pause switch. Keyed on the saved schedule, so a save resets it. */
+const TIME = /^\d{2}:\d{2}$/;
+
+/** "18:00" as the person reads times, e.g. "6:00 PM". */
+const timeLabel = (time: string) => {
+  const [hour, minute] = time.split(':').map(Number);
+  return new Date(2000, 0, 1, hour, minute).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+};
+
+/** One more time to offer: three hours after the last, wrapping past midnight, and not one already listed. */
+function suggestTime(times: string[]): string {
+  const last = times.at(-1) ?? '18:00';
+  let [hour, minute] = last.split(':').map(Number);
+  for (let tries = 0; tries < 8; tries++) {
+    hour = (hour + 3) % 24;
+    const next = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    if (!times.includes(next)) return next;
+    minute = (minute + 30) % 60;
+  }
+  return '12:00';
+}
+
+/** Times, days and the pause switch. Keyed on the saved schedule, so a save resets it. */
 function ScheduleForm({ schedule, onSaved }: Readonly<{ schedule: Schedule; onSaved: (notice: Notice) => void }>) {
-  const [postTime, setPostTime] = useState(schedule.postTime);
+  const [times, setTimes] = useState<string[]>(schedule.postTimes);
   const [days, setDays] = useState<number[]>(schedule.days);
   const [paused, setPaused] = useState(schedule.paused);
   const [saving, setSaving] = useState(false);
-  const changed = postTime !== schedule.postTime || paused !== schedule.paused || days.join() !== schedule.days.join();
-  const valid = /^\d{2}:\d{2}$/.test(postTime) && days.length > 0;
+  const tidy = [...new Set(times.filter((time) => TIME.test(time)))].sort();
+  const changed = tidy.join() !== schedule.postTimes.join() || paused !== schedule.paused || days.join() !== schedule.days.join();
+  const duplicate = tidy.length !== times.length;
+  const valid = times.length > 0 && times.every((time) => TIME.test(time)) && !duplicate && days.length > 0;
 
   const toggle = (day: number) => setDays((have) => (have.includes(day) ? have.filter((one) => one !== day) : [...have, day].sort((a, b) => a - b)));
+  const setTime = (index: number, value: string) => setTimes((have) => have.map((time, at) => (at === index ? value : time)));
+  const removeTime = (index: number) => setTimes((have) => have.filter((_, at) => at !== index));
+  const addTime = () => setTimes((have) => [...have, suggestTime([...have].sort())]);
 
   async function save() {
     setSaving(true);
-    const result = await safeAction(saveScheduleAction)({ postTime, days, timezone: schedule.timezone, paused });
+    const result = await safeAction(saveScheduleAction)({ postTimes: tidy, days, timezone: schedule.timezone, paused });
     setSaving(false);
     onSaved(result.success ? { text: 'Schedule saved.', ok: true, part: 'schedule' } : { text: result.message, ok: false, part: 'schedule' });
   }
 
+  const perDay = tidy.length === 1 ? 'One post a day' : `Up to ${tidy.length} posts a day`;
+  const at = tidy.length ? tidy.map(timeLabel).join(', ') : '…';
+
   return (
     <div className="sh-yt-schedule">
-      <label className="fd-field sh-yt-time">
-        Post at
-        <input type="time" value={postTime} required onChange={(event) => setPostTime(event.currentTarget.value)} />
-      </label>
+      <fieldset className="sh-yt-times">
+        <legend className="sh-yt-legend">Post at</legend>
+        {times.map((time, index) => (
+          // The list is edited in place and never reordered while editing, so the index is a stable key.
+          <div key={index} className="sh-yt-time-row">
+            <input
+              type="time"
+              className="sh-yt-time-input"
+              value={time}
+              required
+              aria-label={`Post time ${index + 1}`}
+              onChange={(event) => setTime(index, event.currentTarget.value)}
+            />
+            {times.length > 1 && (
+              <button type="button" className="sh-icon" aria-label={`Remove ${TIME.test(time) ? timeLabel(time) : `time ${index + 1}`}`} onClick={() => removeTime(index)}>
+                <X size={15} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        ))}
+        {times.length < MAX_POST_TIMES && (
+          <button type="button" className="fd-link sh-yt-add-time" onClick={addTime}>
+            <Plus size={14} aria-hidden="true" /> Add a time
+          </button>
+        )}
+      </fieldset>
       <div className="sh-yt-days" role="group" aria-label="Days to post on">
         {DAYS.map((label, index) => (
           <button key={label} type="button" aria-pressed={days.includes(index + 1)} onClick={() => toggle(index + 1)}>{label}</button>
@@ -112,7 +163,11 @@ function ScheduleForm({ schedule, onSaved }: Readonly<{ schedule: Schedule; onSa
         <input type="checkbox" role="switch" checked={paused} onChange={(event) => setPaused(event.currentTarget.checked)} />
         <span>Pause posting</span>
       </label>
-      <p className="sh-yt-sub">One a day at most, at {postTime || schedule.postTime} in {schedule.timezone.replace(/_/g, ' ')}.{days.length ? '' : ' Pick at least one day.'}</p>
+      <p className="sh-yt-sub">
+        {perDay}, at {at} in {schedule.timezone.replace(/_/g, ' ')}. Each time posts the next short in the queue.
+        {duplicate ? ' Two times are the same; change or remove one.' : ''}
+        {days.length ? '' : ' Pick at least one day.'}
+      </p>
       <div className="sh-actions">
         <button type="button" className="so-action" onClick={() => void save()} disabled={!changed || !valid || saving}>
           {saving && <LoaderCircle className="workbook-spinner" size={15} aria-hidden="true" />}
@@ -254,7 +309,7 @@ export function YouTubePanel({ onChanged }: Readonly<{ onChanged: () => void }>)
       <section className="sh-yt-part sh-yt-sched" aria-labelledby="sh-yt-schedule">
         <h3 id="sh-yt-schedule" className="sh-yt-h">Schedule</h3>
         <ScheduleForm
-          key={`${panel.schedule.postTime}|${panel.schedule.days.join()}|${panel.schedule.paused}`}
+          key={`${panel.schedule.postTimes.join()}|${panel.schedule.days.join()}|${panel.schedule.paused}`}
           schedule={panel.schedule}
           onSaved={(saved) => { setNotice(saved); if (saved.ok) void reload(); }}
         />

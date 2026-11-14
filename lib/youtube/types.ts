@@ -16,9 +16,12 @@ export type VideoDetails = {
 /** What a new video starts with for one Shorts style. */
 export type Preset = { style: string; privacy: Privacy; categoryId: string; madeForKids: boolean; tags: string[] };
 
+/** How many times a day the schedule can post. */
+export const MAX_POST_TIMES = 6;
+
 export type Schedule = {
-  /** 'HH:MM' on the wall clock in `timezone`. */
-  postTime: string;
+  /** 'HH:MM' times on the wall clock in `timezone`, earliest first: one post at each, on each listed day. */
+  postTimes: string[];
   /** ISO weekdays: Monday is 1, Sunday is 7. */
   days: number[];
   timezone: string;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 vi.mock('server-only', () => ({}));
 
-import { exchangeYouTubeCode, getChannel, mintAccessToken, revokeGoogleToken, youtubeAuthUrl, YouTubeAuthError } from './google.ts';
+import { channelRefusal, exchangeYouTubeCode, getChannel, mintAccessToken, revokeGoogleToken, youtubeAuthUrl, YouTubeAuthError } from './google.ts';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -85,4 +85,12 @@ test('getChannel sends the token as a bearer header and never caches', async () 
 test('revokeGoogleToken never throws', async () => {
   const broken = (async () => { throw new Error('offline'); }) as unknown as typeof fetch;
   await assert.doesNotReject(() => revokeGoogleToken('rt', broken));
+});
+
+test('getChannel says why Google refused, in Orbis’s own words', async () => {
+  const disabled = (async () => json({ error: { code: 403, status: 'PERMISSION_DENIED', errors: [{ reason: 'accessNotConfigured' }], details: [{ reason: 'SERVICE_DISABLED' }] } }, 403)) as unknown as typeof fetch;
+  await assert.rejects(() => getChannel('at', disabled), (error: Error) => error instanceof YouTubeAuthError && /YouTube Data API v3 isn’t enabled/.test(error.message));
+  assert.match(await channelRefusal(json({ error: { errors: [{ reason: 'insufficientPermissions' }] } }, 403)), /tick both YouTube permissions/);
+  assert.match(await channelRefusal(json({ error: { errors: [{ reason: 'quotaExceeded' }] } }, 403)), /quota/);
+  assert.equal(await channelRefusal(new Response('not json', { status: 500 })), 'Google could not read your YouTube channel (error 500). Try again.');
 });

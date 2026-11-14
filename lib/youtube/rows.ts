@@ -32,15 +32,29 @@ const integer = (value: unknown) => (typeof value === 'number' && Number.isInteg
 
 /** The schedule a person starts with, in their own zone. */
 export function defaultSchedule(timezone: string): Schedule {
-  return { postTime: '18:00', days: [...ALL_DAYS], timezone, paused: false, holdUntil: null };
+  return { postTimes: ['18:00'], days: [...ALL_DAYS], timezone, paused: false, holdUntil: null };
+}
+
+const clock = (value: unknown): string | null => {
+  const time = /^([01]\d|2[0-3]):([0-5]\d)/.exec(text(value));
+  return time ? `${time[1]}:${time[2]}` : null;
+};
+
+/**
+ * The post times: the post_times list when the column is there and holds any, else the single
+ * post_time every schedule had before more than one time a day was possible. Earliest first, each once.
+ */
+export function readPostTimes(list: unknown, single: unknown): string[] {
+  const many = Array.isArray(list) ? list.map(clock).filter((one): one is string => one !== null) : [];
+  const times = many.length ? many : [clock(single) ?? '18:00'];
+  return [...new Set(times)].sort();
 }
 
 export function readScheduleRow(row: unknown, fallbackZone: string): Schedule {
   if (!isRow(row)) return defaultSchedule(fallbackZone);
-  const time = /^(\d{2}):(\d{2})/.exec(text(row.post_time));
   const days = Array.isArray(row.days) ? row.days.map(Number).filter((day) => ALL_DAYS.includes(day)) : [];
   return {
-    postTime: time ? `${time[1]}:${time[2]}` : '18:00',
+    postTimes: readPostTimes(row.post_times, row.post_time),
     days: days.length ? [...new Set(days)].sort((a, b) => a - b) : [...ALL_DAYS],
     timezone: textOrNull(row.timezone) ?? fallbackZone,
     paused: row.paused === true,

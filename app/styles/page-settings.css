@@ -52,21 +52,27 @@
    any other section is still jumped to below the notch (settings.css). */
 .settings-sheet #settings-you { scroll-margin-top: 100vh; }
 
-/* ─── The index: one inset grouped list ─── */
+/* ─── The index: a category heading over each inset grouped list ───
+   Your account, Preferences, Connected apps, Privacy and data
+   (SETTINGS_CATEGORIES in lib/shell/tabs.ts), as Instagram's and YouTube's
+   settings group theirs. */
 .settings-sheet .settings-jump.st-index {
   display: block;
   min-width: 0;
   min-inline-size: 0;
   margin: 20px 0 0;
   padding: 0;
-  overflow: hidden;
   border: 0;
-  border-radius: var(--r-card);
-  background: var(--sys-surface);
+  border-radius: 0;
+  background: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   box-shadow: none;
 }
+.settings-sheet .st-cat + .st-cat { margin-top: 26px; }
+/* A grouped list's header: 13px, secondary, set in from the cell's edge. */
+.settings-sheet .st-cat-h { margin: 0 0 7px; padding: 0 16px; color: var(--sys-secondary); font: var(--t-footnote); font-weight: 600; letter-spacing: 0; text-transform: none; }
+.settings-sheet .st-cat-list { overflow: hidden; border-radius: var(--r-card); background: var(--sys-surface); }
 .settings-sheet .st-row {
   position: relative;
   display: flex;
@@ -104,12 +110,15 @@
 .st-glyph svg { width: 18px; height: 18px; }
 /* You is a person, so its glyph is round, the way the account row is in iOS. */
 .settings-sheet [data-section="you"] .st-glyph { border-radius: 50%; }
-.st-row-label { flex: 1; min-width: 0; }
+.st-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.st-row-label { min-width: 0; overflow-wrap: break-word; }
+/* What the section holds, in a line under its name. */
+.st-row-desc { min-width: 0; color: var(--sys-secondary); font: var(--t-footnote); overflow-wrap: break-word; }
 .st-row-hint { flex: 0 1 auto; min-width: 0; max-width: 46%; overflow: hidden; color: var(--sys-secondary); font: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
 .st-row-hint.warn { color: var(--sys-red); }
 .st-chev { flex: none; width: 14px; height: 14px; margin-left: -4px; color: var(--sys-tertiary); stroke-width: 3; }
 
-/* ─── A section: its title, the line under it, then grouped cells ─── */
+/* ─── A section: its category, its title, the line under it, then grouped cells ─── */
 .settings-sheet .pf-group.st-group {
   min-width: 0;
   margin-top: 44px;
@@ -121,6 +130,8 @@
   backdrop-filter: none;
   box-shadow: none;
 }
+/* The category the section sits under, as the index groups it. */
+.settings-sheet .pf-group > .st-eyebrow { margin: 0 0 2px; color: var(--sys-secondary); font: var(--t-footnote); font-weight: 600; }
 .settings-sheet .pf-group > .st-h:not(#_) { margin: 0; color: var(--sys-label); font: var(--t-title-2); letter-spacing: -.01em; overflow-wrap: break-word; min-width: 0; }
 .settings-sheet .pf-group > .fd-note.st-lede { margin: 4px 0 0; padding: 0; color: var(--sys-secondary); font: var(--t-subhead); }
 /* A group header inside a section (Heads-ups, the services list): 13px, secondary, sentence case. */
@@ -470,18 +481,24 @@
   .stage[data-desktop] .settings-sheet .settings-head button { position: absolute; top: 18px; right: 18px; z-index: 1; margin: 0; }
   .stage[data-desktop] .settings-sheet .settings-head button:hover { background: var(--sys-surface-3); color: var(--sys-label); }
 
+  /* The sidebar scrolls on its own when the categories outgrow a short window. */
   .stage[data-desktop] .settings-sheet .settings-jump.st-index {
     grid-column: 1;
     grid-row: 2;
     position: static;
-    align-self: start;
+    align-self: stretch;
     display: block;
-    margin: 20px 20px 24px;
-    padding: 0;
-    overflow: hidden;
-    border-radius: 14px;
-    background: var(--sys-surface);
+    min-height: 0;
+    margin: 0;
+    padding: 20px 20px 24px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 0;
+    background: none;
   }
+  .stage[data-desktop] .settings-sheet .st-cat + .st-cat { margin-top: 20px; }
+  .stage[data-desktop] .settings-sheet .st-cat-h { padding: 0 12px; }
+  .stage[data-desktop] .settings-sheet .st-cat-list { border-radius: 14px; }
   .stage[data-desktop] .settings-sheet .st-row { min-height: 40px; padding: 5px 12px; gap: 10px; color: var(--sys-label); font: var(--t-subhead); box-shadow: none; }
   .stage[data-desktop] .settings-sheet .st-row + .st-row::before { left: 48px; }
   .stage[data-desktop] .settings-sheet .st-row:hover { background: var(--sys-fill); }
@@ -494,6 +511,8 @@
   .stage[data-desktop] .settings-sheet .st-glyph { width: 26px; height: 26px; border-radius: 6px; }
   .stage[data-desktop] .settings-sheet .st-glyph svg { width: 16px; height: 16px; }
   .stage[data-desktop] .settings-sheet .st-row-hint { font: var(--t-subhead); }
+  .stage[data-desktop] .settings-sheet .st-row-desc { font: var(--t-caption); }
+  .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-row-desc { color: color-mix(in srgb, var(--on-tint) 82%, transparent); }
   .stage[data-desktop] .settings-sheet .st-row[aria-current="true"] .st-row-hint { color: var(--on-tint); }
   .stage[data-desktop] .settings-sheet .st-chev { display: none; }
 

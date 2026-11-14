@@ -6,7 +6,7 @@
 // text comes from here, never from the URL, except the failure reason, which is
 // shown as plain text and cut short because anyone can put text in a link.
 
-export type SocialConnectNotice = { tone: 'success' | 'error' | 'info'; text: string };
+export type SocialConnectNotice = { tone: 'success' | 'error' | 'info'; text: string; platform: 'instagram' | 'threads' | 'youtube' };
 
 const NAMES = { instagram: 'Instagram', threads: 'Threads', youtube: 'YouTube' } as const;
 const KEYS = { instagram: 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET', threads: 'THREADS_APP_ID and THREADS_APP_SECRET', youtube: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET' } as const;
@@ -14,6 +14,12 @@ const WHY_MAX = 160;
 
 export function socialConnectNotice(code: string | null, why: string | null): SocialConnectNotice | null {
   if (!code) return null;
+  const platform = /^(instagram|threads|youtube)-/.exec(code)?.[1] as SocialConnectNotice['platform'] | undefined;
+  const notice = platform ? noticeText(code, why) : null;
+  return notice && platform ? { ...notice, platform } : null;
+}
+
+function noticeText(code: string, why: string | null): Omit<SocialConnectNotice, 'platform'> | null {
   const match = /^(instagram|threads|youtube)-(connected|cancelled|failed|not-configured|needs-https|no-channel)$/.exec(code);
   if (!match) return null;
   const platform = match[1] as keyof typeof NAMES;
@@ -31,7 +37,7 @@ export function socialConnectNotice(code: string | null, why: string | null): So
     case 'no-channel':
       // Only YouTube sends this one; the other two are never given a channel to lack.
       if (platform !== 'youtube') return null;
-      return { tone: 'error', text: 'That Google account has no YouTube channel. Create one at youtube.com, then connect again.' };
+      return { tone: 'error', text: 'That Google account has no YouTube channel. If your channel is a brand account, connect again and pick the channel’s account on Google’s screen; otherwise create one at youtube.com.' };
     default: {
       const reason = why?.replace(/\s+/g, ' ').trim().slice(0, WHY_MAX);
       // Meta's reason is quoted; YouTube's is Orbis's own sentence, so it stands alone.
