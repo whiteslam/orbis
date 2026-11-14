@@ -1,40 +1,37 @@
-// The daily autopilot for Shorts: once a day, after its start time on the person's own clock,
-// the Shorts PC starts one short in the chosen style with a fresh topic, approves its plan
-// itself and puts the finished video in the YouTube queue. Pure. Relative imports only,
+// The Shorts autopilot: at night, on the person's own clock, the Shorts PC makes bedtime
+// stories one at a time, approves each plan itself and queues the finished video for the
+// platform whose shelf is lowest (lib/shorts/shelf.ts decides). Pure. Relative imports only,
 // because the PC worker loads this file with plain Node.
 
-import { localDate, localParts } from '../locale/dates.ts';
+import type { Destination } from './types.ts';
 
 export type Autopilot = {
   enabled: boolean;
   /** The style every autopilot short is made in. */
   style: string;
-  /** 'HH:MM' on the person's clock: the day's short is started at or after this time. */
-  startTime: string;
+  /** 'HH:MM' on the person's clock: builds start at or after this time… */
+  windowStart: string;
+  /** …and before this one. The window may cross midnight; the same time for both means any time. */
+  windowEnd: string;
+  /** How many days of posts to keep ready, 1–7. */
+  shelfDays: number;
+  /** The platforms autopilot shorts are made for. */
+  destinations: Destination[];
   timezone: string;
-  /** The local date (YYYY-MM-DD) the autopilot last started a short, or null. */
-  lastRunOn: string | null;
+  /** The local date (YYYY-MM-DD) of the last counted start, and how many started that day. */
+  startedOn: string | null;
+  startedCount: number;
 };
 
 export const AUTOPILOT_STYLE = 'cozy-tales';
+export const AUTOPILOT_COLUMNS = 'enabled,style,start_time,window_end,shelf_days,destinations,timezone,started_on,started_count';
+const DESTINATIONS: readonly Destination[] = ['youtube', 'instagram'];
 
 export function defaultAutopilot(timezone: string): Autopilot {
-  return { enabled: false, style: AUTOPILOT_STYLE, startTime: '09:00', timezone, lastRunOn: null };
-}
-
-const minutesOf = (time: string) => {
-  const [hour, minute] = time.split(':').map(Number);
-  return (Number.isFinite(hour) ? hour : 0) * 60 + (Number.isFinite(minute) ? minute : 0);
-};
-
-/** The local date when today's short is due to start, or null when it isn't due (off, too early, or already started today). */
-export function autopilotDueOn(autopilot: Autopilot, now: Date): string | null {
-  if (!autopilot.enabled) return null;
-  const today = localDate(now, autopilot.timezone);
-  if (autopilot.lastRunOn === today) return null;
-  const parts = localParts(now, autopilot.timezone);
-  if (parts.hour * 60 + parts.minute < minutesOf(autopilot.startTime)) return null;
-  return today;
+  return {
+    enabled: false, style: AUTOPILOT_STYLE, windowStart: '23:00', windowEnd: '07:00', shelfDays: 3, destinations: ['youtube'],
+    timezone, startedOn: null, startedCount: 0,
+  };
 }
 
 // Gentle bedtime stories: a baby animal, and a small, warm thing that happens to it. Pairs are
@@ -88,24 +85,56 @@ export function pickStoryTopic(recentTopics: readonly string[], today: string): 
   return STORY_IDEAS[start];
 }
 
-/** What the autopilot asks the PC to make: the style's own voice, music under it, nothing at the end. */
-export function autopilotOptions(defaultVoice: string, seconds: number) {
-  return { seconds, voice: defaultVoice, mode: 'voice' as const, music: 'bed' as const, endLine: '', autopilot: true };
+/** What the autopilot asks the PC to make: the style's own voice, music under it, nothing at the end, and where it posts. */
+export function autopilotOptions(defaultVoice: string, seconds: number, destination: Destination) {
+  return { seconds, voice: defaultVoice, mode: 'voice' as const, music: 'bed' as const, endLine: '', autopilot: true, destination };
 }
 
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)/;
+const FORM_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const readTime = (value: unknown, fallback: string) => {
+  const time = typeof value === 'string' ? TIME.exec(value) : null;
+  return time ? `${time[1]}:${time[2]}` : fallback;
+};
+const isShelfDays = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 7;
+/** One or two known platforms, none twice; anything else is null. */
+const readDestinations = (value: unknown): Destination[] | null => {
+  if (!Array.isArray(value) || value.length === 0 || value.length > DESTINATIONS.length) return null;
+  if (!value.every((item) => DESTINATIONS.includes(item as Destination))) return null;
+  return new Set(value).size === value.length ? (value as Destination[]) : null;
+};
 
 /** A stored row as the screens and the worker use it. */
 export function readAutopilotRow(row: unknown, fallbackZone: string): Autopilot {
   const fallback = defaultAutopilot(fallbackZone);
   if (typeof row !== 'object' || row === null) return fallback;
   const value = row as Record<string, unknown>;
-  const time = typeof value.start_time === 'string' ? TIME.exec(value.start_time) : null;
+  const count = value.started_count;
   return {
     enabled: value.enabled === true,
     style: typeof value.style === 'string' && /^[a-z0-9-]{2,40}$/.test(value.style) ? value.style : fallback.style,
-    startTime: time ? `${time[1]}:${time[2]}` : fallback.startTime,
+    windowStart: readTime(value.start_time, fallback.windowStart),
+    windowEnd: readTime(value.window_end, fallback.windowEnd),
+    shelfDays: isShelfDays(value.shelf_days) ? value.shelf_days : fallback.shelfDays,
+    destinations: readDestinations(value.destinations) ?? fallback.destinations,
     timezone: typeof value.timezone === 'string' && value.timezone ? value.timezone : fallbackZone,
-    lastRunOn: typeof value.last_run_on === 'string' ? value.last_run_on.slice(0, 10) : null,
+    startedOn: typeof value.started_on === 'string' ? value.started_on.slice(0, 10) : null,
+    startedCount: Number.isInteger(count) && (count as number) >= 0 ? (count as number) : 0,
   };
+}
+
+export type AutopilotInput = { enabled: boolean; windowStart: string; windowEnd: string; shelfDays: number; destinations: Destination[] };
+
+/** The Autopilot card's form, checked; null when any field is wrong. */
+export function readAutopilotInput(raw: unknown): AutopilotInput | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.enabled !== 'boolean') return null;
+  if (typeof value.windowStart !== 'string' || !FORM_TIME.test(value.windowStart)) return null;
+  if (typeof value.windowEnd !== 'string' || !FORM_TIME.test(value.windowEnd)) return null;
+  if (!isShelfDays(value.shelfDays)) return null;
+  const destinations = readDestinations(value.destinations);
+  if (!destinations) return null;
+  return { enabled: value.enabled, windowStart: value.windowStart, windowEnd: value.windowEnd, shelfDays: value.shelfDays, destinations };
 }

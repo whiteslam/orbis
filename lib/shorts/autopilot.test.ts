@@ -1,28 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autopilotDueOn, autopilotOptions, defaultAutopilot, pickStoryTopic, readAutopilotRow, STORY_IDEAS, type Autopilot } from './autopilot';
-
-const on: Autopilot = { ...defaultAutopilot('Asia/Kolkata'), enabled: true, startTime: '09:00' };
-// Sat 14 Nov 2026: 08:59 and 09:00 IST.
-const before = new Date('2026-11-14T03:29:00Z');
-const at = new Date('2026-11-14T03:30:00Z');
-
-describe('autopilotDueOn', () => {
-  it('is due from the start time on the person’s clock, once a day', () => {
-    expect(autopilotDueOn(on, before)).toBeNull();
-    expect(autopilotDueOn(on, at)).toBe('2026-11-14');
-    expect(autopilotDueOn({ ...on, lastRunOn: '2026-11-14' }, at)).toBeNull();
-    expect(autopilotDueOn({ ...on, lastRunOn: '2026-11-13' }, at)).toBe('2026-11-14');
-  });
-
-  it('is never due while off', () => {
-    expect(autopilotDueOn({ ...on, enabled: false }, at)).toBeNull();
-  });
-
-  it('uses the local date, not UTC', () => {
-    // 20:00 UTC on 14 Nov is already 01:30 on 15 Nov in India.
-    expect(autopilotDueOn({ ...on, startTime: '00:00', lastRunOn: '2026-11-14' }, new Date('2026-11-14T20:00:00Z'))).toBe('2026-11-15');
-  });
-});
+import { autopilotOptions, defaultAutopilot, pickStoryTopic, readAutopilotInput, readAutopilotRow, STORY_IDEAS } from './autopilot';
 
 describe('STORY_IDEAS and pickStoryTopic', () => {
   it('has 192 different ideas, none longer than a topic may be', () => {
@@ -43,15 +20,44 @@ describe('STORY_IDEAS and pickStoryTopic', () => {
   });
 });
 
-describe('autopilotOptions and readAutopilotRow', () => {
-  it('marks the job as the autopilot’s, with the style’s voice and music', () => {
-    expect(autopilotOptions('af_heart', 45)).toEqual({ seconds: 45, voice: 'af_heart', mode: 'voice', music: 'bed', endLine: '', autopilot: true });
+describe('autopilotOptions, readAutopilotRow and readAutopilotInput', () => {
+  it('marks the job as the autopilot’s, with the style’s voice, music and where it posts', () => {
+    expect(autopilotOptions('af_heart', 45, 'youtube')).toEqual({
+      seconds: 45, voice: 'af_heart', mode: 'voice', music: 'bed', endLine: '', autopilot: true, destination: 'youtube',
+    });
+    expect(autopilotOptions('am_michael', 45, 'youtube').destination).toBe('youtube');
   });
 
-  it('reads a stored row and falls back for anything missing', () => {
-    expect(readAutopilotRow({ enabled: true, style: 'cozy-tales', start_time: '07:30:00', timezone: 'Europe/London', last_run_on: '2026-11-13' }, 'Asia/Kolkata'))
-      .toEqual({ enabled: true, style: 'cozy-tales', startTime: '07:30', timezone: 'Europe/London', lastRunOn: '2026-11-13' });
+  it('starts off, building 23:00–07:00, 3 days ready, posting to YouTube', () => {
+    expect(defaultAutopilot('Asia/Kolkata')).toEqual({
+      enabled: false, style: 'cozy-tales', windowStart: '23:00', windowEnd: '07:00', shelfDays: 3, destinations: ['youtube'],
+      timezone: 'Asia/Kolkata', startedOn: null, startedCount: 0,
+    });
+  });
+
+  it('reads every stored column', () => {
+    expect(readAutopilotRow({
+      enabled: true, style: 'cozy-tales', start_time: '22:30:00', window_end: '06:00:00', shelf_days: 5,
+      destinations: ['youtube', 'instagram'], timezone: 'Europe/London', started_on: '2026-11-13', started_count: 2,
+    }, 'Asia/Kolkata')).toEqual({
+      enabled: true, style: 'cozy-tales', windowStart: '22:30', windowEnd: '06:00', shelfDays: 5,
+      destinations: ['youtube', 'instagram'], timezone: 'Europe/London', startedOn: '2026-11-13', startedCount: 2,
+    });
+  });
+
+  it('falls back for anything missing or wrong', () => {
     expect(readAutopilotRow(null, 'Asia/Kolkata')).toEqual(defaultAutopilot('Asia/Kolkata'));
-    expect(readAutopilotRow({ style: 'BAD STYLE', start_time: 'x' }, 'UTC')).toMatchObject({ enabled: false, style: 'cozy-tales', startTime: '09:00' });
+    expect(readAutopilotRow({ style: 'BAD STYLE', start_time: 'x', window_end: 7, shelf_days: 9, destinations: ['tiktok'], started_count: -1 }, 'UTC'))
+      .toMatchObject({ enabled: false, style: 'cozy-tales', windowStart: '23:00', windowEnd: '07:00', shelfDays: 3, destinations: ['youtube'], startedCount: 0 });
+  });
+
+  it('accepts a good form and refuses each bad field', () => {
+    const good = { enabled: true, windowStart: '23:00', windowEnd: '07:00', shelfDays: 3, destinations: ['youtube'] };
+    expect(readAutopilotInput(good)).toEqual(good);
+    for (const bad of [
+      { windowEnd: '24:00' }, { windowStart: '9:00' }, { shelfDays: 8 }, { shelfDays: 0 }, { shelfDays: 2.5 },
+      { destinations: [] }, { destinations: ['youtube', 'youtube'] }, { destinations: ['tiktok'] }, { enabled: 'yes' },
+    ]) expect(readAutopilotInput({ ...good, ...bad })).toBeNull();
+    expect(readAutopilotInput(null)).toBeNull();
   });
 });
