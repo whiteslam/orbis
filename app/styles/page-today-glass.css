@@ -1,0 +1,136 @@
+/* ─── Today, Glass view (components/today/glass-view.tsx) ───────────────────
+   Desktop only: frosted widgets over the glow wallpaper, on a 12-column grid.
+   Theme tokens only; every class starts with tg-. Classic is page-today.css. */
+
+.tg { display: flex; flex-direction: column; gap: 26px; }
+.tg-lead { display: flex; flex-direction: column; gap: 6px; max-width: 62rem; }
+.tg-date { margin: 0; color: var(--fd-soft); font-size: 14px; }
+
+.tg-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: 18px;
+  align-items: stretch;
+}
+
+/* The glass surface every widget shares. */
+.tg-panel,
+.tg-weather {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 22px 24px;
+  border-radius: 28px;
+  border: 1px solid var(--fd-rule);
+  background: color-mix(in srgb, var(--fd-card) 62%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  color: var(--fd-ink);
+}
+
+.tg-label { margin: 0 0 10px; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.tg-note { margin: 4px 0 0; color: var(--fd-soft); font-size: 13px; }
+.tg-quiet { display: flex; align-items: center; gap: 8px; color: var(--fd-soft); font-size: 14px; }
+
+/* Grid places. */
+.tg-area-weather { grid-column: span 5; grid-row: span 2; display: flex; }
+.tg-area-weather > .tg-weather { flex: 1; }
+.tg-portfolio { grid-column: span 4; }
+.tg-activity { grid-column: span 3; }
+.tg-rest { grid-column: span 4; }
+.tg-market { grid-column: span 3; }
+.tg-story { grid-column: span 7; }
+.tg-needs { grid-column: span 5; }
+.tg-needs:empty { display: none; }
+
+/* Weather: tinted by the sky, the temperature set large, the next hours as a curve. */
+.tg-weather { display: flex; flex-direction: column; gap: 6px; min-height: 300px; }
+.tg-weather[data-sky="clear"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-blue) 34%, var(--fd-card)) 70%, transparent); }
+.tg-weather[data-sky="cloud"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-teal) 22%, var(--fd-card)) 70%, transparent); }
+.tg-weather[data-sky="rain"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-teal) 38%, var(--fd-card)) 70%, transparent); }
+.tg-weather[data-sky="night"] { background: color-mix(in srgb, color-mix(in srgb, var(--brand-violet) 34%, var(--fd-card)) 70%, transparent); }
+.tg-weather-place { margin: 0; font-size: 15px; font-weight: 600; }
+.tg-weather-temp { margin: 4px 0 0; font-size: 88px; font-weight: 300; line-height: 1; letter-spacing: -0.04em; }
+.tg-weather-meta { margin: 6px 0 0; color: var(--fd-soft); font-size: 14px; }
+.tg-weather-rain { margin: 6px 0 0; font-size: 14px; font-weight: 600; }
+.tg-curve { margin-top: auto; padding-top: 18px; }
+.tg-curve svg { display: block; width: 100%; height: 70px; overflow: visible; }
+.tg-curve polyline { stroke: var(--fd-ink); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.tg-curve-labels { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--fd-soft); font-size: 13px; }
+.tg-curve-labels b { color: var(--fd-ink); font-weight: 650; }
+
+/* Portfolio: a button to the Invest tab. */
+.tg-portfolio { display: flex; flex-direction: column; align-items: flex-start; text-align: left; font: inherit; cursor: pointer; }
+.tg-portfolio-total { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.tg-portfolio-day { margin-top: 6px; font-size: 15px; font-weight: 650; }
+.tg-portfolio-day.is-up { color: var(--brand-green); }
+.tg-portfolio-day.is-down { color: var(--brand-red); }
+
+/* Activity: steps on the outer ring, routines on the inner. */
+.tg-activity { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.tg-activity svg { width: 108px; height: 108px; }
+.tg-activity circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+.tg-ring-track { stroke: var(--fd-ring-track); }
+.tg-ring-steps { stroke: var(--brand-green); }
+.tg-ring-routines { stroke: var(--brand-blue); }
+.tg-activity-steps { margin: 10px 0 0; font-size: 15px; font-weight: 650; }
+
+/* Rest of today. */
+.tg-rest ul { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 15px; }
+.tg-rest li { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; }
+.tg-rest li span { color: var(--fd-soft); font-variant-numeric: tabular-nums; }
+
+/* Market read. */
+.tg-market h2 { margin: 0 0 10px; color: var(--fd-soft); font-size: 13px; font-weight: 600; }
+.tg-market-summary { margin: 0; font-size: 15px; line-height: 1.45; }
+.tg-market ul { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 14px; }
+.tg-market li { display: flex; flex-direction: column; gap: 2px; }
+.tg-market li b { display: inline-flex; align-items: center; gap: 4px; font-weight: 650; }
+.tg-market li span { color: var(--fd-soft); }
+.tg-market li.is-up b { color: var(--brand-green); }
+.tg-market li.is-down b { color: var(--brand-red); }
+
+/* Top story: the photo beside the headline. */
+.tg-story { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 20px; align-items: center; color: inherit; text-decoration: none; }
+.tg-story .fd-news-photo { display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 18px; }
+.tg-story .fd-news-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tg-story-text { display: flex; flex-direction: column; gap: 8px; }
+.tg-story-title { font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; }
+.tg-story-meta { color: var(--fd-soft); font-size: 13px; }
+.tg-story.tg-quiet { display: flex; }
+
+/* Needs you: heads-ups and mail share one panel. */
+.tg-needs { display: flex; flex-direction: column; gap: 14px; }
+
+.tg-extras { display: flex; flex-direction: column; gap: 18px; }
+
+/* The Classic | Glass switch in the top bar. */
+.tg-switch { display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid var(--fd-rule); background: color-mix(in srgb, var(--fd-card) 70%, transparent); }
+.tg-switch button { padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tg-switch button[aria-checked="true"] { background: var(--fd-card); color: var(--fd-ink); }
+
+.tg-portfolio:focus-visible,
+.tg-story:focus-visible,
+.tg-switch button:focus-visible { outline: 2px solid var(--fd-accent); outline-offset: 2px; }
+
+.tg-portfolio,
+.tg-story,
+.tg-switch button { transition: transform 160ms ease, background-color 160ms ease; }
+.tg-portfolio:hover,
+.tg-story:hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-portfolio,
+  .tg-story,
+  .tg-switch button { transition: none; }
+  .tg-portfolio:hover,
+  .tg-story:hover { transform: none; }
+}
+
+/* Glass renders only on desktop; below 1100px the grid is one column anyway. */
+@media (max-width: 1100px) {
+  .tg-grid { grid-template-columns: minmax(0, 1fr); }
+  .tg-grid > * { grid-column: auto; grid-row: auto; }
+  .tg-story { grid-template-columns: minmax(0, 1fr); }
+}

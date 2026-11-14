@@ -32,6 +32,7 @@ import '../styles/journal.css';
 import '../styles/desktop.css';
 // Per-page redesigns, each owning its own sheet; after desktop.css so they settle the desktop layout too.
 import '../styles/page-today.css';
+import '../styles/page-today-glass.css';
 import '../styles/page-money.css';
 import '../styles/page-health.css';
 import '../styles/page-social.css';
