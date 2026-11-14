@@ -134,6 +134,35 @@ Capacitor logging is off on purpose: its debug log would write the phone's secre
 - **Android 13 and newer hide that notification until notifications are allowed.** The service runs either way. The person must allow notifications to see "Orbis is active".
 - **Foreground-service wording for Play.** The service is declared `specialUse`, and Play asks you to justify it. Use the text already in the manifest (`android/orbis-core/src/main/AndroidManifest.xml`): "Personal assistant that applies the user's privacy rules to the phone data they chose to share". In the Play Console form, add: it keeps a visible "Orbis is active" notification, runs only while a source is on, and stops when the person turns everything off or removes the phone.
 
+## Reading notifications
+
+The Notifications source is a Notification Listener (`OrbisNotificationListener` in `android/orbis-core/.../notify/`). Android only starts it after the person switches Orbis on in Notification access; the app cannot grant that itself. On a sideloaded (`direct`) build on Android 13 or newer, Android also hides that switch until "Allow restricted settings" is chosen in App info (three-dot menu). The Play build does not need it.
+
+How an item travels: the listener copies the parts of a notification Orbis may read (`NotificationReader`), runs the privacy rules (blocked apps, contacts and words; masking), drops one-time codes, then `NotificationSorter` labels it `transaction`, `package`, `missed_contact` or `career`, or nothing. The raw text stays in the local encrypted store for 30 days. Only sorted items are queued for sync. Payments land in Money under "From your phone, to review" (`components/money/phone-review.tsx`) and become ordinary transactions only when the person accepts them. The server-side migration is `supabase/migrations/202611140003_phone_transactions.sql`.
+
+Unit tests (`:orbis-core:testDebugUnitTest`) cover the reader, sorter, parser and rules. Anything that needs a real Android is an instrumented test.
+
+### Checking it on an emulator
+
+1. Install a debug build and sign in (see Building above). Turn Notifications on in Settings, Phone access.
+2. On an emulator, skip the Settings screens by granting access from the command line:
+
+   ```bash
+   adb shell cmd notification allow_listener app.orbis.android/app.orbis.core.notify.OrbisNotificationListener
+   ```
+
+   (Use your own app id if you changed it.) On a real phone, use the "Open notification access" button in the app instead.
+3. Post a fake bank text:
+
+   ```bash
+   adb shell cmd notification post -S bigtext -t "AX-HDFCBK" bank "Rs.1,250.00 debited from A/c XX1234 to SWIGGY"
+   ```
+
+   Expected: after the next sync, one row under "From your phone, to review" in Money (amount 1,250, merchant SWIGGY, money out).
+4. A text with a code (`"Your OTP is 123456"`) must leave no row anywhere. A delivery text (`"Your order is out for delivery"`) is sorted as `package`. A missed call can only be checked on a real phone: `adb` posts as the shell app, and missed calls are recognised only from the dialer and WhatsApp apps.
+
+The `adb` notifications come from the shell app, not from a banking app, so the default block on banking apps does not apply to them. To test a blocked word, add `HDFCBK` under Blocked words and post again: no new row.
+
 ## How the phone and the server talk
 
 - The phone has its own sign-in (a device credential), separate from the person's web session. It calls `/api/device/*`.
