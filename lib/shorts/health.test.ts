@@ -33,6 +33,14 @@ describe('shortsHealth', () => {
     expect(line(health({}, { nextPost: new Date('2026-11-15T03:30:00Z') }), 'next').text).toBe('YouTube Tomorrow 9:00 am');
     expect(line(health({}, { nextPost: new Date('2026-11-20T13:30:00Z') }), 'next').text).toBe('YouTube Fri 7:00 pm');
     expect(line(health({}, { paused: true }), 'next').text).toBe('Paused');
+  });
+
+  it('says the next post won’t go out while YouTube isn’t connected', () => {
+    expect(line(health({}, { state: 'not_connected' }), 'next'))
+      .toMatchObject({ text: 'YouTube Today 7:00 pm · won’t post until YouTube is connected', tone: 'bad' });
+    expect(line(health({}, { state: 'reconnect' }), 'next'))
+      .toMatchObject({ text: 'YouTube Today 7:00 pm · won’t post until YouTube is connected', tone: 'bad' });
+    expect(line(health(), 'next').tone).toBe('ok');
     expect(line(health({}, { nextPost: null }), 'next').text).toBe('—');
   });
 

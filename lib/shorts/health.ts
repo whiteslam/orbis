@@ -61,9 +61,17 @@ export function shortsHealth(input: HealthInput): HealthLine[] {
   };
 
   let nextText = '—';
+  let nextTone: HealthLine['tone'] = 'ok';
   if (youtube.paused) nextText = 'Paused';
-  else if (youtube.nextPost) nextText = `YouTube ${dayWord(youtube.nextPost, now, youtube.timeZone)} ${clock(youtube.nextPost, youtube.timeZone)}`;
-  const next: HealthLine = { key: 'next', label: 'Next post', text: nextText, tone: 'ok' };
+  else if (youtube.nextPost) {
+    nextText = `YouTube ${dayWord(youtube.nextPost, now, youtube.timeZone)} ${clock(youtube.nextPost, youtube.timeZone)}`;
+    // A video is waiting for its time, but nothing can post it.
+    if (youtube.state === 'not_connected' || youtube.state === 'reconnect') {
+      nextText += ' · won’t post until YouTube is connected';
+      nextTone = 'bad';
+    }
+  }
+  const next: HealthLine = { key: 'next', label: 'Next post', text: nextText, tone: nextTone };
 
   let pc: HealthLine;
   if (worker.presence === 'none') pc = { key: 'pc', label: 'PC', text: 'Not set up', tone: 'warn' };
