@@ -5,11 +5,11 @@ import { getYouTubeRefreshToken, markYouTubeReconnect, recordYouTubePublish } fr
 import { MAX_ATTEMPTS } from '@/lib/youtube/details';
 import { mintAccessToken, YouTubeAuthError } from '@/lib/youtube/google';
 import {
-  getSchedule, listQueue, release, saveUpload, scheduledSince, setHold, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
+  failedRow, getSchedule, listQueue, release, saveUpload, scheduledSince, setHold, settlePublished, takeRow, uploadingRowId, usersWithWork, YouTubeReadError,
 } from '@/lib/youtube/repository';
 import type { QueueRowFull } from '@/lib/youtube/rows';
 import { dayStart, isDue, nextDayStart } from '@/lib/youtube/schedule';
-import { rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadOutcome } from '@/lib/youtube/upload';
+import { askSession, rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadOutcome } from '@/lib/youtube/upload';
 import { signVideo } from '@/lib/youtube/video-file';
 
 // Posting to YouTube, one slice at a time (spec: "Publishing run", rulings
@@ -81,15 +81,15 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
   // uploading to be finished, even at 0 bytes: a one-chunk video may be on
   // YouTube already if the answer to that chunk was lost.
   const pause = () => (session ? {} : { ...BACK_IN_QUEUE });
-  // An attempt used up. After the last one the row fails and drops its session.
-  // Before that, a row with a session keeps it and stays uploading: YouTube may
-  // already have every byte (the answer to the final chunk was lost), so the
-  // next slice asks that session what it has rather than upload the video again.
-  // Without a session it goes back to the queue.
+  // An attempt used up. A row with a session keeps it, whether it stays
+  // uploading or (after the last attempt) fails: YouTube may already have every
+  // byte (the answer to the final chunk was lost), so the next slice, or Retry
+  // (settleFailedRow), asks that session what it has rather than upload the
+  // video again. Without a session it goes back to the queue, or fails.
   const countError = (message: string): SliceResult => {
     const attempts = row.attempts + 1;
     if (attempts >= MAX_ATTEMPTS) {
-      patch = { status: 'failed', attempts, error: message, upload_url: null, bytes_sent: 0 };
+      patch = session ? { status: 'failed', attempts, error: message } : { status: 'failed', attempts, error: message, upload_url: null, bytes_sent: 0 };
       return 'failed';
     }
     patch = session ? { status: 'uploading', attempts, error: message } : { status: 'queued', attempts, error: message, upload_url: null, bytes_sent: 0 };
@@ -187,6 +187,46 @@ export async function publishSlice(admin: Admin, userId: string, opts: SliceOpti
       }
     }
   }
+}
+
+/**
+ * Before Retry puts a failed row back in the queue: if it kept an upload session,
+ * ask that session whether YouTube already has the whole video. 'published' means
+ * it did, and the row is now marked published; 'requeue' means upload it again,
+ * as Retry always has. Any doubt (no session, no sign-in, no answer) is 'requeue'.
+ */
+export async function settleFailedRow(admin: Admin, userId: string, id: string, deps: { fetch?: typeof fetch } = {}): Promise<'published' | 'requeue'> {
+  const fetchImpl = deps.fetch ?? timedFetch;
+  const row = await failedRow(admin, userId, id);
+  if (!row?.uploadUrl || !ownPath(userId, row.videoPath)) return 'requeue';
+
+  const refreshToken = await getYouTubeRefreshToken(admin, userId);
+  if (!refreshToken) return 'requeue';
+  let accessToken: string;
+  try {
+    accessToken = await mintAccessToken(refreshToken, fetchImpl);
+  } catch {
+    return 'requeue';
+  }
+
+  const signed = await signVideo(admin, row.videoPath);
+  if (!('url' in signed)) return 'requeue';
+
+  const answer = await askSession(row.uploadUrl, accessToken, row, {
+    readRange: rangeReader(signed.url, fetchImpl),
+    fetch: fetchImpl,
+    now: Date.now,
+    save: async () => {},
+  });
+  if (answer.kind !== 'done') return 'requeue';
+  // Someone else settled it first: it is published either way, so nothing is uploaded again.
+  if (!(await settlePublished(admin, userId, id, { youtubeId: answer.youtubeId, privacy: answer.privacy }))) return 'published';
+  try {
+    await recordYouTubePublish(admin, userId);
+  } catch (error) {
+    console.error('Could not record the YouTube publish time', error);
+  }
+  return 'published';
 }
 
 /** Stop starting new people with less than this left: a sign-in, then room for at least one timed request. */

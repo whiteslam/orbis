@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { CHUNK, rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadIo, type UploadRow } from './upload.ts';
+import { askSession, CHUNK, rangeReader, REQUEST_TIMEOUT_MS, runUpload, type UploadIo, type UploadRow } from './upload.ts';
 
 const CREATE_URL = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
 const SESSION = 'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=abc';
@@ -317,4 +317,33 @@ test('no chunk starts within one request time limit of the deadline', async () =
   late.io.timeoutMs = 15_000;
   assert.deepEqual(await runUpload(row(), 'token', 20_000, late.io), { kind: 'partial' });
   assert.equal(late.calls.length, 0);
+});
+
+// askSession: before a failed row goes back in the queue, its old session is
+// asked whether YouTube already has the whole video.
+test('askSession says done when YouTube answers 201 with an id', async () => {
+  const { io, calls } = fakeIo(bytes(1000), () => created('abc', 'public'));
+  assert.deepEqual(await askSession(SESSION, 'token', row({ uploadUrl: SESSION }), io), { kind: 'done', youtubeId: 'abc', privacy: 'public' });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'PUT');
+  assert.equal(calls[0].headers['content-range'], 'bytes */1000');
+  assert.equal(calls[0].size, 0);
+});
+
+test('askSession says unfinished on 308, 404, 503, a thrown fetch, an answer without an id and a missing file', async () => {
+  const unreachable: Reply = () => { throw new TypeError('fetch failed'); };
+  const replies: Reply[] = [
+    () => resume(499),
+    () => new Response('gone', { status: 404 }),
+    () => new Response('busy', { status: 503 }),
+    unreachable,
+    () => Response.json({}, { status: 200 }),
+  ];
+  for (const reply of replies) {
+    const { io } = fakeIo(bytes(1000), reply);
+    assert.deepEqual(await askSession(SESSION, 'token', row({ uploadUrl: SESSION }), io), { kind: 'unfinished' });
+  }
+  const { io, calls } = fakeIo(null, () => created());
+  assert.deepEqual(await askSession(SESSION, 'token', row({ uploadUrl: SESSION }), io), { kind: 'unfinished' });
+  assert.equal(calls.length, 0);
 });

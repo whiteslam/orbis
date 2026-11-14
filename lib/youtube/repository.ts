@@ -5,7 +5,7 @@ import { getPersonSettingsAdmin } from '@/lib/locale/repository';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { defaultPreset } from '@/lib/youtube/details';
 import { QUEUE_COLUMNS, defaultSchedule, readPresetRow, readQueueItem, readQueueRow, readScheduleRow, type QueueRowFull } from '@/lib/youtube/rows';
-import type { Preset, QueueItem, QueueStatus, Schedule, VideoDetails } from '@/lib/youtube/types';
+import type { Preset, Privacy, QueueItem, QueueStatus, Schedule, VideoDetails } from '@/lib/youtube/types';
 
 // The YouTube tables (supabase/migrations/202611130002_youtube.sql). Only the
 // service role writes them, so every function takes the admin client from its
@@ -312,6 +312,26 @@ export async function retryFailed(admin: Admin, userId: string, id: string): Pro
     if (error.code === '23505') throw new YouTubeQueueError(ALREADY_QUEUED);
     throw failed(error);
   }
+  return (data ?? []).length > 0;
+}
+
+/** A failed row with the upload session it kept, for Retry to ask first; null when it isn't failed or isn't there. */
+export async function failedRow(admin: Admin, userId: string, id: string): Promise<QueueRowFull | null> {
+  const { data, error } = await admin.from('youtube_queue').select('*').eq('user_id', userId).eq('id', id).eq('status', 'failed').maybeSingle();
+  if (error) throw failed(error);
+  return data ? readQueueRow(data) : null;
+}
+
+/** Marks a failed row published, because its old session had finished the upload. Guarded: only a row still failed changes. */
+export async function settlePublished(admin: Admin, userId: string, id: string, done: { youtubeId: string; privacy: Privacy }): Promise<boolean> {
+  const { data, error } = await admin
+    .from('youtube_queue')
+    .update({ status: 'published', youtube_id: done.youtubeId, published_privacy: done.privacy, published_at: new Date().toISOString(), error: null, upload_url: null })
+    .eq('user_id', userId)
+    .eq('id', id)
+    .eq('status', 'failed')
+    .select('id');
+  if (error) throw failed(error);
   return (data ?? []).length > 0;
 }
 

@@ -30,6 +30,9 @@ const state = vi.hoisted(() => ({
   failedScheduledAt: null as string | null,
   recordThrows: false,
   now: '',
+  // settleFailedRow: the failed row it reads, and what it marked published.
+  failedRow: null as unknown,
+  settled: [] as { id: string; youtubeId: string; privacy: string }[],
   // Rows keep what each slice saved and released, as the database would.
   persist: false,
   scheduleReadFails: false,
@@ -76,6 +79,14 @@ vi.mock('./repository.ts', () => ({
   },
   setHold: async (_admin: unknown, _user: string, iso: string) => { state.holds.push(iso); },
   usersWithWork: async () => state.users,
+  failedRow: async (_admin: unknown, _user: string, id: string) => {
+    const row = state.failedRow as QueueRowFull | null;
+    return row && row.id === id ? row : null;
+  },
+  settlePublished: async (_admin: unknown, _user: string, id: string, done: { youtubeId: string; privacy: string }) => {
+    state.settled.push({ id, ...done });
+    return true;
+  },
 }));
 
 vi.mock('./connection.ts', () => ({
@@ -122,7 +133,7 @@ function rowPatch(patch: Record<string, unknown>): Partial<QueueRowFull> {
 }
 
 import { YouTubeAuthError } from './google.ts';
-import { publishDue, publishSlice } from './publish.ts';
+import { publishDue, publishSlice, settleFailedRow } from './publish.ts';
 
 type Admin = Parameters<typeof publishSlice>[0];
 const admin = {} as Admin;
@@ -176,6 +187,8 @@ beforeEach(() => {
   state.failedScheduledAt = null;
   state.recordThrows = false;
   state.now = NOW.toISOString();
+  state.failedRow = null;
+  state.settled = [];
   state.persist = false;
   state.scheduleReadFails = false;
   state.lastReadFails = false;
@@ -468,12 +481,69 @@ test('Google down on a resumed upload keeps its session too', async () => {
   errors.mockRestore();
 });
 
-test('the last attempt with a session fails the row and drops the session', async () => {
+test('a row failing its last attempt keeps its upload session', async () => {
   state.uploading = 'row-1';
   state.rows.set('row-1', queueRow({ status: 'uploading', uploadUrl: 'https://upload/session', bytesSent: 8, attempts: 2 }));
   state.outcome = { kind: 'error', message: 'YouTube said 500: busy' };
   assert.equal(await publishSlice(admin, USER, { postedBy: 'schedule', deadline: later(), now: NOW }), 'failed');
-  assert.deepEqual(state.releases[0].patch, { status: 'failed', attempts: 3, error: 'YouTube said 500: busy', upload_url: null, bytes_sent: 0 });
+  // Retry asks this session first: YouTube may already have the whole video.
+  assert.deepEqual(state.releases[0].patch, { status: 'failed', attempts: 3, error: 'YouTube said 500: busy' });
+});
+
+// A fetch for settleFailedRow: storage answers the size, YouTube's session answers `session`.
+function settleFetch(session: () => Response) {
+  const calls: { url: string; method: string; range: string | null; body: boolean }[] = [];
+  const fetchImpl = (async (input: string | URL | Request, init: RequestInit = {}) => {
+    const url = String(input);
+    const headers = new Headers(init.headers);
+    calls.push({ url, method: init.method ?? 'GET', range: headers.get('content-range'), body: init.body !== undefined && init.body !== null });
+    if (url.startsWith('https://storage/')) return new Response(new Uint8Array(1), { status: 206, headers: { 'content-range': 'bytes 0-0/1000' } });
+    return session();
+  }) as typeof fetch;
+  return { fetchImpl, calls };
+}
+
+const failedWithSession = () => queueRow({ status: 'failed', uploadUrl: 'https://upload/session', bytesSent: 1000, attempts: 3, error: 'Couldn’t reach YouTube' });
+const answer308 = () => new Response(null, { status: 308, headers: { range: 'bytes=0-499' } });
+const answer503 = () => new Response('busy', { status: 503 });
+const noAnswer = (): Response => { throw new TypeError('fetch failed'); };
+
+test('settling a failed row whose session finished marks it published and never uploads', async () => {
+  state.failedRow = failedWithSession();
+  const { fetchImpl, calls } = settleFetch(() => Response.json({ id: 'yt-1', status: { privacyStatus: 'unlisted' } }, { status: 200 }));
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'published');
+  assert.deepEqual(state.settled, [{ id: 'row-1', youtubeId: 'yt-1', privacy: 'unlisted' }]);
+  assert.equal(state.recorded, 1);
+  const youtube = calls.filter((call) => !call.url.startsWith('https://storage/'));
+  assert.deepEqual(youtube.map((call) => `${call.method} ${call.range}`), ['PUT bytes */1000']);
+  assert.equal(youtube.some((call) => call.body), false);
+});
+
+test('settling a failed row whose session is unfinished asks to requeue and changes nothing', async () => {
+  // 308 (part sent), 503 (YouTube busy) and no answer at all: none of them say it posted.
+  for (const session of [answer308, answer503, noAnswer]) {
+    state.failedRow = failedWithSession();
+    const { fetchImpl } = settleFetch(session);
+    assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'requeue');
+  }
+  assert.deepEqual(state.settled, []);
+  assert.equal(state.recorded, 0);
+});
+
+test('settling a failed row without a session asks to requeue without calling anyone', async () => {
+  state.failedRow = queueRow({ status: 'failed', attempts: 3 });
+  const { fetchImpl, calls } = settleFetch(answer503);
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'requeue');
+  assert.equal(calls.length, 0);
+});
+
+test('settling when Google refuses the token asks to requeue', async () => {
+  state.failedRow = failedWithSession();
+  state.mint = async () => { throw new YouTubeAuthError('Google stopped accepting Orbis’s access. Connect again.', true); };
+  const { fetchImpl, calls } = settleFetch(() => Response.json({ id: 'yt-1' }, { status: 200 }));
+  assert.equal(await settleFailedRow(admin, USER, 'row-1', { fetch: fetchImpl }), 'requeue');
+  assert.equal(calls.length, 0);
+  assert.deepEqual(state.settled, []);
 });
 
 test('an uploading row that holds an error is still picked by Post now', async () => {

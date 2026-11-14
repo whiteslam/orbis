@@ -204,6 +204,29 @@ export async function runUpload(row: UploadRow, accessToken: string, deadline: n
   }
 }
 
+/**
+ * Asks an old upload session whether YouTube already has the whole video, without
+ * sending a byte. Only a finished upload with a video id is 'done'; anything else,
+ * an error or no answer included, is 'unfinished', so the caller uploads as before.
+ */
+export async function askSession(
+  uploadUrl: string,
+  accessToken: string,
+  row: UploadRow,
+  io: UploadIo,
+): Promise<{ kind: 'done'; youtubeId: string; privacy: Privacy } | { kind: 'unfinished' }> {
+  try {
+    const head = await io.readRange(0, 0);
+    if (!head || head.total <= 0) return { kind: 'unfinished' };
+    const status = await put(uploadUrl, accessToken, `bytes */${head.total}`, null, io);
+    if (status.status !== 200 && status.status !== 201) return { kind: 'unfinished' };
+    const outcome = await finished(status, row);
+    return outcome.kind === 'done' ? outcome : { kind: 'unfinished' };
+  } catch {
+    return { kind: 'unfinished' };
+  }
+}
+
 const CONTENT_RANGE = /^bytes (\d+)-(\d+)\/(\d+)$/;
 const UNSATISFIED = /^bytes \*\/(\d+)$/;
 const NOT_FOUND = /not[_ ]?found/i;

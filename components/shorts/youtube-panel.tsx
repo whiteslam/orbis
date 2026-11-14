@@ -229,6 +229,18 @@ export function YouTubePanel({ onChanged }: Readonly<{ onChanged: () => void }>)
     if (kind !== 'move') onChanged();
   }
 
+  /** Retry asks the old upload first; when YouTube already had the video, it says so instead of queueing it. */
+  async function retry(id: string) {
+    let said: string | null = null;
+    await change(id, 'retry', async () => {
+      const result = await safeAction(retryQueueItemAction)(id);
+      if (!result.success) return result;
+      said = result.data.message;
+      return { success: true, data: result.data.queue };
+    });
+    if (said) setNotice({ text: said, ok: true, part: 'posted' });
+  }
+
   async function postNow(id: string) {
     setBusy({ id, kind: 'post' });
     setNotice(null);
@@ -339,7 +351,7 @@ export function YouTubePanel({ onChanged }: Readonly<{ onChanged: () => void }>)
                     <>
                       <span className="sh-yt-error">{item.error ?? 'It couldn’t be posted.'}</span>
                       <div className="sh-yt-tools">
-                        <button type="button" className="fd-link" onClick={() => void change(item.id, 'retry', () => safeAction(retryQueueItemAction)(item.id))} disabled={busy !== null}>
+                        <button type="button" className="fd-link" onClick={() => void retry(item.id)} disabled={busy !== null}>
                           {busy?.id === item.id ? <LoaderCircle className="workbook-spinner" size={13} aria-hidden="true" /> : <RotateCcw size={13} aria-hidden="true" />} Retry
                         </button>
                       </div>

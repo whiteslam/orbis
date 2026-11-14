@@ -16,7 +16,7 @@ import { getYouTubeConnection } from '@/lib/youtube/connection';
 import { buildDetails, cleanDetails } from '@/lib/youtube/details';
 import { youtubeConfigured } from '@/lib/youtube/google';
 import { readMove, readSchedule } from '@/lib/youtube/input';
-import { publishSlice } from '@/lib/youtube/publish';
+import { publishSlice, settleFailedRow } from '@/lib/youtube/publish';
 import {
   getPreset, getSchedule, insertQueued, listPosted, listQueue, moveQueued, removeQueued, retryFailed, saveSchedule, scheduledSince,
   tablesReady, updateQueued, YouTubeQueueError,
@@ -172,8 +172,21 @@ export async function removeQueueItemAction(id: unknown): Promise<Result<QueueIt
 }
 
 /** A failed video goes back to the front of the queue with fresh attempts. */
-export async function retryQueueItemAction(id: unknown): Promise<Result<QueueItem[]>> {
-  return changeQueue(id, 'The video couldn’t be retried. Try again in a little while.', (admin, userId, rowId) => retryFailed(admin, userId, rowId));
+const ALREADY_POSTED = 'It had already posted to YouTube, so it wasn’t uploaded again.';
+
+/**
+ * Puts a failed video back at the front of the queue. First, if it kept an upload
+ * session, that session is asked whether YouTube already has it: then it is marked
+ * posted (with `message` saying so) instead of being uploaded a second time.
+ */
+export async function retryQueueItemAction(id: unknown): Promise<Result<{ queue: QueueItem[]; message: string | null }>> {
+  if (!isUuid(id)) return INVALID;
+  return asUser<{ queue: QueueItem[]; message: string | null }>('The video couldn’t be retried. Try again in a little while.', async (me) => {
+    const admin = createAdminClient();
+    if ((await settleFailedRow(admin, me.userId, id)) === 'published') return ok({ queue: await listQueue(admin, me.userId), message: ALREADY_POSTED });
+    if (!(await retryFailed(admin, me.userId, id))) return fail(MOVED);
+    return ok({ queue: await listQueue(admin, me.userId), message: null });
+  });
 }
 
 export type PostNowState = 'published' | 'partial' | 'held' | 'reconnect' | 'failed' | 'retry';
