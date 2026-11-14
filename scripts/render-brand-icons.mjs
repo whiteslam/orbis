@@ -12,10 +12,10 @@ const root = resolve(import.meta.dirname, '..');
 // its own mask: maskable icons and iOS home-screen icons). `ring` is the ring's
 // share of the canvas; maskable icons keep the ring inside the 80% safe zone.
 const targets = [
-  { file: 'public/icons/icon-192.png', size: 192, shape: 'rounded', ring: 0.62 },
-  { file: 'public/icons/icon-512.png', size: 512, shape: 'rounded', ring: 0.62 },
-  { file: 'public/icons/icon-maskable-192.png', size: 192, shape: 'bleed', ring: 0.5 },
-  { file: 'public/icons/icon-maskable-512.png', size: 512, shape: 'bleed', ring: 0.5 },
+  { file: 'public/icons/orbis-ring-192.png', size: 192, shape: 'rounded', ring: 0.62 },
+  { file: 'public/icons/orbis-ring-512.png', size: 512, shape: 'rounded', ring: 0.62 },
+  { file: 'public/icons/orbis-ring-maskable-192.png', size: 192, shape: 'bleed', ring: 0.5 },
+  { file: 'public/icons/orbis-ring-maskable-512.png', size: 512, shape: 'bleed', ring: 0.5 },
   { file: 'public/apple-touch-icon.png', size: 180, shape: 'bleed', ring: 0.6 },
   { file: 'app/apple-icon.png', size: 180, shape: 'bleed', ring: 0.6 },
   { file: 'app/icon.png', size: 96, shape: 'rounded', ring: 0.64 },

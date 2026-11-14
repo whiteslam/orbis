@@ -1,7 +1,7 @@
 // Orbis service worker: shows daily notifications and opens Orbis when
 // tapped, and caches the app shell so a lost connection lands on the offline
 // page instead of the browser's own dinosaur.
-const CACHE = 'orbis-v1';
+const CACHE = 'orbis-v2';
 const PRECACHE_URLS = ['/offline', '/icon.png', '/apple-icon.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -74,8 +74,8 @@ self.addEventListener('push', (event) => {
   const title = typeof payload.title === 'string' && payload.title ? payload.title : 'Orbis';
   event.waitUntil(self.registration.showNotification(title, {
     body: typeof payload.body === 'string' ? payload.body : '',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/icons/orbis-ring-192.png',
+    badge: '/icons/orbis-ring-192.png',
     tag: typeof payload.tag === 'string' ? payload.tag : 'orbis',
     data: { url: typeof payload.url === 'string' ? payload.url : '/?notifications=open' },
   }));
