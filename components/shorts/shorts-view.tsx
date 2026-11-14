@@ -9,6 +9,7 @@ import { StyleBoard, StyleDetail } from '@/components/shorts/style-board';
 import { WorkerStrip } from '@/components/shorts/worker-strip';
 import { YouTubePanel } from '@/components/shorts/youtube-panel';
 import { AutopilotCard } from '@/components/shorts/autopilot-card';
+import { HealthCard } from '@/components/shorts/health-card';
 import type { ShortsData } from '@/components/shorts/use-shorts-data';
 import { IN_FLIGHT, LIMITS, limitRefusal } from '@/lib/shorts/rules';
 
@@ -79,6 +80,11 @@ export function ShortsView({ data, openJobId = null }: Readonly<{ data: ShortsDa
 
   return (
     <div className="sh-view">
+      <section className="sh-section" aria-labelledby="sh-health-h">
+        <h2 id="sh-health-h" className="sh-h">How it’s running</h2>
+        <HealthCard />
+      </section>
+
       {open.length > 0 && (
         <section className="sh-section" aria-label="On the go">
           <h2 className="sh-h">On the go <span className="so-count">{open.length}</span></h2>

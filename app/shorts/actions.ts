@@ -21,7 +21,10 @@ import type { JobDetail, Result, ShortFiles, ShortsView } from '@/lib/shorts/vie
 import { getPersonSettings } from '@/lib/locale/repository';
 import { isMissingTable } from '@/lib/supabase/errors';
 import { AUTOPILOT_COLUMNS, AUTOPILOT_STYLE, defaultAutopilot, readAutopilotInput, readAutopilotRow, type Autopilot } from '@/lib/shorts/autopilot';
-import { activeQueueFor, hasActiveQueue } from '@/lib/youtube/repository';
+import { activeQueueFor, getSchedule, hasActiveQueue, listQueue, scheduledSince, tablesReady } from '@/lib/youtube/repository';
+import { getYouTubeConnection } from '@/lib/youtube/connection';
+import { dayStart, nextSlot } from '@/lib/youtube/schedule';
+import { shortsHealth, type HealthInput, type HealthLine } from '@/lib/shorts/health';
 
 const SIGN_IN = { success: false as const, message: 'Sign in again to do this.' };
 const INVALID = { success: false as const, message: 'That request isn’t valid. Reload and try again.' };
@@ -220,5 +223,60 @@ export async function saveAutopilotAction(input: unknown): Promise<Result<Autopi
     }
     const { data } = await me.db.from('shorts_autopilot').select(AUTOPILOT_COLUMNS).eq('user_id', me.userId).maybeSingle();
     return ok(readAutopilotRow(data, timeZone));
+  });
+}
+
+/** The health card: shelf, next post, PC, accounts and the last day's problems, for the signed-in person. */
+export async function loadShortsHealthAction(): Promise<Result<HealthLine[]>> {
+  return asUser('The Shorts health couldn’t be loaded. Try again in a little while.', async (me) => {
+    const admin = createAdminClient();
+    const now = new Date();
+    const since = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+
+    const [worker, making, failedBuilds] = await Promise.all([
+      getWorker(me.db, me.userId),
+      // Autopilot shorts still being made for YouTube (none recorded: YouTube) count as on the shelf.
+      me.db.from('shorts_jobs').select('options').eq('user_id', me.userId).in('status', IN_FLIGHT).eq('options->>autopilot', 'true'),
+      me.db.from('shorts_jobs').select('id', { count: 'exact', head: true }).eq('user_id', me.userId).eq('status', 'failed').gte('finished_at', since),
+    ]);
+    if (making.error) throw making.error;
+    if (failedBuilds.error) throw failedBuilds.error;
+    const building = (making.data ?? []).filter((job) => ((job.options as { destination?: string } | null)?.destination ?? 'youtube') === 'youtube').length;
+
+    const youtube: HealthInput['youtube'] = {
+      state: 'not_set_up', onShelf: building, postsPerDay: 1, nextPost: null, paused: false, holdUntil: null,
+      timeZone: (await getPersonSettings(me.userId)).timeZone,
+    };
+    let failedPosts24h = 0;
+    if (await tablesReady(admin)) {
+      const [connection, schedule, queue, failedPosts] = await Promise.all([
+        getYouTubeConnection(admin, me.userId),
+        getSchedule(admin, me.userId),
+        listQueue(admin, me.userId),
+        admin.from('youtube_queue').select('id', { count: 'exact', head: true }).eq('user_id', me.userId).eq('status', 'failed').gte('updated_at', since),
+      ]);
+      if (failedPosts.error) throw failedPosts.error;
+      failedPosts24h = failedPosts.count ?? 0;
+      const waiting = queue.filter((item) => item.status === 'queued' || item.status === 'uploading').length;
+      const postedToday = await scheduledSince(admin, me.userId, dayStart(now, schedule.timezone));
+      Object.assign(youtube, {
+        state: !connection ? 'not_connected' : connection.status === 'reconnect_required' ? 'reconnect' : 'connected',
+        onShelf: waiting + building,
+        postsPerDay: Math.max(1, schedule.postTimes.length),
+        nextPost: waiting > 0 ? nextSlot(schedule, now, postedToday) : null,
+        paused: schedule.paused,
+        holdUntil: schedule.holdUntil,
+        timeZone: schedule.timezone,
+      });
+    }
+
+    const presence = workerPresence(worker, now);
+    return ok(shortsHealth({
+      now,
+      worker: { presence, note: worker?.note ?? null, lastSeen: worker?.lastSeen ?? null },
+      youtube,
+      failedBuilds24h: failedBuilds.count ?? 0,
+      failedPosts24h,
+    }));
   });
 }
