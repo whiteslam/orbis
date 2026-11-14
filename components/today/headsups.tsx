@@ -4,6 +4,7 @@ import { useEffect, useId, useState, useTransition, type ReactNode } from 'react
 import { completeHeadsupAction, dismissHeadsupAction, setHeadsupKindAction, snoozeHeadsupAction } from '@/app/headsups/actions';
 import { safeAction } from '@/lib/client/safe-action';
 import type { Headsup, HeadsupAction, HeadsupKind, HeadsupsResponse } from '@/lib/headsups/types';
+import { shared } from '@/lib/client/inflight';
 
 const SHOWN = 3;
 
@@ -32,8 +33,9 @@ export function Headsups({ onAction, empty }: Readonly<{ onAction: (action: Head
 
   useEffect(() => {
     let live = true;
-    void fetch('/api/home/headsups', { cache: 'no-store' })
-      .then((response) => (response.ok ? response.json() as Promise<HeadsupsResponse> : null))
+    // Shared: a second copy mounting meanwhile (Classic, then Glass) waits for this one.
+    void shared('today-headsups', () => fetch('/api/home/headsups', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() as Promise<HeadsupsResponse> : null)))
       .then((result) => { if (live && result) setData(result); })
       .catch(() => {});
     return () => { live = false; };

@@ -6,6 +6,7 @@ import type { BriefWeather } from '@/lib/home/weather';
 import type { WeatherPhase } from '@/lib/home/brief-gate';
 import { skyFor } from '@/lib/home/glass';
 import { curveLabels, curvePoints } from '@/lib/home/hours';
+import { shared } from '@/lib/client/inflight';
 
 type WeatherResponse = BriefWeather & { place: string | null; stale: boolean };
 
@@ -35,6 +36,28 @@ function currentPosition() {
   });
 }
 
+/** Weather where the person is (or their home city): what the card should show, and the weather for the brief. */
+async function loadWeather(): Promise<{ next: State; weather: WeatherResponse | null }> {
+  let result: Awaited<ReturnType<typeof fetchWeather>> | null = null;
+  let place = 'Your location';
+  try {
+    const position = await currentPosition();
+    result = await fetchWeather(`?lat=${position.coords.latitude.toFixed(3)}&lon=${position.coords.longitude.toFixed(3)}`);
+  } catch {
+    // Location denied or unavailable: use the saved home city instead.
+  }
+  if (result?.status !== 200) {
+    result = await fetchWeather('').catch(() => null);
+    place = result?.body?.place ?? place;
+  }
+  if (result?.status === 200 && result.body?.needsCity) return { next: { status: 'needs-city' }, weather: null };
+  if (result?.status === 200) {
+    const weather = result.body as WeatherResponse;
+    return { next: { status: 'ready', weather, place }, weather };
+  }
+  return { next: { status: 'error', message: result?.body?.error ?? 'Weather is unavailable right now.' }, weather: null };
+}
+
 /**
  * Rain is only mentioned when it is happening or likely. "Mostly dry, 10% at
  * most" on every clear day was noise, and a forecast always names its hour.
@@ -61,34 +84,15 @@ export function WeatherCard({ onWeather, onPhase, openPersonal, variant = 'line'
       return;
     }
     let cancelled = false;
-    const remember = (next: State, weather: BriefWeather | null) => {
-      lastResult = { at: Date.now(), state: next, weather };
-      setState(next);
-    };
-    void (async () => {
-      let result: Awaited<ReturnType<typeof fetchWeather>> | null = null;
-      let place = 'Your location';
-      try {
-        const position = await currentPosition();
-        result = await fetchWeather(`?lat=${position.coords.latitude.toFixed(3)}&lon=${position.coords.longitude.toFixed(3)}`);
-      } catch {
-        // Location denied or unavailable: use the saved home city instead.
-      }
-      if (result?.status !== 200) {
-        result = await fetchWeather('').catch(() => null);
-        place = result?.body?.place ?? place;
-      }
+    // Shared: a second card mounting meanwhile (Classic, then Glass) waits for this one.
+    void shared('today-weather', loadWeather).then(({ next, weather }) => {
+      if (weather) lastResult = { at: Date.now(), state: next, weather };
+      else if (next.status === 'needs-city') lastResult = { at: Date.now(), state: next, weather: null };
+      // Errors are not cached, so the next visit retries.
       if (cancelled) return;
-      if (result?.status === 200 && result.body?.needsCity) {
-        remember({ status: 'needs-city' }, null);
-      } else if (result?.status === 200) {
-        remember({ status: 'ready', weather: result.body as WeatherResponse, place }, result.body as WeatherResponse);
-        onWeather(result.body as WeatherResponse);
-      } else {
-        // Errors are not cached, so the next visit retries.
-        setState({ status: 'error', message: result?.body?.error ?? 'Weather is unavailable right now.' });
-      }
-    })();
+      setState(next);
+      if (weather) onWeather(weather);
+    });
     return () => { cancelled = true; };
   }, [onWeather]);
 

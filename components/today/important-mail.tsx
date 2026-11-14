@@ -8,6 +8,7 @@ import { safeAction } from '@/lib/client/safe-action';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { formatWhen, localDate } from '@/lib/locale/dates';
 import type { PersonLocale } from '@/lib/locale/person';
+import { shared } from '@/lib/client/inflight';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; result: ImportantMailResult };
 
@@ -59,9 +60,10 @@ export function ImportantMail() {
   useEffect(() => {
     if (lastResult && Date.now() - lastResult.at < CLIENT_TTL_MS) return;
     let live = true;
-    void fetch('/api/home/mail', { cache: 'no-store' })
+    // Shared: a second card mounting meanwhile (Classic, then Glass) waits for this one.
+    void shared('today-mail', () => fetch('/api/home/mail', { cache: 'no-store' })
       .then(async (response) => (response.ok ? await response.json() as ImportantMailResult : null))
-      .catch(() => null)
+      .catch(() => null))
       .then((result) => {
         if (!live) return;
         if (!result) return setState({ status: 'error' });

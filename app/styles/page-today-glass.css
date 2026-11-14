@@ -105,7 +105,8 @@
 
 .tg-extras { display: flex; flex-direction: column; gap: 18px; }
 
-/* The Classic | Glass switch in the top bar. */
+/* The Classic | Glass switch: its own row at the top of Today (the desktop layout hides .fd-top). */
+.tg-switch-row { display: flex; justify-content: flex-end; margin-bottom: -6px; }
 .tg-switch { display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid var(--fd-rule); background: color-mix(in srgb, var(--fd-card) 70%, transparent); }
 .tg-switch button { padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--fd-soft); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .tg-switch button[aria-checked="true"] { background: var(--fd-card); color: var(--fd-ink); }

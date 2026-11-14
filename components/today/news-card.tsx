@@ -8,6 +8,7 @@ import type { NewsArticle, NewsDigest, Outlook } from '@/lib/news/types';
 import { usePersonLocale } from '@/components/locale/person-locale';
 import { formatWhen } from '@/lib/locale/dates';
 import type { PersonLocale } from '@/lib/locale/person';
+import { shared } from '@/lib/client/inflight';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; digest: NewsDigest };
 
@@ -90,9 +91,11 @@ export function NewsCard({ variant = 'magazine' }: Readonly<{
   useEffect(() => {
     if (lastDigest && Date.now() - lastDigest.at < CLIENT_TTL_MS) return;
     let live = true;
-    void fetch('/api/home/news', { cache: 'no-store' })
+    // Shared: a second card mounting meanwhile (Classic, then Glass) waits for this one,
+    // so the news (and the model reading it) is asked for once.
+    void shared('today-news', () => fetch('/api/home/news', { cache: 'no-store' })
       .then(async (response) => (response.ok ? await response.json() as NewsDigest : null))
-      .catch(() => null)
+      .catch(() => null))
       .then((digest) => {
         if (!live) return;
         if (!digest) return setState({ status: 'error' });

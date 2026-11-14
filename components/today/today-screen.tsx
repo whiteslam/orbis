@@ -47,6 +47,11 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
+// The Today view this visit has read or chosen. Home remounts on every tab
+// switch; keeping it here means a Glass user isn't shown Classic first each time.
+let savedView: TodayView | undefined;
+const rememberView = (view: TodayView) => { savedView = view; };
+
 // How long Home waits for the portfolio before writing the brief without it.
 const PORTFOLIO_WAIT_MS = 8_000;
 
@@ -84,18 +89,23 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
   // Desktop only: Classic (this page as it always was) or Glass, remembered per
   // browser. Read after mounting, so the server and first render are Classic.
   const desktop = useDesktop();
-  const [view, setView] = useState<TodayView>('classic');
+  // savedView is only set after the first read, never during hydration, so the
+  // first render still matches the server; coming back to Today then skips the flash of Classic.
+  const [view, setView] = useState<TodayView>(() => savedView ?? 'classic');
   useEffect(() => {
+    if (savedView) return;
     let saved: TodayView = 'classic';
     try {
       saved = readTodayView(window.localStorage.getItem(TODAY_VIEW_KEY));
     } catch {
       // Storage blocked (a private window): Classic.
     }
+    rememberView(saved);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setView(saved);
   }, []);
   const chooseView = (next: TodayView) => {
+    rememberView(next);
     setView(next);
     try {
       window.localStorage.setItem(TODAY_VIEW_KEY, next);
@@ -229,20 +239,24 @@ export function TodayScreen({ financeSummary, stepsSummary, documentCount, plan,
           <p className="fd-date" suppressHydrationWarning>{today}</p>
         </div>
         <div className="fd-top-actions">
-          {desktop && (
-            <div className="tg-switch" role="radiogroup" aria-label="Today view">
-              {(['classic', 'glass'] as const).map((option) => (
-                <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
-                  {option === 'classic' ? 'Classic' : 'Glass'}
-                </button>
-              ))}
-            </div>
-          )}
           <NotificationsButton />
           <ThemeToggle />
           <SettingsButton />
         </div>
       </header>
+
+      {/* Its own row, not in .fd-top: the desktop layout hides that bar (app/styles/desktop.css). */}
+      {desktop && (
+        <div className="tg-switch-row">
+          <div className="tg-switch" role="radiogroup" aria-label="Today view">
+            {(['classic', 'glass'] as const).map((option) => (
+              <button key={option} type="button" role="radio" aria-checked={view === option} onClick={() => chooseView(option)}>
+                {option === 'classic' ? 'Classic' : 'Glass'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <PasskeyPrompt />
 
