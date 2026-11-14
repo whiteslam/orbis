@@ -34,10 +34,12 @@ What only you can do to turn on "Orbis reads your notifications" on your phone. 
    3. Tap **Add to Money**. The payment moves into your transaction list with a small phone mark ("From your phone"). You can delete it like any other transaction.
    4. Send another one and tap **Not a payment**. It disappears and is not added.
 
-   No emulator or second phone? See "Check it on an emulator" in [`android.md`](./android.md#reading-notifications).
+   No emulator or second phone? See "Checking it on an emulator" in [`android.md`](./android.md#reading-notifications).
 
 6. **Block the sender and check the next text is ignored.**
-   1. In Settings, Phone access, under Blocked words, add the sender's name from the text. For the example above it is `HDFCBK`. (Blocked contacts takes phone numbers only. Bank texts come from a name, not a number, so use Blocked words.)
+   1. Look at how the test text showed up on your phone: it is under a phone number, a saved contact name or, for a real bank, a name like `AX-HDFCBK`. That is the sender. Block exactly what you see, in Settings, Phone access:
+      - a phone number goes in **Blocked contacts** (the box is made for phone numbers; it also matches a sender name typed exactly as shown);
+      - a name goes in **Blocked words**. A blocked word matches any part of the sender or of the text, so `HDFCBK` blocks `AX-HDFCBK`.
    2. Send another test text from the same sender.
    3. After the next sync, nothing new appears under "From your phone, to review".
 
@@ -46,7 +48,7 @@ What only you can do to turn on "Orbis reads your notifications" on your phone. 
 7. **Check a missed call and a delivery notification are sorted.** Orbis has no screen for these yet, so check them in your account export.
    1. Get a WhatsApp missed call (call yourself from another phone and do not answer), and a delivery notification (for example "Your order is out for delivery" from a shopping app).
    2. Wait for the next sync.
-   3. In Settings, Account, tap **Export my data**.
+   3. Open Orbis on the website if you can (it is easiest there), go to Settings, Account, and tap **Export my data**. It may ask for your password if you have not signed in within the last 10 minutes.
    4. Open the file and look at the `signals` list. You should find one entry with kind `missed_contact` and one with kind `package`. Their `content` is readable in the export.
 
 ## What gets read, and what does not

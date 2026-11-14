@@ -159,9 +159,9 @@ Unit tests (`:orbis-core:testDebugUnitTest`) cover the reader, sorter, parser an
    ```
 
    Expected: after the next sync, one row under "From your phone, to review" in Money (amount 1,250, merchant SWIGGY, money out).
-4. A text with a code (`"Your OTP is 123456"`) must leave no row anywhere. A delivery text (`"Your order is out for delivery"`) is sorted as `package`. A missed call can only be checked on a real phone: `adb` posts as the shell app, and missed calls are recognised only from the dialer and WhatsApp apps.
+4. A text with a code (`"Your OTP is 123456"`) must leave no item and no signal. It leaves one Activity entry in Settings, Phone access, "One-time code", with no text. A delivery text (`"Your order is out for delivery"`) is sorted as `package`. A missed call can only be checked on a real phone: `adb` posts as the shell app, and missed calls are recognised only from the dialer and WhatsApp apps.
 
-The `adb` notifications come from the shell app, not from a banking app, so the default block on banking apps does not apply to them. To test a blocked word, add `HDFCBK` under Blocked words and post again: no new row.
+The `adb` notifications come from the shell app, not from a banking app, so the default block on banking apps does not apply to them. To test blocking here, the title is `AX-HDFCBK`, so add `HDFCBK` under Blocked words and post again: no new row.
 
 ## How the phone and the server talk
 
